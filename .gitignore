@@ -1,0 +1,27 @@
+# Rust
+/target/
+**/*.rs.bk
+
+# Python
+__pycache__/
+*.py[cod]
+*.so
+*.pyd
+*.dylib
+.venv/
+.pytest_cache/
+.ruff_cache/
+*.egg-info/
+/dist/
+/build/
+
+# Local caches (Hugging Face models/datasets downloaded for experiments)
+/.cache/
+
+# Experiment scratch output (curated results go to docs/research/data/)
+/experiments/**/_scratch/
+
+# OS / editors
+.DS_Store
+.idea/
+.vscode/
