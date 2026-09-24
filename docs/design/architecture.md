@@ -1,7 +1,7 @@
 # memopro 아키텍처 설계
 
-- **버전**: 설계 v0.3.2 (2026-09-25) — P1~P4 채택(0015): β 명시 실행 기본, OS 기준선 (v0.3.1: 0012·0013)
-- **이력**: v0.1 기법 모듈 중심(0008) → v0.2 범용성 2계층(0010) → v0.2.1 논리 수정(0011) → v0.3 대상·범위 조정(0012) → v0.3.1 검증 수정(0013) → v0.3.2 P1~P4 채택(0015)
+- **버전**: 설계 v0.3.3 (2026-09-25) — X1 실험 결과 반영(0021): **α 기각**(0018), β 기본 모드 변경(0019)
+- **이력**: v0.1 기법 모듈 중심(0008) → v0.2 범용성 2계층(0010) → v0.2.1 논리 수정(0011) → v0.3 대상·범위 조정(0012) → v0.3.1 검증 수정(0013) → v0.3.2 P1~P4 채택(0015) → v0.3.3 X1 결과 반영(0021)
 - **근거 기록**: [0006](../research/0006-novel-technique-exploration.md), [0009](../research/0009-use-case-analysis.md), [0010](../research/0010-universality-redesign.md), [0011](../research/0011-design-v02-verification.md), [0012](../research/0012-revision-v03.md), [0013](../research/0013-revision-v03-verification.md)
 
 ---
@@ -21,7 +21,7 @@
 | 계층 | 역할 | 가치 | 원칙 |
 |---|---|---|---|
 | **범용 접근 계층** | 누구나 한 줄로 쓰게 한다. 환경을 감지하고, 예산을 산정하고, 기법을 골라 적용하고, 결과를 설명한다 | 실용성, 범용성 | 기존 검증된 기법은 **재구현하지 않고 선택적 백엔드로 연결** |
-| **연구 코어** | memopro 고유 기법 (α rfc, β hibernate, γ elastic, census) | 신규성, 학술성 | 선행 사례 조사와 검증 관문을 통과한 것만 |
+| **연구 코어** | memopro 고유 기법 (β hibernate, census, γ elastic. ~~α rfc~~ — 0018 기각) | 신규성, 학술성 | 선행 사례 조사와 검증 관문을 통과한 것만 |
 
 ## 1. 설계 원칙
 
@@ -55,7 +55,7 @@
 └──────────────────────────────────────┬─────────────────────────────────────────────┘
 ┌──────────────────────────── ③ 기법 레지스트리 (Technique 인터페이스) ─────────────────┐
 │  연구 코어 (memopro 고유)                  │  기존 기법 연동 (선택적 백엔드, 재구현 금지)       │
-│  α rfc 잔차 고정점 체크포인팅 (Gα 통과 시)   │  가중치 양자화: bitsandbytes / torchao / HQQ     │
+│  (α rfc — 0018 실험으로 기각)              │  가중치 양자화: bitsandbytes / torchao / HQQ     │
 │  β hibernate 유휴 텐서 동면                 │  지연 로딩: safetensors mmap                    │
 │  γ elastic OS 압박 탄력 런타임               │  오프로드: accelerate (CPU·디스크)               │
 │  census 메모리 정보 센서스                   │  체크포인팅: torch.utils.checkpoint             │
@@ -126,14 +126,13 @@ int8과 int4처럼 서로 **대체** 관계인 기법은 같은 구성에 함께
 | 0 | 혼합 정밀도(bf16) | 수치 변경 | quality 범위 내 | 기존 연동 |
 | 1 | 활성값 체크포인팅 | **정확** | ✅ | 기존 연동 |
 | 2 | 활성값 오프로드 (분리형 GPU 전용) | 정확 | ✅ | 기존 연동 (Unsloth 방식) |
-| 3 | **α 잔차 고정점 체크포인팅** (Gα 통과 시) | 수치 변경 (오차 자체 측정·폴백) | quality 범위 내 | **memopro 고유** |
+| ~~3~~ | ~~α 잔차 고정점 체크포인팅~~ — **0018에서 기각** (교정이 오차를 키움) | — | — | — |
 | 4 | 8비트 옵티마이저 | 수치 변경 | quality 범위 내 | 기존 연동 |
 | 5 | 마이크로배치 + 그래디언트 누적 | 정확, 단 **BatchNorm·손실 정규화 감지 시 경고** | ✅ (조건부) | 기존 연동 |
 | 6 | 옵티마이저 상태 CPU 오프로드 (분리형 GPU 전용) | 정확 | ✅ | 기존 연동 |
 | 7 | LoRA / QLoRA 전환 | **의미 변경** | ❌ 제안만 | 기존 연동 |
 
-**α의 위치 (0011 L10)**: 분리형 GPU에 호스트 RAM이 넉넉하면 활성값 오프로드(#2)가 오버헤드 면에서 유리하다.
-α를 우선하는 조건은 ① 통합 메모리(오프로드할 다른 풀이 없음) ② 호스트 RAM도 부족한 환경 ③ 오프로드와 결합(4비트 힌트를 오프로드하면 전송량이 약 3.4배 감소)이다.
+**활성값 병목 (0009 관찰, 유효)**: LoRA·QLoRA 이후 남는 활성값 병목은 기존 기법 #1(체크포인팅)과 #2(오프로드)로 대응한다. α로 줄이려던 계획은 0018에서 기각되었다.
 
 **개발 세션** (노트북·REPL): β 동면 + census 경고 ("이 셀 이후 메모리 3.2GB 증가, 유휴 텐서 2.1GB 회수 가능")
 
@@ -144,7 +143,7 @@ int8과 int4처럼 서로 **대체** 관계인 기법은 같은 구성에 함께
 | 종류 | 예 | 실패·변경 시 |
 |---|---|---|
 | **로드 시점형** | 가중치 양자화, 지연 로딩, 장치 배치 | 로드 **전에** 구성을 결정한다. 실패하면 원본에서 **다음 구성으로 다시 로드**한다. 원본 사본을 메모리에 들고 있지 않는다(절감이 사라지므로) |
-| **실행 시점형** | 체크포인팅, α, β, 마이크로배치, γ 조정 | `apply`/`revert`로 되돌릴 수 있다 |
+| **실행 시점형** | 체크포인팅, β, 마이크로배치, γ 조정 | `apply`/`revert`로 되돌릴 수 있다 |
 
 - 적용 중 예외가 나면 해당 기법만 포기하고 다음 구성이나 원래 경로로 계속 진행한다. 모든 과정은 `report()`에 기록한다.
 - 잡을 수 있는 OOM(`torch.OutOfMemoryError`, MPS 할당 실패)은 구성을 한 단계 내려 재시도한다.
@@ -162,7 +161,7 @@ int8과 int4처럼 서로 **대체** 관계인 기법은 같은 구성에 함께
 | **L0 코드 수정 없음** | 서비스 운영자, 비개발자 | CLI, 환경변수, 설정 파일 | `memopro run app.py --budget auto` |
 | **L1 한 줄** | 대부분의 사용자 | `load`, `optimize`, `train_session`, `%load_ext` | `model = memopro.load("모델ID")` |
 | **L2 손잡이** | 실무자 | `budget`, `quality`, `prefer="speed"｜"memory"`, `allow=[…]`, `deny=[…]` | `memopro.load(id, budget="6GB", quality="lossless")` |
-| **L3 개별 기법** | 전문가, 연구자 | 기법 직접 호출 | `memopro.rfc.wrap(model, hint_bits=3)` |
+| **L3 개별 기법** | 전문가, 연구자 | 기법 직접 호출 | `memopro.hibernate.now(obj, mode="spill")`, `memopro.census.record(..., mode="deep")` |
 | **L4 확장·코어** | 라이브러리 제작자, Rust 개발자 | `Technique` 플러그인 작성, Rust 크레이트 | `@memopro.register_technique` / `use memopro::codec` |
 
 ### 4.1 L1 핵심 API (설계안)
@@ -197,7 +196,7 @@ memopro check <모델ID 또는 스크립트>   # [v0.2] 이 PyTorch 모델이 �
 memopro run app.py --budget auto     # [v0.4] 프로세스 수준 기능(β, γ, census, 로딩 정책) 적용 후 실행
 ```
 - `memopro run`은 `from_pretrained` 로딩 정책 적용, β, γ, census처럼 **모델 코드를 몰라도 되는 기능**만 자동 적용한다. 전역 패치는 이 모드에서만 허용한다(P4 예외).
-- 모델 구조가 필요한 α 같은 기법은 L1 이상에서 사용한다.
+- 모델 구조가 필요한 기법(예: 학습 후보 기법)은 L1 이상에서 사용한다.
 
 ### 4.3 생태계 통합 (`memopro.integrations`)
 | 대상 | 형태 |
@@ -214,7 +213,7 @@ memopro run app.py --budget auto     # [v0.4] 프로세스 수준 기능(β, γ,
 
 ```python
 class Technique(Protocol):
-    name: str                       # "quant.int4.bnb", "rfc", "hibernate" ...
+    name: str                       # "quant.int4.bnb", "hibernate", "census" ...
     stage: set[Stage]               # {INFER, TRAIN, DEV}
     quality: QualityGrade           # LOSSLESS | NEAR_LOSSLESS | SMALL_LOSS | ...
     fidelity: Fidelity              # EXACT | NUMERICS(품질 등급 선언) | SEMANTICS(제안만)
@@ -234,7 +233,9 @@ class Technique(Protocol):
 
 ## 5.1 연구 코어 기법 설계 (설계 v0.1에서 이어짐, β는 0011·0013 수정)
 
-### α. rfc (잔차 고정점 체크포인팅)
+### α. rfc (잔차 고정점 체크포인팅) — ⚠️ 0018에서 기각 (기록 보존용)
+
+> E001~E003 결과: 사전학습 GPT-2의 블록은 모든 층에서 ρ > 1(비수축)이고, 역순 체인은 위층 오차를 교정 없이 누적한다. 교정 반복은 교정 없는 힌트(k=0)보다 그래디언트를 나쁘게 만들었다(4비트 k=3 코사인 0.786 대 k=0 0.997). 아래 설계는 기록으로만 남긴다.
 
 ```
 순전파:  x_0 ─[블록0]→ x_1 ─[블록1]→ … → x_L
@@ -287,13 +288,21 @@ class Technique(Protocol):
 **동면 실행 (메모리를 늘리지 않게)**
 - **청크 단위 스트리밍**: 장치 → 호스트 복사와 압축을 청크(기본 64MB) 단위로 처리해 순간 증가량에 상한을 둔다 (V6).
 - 가용 여유가 버퍼보다 작으면 압축 없이 디스크 방출을 우선한다.
-- 모드: `lossless`(기본, Rust codec) / `lossy-bf16` / `spill`(SSD)
+- 모드 (0021 D2, E005 근거):
+
+| 대상 | 기본 모드 | 비고 |
+|---|---|---|
+| CPU 텐서·모듈 (≥ 1MB) | **`spill`**: 바이트 셔플 + zstd 압축 후 SSD 기록, RAM 해제 | RAM 안 무손실 압축은 fp32에서 약 14% 절감에 그친다(0019). 압축은 방출 파일·I/O 절감용 |
+| CUDA 텐서 (VRAM) | **호스트 RAM으로 이동**(무손실), 호스트 부족 시 `spill` | VRAM 회수가 1순위 가치 |
+| 모든 장치, 선택 | `lossy-bf16` (**명시적 선택만**) | 수치 변경 등급. fp32 대비 2.75~3.8배(0019) |
+| RAM 안 무손실 (`lossless`) | 선택 사항 | 저장 활성값처럼 압축이 잘 되는 경우(1.6배)에만 의미 |
+| 1MB 미만 객체 | 제안 대상 제외 | 방출 비용 대비 이득이 작음 |
 
 **회수 확인 (실측)**
 - 해제 후 `torch.mps.empty_cache()` / `torch.cuda.empty_cache()`를 호출한다.
 - 절감량은 논리 바이트가 아니라 **실측 회수량**(프로세스 RSS, `torch.mps.driver_allocated_memory()`, `torch.cuda.memory_reserved()`)으로 보고한다 (V7).
 
-- API: `%load_ext memopro`(제안 표시) · `%hibernate <이름>` · `memopro.hibernate.now(obj, mode="lossless"｜"lossy-bf16"｜"spill")` · `memopro.hibernate.suggest()` · `memopro.hibernate.enable(auto=False, idle_cells=3, idle_seconds=None, spill_dir=None)`
+- API: `%load_ext memopro`(제안 표시) · `%hibernate <이름>` · `memopro.hibernate.now(obj, mode="spill"(CPU 기본)｜"host"(CUDA 기본)｜"lossy-bf16"｜"lossless")` · `memopro.hibernate.suggest()` · `memopro.hibernate.enable(auto=False, idle_cells=3, idle_seconds=None, spill_dir=None)`
 
 ### census — v0.1, 0013 V9·V10 수정
 
@@ -312,7 +321,7 @@ class Technique(Protocol):
 |---|---|---|
 | **`hwinfo`** (v0.1) | 풀별 예산 벡터의 OS 수준 기반: 물리·가용 RAM, 스왑, **cgroup v1/v2 한도**, 통합 메모리 여부, 디스크 여유·속도 | `sysinfo` 크레이트(cgroup 한도 포함)를 의존성으로 쓰고 빠진 부분만 구현 (0011 L13). MPS 권장 한도는 Python에서 torch로 조회 (0013 V12) |
 | `pressure` (v0.4) | OS 메모리 압박 구독 (macOS memory pressure, Linux PSI) | γ. v0.1의 β는 유휴 기준으로만 동작 (0013 V14) |
-| `codec` (v0.1) | 바이트 셔플 + **zstd 크레이트**로 부동소수 무손실 압축, lowbit(2/3/4비트) | β, census, α(CPU 기준 구현). **기존 크레이트 위에 얇게 구현하며 신규성 주장 없음** (0013 V11). 성능 부족 시 blosc2 연동 검토 |
+| `codec` (v0.1) | 바이트 셔플 + **zstd 크레이트**로 부동소수 무손실 압축, lowbit(2/3/4비트) | β(방출 파일 압축), census. **기존 크레이트 위에 얇게 구현하며 신규성 주장 없음** (0013 V11). 성능 부족 시 blosc2 연동 검토 |
 | `ledger`, `spill` (v0.1), `policy` | 텐서 원장, SSD 방출(청크 스트리밍), 결정 로직 | β, γ |
 | `census` (v0.1) | 표본 엔트로피 등 통계 커널 | census |
 
@@ -333,9 +342,9 @@ python/memopro/
 │   └── budget.py
 ├── techniques/            # Technique 레지스트리
 │   ├── base.py            #   인터페이스, 품질 등급
-│   ├── native/            #   연구 코어 어댑터: rfc, hibernate, elastic
+│   ├── native/            #   연구 코어 어댑터: hibernate, census, elastic
 │   └── integrations/      #   기존 기법 연동: bnb, torchao, hqq, accelerate, safetensors, checkpoint, optim8bit, kvcache
-├── rfc/  hibernate/  elastic/  census/   # 연구 코어 본체 (§5.1)
+├── hibernate/  elastic/  census/         # 연구 코어 본체 (§5.1)
 ├── integrations/          # 생태계 통합: hf, peft_trl, diffusers, lightning, ipython
 ├── config.py              # memopro.toml, MEMOPRO_* 환경변수
 └── _core.*.so             # Rust 확장
@@ -371,5 +380,5 @@ python/memopro/
 | 최소 Python | 3.10 (abi3) |
 | GitHub 위치 | 사용자 결정 |
 | 이름 선점 0.0.1 | 사용자 확인 후 |
-| α 채택 | 관문 Gα 통과 시 학습 후보 구성 칸 2로 등록 |
+| α 채택 | **0018에서 기각** (0021 D1) |
 | 첫 연동 백엔드 범위 (v0.2) | 권고: safetensors, accelerate, torch checkpoint, torchao, bitsandbytes(CUDA·MPS — MPS는 torch ≥ 2.9 필요, 0011) |
