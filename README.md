@@ -1,0 +1,113 @@
+# memopro
+
+> **메모리가 부족해도, PyTorch 개발자라면 누구나 큰 모델을.**
+> 내 기기의 실제 가용 메모리에 맞춰, 자기 프로젝트·서비스·개발·학습에서 딥러닝 모델의 메모리 부담을 줄여 주는 Rust + Python 라이브러리.
+
+- **Python** (PyPI `memopro`): PyTorch 개발자를 위한 한 줄 인터페이스
+- **Rust** (crates.io `memopro`): 프레임워크와 무관한 메모리 코어 (환경·예산 감지, 부동소수 압축, 텐서 원장, SSD 방출)
+
+> 여기서 "메모리"는 에이전트·대화 기억(agent memory)이 아니라 GPU/RAM **하드웨어 메모리**를 뜻한다.
+
+상태: **S1 기반 구축 완료(0.0.1 뼈대), X1 첫 실험 진행** (2026-09-25) — 아래 기능 코드는 설계안이며 아직 구현되지 않았다.
+
+---
+
+## 1. 목표와 대상
+
+| # | 목표 |
+|---|---|
+| 궁극 | 메모리가 부족한 **PyTorch 개발자** 누구나, 자기 프로젝트·서비스·개발·학습에서 큰 메모리를 요구하는 모델을 쉽게 쓴다 |
+| G1 | AI 개발·학습·활용 **전 단계**에서 메모리 부담 최소화 |
+| G2 | 극한의 효율로 **더 작은 메모리 환경**에서 구동 |
+| G3 | 메모리 **하드웨어 병목** 극복 |
+
+- **대상**: 직접 만든 모델, 이미지 생성·비전·오디오 모델, Python 코드 안의 LLM, 파인튜닝, 연구 코드, Python 기반 서비스를 다루는 PyTorch 개발자
+- **대상 아님**: 코드 없이 LLM 앱을 쓰려는 최종 사용자
+
+## 2. 이렇게 쓴다 (설계안)
+
+**v0.1: 진단·회수**
+```bash
+pip install "memopro[torch]"
+memopro doctor        # 내 환경의 풀별 예산: 장치·호스트 RAM·디스크 (컨테이너 한도, Apple Silicon 한도 반영)
+```
+```python
+import memopro
+
+%load_ext memopro     # 한동안 안 쓴 텐서·모델과 회수 가능량을 제안
+%hibernate old_model  # β: 제안받은 객체를 압축·방출, 다시 쓰면 복원 (자동 모드는 선택 — 0015 P4)
+
+with memopro.census.record(model, optimizer) as c:    # 메모리가 어디에 쓰이고, 얼마나 중복(낭비)인가
+    loss = model(**batch).loss; loss.backward()
+print(c.summary())
+```
+
+**v0.2: 내 예산에 맞추기**
+```python
+model = memopro.optimize(model, goal="infer")          # 예산에 맞는 구성 자동 선택·적용
+with memopro.train_session(model, optimizer, batch_size=32) as s:
+    for batch in s.batches(loader):
+        s.step(model(**batch).loss)
+memopro.report()   # 무엇을 적용했고, 실측으로 얼마나 줄였고, 품질·속도는 어떻게 변했는지
+```
+
+**v0.3~**: α 잔차 고정점 체크포인팅(검증 통과 시), γ 탄력 런타임과 코드 수정 없는 실행 `memopro run app.py`
+
+## 3. 구조: 2계층
+
+| 계층 | 내용 | 가치 |
+|---|---|---|
+| **범용 접근 계층** | 환경 감지 → **풀별 예산 벡터**(장치·호스트·디스크) → 후보 구성 중 예산에 맞는 것을 선택 → 적용 → 실측 보고. 검증된 기존 기법(양자화, 오프로드, 지연 로딩, 체크포인팅 등)은 **재구현하지 않고 연결** | 누구나, 바로 |
+| **연구 코어** (memopro 고유) | **β** 유휴 텐서 동면 · **census** 메모리 중복도 측정 · **α** 잔차 고정점 체크포인팅(검증 전) · **γ** OS 메모리 압박 탄력 런타임 | 새로움, 학술 기여 |
+
+### 연구 코어 요약
+- **β 유휴 텐서 동면** (v0.1): 노트북·REPL에서 한동안 쓰지 않은 텐서와 모델을 **제안**하고, 사용자가 한 줄로 압축하거나 SSD로 내보내며, 다시 쓰는 순간 복원한다. 1순위 환경은 CUDA GPU 메모리와 스왑 없는 환경이다(0015 P3). 참조 관계를 분석해 안전한 대상만 고르고, 동면 과정에서 메모리가 튀지 않게 청크 단위로 처리하며, 절감량은 **실측**으로 보고한다.
+- **census** (v0.1): 메모리가 "어디에" 쓰이는지를 넘어, 저장된 텐서가 실제로 담고 있는 정보량 대비 **얼마나 중복(낭비)인지**를 측정한다.
+- **α 잔차 고정점 체크포인팅** (v0.3, 관문 통과 시): 잔차 블록의 입력은 방정식 `x = x_{l+1} − f(x)`의 해이다. 활성값을 4비트 힌트로만 저장하고 역전파 때 이 방정식으로 교정한다. 고유 영역은 통합 메모리(Apple Silicon), 호스트 RAM도 부족한 환경, 오프로드와의 결합이다.
+- **γ 탄력 런타임** (v0.4): 실행 중 메모리 압박에 따라 구성을 바꾼다. OOM 대신 단계적으로 열화한다.
+
+## 개발 환경 (S1)
+
+```bash
+python3 -m venv .venv && .venv/bin/pip install "maturin>=1.9,<2" pytest ruff
+VIRTUAL_ENV=$PWD/.venv .venv/bin/maturin develop --release   # Rust 확장 빌드 + 설치
+.venv/bin/pytest -q                                           # Python 테스트
+cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test -p memopro
+.venv/bin/maturin build --release --out dist                  # wheel (abi3, Python ≥ 3.10)
+```
+
+구성: Rust 코어 `crates/memopro`(crates.io) · PyO3 바인딩 `crates/memopro-py`(비공개) · Python 패키지 `python/memopro`(PyPI) · 실험 `experiments/`(환경 자동 기록 하네스 포함)
+
+## 4. 설계 문서
+
+- [architecture.md](docs/design/architecture.md): 2계층 구조, 원칙 U1~U9, 풀별 예산 벡터, 후보 구성 선택, 충실도 3분류, β·census 상세 설계
+- [use-cases.md](docs/design/use-cases.md): 환경별 시나리오와 적용 범위
+- [development-plan.md](docs/design/development-plan.md): 트랙 N(고유 기법) / A(범용 접근) / R(연구), 관문, 완료 조건, 위험
+
+## 5. 로드맵
+
+| 단계 | 내용 | 배포 | 상태 |
+|---|---|---|---|
+| S0 | 조사, 방향 설정, 설계, 검증 (연구 기록 0001~0015) | | ✅ |
+| S1 | 기반 구축 + 걷는 뼈대: git, 가상환경, Cargo workspace, PyO3·maturin, CI 설정, `Technique` 뼈대, 실험 하네스, wheel·sdist·crate 패키징 확인 | 0.0.1 (로컬 빌드만, 미배포) | ✅ |
+| X1 | **첫 실험** (0015 P1): α E001~E003, 텐서 중복도·OS 압축 기준선 E005, 노트북 유휴 계측 도구 E006 | | ⏳ 진행 |
+| A1 | Rust 코어(v0.1 범위): hwinfo(sysinfo 기반, cgroup), codec(셔플 + zstd), ledger, spill, census 커널 | | |
+| N1 | **doctor + census + β** | 🚀 v0.1.0 (crates.io + PyPI) | |
+| R1 · R2 | α 잔여 실험(E004) · 메모리 센서스 연구 (census와 코드 공유) | | |
+| A2 | 범용 접근: `optimize`, `train_session`, `load`, `check`, 생태계 통합 | 🚀 v0.2.0 | |
+| ◆ Gα → N2 | α 등록 + 논문 초안 | 🚀 v0.3.0 | |
+| ◆ Gγ → N3 | γ + pressure + `memopro run` | 🚀 v0.4.0 | |
+| S6 | 안정화, 문서 사이트(영어·한국어) | 🚀 v1.0.0 | |
+
+## 6. 원칙 (요약)
+
+설정 없이 동작 · memopro 자신의 오류로는 멈추지 않고 OOM은 사전 예방 · 약속한 품질 이상으로 손실을 내지 않음 · 충실도 3분류(정확 / 수치 변경 / 의미 변경은 제안만) · 예상 메모리와 대략적 속도를 먼저 알려줌 · 절감량은 실측으로 보고 · 풀별(장치·호스트·디스크) 실제 가용 메모리 기준 · 기존 기법은 재구현하지 않고 연결
+
+## 7. 연구 기록
+
+모든 단계의 결정·실험·결과는 논문과 연구보고서 작성을 위해 [docs/research/](docs/research/)에 기록한다.
+방향의 변화(플래너 → 고유 기법 → 범용 2계층 → 검증 → 대상 재정의)도 0001~0013에 남아 있다.
+
+## License
+
+MIT OR Apache-2.0 (둘 중 선택). S1에서 권고안을 적용했으며 변경 가능하다 (0015).

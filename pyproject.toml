@@ -1,0 +1,42 @@
+[build-system]
+requires = ["maturin>=1.9,<2.0"]
+build-backend = "maturin"
+
+[project]
+name = "memopro"
+description = "Memory relief and redundancy diagnostics for PyTorch developers with limited GPU/RAM (early development)."
+readme = "README.en.md"
+requires-python = ">=3.10"
+license = "MIT OR Apache-2.0"
+license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
+keywords = ["memory", "deep-learning", "pytorch", "compression", "gpu"]
+classifiers = [
+    "Development Status :: 2 - Pre-Alpha",
+    "Intended Audience :: Developers",
+    "Intended Audience :: Science/Research",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Rust",
+    "Topic :: Scientific/Engineering :: Artificial Intelligence",
+]
+dynamic = ["version"]
+dependencies = []
+
+[project.optional-dependencies]
+torch = ["torch>=2.4"]
+dev = ["pytest>=8", "ruff>=0.6"]
+
+[tool.maturin]
+python-source = "python"
+module-name = "memopro._core"
+manifest-path = "crates/memopro-py/Cargo.toml"
+features = ["pyo3/extension-module"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py310"
+
+[tool.ruff.lint.isort]
+known-first-party = ["memopro", "experiments"]

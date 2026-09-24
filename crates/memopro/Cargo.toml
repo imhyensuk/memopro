@@ -1,0 +1,12 @@
+[package]
+name = "memopro"
+description = "Framework-agnostic memory toolkit for deep learning workloads: memory budgets, tensor compression and spill (early development)."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+readme = "README.md"
+keywords = ["memory", "deep-learning", "compression", "pytorch"]
+categories = ["memory-management", "science"]
+
+[dependencies]

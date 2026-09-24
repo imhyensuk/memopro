@@ -1,0 +1,13 @@
+[workspace]
+resolver = "3"
+members = ["crates/memopro", "crates/memopro-py"]
+
+[workspace.package]
+version = "0.0.1"
+edition = "2024"
+rust-version = "1.85"
+license = "MIT OR Apache-2.0"
+
+[profile.release]
+lto = "thin"
+codegen-units = 1
