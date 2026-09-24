@@ -1,0 +1,310 @@
+{
+  "experiment": "E003",
+  "config": {
+    "batch": 4,
+    "seq_len": 512,
+    "e002": "/Users/imhyeonseok/Desktop/memopro/docs/research/data/e002/results.json",
+    "out": "/Users/imhyeonseok/Desktop/memopro/docs/research/data/e003",
+    "explore_bits": [
+      2,
+      3,
+      4
+    ],
+    "explore_ks": [
+      0,
+      1,
+      2,
+      3,
+      5
+    ]
+  },
+  "validation": {
+    "max_hidden_rel_err_l0_to_l11": 0.0,
+    "last_hidden_rel_err_raw": 1.5839409828186035,
+    "last_hidden_rel_err_after_ln_f": 0.0,
+    "logits_rel_err": 0.0,
+    "valid": true
+  },
+  "sanity_exact_inputs": {
+    "cosine": 1.0000000000541545,
+    "rel_l2_error": 0.0,
+    "per_tensor_cosine_min": 0.9999999999998516,
+    "per_tensor_cosine_median": 0.9999999999999998,
+    "worst_tensors": [
+      "transformer.h.10.mlp.c_fc.weight",
+      "transformer.h.0.mlp.c_proj.weight",
+      "transformer.h.6.mlp.c_proj.weight",
+      "transformer.h.8.attn.c_attn.weight",
+      "transformer.h.9.mlp.c_proj.weight"
+    ],
+    "finite": true,
+    "loss_ref": 3.6317026615142822,
+    "loss_manual": 3.6317028999328613,
+    "valid": true
+  },
+  "H3": {
+    "selected_accel_from_E002": "anderson",
+    "main_cosine_b4_k3": 0.7861944580518584,
+    "control_cosine_b4_k0": 0.9970820966087204,
+    "H3_pass": false
+  },
+  "runs": [
+    {
+      "bits": 2,
+      "k": 0,
+      "accel": "none",
+      "cosine": 0.9757785578312612,
+      "rel_l2_error": 0.21964928772152753,
+      "per_tensor_cosine_min": -0.5717894430409771,
+      "per_tensor_cosine_median": 0.45797142984740985,
+      "worst_tensors": [
+        "transformer.h.5.ln_1.weight",
+        "transformer.h.7.ln_1.weight",
+        "transformer.h.1.ln_2.weight",
+        "transformer.h.11.ln_1.weight",
+        "transformer.h.1.ln_1.weight"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 2,
+      "k": 1,
+      "accel": "anderson",
+      "cosine": 0.8870337515726507,
+      "rel_l2_error": 0.5045453873340758,
+      "per_tensor_cosine_min": -0.7135787740487315,
+      "per_tensor_cosine_median": 0.3054082247221438,
+      "worst_tensors": [
+        "transformer.h.3.ln_2.weight",
+        "transformer.h.6.ln_2.weight",
+        "transformer.h.5.ln_2.weight",
+        "transformer.h.2.ln_1.weight",
+        "transformer.h.0.ln_1.weight"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 2,
+      "k": 2,
+      "accel": "anderson",
+      "cosine": 0.9218287601254679,
+      "rel_l2_error": 0.40649366506236223,
+      "per_tensor_cosine_min": -0.69513407908385,
+      "per_tensor_cosine_median": 0.18802206788672546,
+      "worst_tensors": [
+        "transformer.h.11.ln_1.weight",
+        "transformer.h.5.ln_2.weight",
+        "transformer.h.4.ln_2.weight",
+        "transformer.h.6.ln_2.weight",
+        "transformer.h.7.ln_1.weight"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 2,
+      "k": 3,
+      "accel": "anderson",
+      "cosine": 0.9513434536942806,
+      "rel_l2_error": 0.31404358372420377,
+      "per_tensor_cosine_min": -0.6358737991636928,
+      "per_tensor_cosine_median": 0.15623610571931315,
+      "worst_tensors": [
+        "transformer.h.11.ln_1.weight",
+        "transformer.h.10.ln_1.weight",
+        "transformer.h.7.ln_1.weight",
+        "transformer.h.4.ln_2.weight",
+        "transformer.h.4.ln_2.bias"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 2,
+      "k": 5,
+      "accel": "anderson",
+      "cosine": 0.7605062609929408,
+      "rel_l2_error": 0.8180572656352343,
+      "per_tensor_cosine_min": -0.7586970396715681,
+      "per_tensor_cosine_median": 0.05669731117675845,
+      "worst_tensors": [
+        "transformer.h.7.ln_1.weight",
+        "transformer.h.11.ln_1.weight",
+        "transformer.h.0.ln_2.weight",
+        "transformer.h.9.ln_1.weight",
+        "transformer.h.8.ln_2.weight"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 3,
+      "k": 0,
+      "accel": "none",
+      "cosine": 0.990105120526333,
+      "rel_l2_error": 0.14032948284063557,
+      "per_tensor_cosine_min": -0.2390077150921048,
+      "per_tensor_cosine_median": 0.8199505666581405,
+      "worst_tensors": [
+        "transformer.h.1.ln_2.weight",
+        "transformer.h.5.ln_1.weight",
+        "transformer.h.1.ln_1.weight",
+        "transformer.h.2.ln_1.weight",
+        "transformer.h.1.mlp.c_proj.weight"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 3,
+      "k": 1,
+      "accel": "anderson",
+      "cosine": 0.8695811368032336,
+      "rel_l2_error": 0.5510861795391627,
+      "per_tensor_cosine_min": -0.3416887907212809,
+      "per_tensor_cosine_median": 0.5007263953766579,
+      "worst_tensors": [
+        "transformer.h.1.ln_1.weight",
+        "transformer.h.5.ln_2.weight",
+        "transformer.h.3.ln_2.weight",
+        "transformer.h.3.ln_1.weight",
+        "transformer.h.4.ln_1.weight"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 3,
+      "k": 2,
+      "accel": "anderson",
+      "cosine": 0.8650024973522833,
+      "rel_l2_error": 0.5601228706591437,
+      "per_tensor_cosine_min": -0.8135837764323974,
+      "per_tensor_cosine_median": 0.2610267572730462,
+      "worst_tensors": [
+        "transformer.h.3.ln_2.weight",
+        "transformer.h.1.ln_1.weight",
+        "transformer.h.1.ln_2.weight",
+        "transformer.h.11.ln_1.weight",
+        "transformer.h.3.ln_1.weight"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 3,
+      "k": 3,
+      "accel": "anderson",
+      "cosine": 0.8643762246689932,
+      "rel_l2_error": 0.5623805605245983,
+      "per_tensor_cosine_min": -0.3274835674956844,
+      "per_tensor_cosine_median": 0.23126295253076237,
+      "worst_tensors": [
+        "transformer.h.4.ln_2.weight",
+        "transformer.h.8.ln_2.weight",
+        "transformer.h.1.ln_1.weight",
+        "transformer.h.5.ln_2.weight",
+        "transformer.h.0.ln_2.weight"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 3,
+      "k": 5,
+      "accel": "anderson",
+      "cosine": 0.7956803923973658,
+      "rel_l2_error": 0.7335526754547771,
+      "per_tensor_cosine_min": -0.5463731608888743,
+      "per_tensor_cosine_median": 0.21217923771669567,
+      "worst_tensors": [
+        "transformer.h.9.ln_1.weight",
+        "transformer.h.6.ln_1.weight",
+        "transformer.h.4.ln_2.weight",
+        "transformer.h.8.ln_2.weight",
+        "transformer.h.1.ln_2.weight"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 4,
+      "k": 0,
+      "accel": "none",
+      "cosine": 0.9970820966087204,
+      "rel_l2_error": 0.07633814206530663,
+      "per_tensor_cosine_min": 0.5552453039241276,
+      "per_tensor_cosine_median": 0.9599947427835563,
+      "worst_tensors": [
+        "transformer.h.1.ln_2.weight",
+        "transformer.h.1.ln_1.weight",
+        "transformer.h.1.mlp.c_proj.weight",
+        "transformer.h.4.ln_1.weight",
+        "transformer.h.2.ln_1.weight"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 4,
+      "k": 1,
+      "accel": "anderson",
+      "cosine": 0.8329476987669342,
+      "rel_l2_error": 0.6479023721260991,
+      "per_tensor_cosine_min": -0.2573633674101583,
+      "per_tensor_cosine_median": 0.6757459144262586,
+      "worst_tensors": [
+        "transformer.h.0.ln_2.weight",
+        "transformer.h.4.ln_2.weight",
+        "transformer.h.5.ln_1.weight",
+        "transformer.h.2.ln_1.bias",
+        "transformer.h.2.attn.c_attn.bias"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 4,
+      "k": 2,
+      "accel": "anderson",
+      "cosine": 0.6880184452070902,
+      "rel_l2_error": 1.0315829083783319,
+      "per_tensor_cosine_min": -0.843863134018301,
+      "per_tensor_cosine_median": 0.2576864258758302,
+      "worst_tensors": [
+        "transformer.h.6.ln_1.weight",
+        "transformer.h.2.ln_1.weight",
+        "transformer.h.5.ln_2.bias",
+        "transformer.h.4.ln_2.weight",
+        "transformer.h.2.ln_1.bias"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 4,
+      "k": 3,
+      "accel": "anderson",
+      "cosine": 0.7861944580518584,
+      "rel_l2_error": 0.758276776370497,
+      "per_tensor_cosine_min": -0.8361643172234688,
+      "per_tensor_cosine_median": 0.23212023117136835,
+      "worst_tensors": [
+        "transformer.h.6.ln_1.weight",
+        "transformer.h.3.ln_2.weight",
+        "transformer.h.0.ln_2.weight",
+        "transformer.h.1.ln_1.weight",
+        "transformer.h.3.ln_1.weight"
+      ],
+      "finite": true
+    },
+    {
+      "bits": 4,
+      "k": 5,
+      "accel": "anderson",
+      "cosine": 0.893155724531666,
+      "rel_l2_error": 0.4866961880400021,
+      "per_tensor_cosine_min": -0.7137928977481167,
+      "per_tensor_cosine_median": 0.18106716502139875,
+      "worst_tensors": [
+        "transformer.h.6.ln_1.weight",
+        "transformer.h.4.ln_2.weight",
+        "transformer.h.0.ln_2.weight",
+        "transformer.h.1.ln_1.weight",
+        "transformer.h.1.ln_2.weight"
+      ],
+      "finite": true
+    }
+  ],
+  "runtime_s": 601.1,
+  "peak_rss_bytes": 3521904640
+}
