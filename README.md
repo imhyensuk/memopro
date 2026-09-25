@@ -9,7 +9,7 @@
 
 > 여기서 "메모리"는 에이전트·대화 기억(agent memory)이 아니라 GPU/RAM **하드웨어 메모리**를 뜻한다.
 
-상태: **v0.1 기능 전체 동작 (개발판, 미배포)** (2026-09-25) — doctor, census, β hibernate(방법 5종, 노트북 통합), HF·Lightning 콜백. 배포 전 검증(CUDA 실기, Linux 컨테이너, E009~E011 실험)이 남아 있다. v0.2·v0.3 기능은 호출하면 `NotYetImplemented`가 예정 버전을 알려 준다.
+상태: **알파 준비 (0.1.0a1, 미배포)** (2026-09-25) — doctor, census, β hibernate(방법 5종, 노트북 통합), HF·Lightning 콜백. Linux(CI, 메모리 제한 컨테이너 포함)와 macOS에서 검증했다. 실제 NVIDIA GPU 검증(Colab), E009~E011 실험은 남아 있다. 배포 후 설치: `pip install --pre "memopro[torch]"`. v0.2·v0.3 기능은 호출하면 `NotYetImplemented`가 예정 버전을 알려 준다.
 
 ---
 
@@ -135,6 +135,8 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 - `source` 복원은 Hugging Face `from_pretrained`로 불러온 safetensors 모델(로컬 폴더 또는 HF 캐시)과 `register_source`로 등록한 파일에서만 쓸 수 있다. 불러온 뒤 바뀐 텐서는 비트 단위 확인에서 걸러져 다른 방법으로 넘어간다. **동면 중에 원본 파일을 바꾸면 복원이 거부된다**(데이터 복구 불가, `IntegrityError`).
 - 동면 중인 텐서를 직접 쓰면 크기 0이라 오류가 난다(조용히 틀리지 않음). 모듈과 옵티마이저는 호출·`step()`·진행 중이던 역전파에서 스스로 깨어난다. 노트북의 텐서 대리 객체는 `isinstance`·`id()`가 원래 텐서와 다르다.
 - 다른 텐서와 메모리를 공유하는 텐서(뷰, 역전파용으로 저장된 텐서)와 meta 텐서는 동면하지 않고 이유를 알려 준다(0041). 공유 판정에는 torch 내부 API를 쓰며, 없으면 뷰 여부만 검사한다.
+- 동면 중인 모듈·옵티마이저는 `state_dict`, `load_state_dict`, `torch.save`/pickle, `copy.deepcopy`, `.to()`/`.double()`, `parameters()`, `optimizer.step()`에서도 먼저 깨어난다(0048). 복원할 수 없게 되면(원본 파일 변경, 방출 파일 손실) 조용히 계속하지 않고 `IntegrityError`를 내며, `handle.discard()`로만 포기할 수 있다.
+- "비트 단위 동일"은 **텐서 값**에 대한 보장이다. CPU에서 메모리 매핑으로 불러온 가중치는 정렬이 어긋나 있어서, memopro든 `.clone()`이든 한 번 재할당된 뒤 첫 계산 결과의 마지막 자릿수가 바뀔 수 있다(0048, BLAS 누적 순서).
 - 회수량은 실측(RSS, MPS·CUDA 드라이버 메모리)으로 보고한다. 할당자가 페이지를 바로 돌려주지 않아 논리 크기보다 작게 나올 수 있다.
 - census의 필요 비트는 복원 오차 기준이다(학습 영향 기준은 v0.2). 권고 임계값은 휴리스틱이다.
 - β 수요(E010), 압축 방출(E009), OS 스왑 대비 이득(E011)은 배포 전 검증 과제이다(0036). 그 전까지 OS 대비 우위는 주장하지 않는다.

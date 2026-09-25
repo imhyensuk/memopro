@@ -104,7 +104,7 @@ checksum = "cf8baf1c55e62ffcace7a9f06f4bd9cd3f0c4beb022d3b367256b91b87513d98"
 
 [[package]]
 name = "memopro"
-version = "0.0.1"
+version = "0.1.0-alpha.1"
 dependencies = [
  "libc",
  "rayon",
@@ -115,7 +115,7 @@ dependencies = [
 
 [[package]]
 name = "memopro-py"
-version = "0.0.1"
+version = "0.1.0-alpha.1"
 dependencies = [
  "memopro",
  "pyo3",

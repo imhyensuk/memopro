@@ -2,7 +2,40 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased (development build, 0.0.1)
+## 0.1.0a1 (alpha, not published yet)
+
+### Changed (0044)
+- Version 0.1.0-alpha.1 (Cargo) / 0.1.0a1 (PyPI, PEP 440); `memopro.__version__` uses the PEP 440
+  form, `memopro.core_version()` the Cargo form.
+- Release workflow: tag must match the version; wheels are smoke-tested in a clean environment
+  without torch; a manual run builds the Linux wheel only (macOS on request) and never publishes.
+- Apple MPS counts as usable only if a tiny allocation works (CI macOS VMs report it available
+  but cannot allocate) (0042).
+- CI: pull requests on Linux only, macOS once per push to main (0043).
+
+### Fixed (0045, found on a Colab T4)
+- `Handle.reclaimed` is now a signed change per pool (+ freed, - added). Mode `host` frees GPU
+  memory but adds host RAM; before, the added RAM was reported as 0.
+- census counts the cuBLAS/cuBLASLt workspace held in PyTorch's CUDA allocator as "framework
+  workspace", so it no longer appears as unattributed memory.
+
+### Fixed (0048, exploratory defect sweep: 40 probes, 16 defects)
+- Reading, saving or copying a sleeping object returned or wrote empty tensors
+  (`state_dict`, `torch.save`, pickle, `copy.deepcopy`); `load_state_dict`, `.to()`/`.double()`
+  failed; `optimizer.step()` on a sleeping model was silently skipped. Guards now wake the object
+  first on all these paths.
+- Ctrl-C during `hibernate.now()` could leave empty tensors without a handle; it now rolls back.
+- Handles kept deleted models alive; the registry is weak and a deleted sleeping object is freed.
+- Concurrent calls (forward from several threads, `now()` from several threads) raced.
+- Invalid setting types leaked `TypeError`/`ValueError` instead of `ConfigError`.
+- `source` now also matches weights that transformers renames on load (e.g. ViT).
+- census no longer hides the user's exception if it fails while one is propagating.
+
+### Added
+- `Handle.discard()` to give up on data that cannot be restored.
+- `examples/colab_cuda_check.ipynb`: pre-release check on a real NVIDIA GPU (0044).
+
+## Development build (0.0.1)
 
 ### Added
 - `memopro doctor` / `memopro.doctor()`: memory per pool (device, host, disk) with a conservative

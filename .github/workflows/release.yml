@@ -1,45 +1,96 @@
-# Release pipeline (walking skeleton, docs/research/0015 P2).
+# Release pipeline (0015 P2, 0044).
 # Publishing is OUTWARD-FACING and must be triggered deliberately by the maintainer:
-#   - PyPI uses Trusted Publishing (configure the "pypi" environment + publisher on pypi.org first).
-#   - crates.io needs the CARGO_REGISTRY_TOKEN secret.
-# Nothing is published until a version tag (v*) is pushed AND the "pypi"/"crates-io" environments
-# are approved.
+#   - PyPI uses Trusted Publishing: register this repository/workflow/environment "pypi" as a
+#     (pending) trusted publisher on pypi.org first. No token is stored.
+#   - crates.io: the first release needs the CARGO_REGISTRY_TOKEN secret (crates.io trusted
+#     publishing can only be configured once the crate exists).
+# Nothing is published unless a version tag (v*) matching the Cargo version is pushed AND the
+# "pypi" / "crates-io" environments are approved in GitHub.
+#
+# Manual run (workflow_dispatch) builds artifacts only and never publishes; by default it builds
+# the Linux x86_64 wheel alone (e.g. for the Colab CUDA check), macOS on request (costs 10x).
 name: Release
 
 on:
   push:
     tags: ["v*"]
   workflow_dispatch:
+    inputs:
+      macos:
+        description: "Also build the macOS arm64 wheel"
+        type: boolean
+        default: false
 
 permissions:
   contents: read
 
 jobs:
-  wheels:
-    name: Wheel (${{ matrix.target }})
-    runs-on: ${{ matrix.os }}
-    strategy:
-      fail-fast: false
-      matrix:
-        include:
-          # 0.1 scope (0015 P2): macOS arm64 and Linux x86_64 first.
-          - os: macos-14
-            target: aarch64-apple-darwin
-          - os: ubuntu-latest
-            target: x86_64-unknown-linux-gnu
+  version:
+    name: Check tag matches Cargo version
+    runs-on: ubuntu-latest
+    outputs:
+      pep440: ${{ steps.v.outputs.pep440 }}
+    steps:
+      - uses: actions/checkout@v4
+      - id: v
+        run: |
+          cargo=$(python3 -c "import tomllib;print(tomllib.load(open('Cargo.toml','rb'))['workspace']['package']['version'])")
+          pep440=$(echo "$cargo" | sed -e 's/-alpha\./a/' -e 's/-beta\./b/' -e 's/-rc\./rc/')
+          echo "pep440=$pep440" >> "$GITHUB_OUTPUT"
+          echo "Cargo $cargo -> PEP 440 $pep440"
+          if [[ "$GITHUB_REF" == refs/tags/v* && "${GITHUB_REF#refs/tags/v}" != "$pep440" ]]; then
+            echo "::error::tag ${GITHUB_REF#refs/tags/} does not match version $pep440"; exit 1
+          fi
+
+  wheel-linux:
+    name: Wheel (x86_64-unknown-linux-gnu)
+    needs: version
+    runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: PyO3/maturin-action@v1
         with:
-          target: ${{ matrix.target }}
+          target: x86_64-unknown-linux-gnu
           args: --release --out dist
           manylinux: auto
+      - name: Smoke test the wheel in a clean environment (no torch)
+        run: |
+          python3 -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install --no-index --find-links dist memopro
+          /tmp/smoke/bin/memopro --version
+          /tmp/smoke/bin/memopro doctor --no-devices --json > /dev/null
+          /tmp/smoke/bin/python -c "import sys, memopro; assert memopro.__version__ == '${{ needs.version.outputs.pep440 }}'; assert 'torch' not in sys.modules"
       - uses: actions/upload-artifact@v4
         with:
-          name: wheels-${{ matrix.target }}
+          name: wheels-x86_64-unknown-linux-gnu
+          path: dist
+
+  wheel-macos:
+    # Separate job so that a plain manual run never starts a (10x billed) macOS runner.
+    name: Wheel (aarch64-apple-darwin)
+    needs: version
+    if: github.event_name != 'workflow_dispatch' || inputs.macos
+    runs-on: macos-14
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: aarch64-apple-darwin
+          args: --release --out dist
+      - name: Smoke test the wheel in a clean environment (no torch)
+        run: |
+          python3 -m venv /tmp/smoke
+          /tmp/smoke/bin/pip install --no-index --find-links dist memopro
+          /tmp/smoke/bin/memopro --version
+          /tmp/smoke/bin/memopro doctor --no-devices --json > /dev/null
+          /tmp/smoke/bin/python -c "import sys, memopro; assert memopro.__version__ == '${{ needs.version.outputs.pep440 }}'; assert 'torch' not in sys.modules"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-aarch64-apple-darwin
           path: dist
 
   sdist:
+    needs: version
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
@@ -53,7 +104,7 @@ jobs:
           path: dist
 
   publish-pypi:
-    needs: [wheels, sdist]
+    needs: [wheel-linux, wheel-macos, sdist]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: pypi
@@ -67,7 +118,7 @@ jobs:
       - uses: pypa/gh-action-pypi-publish@release/v1
 
   publish-crates:
-    needs: [wheels]
+    needs: [wheel-linux, wheel-macos]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: crates-io

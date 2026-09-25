@@ -107,6 +107,20 @@ class SleepingTensor:
     def __torch_function__(cls, func: Any, types: Any, args: Any = (), kwargs: Any = None) -> Any:
         return func(*_unwrap(args), **_unwrap(kwargs or {}))
 
+    # copying or pickling the proxy copies the real tensor, awake (0048 S1)
+    def __reduce_ex__(self, protocol: int) -> Any:
+        return self._memopro_wake().__reduce_ex__(protocol)
+
+    def __copy__(self) -> Any:
+        import copy
+
+        return copy.copy(self._memopro_wake())
+
+    def __deepcopy__(self, memo: dict) -> Any:
+        import copy
+
+        return copy.deepcopy(self._memopro_wake(), memo)
+
 
 def _forward(op: str):
     def method(self: SleepingTensor, *args: Any) -> Any:
@@ -188,11 +202,15 @@ def format_plan(name: str, rows: list[Any]) -> str:
 
 def _describe(handle: Any) -> str:
     modes = ", ".join(f"{m} {format_size(b)}" for m, b in handle.bytes_by_mode().items())
-    rec = ", ".join(f"{k} {format_size(v)}" for k, v in handle.reclaimed.items() if v)
+    freed = [f"{k} {format_size(v)}" for k, v in handle.reclaimed.items() if v > 0]
+    added = [f"{k} {format_size(-v)}" for k, v in handle.reclaimed.items() if v < 0]
+    rec = "freed " + ", ".join(freed) if freed else ""
+    if added:  # e.g. mode "host" moves GPU memory into host RAM (0045 F1)
+        rec += ("; " if rec else "") + "added " + ", ".join(added)
     text = f"[memopro] hibernated {handle.name}: {modes}"
     if handle.disk_write_bytes:
         text += f"; wrote {format_size(handle.disk_write_bytes)} to SSD"
-    text += f". Measured reclaim: {rec or 'none yet (allocator may keep pages)'}"
+    text += f". Measured: {rec or 'no change yet (allocator may keep pages)'}"
     for reason, names in handle.kept.items():
         text += f"\n[memopro] kept awake ({len(names)} tensors): {reason}"
     return text

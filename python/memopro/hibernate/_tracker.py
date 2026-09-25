@@ -75,7 +75,7 @@ class Tracker:
             self.first_seen.setdefault(name, self.cell)
             if getattr(type(obj), "_memopro_wake", None) is not None:
                 continue  # already a sleeping proxy
-            h = hibernate._handles.get(id(obj))
+            h = hibernate._lookup(obj)
             if h is not None and h.asleep:
                 continue
             idle_for = self.idle(name)
