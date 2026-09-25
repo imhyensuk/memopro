@@ -70,6 +70,7 @@
 | [0041](0041-completeness-review-d1-d3.md) | 2026-09-25 | survey+milestone | 자기 비판 3차(완성도 평가, 탐색적 시험 6종): 결함 D1(공유 저장공간이 조용히 깨짐)·D2(역전파 도중 동면)·D3(meta 텐서 예외 누출) 발견·수정, 회귀 테스트 5개 | 확정 |
 | [0042](0042-github-ci-first-run.md) | 2026-09-25 | milestone+experiment | GitHub 저장소(`imhyensuk/memopro`, 비공개)와 첫 CI: Linux·Python 3.11·cgroup 512MiB 한도 인식 통과, macOS 가상머신의 MPS 오판정 발견 → 실제 할당으로 판정 | 확정 |
 | [0043](0043-ci-minimal-usage.md) | 2026-09-25 | decision | CI 사용량 최소화: PR은 Linux만, macOS는 main push·수동 실행 때 1개 작업, 문서만 바뀌면 생략, 중복 실행 취소, 빌드·pip 캐시 | 확정 |
+| [0044](0044-alpha-prep.md) | 2026-09-25 | milestone | 알파 준비: 버전 0.1.0a1, 배포 워크플로(태그·버전 일치, 깨끗한 환경 wheel 확인, 신뢰 게시, 수동 실행은 Linux wheel만), Colab CUDA 확인 노트북 | 확정 (배포 대기) |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

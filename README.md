@@ -9,7 +9,7 @@
 
 > 여기서 "메모리"는 에이전트·대화 기억(agent memory)이 아니라 GPU/RAM **하드웨어 메모리**를 뜻한다.
 
-상태: **v0.1 기능 전체 동작 (개발판, 미배포)** (2026-09-25) — doctor, census, β hibernate(방법 5종, 노트북 통합), HF·Lightning 콜백. 배포 전 검증(CUDA 실기, Linux 컨테이너, E009~E011 실험)이 남아 있다. v0.2·v0.3 기능은 호출하면 `NotYetImplemented`가 예정 버전을 알려 준다.
+상태: **알파 준비 (0.1.0a1, 미배포)** (2026-09-25) — doctor, census, β hibernate(방법 5종, 노트북 통합), HF·Lightning 콜백. Linux(CI, 메모리 제한 컨테이너 포함)와 macOS에서 검증했다. 실제 NVIDIA GPU 검증(Colab), E009~E011 실험은 남아 있다. 배포 후 설치: `pip install --pre "memopro[torch]"`. v0.2·v0.3 기능은 호출하면 `NotYetImplemented`가 예정 버전을 알려 준다.
 
 ---
 
