@@ -1,0 +1,92 @@
+{
+  "device": "mps",
+  "doctor_before": {
+    "host": {
+      "total_bytes": 8589934592,
+      "available_bytes": 1540030464,
+      "kernel_available_bytes": 3885645824,
+      "swap_total_bytes": 7516192768,
+      "swap_free_bytes": 1450639360,
+      "cgroup_limit_bytes": null,
+      "cgroup_free_bytes": null,
+      "usable_bytes": 1540030464
+    },
+    "budget": {
+      "device": null,
+      "host": 1386027417,
+      "disk": 0,
+      "unified": false,
+      "device_name": null,
+      "headroom": 0.1,
+      "disk_floor_bytes": 49021439180,
+      "capped_by_setting": false
+    }
+  },
+  "S1_source": {
+    "param_bytes": 497759232,
+    "loaded_minus_base": {
+      "rss": 32555008,
+      "mps_driver": 1077919744
+    },
+    "first_load_s": 1.0847222909796983,
+    "modes": {
+      "source": 497759232
+    },
+    "hibernate_s": [
+      0.7107513330411166,
+      0.3323245421051979,
+      0.41509845899417996
+    ],
+    "hibernate_s_median": 0.41509845899417996,
+    "wake_plus_forward_s": [
+      0.4187324170488864,
+      0.3845361670246348,
+      0.471026667044498
+    ],
+    "wake_plus_forward_s_median": 0.4187324170488864,
+    "reclaimed_per_cycle": [
+      {
+        "rss": 74334208,
+        "mps_driver": 1073741824
+      },
+      {
+        "rss": 8945664,
+        "mps_driver": 1073741824
+      },
+      {
+        "rss": 9912320,
+        "mps_driver": 1073741824
+      }
+    ],
+    "bit_exact_each_cycle": [
+      true,
+      true,
+      true
+    ],
+    "baseline_del_freed": {
+      "rss": 49364992,
+      "mps_driver": 1073741824
+    },
+    "baseline_reload_s": 0.558188374969177,
+    "baseline_reload_exact": true
+  },
+  "S2_modified_bf16": {
+    "hibernate_s": 1.0315571250393987,
+    "modes": {
+      "compress": 248879616
+    },
+    "kept_awake": {},
+    "held_bytes": 171009636,
+    "reclaimed": {
+      "rss": -230637568,
+      "mps_driver": 1073741824
+    },
+    "wake_plus_forward_s": 0.520241167047061,
+    "bit_exact": true,
+    "spill_plan": {
+      "available": false,
+      "reason": "free disk space would fall below the 20% floor"
+    }
+  },
+  "ssd_written_today": 0
+}

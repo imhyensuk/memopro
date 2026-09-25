@@ -1,6 +1,6 @@
 # memopro 아키텍처 설계
 
-- **버전**: 설계 v0.3.7 (2026-09-25) — β SSD 쓰기 최소화(원본 재읽기 우선, SSD 기본 끔)·방법 선택 인터페이스·명시 핸들, census 재정의와 정밀 경량판 v0.1 (0032) / v0.3.6 — 중복성 검사 3차 반영: census 정밀 모드 재정의, 방출 엔진의 존재 이유와 기준선 명시(0029·0030) / v0.3.5: Rust 코어 설계 규칙 RS1~RS5 채택(0027) / v0.3.4: β 방출 기본값 무압축(0025 E008 C5) / v0.3.3: α 기각(0018), β 기본 모드 변경(0019)
+- **버전**: 설계 v0.3.11 (2026-09-25) — v0.1 구현 반영: 정체성 유지 해제(B1), 텐서별 방법 혼합, 자동 복원 hook, 엔진·codec 확정 (0036~0040) / v0.3.10 — 보수적 가용 메모리 정의, 예산 규칙 구현 반영 (0035) / v0.3.9 — 패키지 구조를 실제 뼈대에 맞춤, 오류 계층·설정 계층·지연 import 명시 (0034) / v0.3.8 — G3 장기 과제 명시, 실험 규칙 K1~K6 원칙화 (0033) / v0.3.7 — β SSD 쓰기 최소화(원본 재읽기 우선, SSD 기본 끔)·방법 선택 인터페이스·명시 핸들, census 재정의와 정밀 경량판 v0.1 (0032) / v0.3.6 — 중복성 검사 3차 반영: census 정밀 모드 재정의, 방출 엔진의 존재 이유와 기준선 명시(0029·0030) / v0.3.5: Rust 코어 설계 규칙 RS1~RS5 채택(0027) / v0.3.4: β 방출 기본값 무압축(0025 E008 C5) / v0.3.3: α 기각(0018), β 기본 모드 변경(0019)
 - **이력**: v0.1 기법 모듈 중심(0008) → v0.2 범용성 2계층(0010) → v0.2.1 논리 수정(0011) → v0.3 대상·범위 조정(0012) → v0.3.1 검증 수정(0013) → v0.3.2 P1~P4 채택(0015) → v0.3.3 X1 결과 반영(0021)
 - **근거 기록**: [0006](../research/0006-novel-technique-exploration.md), [0009](../research/0009-use-case-analysis.md), [0010](../research/0010-universality-redesign.md), [0011](../research/0011-design-v02-verification.md), [0012](../research/0012-revision-v03.md), [0013](../research/0013-revision-v03-verification.md)
 
@@ -14,6 +14,8 @@
 **대상 (0012 S1)**: 하드웨어 사양이나 숙련도와 무관하게, PyTorch로 무언가를 만드는 사람.
 직접 만든 모델, 확산·비전·오디오 모델, Python 코드 안의 LLM(HF Transformers), 파인튜닝, 연구 코드, Python 기반 서비스(FastAPI·Gradio 등)가 포함된다.
 **대상 아님**: 코드 없이 LLM 앱을 쓰려는 최종 사용자. memopro는 이들을 외부 도구로 안내하지도 않는다(0012, S2 기각).
+
+**목표별 범위 (0033)**: v0.1~v0.3은 **G1(전 단계 메모리 부담 최소화)·G2(더 작은 메모리 환경)** 중심이다. **G3(하드웨어 병목 극복)는 장기 과제**이며, 이를 직접 겨냥하는 기법은 γ뿐이다. G3 후보는 센서스 측정 연구(논문 A)의 결과에서 0006 절차(선행 조사 → 가설 → 사전 등록 실험 → 관문)로 탐색한다. 찾지 못하면 그대로 기록한다.
 
 이 목표를 기준으로 삼으면 "새로운 기법 하나"만으로는 부족하다. 사용자는 기법이 아니라 **결과**(내 기기에서 돌아간다)를 원한다.
 그래서 memopro는 두 계층으로 구성한다.
@@ -37,6 +39,12 @@
 | U8 | **설치가 쉽다** | `pip install memopro`만으로 동작한다(주요 플랫폼 사전 빌드 wheel). 무거운 의존성은 선택 설치(extras). |
 | U9 | **확장 가능하다** | 모든 기법은 같은 `Technique` 인터페이스를 따른다. 제3자도 기법을 추가할 수 있다. |
 | P1–P7 | (설계 v0.1 원칙 유지) | Rust는 프레임워크를 모름, 뜨거운 경로는 장치/차가운 경로는 Rust, 스스로 오차 측정과 폴백, 절감량 보고, 재현성 |
+| K1 | **이상치 분리** (0033, 0018 E002) | 손실 저장(양자화 등)은 이상치 채널·토큰을 따로 처리한다. 블록 단위 최댓값 기준만으로는 오차 22% |
+| K2 | **LayerNorm 관련 텐서 보호** (0018 E003) | 손실 기능은 LayerNorm 관련 저장 텐서를 보호하거나 제외한다. 게인 그래디언트가 가장 민감하다 |
+| K3 | **최악값 보고** (0018 E003) | 전체 평균 지표만 보지 않고 텐서별 최악값을 보고한다 |
+| K4 | **독립 복원** (0018 E002) | 서로 의존하는 복원은 오차가 누적된다. 복원은 서로 독립적이어야 한다 |
+| K5 | **통합 메모리 상한** (S1 측정) | 통합 메모리의 장치 예산은 MPS 권장 한도(8GB 기기에서 5.33GB)를 상한으로 쓴다 |
+| K6 | **외부 내부 의존 테스트** (transformers 5.x 인과 마스크) | 외부 라이브러리 내부 동작에 의존하는 기능은 버전별 동작 검증 테스트를 둔다 |
 | P4 예외 | 전역 패치는 L0 명시 선택 시에만 | `memopro run`의 `from_pretrained` 로딩 정책 패치 등은 사용자가 L0 모드를 명시적으로 선택했을 때만 적용하고, 문서화하며, `report()`에 표시한다 (0011 L9) |
 
 ## 2. 전체 구조
@@ -72,6 +80,7 @@
 
 ### 3.1 환경 감지 (`memopro.env`)
 - **메모리**: 물리 RAM, 현재 가용 RAM, 스왑, **cgroup v1/v2 한도**(Docker·Kubernetes), 통합 메모리 여부(Apple Silicon), GPU별 여유 메모리(CUDA·MPS)
+  - **가용 RAM은 보수적으로 정의한다 (0035)**: `total − used`. used는 압축이나 스왑 없이는 내줄 수 없는 메모리이다. macOS는 앱(익명) − 퍼저블 + wired + 압축기(Activity Monitor 기준), Linux는 `MemTotal − MemAvailable`이다. macOS 자체 추정값(active 익명 페이지 포함)은 참고용 `kernel_available_bytes`로만 보고한다. 8GB M1 실측: 1.55 GiB 대 3.27 GiB(스왑 4.9GB 사용 중).
 - **장치**: CPU / MPS / CUDA (ROCm·XPU는 감지만 하고 미지원 시 fail-open)
 - **소프트웨어**: torch 버전, 설치된 백엔드(bitsandbytes, torchao, HQQ, accelerate, peft)와 **현재 장치에서의 동작 가능 여부**
 - **디스크**: SSD 여유 공간, 읽기 속도 (오프로드·방출 계획용)
@@ -86,11 +95,13 @@ Budget = { device: 장치 메모리 예산,  host: 호스트 RAM 예산,  disk: 
 
 | 환경 | device | host | disk |
 |---|---|---|---|
-| 분리형 GPU (CUDA) | GPU 여유 메모리 − 여유분 | min(가용 RAM, cgroup 한도) − 여유분 | SSD 여유 공간 × 허용 비율 |
-| 통합 메모리 (Apple Silicon, MPS) | **host와 같은 풀**. MPS 한도(`recommendedMaxWorkingSetSize` × 워터마크 비율) 이내 | 단일 풀: min(가용 RAM, MPS 한도) − 여유분 | 위와 같음 |
-| CPU 전용 | — | min(가용 RAM, cgroup 한도) − 여유분 | 위와 같음 |
+| 분리형 GPU (CUDA) | GPU 여유 메모리(`mem_get_info`) × (1 − 여유분) | min(가용 RAM, 컨테이너 여유) × (1 − 여유분) | 여유 공간 − 전체 × `min_free_disk_fraction`(기본 20%, 0032 H4) |
+| 통합 메모리 (Apple Silicon, MPS) | **host와 같은 풀**. min(MPS 권장 한도 − 드라이버 할당량, host 사용 가능량) × (1 − 여유분) (K5) | min(가용 RAM, 컨테이너 여유) × (1 − 여유분). CPU 텐서는 MPS 한도를 받지 않는다 | 위와 같음 |
+| CPU 전용 | — | min(가용 RAM, 컨테이너 여유) × (1 − 여유분) | 위와 같음 |
 
-- 여유분 기본값 10%. 사용자는 `budget="6GB"`(주 장치 기준), `budget={"device": "10GB", "host": "16GB"}`, `0.7`(가용분 비율) 등으로 지정할 수 있다.
+- 구현: `memopro.orchestrator.budget.compute_budget` (0035). 디스크에 쓸 수 있는지는 예산이 아니라 `disk_writes` 정책이 정한다.
+
+- 여유분(`headroom`) 기본값 10%(초기값, 실측으로 보정 예정). 사용자는 `budget="6GB"`로 device와 host를 함께 제한할 수 있다. 풀별 지정(`{"device": …, "host": …}`)과 비율 지정(`0.7`)은 설계만 있고 아직 구현하지 않았다(v0.2).
 - 통합 메모리에서는 "CPU 오프로드"가 메모리를 줄이지 못한다(같은 풀). 후보 구성에서 자동으로 제외한다.
 
 ### 3.3 전략 선택: 후보 구성 목록 (0011 L5 수정 — 선형 "사다리"에서 변경)
@@ -277,7 +288,8 @@ class Technique(Protocol):
 
 
 **동면 대상 선정 (참조 그래프 기반)**
-- 전역 `TorchDispatchMode`는 쓰지 않는다(모든 연산에 오버헤드). 저장공간을 크기 0으로 바꾸는 `set_`도 쓰지 않는다(조용히 틀린 결과 위험).
+- 전역 `TorchDispatchMode`는 쓰지 않는다(모든 연산에 오버헤드).
+- **해제 방식 (0036 B1로 수정)**: 텐서 객체는 두고 `tensor.data`만 크기 0 텐서로 바꾼다(복원 시 되돌림). 정체성이 유지되어 옵티마이저 등 참조가 복원 후에도 유효하다. 동면 중 직접 사용은 형상 오류로 크게 실패한다. 모듈은 forward pre-hook, 옵티마이저는 step pre-hook, 진행 중이던 역전파는 파라미터 그래디언트 hook으로 자동 복원한다. **다른 텐서와 저장공간을 공유하는 텐서(뷰, autograd가 저장한 텐서)와 meta 텐서는 동면하지 않는다**(0041 D1~D3: 교체하면 공유가 조용히 깨지거나 해제되지 않음). (이전 설계의 "`set_`으로 크기 0 저장공간을 만들지 않는다"는 이 방식으로 대체되었다.)
 - 후보: 사용자 네임스페이스에 바인딩된 `torch.Tensor`와 `nn.Module` 중 N개 셀 또는 T초 동안 접근되지 않은 것
 - `gc.get_referrers`로 외부 참조자를 찾는다.
   - 네임스페이스와 IPython 출력 캐시(`Out[n]`, `_`, `__`, `___`)의 참조는 "네임스페이스 참조"로 함께 집계한다. 동면 시 캐시 항목도 프록시로 교체한다 (V4).
@@ -347,10 +359,10 @@ class Technique(Protocol):
 
 | 모듈 | 책임 | 비고 |
 |---|---|---|
-| **`hwinfo`** (v0.1) | 풀별 예산 벡터의 OS 수준 기반: 물리·가용 RAM, 스왑, **cgroup v1/v2 한도**, 통합 메모리 여부, 디스크 여유·속도 | `sysinfo` 크레이트(cgroup 한도 포함)를 의존성으로 쓰고 빠진 부분만 구현 (0011 L13). MPS 권장 한도는 Python에서 torch로 조회 (0013 V12) |
+| **`hwinfo`** (v0.1, ✅ 0035) | 풀별 예산 벡터의 OS 수준 기반: 물리·가용(보수적)·OS 추정 RAM, 스왑, **cgroup v1/v2 한도**, CPU, 디스크 용량(`statvfs`) | `sysinfo` 0.39(system 기능만, cgroup 포함)와 `libc::statvfs`. MPS·CUDA 한도는 Python에서 torch로 조회 (0013 V12) |
 | `pressure` (v0.3) | OS 메모리 압박 구독 (macOS memory pressure, Linux PSI) | γ. v0.1의 β는 유휴 기준으로만 동작 (0013 V14) |
-| `codec` (v0.1) | 바이트 셔플 + **zstd 크레이트**로 부동소수 무손실 압축, lowbit(2/3/4비트) | β(방출 파일 압축), census. **기존 크레이트 위에 얇게 구현하며 신규성 주장 없음** (0013 V11). 성능 부족 시 blosc2 연동 검토 |
-| `ledger`, `spill` (v0.1), `policy` | 텐서 원장, **방출 엔진**(상주 풀 + 고정 버퍼 풀 + 파이프라인 방출·복원, 아래 RS1~RS5). **주 경로는 원본 파일 → 텐서 읽기와 병렬 해시 확인**, SSD 쓰기는 최후 수단 (0032 H1). 결정 로직 | β, γ. v0.1 Rust 코어의 중심 (0027). **신규성 주장 없음**: 비동기 텐서 SSD 방출은 TensorNVMe·DeepNVMe·kvikio가 이미 제공한다(0029 D20). 직접 만드는 이유는 ① macOS 지원(기존 도구는 Linux 전용) ② RS4 메모리 상한 보장 ③ β 프록시·원장과의 결합. Linux에서 TensorNVMe를 선택 백엔드로 쓸지는 E009 결과로 판단 (0030 C2) |
+| `codec` (v0.1, ✅ 0038) | 바이트 셔플 + **zstd 크레이트**로 부동소수 무손실 압축(`pack`/`unpack_into`, 스레드별 문맥 재사용) | β `compress`. **기존 크레이트 위에 얇게 구현하며 신규성 주장 없음** (0013 V11). E008 프로토타입 제거 |
+| `ledger`, `spill` (v0.1, ✅ 0038), `policy` | 원장, **저장 엔진**: 원본 파일 → 목적지 버퍼 직접 읽기 + xxh3-128 다이제스트 확인(주 경로), 0600 방출 파일(최후 수단, 저우선순위 쓰기 풀), 중간 버퍼 없음(RS1~RS5) | β. **신규성 주장 없음**(0029 D20). 존재 이유: macOS 지원, 메모리 상한, β 결합 |
 | `census` (v0.1) | 표본 엔트로피 등 통계 커널 | census |
 
 > v0.1 크레이트는 기존 크레이트를 얇게 감싼 부분이 많아 단독 가치가 크지 않다. crates.io 배포는 최종 목표 달성과 이름 확보가 목적이며, 크레이트 설명에 범위를 명시한다 (0013 V13).
@@ -372,26 +384,33 @@ class Technique(Protocol):
 - 보류(0027): RS6 특화 커널·SIMD(기존 2·4바이트 셔플은 유지하되 요구하지 않음), RS7 GIL과 무관한 백그라운드 서비스(N3에서 재판단), RS8 `gil_used = false` 선언.
 - **Rust를 쓰지 않는 곳**(0025): GPU 수학과 CPU 행렬곱(torch 담당, E007), C 라이브러리를 호출만 하는 단순 병렬(Python 스레드로 충분, E008 C3), 작은 호출이 잦은 경로(FFI 비용).
 
-## 7. Python 패키지 구조 (개정)
+## 7. 패키지 구조 (0034 뼈대 기준)
 
 ```
 python/memopro/
-├── __init__.py            # load, optimize, train_session, report, env (지연 import)
-├── __main__.py / cli.py   # memopro doctor | check | run
-├── env/                   # 환경 감지 (Rust hwinfo + torch 장치 정보)
-├── orchestrator/          # 예산 산정, 후보 구성 선택, 적용·fail-open, report
-│   ├── ladder_infer.py
-│   ├── ladder_train.py
-│   └── budget.py
-├── techniques/            # Technique 레지스트리
-│   ├── base.py            #   인터페이스, 품질 등급
-│   ├── native/            #   연구 코어 어댑터: hibernate, census, elastic
-│   └── integrations/      #   기존 기법 연동: bnb, torchao, hqq, accelerate, safetensors, checkpoint, optim8bit, kvcache
-├── hibernate/  elastic/  census/         # 연구 코어 본체 (§5.1)
-├── integrations/          # 생태계 통합: hf, peft_trl, diffusers, lightning, ipython
-├── config.py              # memopro.toml, MEMOPRO_* 환경변수
-└── _core.*.so             # Rust 확장
+├── __init__.py          공개 API (PEP 562 지연 import), load_ipython_extension
+├── _errors.py           MemoproError ← InvalidArgument(ValueError) ← ConfigError / PolicyError /
+│                        ModeUnavailable(이유 + 대안) / NotYetImplemented(예정 버전 명시)
+├── _units.py            크기 파싱·표시
+├── config.py            기본값 < memopro.toml($MEMOPRO_CONFIG) < MEMOPRO_* < configure()
+├── report.py            report() — 적용·실패·회수량(실측)·SSD 쓰기량
+├── access.py            load · optimize · train_session · check (v0.2)
+├── cli.py, __main__.py  memopro doctor | check | run  (종료 코드 0/1/2/3=미구현)
+├── env/                 detect() → Env(HostMemory, Disk, Device…)
+├── orchestrator/        budget.Budget · candidates.Configuration · apply.fail_open
+├── hibernate/           now → Handle.wake · plan → PlanRow · wake · suggest · enable · status
+│   └── _policy.py       resolve_modes: 쓰기 없는 방법 우선, bf16 명시만, SSD는 disk_writes 정책
+├── census/              record(mode = fast | light | deep) → Census.summary / to_json
+├── elastic/             γ (v0.3)
+├── integrations/        ipython(%hibernate · %wake · %memopro) · hf · lightning (census 콜백)
+├── techniques/          base(Technique·Registry) · native/ · integrations/ (어댑터)
+└── _core.*.so           Rust 확장
+
+crates/memopro/src/      error · hwinfo · spill(원본 재읽기·다이제스트·방출 파일) · ledger · pressure · codec(E008)
 ```
+
+- **지연 import 규칙 (0032 I4)**: `import memopro`는 Rust 확장과 최상위 모듈만 불러온다. torch·numpy·transformers·IPython과 하위 모듈은 처음 쓸 때 불러온다. `tests/test_import_cost.py`가 보장한다.
+- **미구현 규칙 (0034 K-a)**: 설계된 API 중 아직 없는 기능은 조용히 아무것도 하지 않지 않고 `NotYetImplemented`(Rust는 `Error::NotImplemented`)로 예정 버전을 알린다. Rust 코어는 패닉(`unimplemented!`)을 쓰지 않는다.
 
 ## 8. 설치와 플랫폼
 

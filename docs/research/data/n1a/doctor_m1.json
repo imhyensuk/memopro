@@ -1,0 +1,63 @@
+{
+  "version": "0.0.1",
+  "env": {
+    "os": "Darwin",
+    "os_version": "macOS 26.6.2",
+    "machine": "arm64",
+    "cpu_brand": "Apple M1",
+    "logical_cpus": 8,
+    "host": {
+      "total_bytes": 8589934592,
+      "available_bytes": 2487500800,
+      "kernel_available_bytes": 3072540672,
+      "swap_total_bytes": 6442450944,
+      "swap_free_bytes": 1281294336,
+      "cgroup_limit_bytes": null,
+      "cgroup_free_bytes": null,
+      "usable_bytes": 2487500800
+    },
+    "disk": {
+      "spill_dir": "~/Library/Caches/memopro",
+      "measured_path": "~/Library/Caches",
+      "total_bytes": 245107195904,
+      "available_bytes": 22422487040
+    },
+    "devices": [
+      {
+        "kind": "mps",
+        "name": "Apple GPU (MPS)",
+        "total_bytes": null,
+        "available_bytes": 5726240768,
+        "limit_bytes": 5726633984,
+        "allocated_bytes": 393216,
+        "unified": true
+      }
+    ],
+    "notes": []
+  },
+  "budget": {
+    "device": 2238750720,
+    "host": 2238750720,
+    "disk": 0,
+    "unified": true,
+    "device_name": "Apple GPU (MPS)",
+    "headroom": 0.1,
+    "disk_floor_bytes": 49021439180,
+    "capped_by_setting": false
+  },
+  "policy": {
+    "disk_writes": "ask",
+    "hibernate_modes": [
+      "source",
+      "host",
+      "compress"
+    ],
+    "min_free_disk_fraction": 0.2,
+    "headroom": 0.1
+  },
+  "warnings": [
+    "swap in use: 4.81 GiB",
+    "free disk space is below the 20% floor: memopro will not spill to this disk"
+  ],
+  "captured": "2026-09-25, MacBook Air M1 8GB (dev machine), home path redacted"
+}
