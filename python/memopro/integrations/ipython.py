@@ -188,11 +188,15 @@ def format_plan(name: str, rows: list[Any]) -> str:
 
 def _describe(handle: Any) -> str:
     modes = ", ".join(f"{m} {format_size(b)}" for m, b in handle.bytes_by_mode().items())
-    rec = ", ".join(f"{k} {format_size(v)}" for k, v in handle.reclaimed.items() if v)
+    freed = [f"{k} {format_size(v)}" for k, v in handle.reclaimed.items() if v > 0]
+    added = [f"{k} {format_size(-v)}" for k, v in handle.reclaimed.items() if v < 0]
+    rec = "freed " + ", ".join(freed) if freed else ""
+    if added:  # e.g. mode "host" moves GPU memory into host RAM (0045 F1)
+        rec += ("; " if rec else "") + "added " + ", ".join(added)
     text = f"[memopro] hibernated {handle.name}: {modes}"
     if handle.disk_write_bytes:
         text += f"; wrote {format_size(handle.disk_write_bytes)} to SSD"
-    text += f". Measured reclaim: {rec or 'none yet (allocator may keep pages)'}"
+    text += f". Measured: {rec or 'no change yet (allocator may keep pages)'}"
     for reason, names in handle.kept.items():
         text += f"\n[memopro] kept awake ({len(names)} tensors): {reason}"
     return text

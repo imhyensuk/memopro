@@ -113,7 +113,9 @@ class Handle:
         self.requested_mode = mode
         self.records: list[_Record] = []
         self.kept: dict[str, list[str]] = defaultdict(list)  # reason -> tensor names left awake
-        self.reclaimed: dict[str, int] = {}  # measured, per pool
+        # Measured change per pool, signed (0045 F1): positive = freed, negative = added.
+        # E.g. mode "host" frees CUDA memory and adds the same amount of host RAM.
+        self.reclaimed: dict[str, int] = {}
         self.asleep = False
         self._hooks: list[Any] = []
 
@@ -286,12 +288,16 @@ def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False, name: str | 
         others = () if mode == "auto" else tuple(m for m in MODES if m not in (mode, "auto"))
         raise ModeUnavailable(mode, reasons, others)
     after = _measure()
-    handle.reclaimed = {k: max(0, before[k] - after.get(k, 0)) for k in before}
+    handle.reclaimed = {k: before[k] - after.get(k, before[k]) for k in before}
     handle.asleep = True
     _install_auto_wake(handle)
     _handles[id(obj)] = handle
     detail = f"{handle.name}: " + ", ".join(f"{m} {b}" for m, b in handle.bytes_by_mode().items())
-    report().add("hibernate", "applied", detail, reclaimed_bytes=max(handle.reclaimed.values()))
+    detail += "; measured " + ", ".join(
+        f"{pool} {'freed' if v >= 0 else 'added'} {abs(v)}" for pool, v in handle.reclaimed.items()
+    )
+    freed = max(handle.reclaimed.values(), default=0)
+    report().add("hibernate", "applied", detail, reclaimed_bytes=max(freed, 0))
     return handle
 
 

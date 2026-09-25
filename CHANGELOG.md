@@ -13,6 +13,12 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   but cannot allocate) (0042).
 - CI: pull requests on Linux only, macOS once per push to main (0043).
 
+### Fixed (0045, found on a Colab T4)
+- `Handle.reclaimed` is now a signed change per pool (+ freed, - added). Mode `host` frees GPU
+  memory but adds host RAM; before, the added RAM was reported as 0.
+- census counts the cuBLAS/cuBLASLt workspace held in PyTorch's CUDA allocator as "framework
+  workspace", so it no longer appears as unattributed memory.
+
 ### Added
 - `examples/colab_cuda_check.ipynb`: pre-release check on a real NVIDIA GPU (0044).
 
