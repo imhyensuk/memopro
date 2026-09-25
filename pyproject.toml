@@ -23,7 +23,12 @@ dependencies = []
 
 [project.optional-dependencies]
 torch = ["torch>=2.4"]
+hf = ["torch>=2.4", "transformers", "accelerate", "safetensors"]
+notebook = ["ipython"]
 dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+memopro = "memopro.cli:main"
 
 [tool.maturin]
 python-source = "python"

@@ -1,6 +1,6 @@
 # memopro 아키텍처 설계
 
-- **버전**: 설계 v0.3.8 (2026-09-25) — G3 장기 과제 명시, 실험 규칙 K1~K6 원칙화 (0033) / v0.3.7 — β SSD 쓰기 최소화(원본 재읽기 우선, SSD 기본 끔)·방법 선택 인터페이스·명시 핸들, census 재정의와 정밀 경량판 v0.1 (0032) / v0.3.6 — 중복성 검사 3차 반영: census 정밀 모드 재정의, 방출 엔진의 존재 이유와 기준선 명시(0029·0030) / v0.3.5: Rust 코어 설계 규칙 RS1~RS5 채택(0027) / v0.3.4: β 방출 기본값 무압축(0025 E008 C5) / v0.3.3: α 기각(0018), β 기본 모드 변경(0019)
+- **버전**: 설계 v0.3.9 (2026-09-25) — 패키지 구조를 실제 뼈대에 맞춤, 오류 계층·설정 계층·지연 import 명시 (0034) / v0.3.8 — G3 장기 과제 명시, 실험 규칙 K1~K6 원칙화 (0033) / v0.3.7 — β SSD 쓰기 최소화(원본 재읽기 우선, SSD 기본 끔)·방법 선택 인터페이스·명시 핸들, census 재정의와 정밀 경량판 v0.1 (0032) / v0.3.6 — 중복성 검사 3차 반영: census 정밀 모드 재정의, 방출 엔진의 존재 이유와 기준선 명시(0029·0030) / v0.3.5: Rust 코어 설계 규칙 RS1~RS5 채택(0027) / v0.3.4: β 방출 기본값 무압축(0025 E008 C5) / v0.3.3: α 기각(0018), β 기본 모드 변경(0019)
 - **이력**: v0.1 기법 모듈 중심(0008) → v0.2 범용성 2계층(0010) → v0.2.1 논리 수정(0011) → v0.3 대상·범위 조정(0012) → v0.3.1 검증 수정(0013) → v0.3.2 P1~P4 채택(0015) → v0.3.3 X1 결과 반영(0021)
 - **근거 기록**: [0006](../research/0006-novel-technique-exploration.md), [0009](../research/0009-use-case-analysis.md), [0010](../research/0010-universality-redesign.md), [0011](../research/0011-design-v02-verification.md), [0012](../research/0012-revision-v03.md), [0013](../research/0013-revision-v03-verification.md)
 
@@ -380,26 +380,33 @@ class Technique(Protocol):
 - 보류(0027): RS6 특화 커널·SIMD(기존 2·4바이트 셔플은 유지하되 요구하지 않음), RS7 GIL과 무관한 백그라운드 서비스(N3에서 재판단), RS8 `gil_used = false` 선언.
 - **Rust를 쓰지 않는 곳**(0025): GPU 수학과 CPU 행렬곱(torch 담당, E007), C 라이브러리를 호출만 하는 단순 병렬(Python 스레드로 충분, E008 C3), 작은 호출이 잦은 경로(FFI 비용).
 
-## 7. Python 패키지 구조 (개정)
+## 7. 패키지 구조 (0034 뼈대 기준)
 
 ```
 python/memopro/
-├── __init__.py            # load, optimize, train_session, report, env (지연 import)
-├── __main__.py / cli.py   # memopro doctor | check | run
-├── env/                   # 환경 감지 (Rust hwinfo + torch 장치 정보)
-├── orchestrator/          # 예산 산정, 후보 구성 선택, 적용·fail-open, report
-│   ├── ladder_infer.py
-│   ├── ladder_train.py
-│   └── budget.py
-├── techniques/            # Technique 레지스트리
-│   ├── base.py            #   인터페이스, 품질 등급
-│   ├── native/            #   연구 코어 어댑터: hibernate, census, elastic
-│   └── integrations/      #   기존 기법 연동: bnb, torchao, hqq, accelerate, safetensors, checkpoint, optim8bit, kvcache
-├── hibernate/  elastic/  census/         # 연구 코어 본체 (§5.1)
-├── integrations/          # 생태계 통합: hf, peft_trl, diffusers, lightning, ipython
-├── config.py              # memopro.toml, MEMOPRO_* 환경변수
-└── _core.*.so             # Rust 확장
+├── __init__.py          공개 API (PEP 562 지연 import), load_ipython_extension
+├── _errors.py           MemoproError ← InvalidArgument(ValueError) ← ConfigError / PolicyError /
+│                        ModeUnavailable(이유 + 대안) / NotYetImplemented(예정 버전 명시)
+├── _units.py            크기 파싱·표시
+├── config.py            기본값 < memopro.toml($MEMOPRO_CONFIG) < MEMOPRO_* < configure()
+├── report.py            report() — 적용·실패·회수량(실측)·SSD 쓰기량
+├── access.py            load · optimize · train_session · check (v0.2)
+├── cli.py, __main__.py  memopro doctor | check | run  (종료 코드 0/1/2/3=미구현)
+├── env/                 detect() → Env(HostMemory, Disk, Device…)
+├── orchestrator/        budget.Budget · candidates.Configuration · apply.fail_open
+├── hibernate/           now → Handle.wake · plan → PlanRow · wake · suggest · enable · status
+│   └── _policy.py       resolve_modes: 쓰기 없는 방법 우선, bf16 명시만, SSD는 disk_writes 정책
+├── census/              record(mode = fast | light | deep) → Census.summary / to_json
+├── elastic/             γ (v0.3)
+├── integrations/        ipython(%hibernate · %wake · %memopro) · hf · lightning (census 콜백)
+├── techniques/          base(Technique·Registry) · native/ · integrations/ (어댑터)
+└── _core.*.so           Rust 확장
+
+crates/memopro/src/      error · hwinfo · spill(원본 재읽기·다이제스트·방출 파일) · ledger · pressure · codec(E008)
 ```
+
+- **지연 import 규칙 (0032 I4)**: `import memopro`는 Rust 확장과 최상위 모듈만 불러온다. torch·numpy·transformers·IPython과 하위 모듈은 처음 쓸 때 불러온다. `tests/test_import_cost.py`가 보장한다.
+- **미구현 규칙 (0034 K-a)**: 설계된 API 중 아직 없는 기능은 조용히 아무것도 하지 않지 않고 `NotYetImplemented`(Rust는 `Error::NotImplemented`)로 예정 버전을 알린다. Rust 코어는 패닉(`unimplemented!`)을 쓰지 않는다.
 
 ## 8. 설치와 플랫폼
 

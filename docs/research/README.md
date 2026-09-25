@@ -60,6 +60,7 @@
 | [0031](0031-adoption-self-critique.md) | 2026-09-25 | survey+decision | 자기 비판 2차(개발자 채택 관점): 대부분 미채택 가능성, β는 좁은 사용자층에 유효 / 개선 방안 I1~I11(수요 측정 Gβ 우선), 대기 제안 H1~H6 기록 | 평가 확정, I1~I5·I7~I9·H1~H6 채택(→0032), I6·I10·I11 대기 |
 | [0032](0032-adopt-group1-2.md) | 2026-09-25 | decision | 개발 착수 전 결정(I1·R1·H1~H4·H6·P5·I4·I5·병합)과 v0.1 범위(Q1·R2·P6·P7·R3·I2·I3·I7·I8·I9) 일괄 채택 → Gβ 관문, 순서 변경, β SSD 정책, 제품 중심 β + census | 확정 |
 | [0033](0033-research-direction.md) | 2026-09-25 | decision | 연구 방향 확정: 논문 A(센서스 측정 연구) 주력·E012, 논문 B는 v0.1 이후, G3 장기 과제와 후보 탐색 절차, K1~K6 원칙화, 연구·제품 성공 기준 분리 | 확정 (게재처·GPU 환경 대기) |
+| [0034](0034-library-skeleton.md) | 2026-09-25 | design+milestone | S2 라이브러리 전체 뼈대: 공개 API(지연 import), 오류 계층(NotYetImplemented), 설정 계층, β 방법 선택 정책, fail-open, CLI 종료 코드, 노트북 매직, Rust 모듈(error·hwinfo·spill·ledger·pressure). 테스트 Python 60·Rust 17 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
