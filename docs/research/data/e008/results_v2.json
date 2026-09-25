@@ -1,0 +1,102 @@
+{
+  "experiment": "E008b (exploratory)",
+  "kernel": [
+    {
+      "payload": "fp32",
+      "variant": "B2 python threads(8)",
+      "median_s": 0.18349970795679837,
+      "mib_per_s": 2586.926162434326
+    },
+    {
+      "payload": "fp32",
+      "variant": "R1 rust v1 (E008)",
+      "median_s": 0.26116262504365295,
+      "mib_per_s": 1817.6421501091688
+    },
+    {
+      "payload": "fp32",
+      "variant": "R2 rust v2 reuse",
+      "median_s": 0.12324158404953778,
+      "mib_per_s": 3851.785896566301
+    },
+    {
+      "payload": "bf16",
+      "variant": "B2 python threads(8)",
+      "median_s": 0.12262866704259068,
+      "mib_per_s": 1935.5188585211886
+    },
+    {
+      "payload": "bf16",
+      "variant": "R1 rust v1 (E008)",
+      "median_s": 0.15679962502326816,
+      "mib_per_s": 1513.715977452297
+    },
+    {
+      "payload": "bf16",
+      "variant": "R2 rust v2 reuse",
+      "median_s": 0.10046720900572836,
+      "mib_per_s": 2362.463335103864
+    }
+  ],
+  "spill": [
+    {
+      "payload": "fp32",
+      "variant": "S0 raw write",
+      "median_s": 0.507799791987054,
+      "effective_mib_per_s": 934.8176245897362,
+      "bytes_written": null
+    },
+    {
+      "payload": "fp32",
+      "variant": "S1 python threads compress, then write",
+      "median_s": 0.5835461670067161,
+      "effective_mib_per_s": 813.4749607686766,
+      "bytes_written": null
+    },
+    {
+      "payload": "fp32",
+      "variant": "S2 rust pipelined spill",
+      "median_s": 0.41652370791416615,
+      "effective_mib_per_s": 1139.6714911851366,
+      "bytes_written": 419577976
+    },
+    {
+      "payload": "bf16",
+      "variant": "S0 raw write",
+      "median_s": 0.15966725000180304,
+      "effective_mib_per_s": 1486.5296274193345,
+      "bytes_written": null
+    },
+    {
+      "payload": "bf16",
+      "variant": "S1 python threads compress, then write",
+      "median_s": 0.2296467499108985,
+      "effective_mib_per_s": 1033.5443360219135,
+      "bytes_written": null
+    },
+    {
+      "payload": "bf16",
+      "variant": "S2 rust pipelined spill",
+      "median_s": 0.18110304104629904,
+      "effective_mib_per_s": 1310.5804092796618,
+      "bytes_written": 170716606
+    }
+  ],
+  "memory": [
+    {
+      "base_maxrss": 273547264,
+      "after_maxrss": 658391040,
+      "written": 419577976,
+      "payload": "fp32",
+      "growth_bytes": 384843776
+    },
+    {
+      "base_maxrss": 286572544,
+      "after_maxrss": 389169152,
+      "written": 170716606,
+      "payload": "bf16",
+      "growth_bytes": 102596608
+    }
+  ],
+  "runtime_s": 27.3
+}

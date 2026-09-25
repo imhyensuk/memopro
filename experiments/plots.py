@@ -246,8 +246,114 @@ def fig_e005():
     plt.close(fig)
 
 
+def fig_e007():
+    r = json.loads((DATA / "e007" / "results.json").read_text())
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 3.4), dpi=160)
+    panels = [
+        (axes[0], r["part_b"], "B · Adam 사전학습 GPT-2 전체 파인튜닝 (60스텝)"),
+        (axes[1], r["part_c"], "C · 작은 GPT-2 처음부터 학습 (300스텝)"),
+    ]
+    for ax, rows, title in panels:
+        for slot, kind in enumerate(("adamw", "hybrid")):
+            pts = sorted((x["lr"], x["val_loss"]) for x in rows if x["kind"] == kind)
+            ax.plot(
+                [p[0] for p in pts],
+                [p[1] for p in pts],
+                color=SLOTS[slot],
+                marker="o",
+                markersize=5,
+                markeredgecolor=SURFACE,
+                markeredgewidth=1.5,
+                label="AdamW" if kind == "adamw" else "Muon + AdamW (혼합)",
+            )
+        ax.set_xscale("log")
+        ax.set_xticks(sorted({x["lr"] for x in rows}))
+        ax.xaxis.set_major_formatter(FuncFormatter(lambda v, _: f"{v:g}"))
+        ax.xaxis.set_minor_formatter(NullFormatter())
+        ax.set_xlabel("학습률")
+        ax.set_title(title, fontsize=10)
+        _clean(ax)
+    axes[0].set_ylabel("검증 손실 (낮을수록 좋음)")
+    axes[0].legend(loc="lower right")
+    fig.suptitle(
+        "E007 · Muon 타당성 (Apple M1, MPS)", fontsize=11, fontweight="semibold", color=INK
+    )
+    fig.tight_layout()
+    fig.savefig(DATA / "e007" / "val_loss_vs_lr.png")
+    plt.close(fig)
+
+
+def fig_e008():
+    r2 = json.loads((DATA / "e008" / "results_v2.json").read_text())
+    fig, axes = plt.subplots(1, 2, figsize=(9.6, 3.6), dpi=160)
+    ax = axes[0]
+    names = ["B2 python threads(8)", "R1 rust v1 (E008)", "R2 rust v2 reuse"]
+    labels = ["Python 8스레드", "Rust v1 (단순)", "Rust v2 (재사용·특화 셔플)"]
+    vals = [
+        next(x["mib_per_s"] for x in r2["kernel"] if x["payload"] == "fp32" and x["variant"] == n)
+        for n in names
+    ]
+    ax.barh(range(len(vals)), vals, height=0.55, color=[SLOTS[0], SLOTS[1], SLOTS[1]], zorder=2)
+    for i, v in enumerate(vals):
+        ax.annotate(
+            f"{v:,.0f}",
+            (v, i),
+            xytext=(3, 0),
+            textcoords="offset points",
+            va="center",
+            fontsize=7,
+            color=INK,
+        )
+    ax.set_yticks(range(len(vals)))
+    ax.set_yticklabels(labels)
+    ax.invert_yaxis()
+    ax.set_xlabel("압축 처리량 (MiB/s, fp32, zstd 레벨 1)")
+    ax.set_title("바이트 셔플 + zstd 처리량 · E008b 동일 세션", fontsize=10)
+    _clean(ax)
+    ax = axes[1]
+    vnames = ["S0 raw write", "S1 python threads compress, then write", "S2 rust pipelined spill"]
+    vlabels = ["무압축 쓰기", "Python 압축 후 쓰기", "Rust 압축·쓰기 파이프라인"]
+    t = [
+        next(x["median_s"] for x in r2["spill"] if x["payload"] == "fp32" and x["variant"] == v)
+        for v in vnames
+    ]
+    ax.barh(range(3), t, height=0.55, color=[MUTED, SLOTS[0], SLOTS[1]], zorder=2)
+    for i, v in enumerate(t):
+        ax.annotate(
+            f"{v:.3f}s",
+            (v, i),
+            xytext=(3, 0),
+            textcoords="offset points",
+            va="center",
+            fontsize=7,
+            color=INK,
+        )
+    ax.set_yticks(range(3))
+    ax.set_yticklabels(vlabels)
+    ax.invert_yaxis()
+    ax.set_xlabel("SSD 방출 시간 (초, 475MiB fp32, 낮을수록 좋음)")
+    ax.set_title("방출(spill) 시간 · E008b 탐색적", fontsize=10)
+    _clean(ax)
+    fig.suptitle(
+        "E008 · Rust 병렬 방출 코덱 (Apple M1, 8스레드)",
+        fontsize=11,
+        fontweight="semibold",
+        color=INK,
+    )
+    fig.tight_layout()
+    fig.savefig(DATA / "e008" / "codec_and_spill.png")
+    plt.close(fig)
+
+
 if __name__ == "__main__":
-    targets = sys.argv[1:] or ["e001", "e002", "e003", "e005"]
+    targets = sys.argv[1:] or ["e001", "e002", "e003", "e005", "e007", "e008"]
     for t in targets:
-        {"e001": fig_e001, "e002": fig_e002, "e003": fig_e003, "e005": fig_e005}[t]()
+        {
+            "e001": fig_e001,
+            "e002": fig_e002,
+            "e003": fig_e003,
+            "e005": fig_e005,
+            "e007": fig_e007,
+            "e008": fig_e008,
+        }[t]()
         print("figure", t, "ok")
