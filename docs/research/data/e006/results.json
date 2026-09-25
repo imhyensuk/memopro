@@ -1,0 +1,96 @@
+{
+  "experiment": "E006",
+  "expected": {
+    "tracked_bytes": 120004004,
+    "idle_bytes": 104004004
+  },
+  "observed": {
+    "tracked_bytes": 120004004,
+    "idle_bytes": 104004004
+  },
+  "checks": {
+    "n_snapshots_equals_cells": true,
+    "tracked_bytes_exact": true,
+    "idle_bytes_exact": true,
+    "view_not_double_counted": true,
+    "magic_usage_detected": true,
+    "no_source_code_recorded": true
+  },
+  "pass": true,
+  "last_snapshot": {
+    "cell": 9,
+    "elapsed_s": 0.08,
+    "idle_threshold_cells": 3,
+    "tracked_bytes": 120004004,
+    "idle_bytes": 104004004,
+    "peak_rss_bytes": 340803584,
+    "variables": [
+      {
+        "name": "a",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 100000000
+        },
+        "last_used_cell": 6,
+        "idle_cells": 3
+      },
+      {
+        "name": "b",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4000000
+        },
+        "last_used_cell": 9,
+        "idle_cells": 0
+      },
+      {
+        "name": "lin",
+        "type": "Linear",
+        "bytes": {
+          "cpu": 4004000
+        },
+        "last_used_cell": 4,
+        "idle_cells": 5
+      },
+      {
+        "name": "s",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4
+        },
+        "last_used_cell": 5,
+        "idle_cells": 4
+      },
+      {
+        "name": "c",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4000000
+        },
+        "last_used_cell": 7,
+        "idle_cells": 2
+      },
+      {
+        "name": "d",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4000000
+        },
+        "last_used_cell": 8,
+        "idle_cells": 1
+      },
+      {
+        "name": "e",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4000000
+        },
+        "last_used_cell": 9,
+        "idle_cells": 0
+      }
+    ],
+    "mps_allocated_bytes": 0
+  },
+  "summary_text": "idle probe: cell 9, tracked 114.4 MiB, idle (>= 3 cells) 99.2 MiB\n  a                             95.4 MiB  idle 3 cells  {'cpu': 100000000}\n  lin                            3.8 MiB  idle 5 cells  {'cpu': 4004000}\n  b                              3.8 MiB  idle 0 cells  {'cpu': 4000000}\n  c                              3.8 MiB  idle 2 cells  {'cpu': 4000000}\n  d                              3.8 MiB  idle 1 cells  {'cpu': 4000000}\n  e                              3.8 MiB  idle 0 cells  {'cpu': 4000000}\n  s                              0.0 MiB  idle 4 cells  {'cpu': 4}",
+  "runtime_s": 0.1
+}

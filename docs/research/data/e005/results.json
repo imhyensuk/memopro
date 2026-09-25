@@ -1,0 +1,226 @@
+{
+  "experiment": "E005",
+  "config": {
+    "steps": 20,
+    "batch": 2,
+    "seq_len": 256,
+    "out": "/Users/imhyeonseok/Desktop/memopro/docs/research/data/e005",
+    "cap_bytes": 67108864,
+    "zstd_level": 3,
+    "lr": 0.0001,
+    "wd": 0.01
+  },
+  "train_losses": [
+    4.439789295196533,
+    4.18552303314209,
+    3.9469921588897705,
+    4.0337605476379395,
+    3.8172006607055664,
+    3.8138809204101562,
+    3.5591015815734863,
+    3.6978938579559326,
+    3.710711717605591,
+    3.8614771366119385,
+    4.128080368041992,
+    3.810410499572754,
+    3.7578279972076416,
+    3.759439706802368,
+    3.5540552139282227,
+    3.610788583755493,
+    4.087085247039795,
+    3.0806686878204346,
+    3.8562514781951904,
+    3.624302864074707
+  ],
+  "saved_tensor_counts": {
+    "float": 271,
+    "nonfloat": 3,
+    "block_inputs": 12
+  },
+  "rows": [
+    {
+      "category": "parameters_fp32",
+      "dtype": "float32",
+      "n_tensors": 148,
+      "total_bytes": 497759232,
+      "sampled_bytes": 67109132,
+      "stored_bits_per_element": 32,
+      "entropy_bits_per_element": 26.756814830700822,
+      "entropy_bound_ratio": 1.1959570002062854,
+      "ratio_os_lz4_16k_pages": 1.0,
+      "ratio_os_zstd_4k_pages": 1.0656936963283448,
+      "ratio_zstd_whole": 1.0764523303818172,
+      "ratio_shuffle_zstd": 1.1666655134881039,
+      "shuffle_zstd_mb_per_s_python": 319.2317218923441,
+      "bf16": {
+        "entropy_bits_per_element": 10.754787029134544,
+        "ratio_os_lz4_16k_pages": 1.0,
+        "ratio_shuffle_zstd": 1.399883890023397,
+        "ratio_vs_fp32_including_cast": 2.799767780046794
+      }
+    },
+    {
+      "category": "gradients_fp32",
+      "dtype": "float32",
+      "n_tensors": 148,
+      "total_bytes": 497759232,
+      "sampled_bytes": 67109132,
+      "stored_bits_per_element": 32,
+      "entropy_bits_per_element": 27.78101582432527,
+      "entropy_bound_ratio": 1.1518657273856976,
+      "ratio_os_lz4_16k_pages": 1.0,
+      "ratio_os_zstd_4k_pages": 1.0598514761058755,
+      "ratio_zstd_whole": 1.0674018171673387,
+      "ratio_shuffle_zstd": 1.1573307816426235,
+      "shuffle_zstd_mb_per_s_python": 402.8564216390303,
+      "bf16": {
+        "entropy_bits_per_element": 11.83105619150149,
+        "ratio_os_lz4_16k_pages": 1.0004800461798462,
+        "ratio_shuffle_zstd": 1.374126467643905,
+        "ratio_vs_fp32_including_cast": 2.74825293528781
+      }
+    },
+    {
+      "category": "adam_exp_avg_fp32",
+      "dtype": "float32",
+      "n_tensors": 148,
+      "total_bytes": 497759232,
+      "sampled_bytes": 67109132,
+      "stored_bits_per_element": 32,
+      "entropy_bits_per_element": 27.482539376551554,
+      "entropy_bound_ratio": 1.1643756627272515,
+      "ratio_os_lz4_16k_pages": 1.0,
+      "ratio_os_zstd_4k_pages": 1.0604623868594385,
+      "ratio_zstd_whole": 1.0682608234160962,
+      "ratio_shuffle_zstd": 1.1579143703052186,
+      "shuffle_zstd_mb_per_s_python": 403.4000736360426,
+      "bf16": {
+        "entropy_bits_per_element": 11.568051821996747,
+        "ratio_os_lz4_16k_pages": 1.0004800461798462,
+        "ratio_shuffle_zstd": 1.3750872452670255,
+        "ratio_vs_fp32_including_cast": 2.750174490534051
+      }
+    },
+    {
+      "category": "adam_exp_avg_sq_fp32",
+      "dtype": "float32",
+      "n_tensors": 148,
+      "total_bytes": 497759232,
+      "sampled_bytes": 67109132,
+      "stored_bits_per_element": 32,
+      "entropy_bits_per_element": 27.04460896216331,
+      "entropy_bound_ratio": 1.1832302713183807,
+      "ratio_os_lz4_16k_pages": 1.0,
+      "ratio_os_zstd_4k_pages": 1.0956785103464508,
+      "ratio_zstd_whole": 1.100784261930927,
+      "ratio_shuffle_zstd": 1.2170186270455938,
+      "shuffle_zstd_mb_per_s_python": 543.813200059155,
+      "bf16": {
+        "entropy_bits_per_element": 11.121973018777057,
+        "ratio_os_lz4_16k_pages": 1.0004800461798462,
+        "ratio_shuffle_zstd": 1.5563769506203364,
+        "ratio_vs_fp32_including_cast": 3.112753901240673
+      }
+    },
+    {
+      "category": "saved_activations_float",
+      "dtype": "float32",
+      "n_tensors": 271,
+      "total_bytes": 900470788,
+      "sampled_bytes": 67109076,
+      "stored_bits_per_element": 32,
+      "entropy_bits_per_element": 25.021431641318504,
+      "entropy_bound_ratio": 1.278903639836404,
+      "ratio_os_lz4_16k_pages": 1.2526839183148495,
+      "ratio_os_zstd_4k_pages": 1.3857785282317288,
+      "ratio_zstd_whole": 1.4097381159551718,
+      "ratio_shuffle_zstd": 1.6252154572299446,
+      "shuffle_zstd_mb_per_s_python": 312.46550598248615,
+      "bf16": {
+        "entropy_bits_per_element": 10.76176186423428,
+        "ratio_os_lz4_16k_pages": 1.2429958216846613,
+        "ratio_shuffle_zstd": 1.9117469860040377,
+        "ratio_vs_fp32_including_cast": 3.8234939720080754
+      }
+    },
+    {
+      "category": "saved_activations_nonfloat",
+      "dtype": "int64",
+      "n_tensors": 3,
+      "total_bytes": 10240,
+      "sampled_bytes": 10240,
+      "stored_bits_per_element": 64,
+      "entropy_bits_per_element": 11.831709859167587,
+      "entropy_bound_ratio": 5.409192818433657,
+      "ratio_os_lz4_16k_pages": 3.5298173043778007,
+      "ratio_os_zstd_4k_pages": 3.8208955223880596,
+      "ratio_zstd_whole": 6.530612244897959,
+      "ratio_shuffle_zstd": 7.950310559006211,
+      "shuffle_zstd_mb_per_s_python": 101.6377171215881
+    },
+    {
+      "category": "block_inputs_fp32",
+      "dtype": "float32",
+      "n_tensors": 12,
+      "total_bytes": 18874368,
+      "sampled_bytes": 18874368,
+      "stored_bits_per_element": 32,
+      "entropy_bits_per_element": 27.01828734833709,
+      "entropy_bound_ratio": 1.1843829916913486,
+      "ratio_os_lz4_16k_pages": 1.0014292664835471,
+      "ratio_os_zstd_4k_pages": 1.0690548140173157,
+      "ratio_zstd_whole": 1.0828909492013332,
+      "ratio_shuffle_zstd": 1.1672002470651428,
+      "shuffle_zstd_mb_per_s_python": 292.28825620020285,
+      "bf16": {
+        "entropy_bits_per_element": 11.109797039384762,
+        "ratio_os_lz4_16k_pages": 1.0,
+        "ratio_shuffle_zstd": 1.3951809612146664,
+        "ratio_vs_fp32_including_cast": 2.790361922429333
+      }
+    },
+    {
+      "category": "reference_random_normal_fp32",
+      "dtype": "float32",
+      "n_tensors": 1,
+      "total_bytes": 16777216,
+      "sampled_bytes": 16777216,
+      "stored_bits_per_element": 32,
+      "entropy_bits_per_element": 26.58862179320245,
+      "entropy_bound_ratio": 1.2035223280426293,
+      "ratio_os_lz4_16k_pages": 1.0,
+      "ratio_os_zstd_4k_pages": 1.069241293303253,
+      "ratio_zstd_whole": 1.080667362926031,
+      "ratio_shuffle_zstd": 1.1708825899809976,
+      "shuffle_zstd_mb_per_s_python": 408.3836229979066,
+      "bf16": {
+        "entropy_bits_per_element": 10.589675112041459,
+        "ratio_os_lz4_16k_pages": 1.0,
+        "ratio_shuffle_zstd": 1.4122946592766201,
+        "ratio_vs_fp32_including_cast": 2.8245893185532402
+      }
+    }
+  ],
+  "beta_rules": [
+    {
+      "category": "parameters_fp32",
+      "advantage_over_os_lz4": 1.1666655134881039,
+      "rule1_lossless_beats_os_(>=1.25)": false,
+      "rule2_lossless_small_(<1.3)": true
+    },
+    {
+      "category": "adam_exp_avg_fp32",
+      "advantage_over_os_lz4": 1.1579143703052186,
+      "rule1_lossless_beats_os_(>=1.25)": false,
+      "rule2_lossless_small_(<1.3)": true
+    },
+    {
+      "category": "adam_exp_avg_sq_fp32",
+      "advantage_over_os_lz4": 1.2170186270455938,
+      "rule1_lossless_beats_os_(>=1.25)": false,
+      "rule2_lossless_small_(<1.3)": true
+    }
+  ],
+  "runtime_s": 89.7,
+  "peak_rss_bytes": 3027943424
+}

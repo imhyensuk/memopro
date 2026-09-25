@@ -156,6 +156,11 @@ def capture(
     if script is not None:
         path = Path(script).resolve()
         env["script"] = {"path": str(path.relative_to(REPO_ROOT)), "sha256": sha256_file(path)}
+        # sibling modules (e.g. common.py) and the harness itself, so imported code is traceable too
+        env["modules_sha256"] = {
+            str(p.relative_to(REPO_ROOT)): sha256_file(p)
+            for p in sorted({*path.parent.glob("*.py"), Path(__file__).resolve()})
+        }
     if extra:
         env["extra"] = extra
     return env

@@ -1,4 +1,5 @@
 import re
+import tomllib
 from pathlib import Path
 
 import pytest
@@ -10,11 +11,8 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_version_matches_cargo_workspace():
-    # regex instead of tomllib so the test also runs on Python 3.10
-    cargo = (ROOT / "Cargo.toml").read_text()
-    section = cargo.split("[workspace.package]", 1)[1]
-    version = re.search(r'^version\s*=\s*"([^"]+)"', section, re.MULTILINE).group(1)
-    assert memopro.__version__ == version
+    cargo = tomllib.loads((ROOT / "Cargo.toml").read_text())
+    assert memopro.__version__ == cargo["workspace"]["package"]["version"]
     assert memopro.core_version() == memopro.__version__
     assert re.fullmatch(r"\d+\.\d+\.\d+.*", memopro.__version__)
 
