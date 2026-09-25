@@ -52,6 +52,7 @@
 | [0023](0023-e007-e008-preregistration.md) | 2026-09-25 | experiment | 사전 등록: E007 Muon 타당성, E008 Rust 병렬 방출 코덱 | 확정 (실행 전 작성) |
 | [0024](0024-e007-muon-results.md) | 2026-09-25 | experiment | E007: Muon — 메모리 −34%·처음부터 학습 품질 우위, 그러나 M1 소배치에서 3배 느림 → 후보 미추가 | 확정 |
 | [0025](0025-e008-rust-results-and-strategy.md) | 2026-09-25 | experiment+design+decision | E008: 단순 Rust는 Python 스레드보다 느림, 압축 방출은 무압축보다 느림 → β 방출 기본 무압축 / E008b(탐색): 설계한 Rust는 1.49배·방출 −18% / 전략 RS1~RS8 | 판정 확정, RS 제안 승인 대기 |
+| [0026](0026-min-python-311.md) | 2026-09-25 | decision | 최소 Python 3.10 → 3.11 상향(abi3-py311, buffer protocol 전제)과 3.10 흔적 정리 | 확정 |
 
 ## 연구 질문 (Research Questions) — 초안 (0006 기준으로 갱신)
 

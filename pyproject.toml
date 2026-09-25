@@ -6,7 +6,7 @@ build-backend = "maturin"
 name = "memopro"
 description = "Memory relief and redundancy diagnostics for PyTorch developers with limited GPU/RAM (early development)."
 readme = "README.en.md"
-requires-python = ">=3.10"
+requires-python = ">=3.11"
 license = "MIT OR Apache-2.0"
 license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
 keywords = ["memory", "deep-learning", "pytorch", "compression", "gpu"]
@@ -36,7 +36,7 @@ testpaths = ["tests"]
 
 [tool.ruff]
 line-length = 100
-target-version = "py310"
+target-version = "py311"
 
 [tool.ruff.lint.isort]
 known-first-party = ["memopro", "experiments"]
@@ -44,7 +44,7 @@ known-first-party = ["memopro", "experiments"]
 [tool.ruff.lint.per-file-ignores]
 # Research scripts whose SHA-256 is recorded in docs/research/data/*/env.json must not be
 # rewritten after they produced results; keep lint exceptions here instead of editing them.
-"experiments/**/*.py" = ["SIM115"]
+"experiments/**/*.py" = ["SIM115", "UP017"]  # UP017 appeared with target py311 (0026)
 
 [tool.ruff.format]
 # Frozen: experiment scripts are hashed in env.json when they produce results (see above).
