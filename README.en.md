@@ -55,6 +55,10 @@ See `examples/quickstart.ipynb`.
   `copy.deepcopy`, `.to()`, `parameters()` or a backward pass already in flight. If data cannot be
   restored (source file changed, spill file lost), memopro raises `IntegrityError` and keeps the
   object guarded until you call `handle.discard()`.
+- `torch.compile`: a compiled model is woken before any compiled frame is entered, so the
+  compiled graph is kept (also with `fullgraph=True`). Compiled code memopro cannot see
+  (compiling after hibernation, a compiled function that calls the model) still gives correct
+  results but may run that part eagerly afterwards; memopro warns once. Call `h.wake()` first.
 - "Bit-exact" refers to tensor values. On CPU, weights memory-mapped from safetensors may be
   unaligned; after any re-allocation (memopro, `.clone()`, `.to()`) the first BLAS results can
   differ in the last digits.
