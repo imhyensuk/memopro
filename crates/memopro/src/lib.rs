@@ -3,7 +3,9 @@
 //! The crate knows nothing about PyTorch or any other framework; it works on byte buffers,
 //! dtypes and shapes. Python bindings live in the separate `memopro-py` crate.
 //!
-//! Status: early development. Only version information is exposed so far.
+//! Status: early development. `codec` is a prototype for experiment E008 (docs/research/0023).
+
+pub mod codec;
 
 /// Version of the memopro core, taken from the crate manifest.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
