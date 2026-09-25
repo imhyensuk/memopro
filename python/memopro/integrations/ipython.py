@@ -107,6 +107,20 @@ class SleepingTensor:
     def __torch_function__(cls, func: Any, types: Any, args: Any = (), kwargs: Any = None) -> Any:
         return func(*_unwrap(args), **_unwrap(kwargs or {}))
 
+    # copying or pickling the proxy copies the real tensor, awake (0048 S1)
+    def __reduce_ex__(self, protocol: int) -> Any:
+        return self._memopro_wake().__reduce_ex__(protocol)
+
+    def __copy__(self) -> Any:
+        import copy
+
+        return copy.copy(self._memopro_wake())
+
+    def __deepcopy__(self, memo: dict) -> Any:
+        import copy
+
+        return copy.deepcopy(self._memopro_wake(), memo)
+
 
 def _forward(op: str):
     def method(self: SleepingTensor, *args: Any) -> Any:

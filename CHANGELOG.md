@@ -19,7 +19,20 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 - census counts the cuBLAS/cuBLASLt workspace held in PyTorch's CUDA allocator as "framework
   workspace", so it no longer appears as unattributed memory.
 
+### Fixed (0048, exploratory defect sweep: 40 probes, 16 defects)
+- Reading, saving or copying a sleeping object returned or wrote empty tensors
+  (`state_dict`, `torch.save`, pickle, `copy.deepcopy`); `load_state_dict`, `.to()`/`.double()`
+  failed; `optimizer.step()` on a sleeping model was silently skipped. Guards now wake the object
+  first on all these paths.
+- Ctrl-C during `hibernate.now()` could leave empty tensors without a handle; it now rolls back.
+- Handles kept deleted models alive; the registry is weak and a deleted sleeping object is freed.
+- Concurrent calls (forward from several threads, `now()` from several threads) raced.
+- Invalid setting types leaked `TypeError`/`ValueError` instead of `ConfigError`.
+- `source` now also matches weights that transformers renames on load (e.g. ViT).
+- census no longer hides the user's exception if it fails while one is propagating.
+
 ### Added
+- `Handle.discard()` to give up on data that cannot be restored.
 - `examples/colab_cuda_check.ipynb`: pre-release check on a real NVIDIA GPU (0044).
 
 ## Development build (0.0.1)

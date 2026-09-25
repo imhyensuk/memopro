@@ -108,8 +108,8 @@ def _layer(source: str, values: Mapping[str, Any]) -> dict[str, Any]:
     for key, value in values.items():
         try:
             out[key] = _validate(key, value)
-        except InvalidArgument as e:
-            raise ConfigError(f"{source}: {e}") from None
+        except (TypeError, ValueError) as e:  # includes InvalidArgument; no raw errors (0048)
+            raise ConfigError(f"{source}: {key}={value!r}: {e}") from None
     return out
 
 

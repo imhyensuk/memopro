@@ -7,6 +7,7 @@ A function raises ``ModeUnavailable`` when its method does not fit this tensor.
 
 from __future__ import annotations
 
+import weakref
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -144,6 +145,8 @@ def sleep_spill(slot: Slot, config: Config) -> Sleeping:
         _ssd.remove(kept[0])
     written = _ssd.write(view, directory)
     _kept_spills[id(slot.tensor)] = written
+    # the kept file goes away with its tensor, not only at exit (0048 S4)
+    weakref.finalize(slot.tensor, _forget_spill, id(slot.tensor), written[0])
     return Sleeping("spill", written, slot.nbytes, 0, written[1])
 
 
@@ -155,6 +158,12 @@ def wake_spill(slot: Slot, sleeping: Sleeping) -> None:
     except (RuntimeError, OSError) as e:
         raise IntegrityError(f"spill file {path} could not be restored: {e}") from None
     put_back(slot, buf)
+
+
+def _forget_spill(key: int, path: str) -> None:
+    if _kept_spills.get(key, ("",))[0] == path:
+        del _kept_spills[key]
+    _ssd.remove(path)
 
 
 def drop_kept(tensor: torch.Tensor) -> None:
