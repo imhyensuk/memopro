@@ -15,6 +15,7 @@ from memopro._doctor import DoctorReport
 from memopro.cli import EXIT_OK, main
 from memopro.config import Config, reset_config
 from memopro.env import Device, Disk, Env, HostMemory
+from memopro.env._torch import mps_usable
 from memopro.orchestrator.budget import compute_budget
 
 GiB = 2**30
@@ -192,16 +193,19 @@ def test_cli_doctor_json(capsys):
     assert data["env"]["host"]["total_bytes"] > 0
 
 
-def _has_mps():
-    try:
-        import torch
+def test_unusable_mps_is_reported_not_listed(monkeypatch):
+    import torch
 
-        return torch.backends.mps.is_available()
-    except ImportError:
-        return False
+    from memopro.env import _torch
+
+    monkeypatch.setattr(torch.backends.mps, "is_available", lambda: True)
+    monkeypatch.setattr(_torch, "mps_usable", lambda: False)
+    devices, notes = _torch.probe()
+    assert not any(d.kind == "mps" for d in devices)
+    assert _torch.MPS_UNUSABLE_NOTE in notes
 
 
-@pytest.mark.skipif(not _has_mps(), reason="needs Apple MPS")
+@pytest.mark.skipif(not mps_usable(), reason="needs a usable Apple MPS device")
 def test_mps_limit_matches_torch():
     import torch
 

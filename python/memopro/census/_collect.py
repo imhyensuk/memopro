@@ -78,8 +78,9 @@ def allocator_snapshot() -> dict[str, dict[str, int]]:
                 torch.cuda.max_memory_allocated(i) for i in range(torch.cuda.device_count())
             ),
         }
-    mps = getattr(torch.backends, "mps", None)
-    if mps is not None and mps.is_available():
+    from memopro.env._torch import mps_usable
+
+    if mps_usable():
         snap["mps"] = {
             "allocated": int(torch.mps.current_allocated_memory()),
             "driver": int(torch.mps.driver_allocated_memory()),

@@ -96,8 +96,9 @@ def _measure() -> dict[str, int]:
         out["cuda"] = int(
             sum(torch.cuda.memory_reserved(i) for i in range(torch.cuda.device_count()))
         )
-    mps = getattr(torch.backends, "mps", None)
-    if mps is not None and mps.is_available():
+    from memopro.env._torch import mps_usable
+
+    if mps_usable():
         torch.mps.empty_cache()
         out["mps"] = int(torch.mps.driver_allocated_memory())
     return out
