@@ -31,9 +31,18 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 - `source` now also matches weights that transformers renames on load (e.g. ViT).
 - census no longer hides the user's exception if it fails while one is propagating.
 
+### Fixed (0049, torch.compile)
+- Calling a compiled model (`torch.compile(m)`, `m.compile()`) while it slept crashed in dynamo;
+  once that was avoided, the wake became a graph break after which dynamo kept running the model
+  eagerly on every later call. The object is now woken before any compiled frame is entered, so
+  the compiled graph is kept (also with `fullgraph=True`). Compiled code memopro cannot see
+  (compiling after hibernation, a compiled function that calls the model) still gives correct
+  results and warns once.
+
 ### Added
 - `Handle.discard()` to give up on data that cannot be restored.
-- `examples/colab_cuda_check.ipynb`: pre-release check on a real NVIDIA GPU (0044).
+- `examples/colab_cuda_check.ipynb`: pre-release check on a real NVIDIA GPU (0044); run 3 adds
+  guard, GPT-2 and torch.compile checks (0049).
 
 ## Development build (0.0.1)
 
