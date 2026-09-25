@@ -1,10 +1,11 @@
 # memopro
 
-> **메모리가 부족해도, PyTorch 개발자라면 누구나 큰 모델을.**
-> 내 기기의 실제 가용 메모리에 맞춰, 자기 프로젝트·서비스·개발·학습에서 딥러닝 모델의 메모리 부담을 줄여 주는 Rust + Python 라이브러리.
+> **노트북과 학습 중에 잠든 메모리를 되찾고, 낭비되는 메모리를 보여 준다.**
+> PyTorch 개발자를 위한 메모리 회수·진단 라이브러리 (Rust + Python). 불러온 모델은 SSD에 쓰지 않고 원본에서 복원하며, 모든 절감량은 실측으로 보고한다.
+> 이후 버전(v0.2~)에서는 내 기기의 실제 가용 메모리에 맞춰 모델을 불러오고 학습하는 편의 기능을 더한다.
 
 - **Python** (PyPI `memopro`): PyTorch 개발자를 위한 한 줄 인터페이스
-- **Rust** (crates.io `memopro`): 프레임워크와 무관한 메모리 코어 (환경·예산 감지, 부동소수 압축, 텐서 원장, SSD 방출)
+- **Rust** (crates.io `memopro`): 프레임워크와 무관한 메모리 코어 (환경·예산 감지, 원본 파일 재읽기와 해시 확인, 텐서 원장, 메모리 상한이 보장된 방출)
 
 > 여기서 "메모리"는 에이전트·대화 기억(agent memory)이 아니라 GPU/RAM **하드웨어 메모리**를 뜻한다.
 
@@ -35,7 +36,9 @@ memopro doctor        # 내 환경의 풀별 예산: 장치·호스트 RAM·디�
 import memopro
 
 %load_ext memopro     # 한동안 안 쓴 텐서·모델과 회수 가능량을 제안
-%hibernate old_model  # β: 제안받은 객체를 SSD로 방출(CUDA는 호스트로 이동), 다시 쓰면 복원 (자동 모드는 선택 — 0015 P4)
+%hibernate old_model          # β: SSD에 쓰지 않는 방법부터(원본 재읽기 → GPU→RAM → RAM 압축), 다시 쓰면 복원
+%hibernate old_model --plan   # 방법별 회수량·복원 시간·SSD 쓰기를 미리 비교 (--mode 로 직접 선택)
+%wake old_model               # 바로 복원. SSD 쓰기는 허락할 때만 (disk_writes="ask")
 
 with memopro.census.record(model, optimizer) as c:    # 메모리가 어디에 쓰이고, 얼마나 중복(낭비)인가
     loss = model(**batch).loss; loss.backward()
@@ -107,8 +110,10 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 | S0 | 조사, 방향 설정, 설계, 검증 (연구 기록 0001~0015) | | ✅ |
 | S1 | 기반 구축 + 걷는 뼈대: git, 가상환경, Cargo workspace, PyO3·maturin, CI 설정, `Technique` 뼈대, 실험 하네스, wheel·sdist·crate 패키징 확인 | 0.0.1 (로컬 빌드만, 미배포) | ✅ |
 | X1 | **첫 실험** (0015 P1): α E001~E003(→ 기각), 텐서 중복도·OS 압축 기준선 E005, 노트북 유휴 계측 도구 E006 | | ✅ (0018~0021) |
-| A1 | Rust 코어(v0.1 범위): **방출 엔진**(설계 규칙 RS1~RS5 — 0027) + E009 확인 실험, hwinfo(sysinfo 기반, cgroup), codec(셔플 + zstd), ledger, census 커널 | | 설계 규칙 확정, 프로토타입 codec 완료(E008) |
-| N1 | **doctor + census + β** | 🚀 v0.1.0 (crates.io + PyPI) | |
+| E010 | β 실사용 수요 수집 (사전 등록, 동료 3~5명) → **◆ Gβ** (0032) | | |
+| A1a·N1a·N1b | hwinfo → **doctor** → **census**(빠른 + 정밀 경량, HF·Lightning 콜백) | | |
+| A1b·N1c | (Gβ 통과 시) 방출 엔진(원본 재읽기·해시 우선, RS1~RS5, SSD 정책) → E009·E011 → **β** | | 설계 규칙 확정, 프로토타입 codec 완료(E008) |
+| N1 | **doctor + census + β** 통합, 5분 시연 노트북, 공개 시연 수치 | 🚀 v0.1.0 (crates.io + PyPI) | |
 | R2 | 메모리 센서스 연구 (census와 코드 공유, 연구 주력 후보 — 0021 Q2) | | |
 | A2 | 범용 접근: `optimize`, `train_session`, `load`, `check`, 생태계 통합 | 🚀 v0.2.0 | |
 | ~~◆ Gα → N2~~ | ~~α 등록~~ — 0018 기각으로 취소 | | ❌ |

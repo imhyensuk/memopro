@@ -1,6 +1,6 @@
 # memopro 아키텍처 설계
 
-- **버전**: 설계 v0.3.6 (2026-09-25) — 중복성 검사 3차 반영: census 정밀 모드 재정의, 방출 엔진의 존재 이유와 기준선 명시(0029·0030) / v0.3.5: Rust 코어 설계 규칙 RS1~RS5 채택(0027) / v0.3.4: β 방출 기본값 무압축(0025 E008 C5) / v0.3.3: α 기각(0018), β 기본 모드 변경(0019)
+- **버전**: 설계 v0.3.7 (2026-09-25) — β SSD 쓰기 최소화(원본 재읽기 우선, SSD 기본 끔)·방법 선택 인터페이스·명시 핸들, census 재정의와 정밀 경량판 v0.1 (0032) / v0.3.6 — 중복성 검사 3차 반영: census 정밀 모드 재정의, 방출 엔진의 존재 이유와 기준선 명시(0029·0030) / v0.3.5: Rust 코어 설계 규칙 RS1~RS5 채택(0027) / v0.3.4: β 방출 기본값 무압축(0025 E008 C5) / v0.3.3: α 기각(0018), β 기본 모드 변경(0019)
 - **이력**: v0.1 기법 모듈 중심(0008) → v0.2 범용성 2계층(0010) → v0.2.1 논리 수정(0011) → v0.3 대상·범위 조정(0012) → v0.3.1 검증 수정(0013) → v0.3.2 P1~P4 채택(0015) → v0.3.3 X1 결과 반영(0021)
 - **근거 기록**: [0006](../research/0006-novel-technique-exploration.md), [0009](../research/0009-use-case-analysis.md), [0010](../research/0010-universality-redesign.md), [0011](../research/0011-design-v02-verification.md), [0012](../research/0012-revision-v03.md), [0013](../research/0013-revision-v03-verification.md)
 
@@ -261,6 +261,7 @@ class Technique(Protocol):
 - `%load_ext memopro`를 켜면 셀 실행 후 census가 **유휴 객체와 회수 가능량**을 알려준다.
   예: "`model_a` (nn.Module, 2.1GB, 7개 셀 동안 미사용) → `%hibernate model_a`로 회수 가능"
 - 사용자가 `%hibernate <이름>` 또는 `memopro.hibernate.now(obj)`로 실행한다. 다시 쓰면 복원된다.
+- **명시 핸들 방식 (0032 I5)**: `h = memopro.hibernate.now(obj)` → `obj = h.wake()`. 변수를 대리 객체로 바꿔 끼우지 않으므로 `isinstance`·`id()`·C 확장 문제가 없다. 대리 객체 방식(`%hibernate`)은 편의 기능이다.
 - 자동 동면은 **선택 사항**이다: `memopro.hibernate.enable(auto=True, idle_cells=3)`. 자동 모드에서만 아래의 참조 그래프 규칙으로 대상을 스스로 고른다(명시 실행에도 같은 안전 검사를 적용한다).
 
 **우선 환경과 기준선 (0015 P3)**
@@ -286,35 +287,61 @@ class Technique(Protocol):
   `isinstance`·`id()`·C 확장 직접 전달에는 한계가 있으며 문서화한다 (V8).
 
 **동면 실행 (메모리를 늘리지 않게)**
-- **청크 단위 스트리밍**: 장치 → 호스트 복사와 압축을 청크(기본 64MB) 단위로 처리해 순간 증가량에 상한을 둔다 (V6).
-- 가용 여유가 버퍼보다 작으면 압축 없이 디스크 방출을 우선한다.
-- 모드 (0021 D2, E005 근거):
+- **청크 단위 스트리밍**: 장치 → 호스트 복사, 압축, 방출을 청크 단위로 처리해 순간 증가량에 상한을 둔다 (V6, RS4).
 
-| 대상 | 기본 모드 | 비고 |
-|---|---|---|
-| CPU 텐서·모듈 (≥ 1MB) | **`spill`**: SSD 기록 후 RAM 해제. **기본은 무압축**(0025, E008 C5: 이 SSD에서 압축 방출이 무압축보다 느림). 압축 방출은 선택 사항이며, 파이프라인 방식의 확인 실험(E009) 뒤 재검토 | RAM 안 무손실 압축은 fp32에서 약 14% 절감에 그친다(0019) |
-| CUDA 텐서 (VRAM) | **호스트 RAM으로 이동**(무손실), 호스트 부족 시 `spill` | VRAM 회수가 1순위 가치 |
-| 모든 장치, 선택 | `lossy-bf16` (**명시적 선택만**) | 수치 변경 등급. fp32 대비 2.75~3.8배(0019) |
-| RAM 안 무손실 (`lossless`) | 선택 사항 | 저장 활성값처럼 압축이 잘 되는 경우(1.6배)에만 의미 |
-| 1MB 미만 객체 | 제안 대상 제외 | 방출 비용 대비 이득이 작음 |
+**방법 우선순위: SSD에 쓰지 않는 방법부터 (0032 H1)**
+
+| 순서 | 방법 (`mode`) | SSD 쓰기 | 대상 | 결과 |
+|---|---|---|---|---|
+| 1 | **`source`**: 메모리만 해제, 복원 시 원본 파일(safetensors 등)에서 다시 읽음 | 없음 | 불러온 뒤 바뀌지 않은 텐서. **해시로 원본과 일치 확인**(텐서 버전 번호는 `.data` 경유 수정을 잡지 못함) | 원본과 동일 |
+| 2 | **`host`**: GPU → 호스트 RAM 이동 | 없음 | CUDA 텐서(VRAM). 통합 메모리(MPS)에는 해당 없음 | 원본과 동일 |
+| 3 | **`compress`**: RAM 안 무손실 압축 | 없음 | 압축이 잘 되는 텐서(저장 활성값 약 1.6배). fp32 가중치는 약 14%로 효과 작음(0019) | 원본과 동일 |
+| — | **`bf16`**: 손실 압축 (**명시 선택만**, 자동 선택 안 함) | 없음 | 모든 장치. fp32 대비 절반(0019) | 수치 변경 |
+| 4 | **`spill`**: SSD 기록 후 해제. 무압축 기본(0025 C5), 압축은 E009 뒤 재검토 | **있음** | 원본이 없는 데이터. **`disk_writes` 정책이 허락할 때만** | 원본과 동일 |
+
+- 1MB 미만 객체는 제안 대상에서 제외한다.
+- `mode="auto"`(기본)는 위 순서에서 가능한 첫 방법을 고르되 `bf16`은 고르지 않는다. 4번에 도달하면 정책에 따라 묻거나 거부한다.
+
+**SSD 수명·성능 정책 (0032 H2~H4)**
+- `disk_writes`: `"ask"`(기본, 쓰기 전에 크기를 알리고 확인) · `"never"`(금지, 어떤 명령보다 우선) · `"allow"`.
+- 바뀌지 않은 데이터는 다시 쓰지 않는다: 복원 뒤에도 방출 파일을 디스크 예산 안에서 유지하고, 다음 동면 때 해시가 같으면 기존 파일을 재사용한다.
+- 같은 객체를 짧은 시간 안에 반복해서 동면·복원하면 경고하고 RAM에 두기를 제안한다. 자동 모드와 γ에는 하루 쓰기 한도(`daily_write_limit`)를 둔다.
+- 낮은 I/O 우선순위(macOS `setiopolicy_np`, Linux idle I/O 클래스 — NVMe 기본 스케줄러에서의 효과는 실측), SSD 여유 공간 20% 미만이면 `spill`을 쓰지 않음, 큰 순차 쓰기.
+- 쓰기량은 `report()`·`%memopro status`·`doctor`에 오늘·누적으로 표시한다(H5).
+
+**방출 파일 안전성 (0032 P5)**
+- 권한 0600, 정상·비정상 종료 시 정리, 다음 실행 시 남은 파일 청소, 디스크 예산 준수.
+- pickle을 쓰지 않는다. 원시 버퍼 + 메타데이터(dtype·shape·해시)로 저장한다.
+
+**사용자 선택 인터페이스 (0032 H6)**
+- 고른 방법이 불가능하면 조용히 바꾸지 않고 이유와 대안을 알린다. 예: "`source` 불가: 불러온 뒤 가중치가 수정됨 → `compress` 또는 `spill` 가능".
+- 안전 검사(참조 그래프, 비트 단위 복원 확인)는 어떤 선택으로도 우회할 수 없다.
+- `--plan`은 실행하지 않고 방법별 회수량·복원 시간(예상)·SSD 쓰기·결과 등급을 표로 보여 준다.
 
 **회수 확인 (실측)**
 - 해제 후 `torch.mps.empty_cache()` / `torch.cuda.empty_cache()`를 호출한다.
 - 절감량은 논리 바이트가 아니라 **실측 회수량**(프로세스 RSS, `torch.mps.driver_allocated_memory()`, `torch.cuda.memory_reserved()`)으로 보고한다 (V7).
 
-- API: `%load_ext memopro`(제안 표시) · `%hibernate <이름>` · `memopro.hibernate.now(obj, mode="spill"(CPU 기본)｜"host"(CUDA 기본)｜"lossy-bf16"｜"lossless")` · `memopro.hibernate.suggest()` · `memopro.hibernate.enable(auto=False, idle_cells=3, idle_seconds=None, spill_dir=None)`
+- API (0032 H6·I5):
+  - 노트북: `%load_ext memopro` · `%hibernate <이름> [--mode auto｜source｜host｜compress｜bf16｜spill] [--plan]` · `%wake <이름>` · `%memopro status`
+  - Python: `h = memopro.hibernate.now(obj, mode="auto")` → `h.wake()` · `memopro.hibernate.plan(obj)` · `memopro.hibernate.suggest()` · `memopro.hibernate.enable(auto=False, idle_cells=3, idle_seconds=None)`
+  - 정책: `memopro.configure(hibernate_modes=[...], disk_writes="ask"｜"never"｜"allow", daily_write_limit="20GB", spill_dir=None)` · `memopro.toml` · `MEMOPRO_DISK_WRITES` · `memopro run --disk-writes never`
 
 ### census — v0.1, 0013 V9·V10 수정
 
 | 모드 | 기본 | 측정 | 비용 |
 |---|---|---|---|
-| **빠른 모드** | ✅ | 파라미터·그래디언트·옵티마이저 상태·역전파 저장 텐서(`saved_tensors_hooks`)의 바이트, **표본 엔트로피(중복도)**, 생애 주기·유휴 시간, 셀 단위 증감(노트북) | 낮음 |
+| **빠른 모드** | ✅ | ① 범주별 바이트: 파라미터·그래디언트·옵티마이저 상태·역전파 저장 텐서(`saved_tensors_hooks`) ③ 이상치·거대 활성값 탐지, 생애 주기·유휴 시간, 셀 단위 증감(노트북). 무손실 엔트로피는 **보조 지표** (0032 R2) | 낮음 |
+| **정밀 경량판** (v0.1, 0032 Q1) | 선택 | ② 정밀도 중복: 표본 텐서 몇 개에 대해 비트 폭 2·4·8에서의 오차·그래디언트 영향 → 범주별 "필요 비트" 추정 ④ 텐서별 최악 민감도(K3) | 중간 |
 | **정밀 모드** (v0.2, 0015 P2) | 선택 | 학습 상태 범주(가중치·그래디언트·옵티마이저 모멘트·저장 활성값)별로 **필요한 비트 대비 실제 저장 비트**를 측정한다(표본 텐서에 비트 단위 교란 → 그래디언트·손실 영향). 층 간 상관 | 높음 (명시적 선택) |
 
 - **커버리지 대조**: 할당자 통계(장치·호스트)와 비교해 분류하지 못한 부분을 **"미분류"**로 명시한다. `no_grad` 추론 텐서(KV 캐시 등), 할당자 캐시, 런타임 컨텍스트가 여기에 해당한다. 목표는 할당자 바이트의 90% 이상 분류이다 (V9).
 - **차별점**: "어디에 쓰이나"는 기존 프로파일러(PyTorch Profiler, pytorch_memlab, memray, Scalene)와 겹친다. **"얼마나 중복(낭비)인가"**가 핵심 기능이다 (0013 D9·D10).
 - **정밀 모드는 양자화 민감도 분석이 아니다 (0030 C3)**: 추론 모델의 층별 양자화 민감도는 AIMET QuantAnalyzer, HAWQ 계열, Intel Neural Compressor 등 기존 도구의 영역이다. memopro는 이를 재구현하지 않는다. 정밀 모드의 대상은 **학습 중 메모리 상태 전체**이고, 결과는 "어느 범주에 몇 비트가 낭비되는가"라는 메모리 조사로 보고한다.
-- API: `with memopro.census.record(model, optimizer, mode="fast"｜"deep") as c: …` → `c.summary()`, `c.to_json()`
+- **행동 가능한 권고 (0032 P6)**: 결과를 조치로 연결한다. 예: "옵티마이저 상태는 원소당 약 k비트면 충분 → 8비트 옵티마이저 적용 시 약 X GB 절감 예상(수치 변경 등급)". memopro 기능이나 일반 기법 이름으로만 표현한다(외부 도구 안내 없음, S2).
+- **정확성 검증 (0032 P7)**: 정보량을 아는 합성 텐서로 측정값을 확인하고, 할당자 통계와 대조한다.
+- **통합 (0032 I8)**: HF Trainer 콜백, Lightning 콜백을 v0.1부터 제공한다.
+- API: `with memopro.census.record(model, optimizer, mode="fast"｜"light"｜"deep") as c: …` → `c.summary()`, `c.to_json()`
 
 ## 6. Rust 코어 (`crates/memopro`) — crates.io
 
@@ -323,7 +350,7 @@ class Technique(Protocol):
 | **`hwinfo`** (v0.1) | 풀별 예산 벡터의 OS 수준 기반: 물리·가용 RAM, 스왑, **cgroup v1/v2 한도**, 통합 메모리 여부, 디스크 여유·속도 | `sysinfo` 크레이트(cgroup 한도 포함)를 의존성으로 쓰고 빠진 부분만 구현 (0011 L13). MPS 권장 한도는 Python에서 torch로 조회 (0013 V12) |
 | `pressure` (v0.3) | OS 메모리 압박 구독 (macOS memory pressure, Linux PSI) | γ. v0.1의 β는 유휴 기준으로만 동작 (0013 V14) |
 | `codec` (v0.1) | 바이트 셔플 + **zstd 크레이트**로 부동소수 무손실 압축, lowbit(2/3/4비트) | β(방출 파일 압축), census. **기존 크레이트 위에 얇게 구현하며 신규성 주장 없음** (0013 V11). 성능 부족 시 blosc2 연동 검토 |
-| `ledger`, `spill` (v0.1), `policy` | 텐서 원장, **방출 엔진**(상주 풀 + 고정 버퍼 풀 + 파이프라인 방출·복원, 아래 RS1~RS5), 결정 로직 | β, γ. v0.1 Rust 코어의 중심 (0027). **신규성 주장 없음**: 비동기 텐서 SSD 방출은 TensorNVMe·DeepNVMe·kvikio가 이미 제공한다(0029 D20). 직접 만드는 이유는 ① macOS 지원(기존 도구는 Linux 전용) ② RS4 메모리 상한 보장 ③ β 프록시·원장과의 결합. Linux에서 TensorNVMe를 선택 백엔드로 쓸지는 E009 결과로 판단 (0030 C2) |
+| `ledger`, `spill` (v0.1), `policy` | 텐서 원장, **방출 엔진**(상주 풀 + 고정 버퍼 풀 + 파이프라인 방출·복원, 아래 RS1~RS5). **주 경로는 원본 파일 → 텐서 읽기와 병렬 해시 확인**, SSD 쓰기는 최후 수단 (0032 H1). 결정 로직 | β, γ. v0.1 Rust 코어의 중심 (0027). **신규성 주장 없음**: 비동기 텐서 SSD 방출은 TensorNVMe·DeepNVMe·kvikio가 이미 제공한다(0029 D20). 직접 만드는 이유는 ① macOS 지원(기존 도구는 Linux 전용) ② RS4 메모리 상한 보장 ③ β 프록시·원장과의 결합. Linux에서 TensorNVMe를 선택 백엔드로 쓸지는 E009 결과로 판단 (0030 C2) |
 | `census` (v0.1) | 표본 엔트로피 등 통계 커널 | census |
 
 > v0.1 크레이트는 기존 크레이트를 얇게 감싼 부분이 많아 단독 가치가 크지 않다. crates.io 배포는 최종 목표 달성과 이름 확보가 목적이며, 크레이트 설명에 범위를 명시한다 (0013 V13).
