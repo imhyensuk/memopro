@@ -9,6 +9,7 @@ import torch
 import memopro
 from memopro import IntegrityError, ModeUnavailable, PolicyError, hibernate
 from memopro.config import configure, reset_config
+from memopro.env._torch import mps_usable
 from memopro.hibernate import _ssd
 
 transformers = pytest.importorskip("transformers")
@@ -47,7 +48,7 @@ def logits(model, x):
 
 def devices():
     out = ["cpu"]
-    if torch.backends.mps.is_available():
+    if mps_usable():
         out.append("mps")
     return out
 

@@ -7,11 +7,37 @@ ROCm and XPU are detected and listed, but budgets for them are not supported yet
 
 from __future__ import annotations
 
+from functools import cache
 from importlib.util import find_spec
 
 from memopro.env import Device
 
-__all__ = ["probe"]
+__all__ = ["mps_usable", "probe"]
+
+MPS_UNUSABLE_NOTE = (
+    "Apple MPS reports available but cannot allocate memory here (for example a virtual "
+    "machine without GPU access): not used"
+)
+
+
+@cache
+def mps_usable() -> bool:
+    """MPS is usable only if a tiny allocation really works (0042).
+
+    ``torch.backends.mps.is_available()`` is also true in virtual machines (e.g. CI runners)
+    where every allocation fails with "MPS backend out of memory".
+    """
+    if find_spec("torch") is None:
+        return False
+    import torch
+
+    mps = getattr(torch.backends, "mps", None)
+    if mps is None or not mps.is_available():
+        return False
+    try:
+        return float((torch.ones(4, device="mps") + 1).sum().cpu()) == 8.0
+    except RuntimeError:
+        return False
 
 
 def probe() -> tuple[tuple[Device, ...], tuple[str, ...]]:
@@ -41,7 +67,9 @@ def probe() -> tuple[tuple[Device, ...], tuple[str, ...]]:
             notes.append("ROCm GPU detected: listed only, budgets are not supported yet")
 
     mps = getattr(torch.backends, "mps", None)
-    if mps is not None and mps.is_available():
+    if mps is not None and mps.is_available() and not mps_usable():
+        notes.append(MPS_UNUSABLE_NOTE)
+    elif mps is not None and mps.is_available():
         limit = int(torch.mps.recommended_max_memory())
         allocated = int(torch.mps.driver_allocated_memory())
         devices.append(

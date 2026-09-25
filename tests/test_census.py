@@ -8,6 +8,7 @@ import torch
 import memopro
 from memopro import InvalidArgument, NotYetImplemented
 from memopro.census import _stats
+from memopro.env._torch import mps_usable
 
 
 def tiny_model():
@@ -139,7 +140,7 @@ def test_result_needs_the_block_to_finish_and_modes_are_checked():
         memopro.census.record(mode="turbo")
 
 
-@pytest.mark.skipif(not torch.backends.mps.is_available(), reason="needs Apple MPS")
+@pytest.mark.skipif(not mps_usable(), reason="needs a usable Apple MPS device")
 def test_mps_coverage_is_reported():
     model = tiny_model().to("mps")
     opt = torch.optim.AdamW(model.parameters())
