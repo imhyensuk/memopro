@@ -68,6 +68,8 @@
 | [0039](0039-hibernate-v01.md) | 2026-09-25 | design+milestone+experiment | N1c β hibernate와 노트북 통합, M1 시연: GPT-2 498MB를 SSD 쓰기 없이 해제·비트 동일 복원 3/3, 깨우기 0.42s 대 다시 불러오기 0.56s | 확정 (CUDA 미검증) |
 | [0040](0040-v01-development-build.md) | 2026-09-25 | milestone | v0.1 개발판 완성: 테스트 Python 97·Rust 21, 패키징 확인(미배포), 완료 조건 대비표, 배포 전 검증 V1~V5 | 확정 (검증 대기) |
 | [0041](0041-completeness-review-d1-d3.md) | 2026-09-25 | survey+milestone | 자기 비판 3차(완성도 평가, 탐색적 시험 6종): 결함 D1(공유 저장공간이 조용히 깨짐)·D2(역전파 도중 동면)·D3(meta 텐서 예외 누출) 발견·수정, 회귀 테스트 5개 | 확정 |
+| [0042](0042-github-ci-first-run.md) | 2026-09-25 | milestone+experiment | GitHub 저장소(`imhyensuk/memopro`, 비공개)와 첫 CI: Linux·Python 3.11·cgroup 512MiB 한도 인식 통과, macOS 가상머신의 MPS 오판정 발견 → 실제 할당으로 판정 | 확정 |
+| [0043](0043-ci-minimal-usage.md) | 2026-09-25 | decision | CI 사용량 최소화: PR은 Linux만, macOS는 main push·수동 실행 때 1개 작업, 문서만 바뀌면 생략, 중복 실행 취소, 빌드·pip 캐시 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
