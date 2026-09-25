@@ -11,7 +11,9 @@
 
 use crate::error::{Error, Result};
 use std::path::{Path, PathBuf};
-use sysinfo::{CpuRefreshKind, MemoryRefreshKind, RefreshKind, System};
+use sysinfo::{
+    CpuRefreshKind, MemoryRefreshKind, ProcessRefreshKind, ProcessesToUpdate, RefreshKind, System,
+};
 
 /// Memory limit of the container (cgroup) the process runs in.
 #[derive(Debug, Clone, Copy, PartialEq, Eq)]
@@ -105,6 +107,20 @@ pub fn memory() -> Result<MemoryInfo> {
         swap_free_bytes: sys.free_swap(),
         cgroup,
     })
+}
+
+/// Resident set size of the current process, in bytes (used to measure reclaimed memory).
+pub fn process_rss() -> Result<u64> {
+    let pid = sysinfo::get_current_pid().map_err(|e| Error::InvalidArgument(e.to_string()))?;
+    let mut sys = System::new();
+    sys.refresh_processes_specifics(
+        ProcessesToUpdate::Some(&[pid]),
+        false,
+        ProcessRefreshKind::nothing().with_memory(),
+    );
+    sys.process(pid)
+        .map(|p| p.memory())
+        .ok_or_else(|| Error::InvalidArgument("current process not found".into()))
 }
 
 /// CPU brand and logical CPU count.
@@ -202,6 +218,16 @@ mod tests {
         assert!(m.kernel_available_bytes <= m.total_bytes);
         assert!(m.swap_free_bytes <= m.swap_total_bytes);
         assert!(m.usable_bytes() <= m.available_bytes);
+    }
+
+    #[test]
+    fn process_rss_grows_with_touched_memory() {
+        let before = process_rss().unwrap();
+        let block = vec![1u8; 64 << 20];
+        let after = process_rss().unwrap();
+        assert!(before > 0);
+        assert!(after >= before + (32 << 20), "{before} -> {after}");
+        drop(block);
     }
 
     #[test]

@@ -9,7 +9,7 @@
 
 > 여기서 "메모리"는 에이전트·대화 기억(agent memory)이 아니라 GPU/RAM **하드웨어 메모리**를 뜻한다.
 
-상태: **첫 기능 `memopro doctor` 동작** (2026-09-25) — 공개 API 구조와 공통 기반(설정, 방법 선택 정책, fail-open, CLI, 노트북 매직), 그리고 doctor(풀별 가용 메모리와 예산)가 동작한다. 나머지 기능은 아직 구현되지 않았으며, 호출하면 `NotYetImplemented`가 예정 버전을 알려 준다.
+상태: **v0.1 기능 전체 동작 (개발판, 미배포)** (2026-09-25) — doctor, census, β hibernate(방법 5종, 노트북 통합), HF·Lightning 콜백. 배포 전 검증(CUDA 실기, Linux 컨테이너, E009~E011 실험)이 남아 있다. v0.2·v0.3 기능은 호출하면 `NotYetImplemented`가 예정 버전을 알려 준다.
 
 ---
 
@@ -25,27 +25,34 @@
 - **대상**: 직접 만든 모델, 이미지 생성·비전·오디오 모델, Python 코드 안의 LLM, 파인튜닝, 연구 코드, Python 기반 서비스를 다루는 PyTorch 개발자
 - **대상 아님**: 코드 없이 LLM 앱을 쓰려는 최종 사용자
 
-## 2. 이렇게 쓴다 (설계안)
+## 2. 이렇게 쓴다
 
-**v0.1: 진단·회수**
+**v0.1: 진단·회수 (동작함, 미배포 — [예제 노트북](examples/quickstart.ipynb))**
 ```bash
 pip install "memopro[torch]"
-memopro doctor        # 내 환경의 풀별 예산: 장치·호스트 RAM·디스크 (컨테이너 한도, Apple Silicon 한도 반영)
+memopro doctor        # 풀별 가용 메모리와 예산: 장치·호스트 RAM·디스크 (컨테이너 한도, Apple Silicon 한도 반영)
 ```
 ```python
+%load_ext memopro             # 한동안 안 쓴 모델·텐서와 회수 가능량을 셀 뒤에 알려 줌
+%hibernate old_model --plan   # 방법별 회수량·복원 시간·SSD 쓰기를 먼저 비교 (아무것도 바꾸지 않음)
+%hibernate old_model          # SSD에 쓰지 않는 방법부터: 원본 재읽기 → GPU→RAM → RAM 압축
+old_model(x)                  # 다시 쓰면 스스로 복원 (비트 단위 동일)
+%memopro status               # 동면 중인 객체, 방법별 바이트, SSD 쓰기량
+
 import memopro
+h = memopro.hibernate.now(model)   # 노트북 밖에서: 명시 핸들 (대리 객체 없음)
+model = h.wake()
 
-%load_ext memopro     # 한동안 안 쓴 텐서·모델과 회수 가능량을 제안
-%hibernate old_model          # β: SSD에 쓰지 않는 방법부터(원본 재읽기 → GPU→RAM → RAM 압축), 다시 쓰면 복원
-%hibernate old_model --plan   # 방법별 회수량·복원 시간·SSD 쓰기를 미리 비교 (--mode 로 직접 선택)
-%wake old_model               # 바로 복원. SSD 쓰기는 허락할 때만 (disk_writes="ask")
-
-with memopro.census.record(model, optimizer) as c:    # 메모리가 어디에 쓰이고, 얼마나 중복(낭비)인가
-    loss = model(**batch).loss; loss.backward()
-print(c.summary())
+with memopro.census.record(model, optimizer, mode="light") as c:   # 한 스텝의 메모리 조사
+    model(**batch).loss.backward(); optimizer.step()
+print(c.summary())            # 범주별 바이트·무손실 비율·필요 비트·권고
+# HF Trainer / Lightning: callbacks=[memopro.integrations.hf.census_callback()]
 ```
+- SSD 쓰기는 기본으로 꺼져 있다(`disk_writes="ask"`). `%hibernate x --spill` 또는 `allow_spill=True`로 허락할 때만 쓰고, 파일은 본인만 읽을 수 있으며(0600) 종료 시 지운다. 디스크 여유가 20% 미만이면 쓰지 않는다.
+- `bf16`(수치 변경)은 `--mode bf16`으로 명시할 때만 쓴다.
+- **실측 (M1 8GB, MPS, GPT-2 124M)**: 원본 재읽기로 498MB를 SSD 쓰기 없이 해제, 3회 모두 비트 단위 동일 복원, 깨우기+추론 0.42초 대 `del` 후 다시 불러오기 0.56초 ([0039](docs/research/0039-hibernate-v01.md)).
 
-**v0.2: 내 예산에 맞추기**
+**v0.2: 내 예산에 맞추기 (설계안)**
 ```python
 model = memopro.optimize(model, goal="infer")          # 예산에 맞는 구성 자동 선택·적용
 with memopro.train_session(model, optimizer, batch_size=32) as s:
@@ -111,16 +118,25 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 | S1 | 기반 구축 + 걷는 뼈대: git, 가상환경, Cargo workspace, PyO3·maturin, CI 설정, `Technique` 뼈대, 실험 하네스, wheel·sdist·crate 패키징 확인 | 0.0.1 (로컬 빌드만, 미배포) | ✅ |
 | S2 | **라이브러리 전체 뼈대** (0034): 공개 API, 오류·설정 계층, β 방법 선택 정책, fail-open, CLI, 노트북 매직, Rust 모듈 구조. 테스트 Python 60·Rust 17 | | ✅ |
 | X1 | **첫 실험** (0015 P1): α E001~E003(→ 기각), 텐서 중복도·OS 압축 기준선 E005, 노트북 유휴 계측 도구 E006 | | ✅ (0018~0021) |
-| E010 | β 실사용 수요 수집 (사전 등록, 동료 3~5명) → **◆ Gβ** (0032) | | |
+| E010·E009·E011 | 배포 전 검증: β 실사용 수요(Gβ), 압축 방출, OS 스왑 대비 (0036) | | 대기 |
 | A1a·N1a | hwinfo → **doctor** (0035): 보수적 가용 메모리, 풀별 예산, `memopro doctor [--json]` | | ✅ (macOS 검증, Linux 컨테이너는 CI 대기) |
-| N1b | **census**(빠른 + 정밀 경량, HF·Lightning 콜백) | | |
-| A1b·N1c | (Gβ 통과 시) 방출 엔진(원본 재읽기·해시 우선, RS1~RS5, SSD 정책) → E009·E011 → **β** | | 설계 규칙 확정, 프로토타입 codec 완료(E008) |
-| N1 | **doctor + census + β** 통합, 5분 시연 노트북, 공개 시연 수치 | 🚀 v0.1.0 (crates.io + PyPI) | |
+| N1b | **census**(빠른 + 정밀 경량, 권고, HF·Lightning 콜백) (0037) | | ✅ |
+| A1b·N1c | 저장 엔진(원본 재읽기·다이제스트, RS1~RS5, SSD 정책) → **β** (0038·0039, 0036에서 Gβ 이전 제작으로 변경) | | ✅ (CUDA 실기 미검증) |
+| N1 | **doctor + census + β** 통합, 5분 시연 노트북, 공개 시연 수치 (0040) | 🚀 v0.1.0 (crates.io + PyPI) | 개발판 완성, 배포 전 검증 대기 |
 | R2 | 메모리 센서스 연구 (census와 코드 공유, 연구 주력 후보 — 0021 Q2) | | |
 | A2 | 범용 접근: `optimize`, `train_session`, `load`, `check`, 생태계 통합 | 🚀 v0.2.0 | |
 | ~~◆ Gα → N2~~ | ~~α 등록~~ — 0018 기각으로 취소 | | ❌ |
 | ◆ Gγ → N3 | γ + pressure + `memopro run` | 🚀 v0.3.0 | |
 | S6 | 안정화, 문서 사이트(영어·한국어) | 🚀 v1.0.0 | |
+
+## 알려진 한계 (v0.1 개발판)
+
+- **아직 배포 전이다.** CUDA GPU는 합성 테스트만 했고 실제 GPU(Colab) 검증 전이다. Linux 컨테이너 한도 인식은 CI 작업만 작성되어 있다.
+- `source` 복원은 Hugging Face `from_pretrained`로 불러온 safetensors 모델(로컬 폴더 또는 HF 캐시)과 `register_source`로 등록한 파일에서만 쓸 수 있다. 불러온 뒤 바뀐 텐서는 비트 단위 확인에서 걸러져 다른 방법으로 넘어간다. **동면 중에 원본 파일을 바꾸면 복원이 거부된다**(데이터 복구 불가, `IntegrityError`).
+- 동면 중인 텐서를 직접 쓰면 크기 0이라 오류가 난다(조용히 틀리지 않음). 모듈과 옵티마이저는 호출·`step()` 때 스스로 깨어난다. 노트북의 텐서 대리 객체는 `isinstance`·`id()`가 원래 텐서와 다르다.
+- 회수량은 실측(RSS, MPS·CUDA 드라이버 메모리)으로 보고한다. 할당자가 페이지를 바로 돌려주지 않아 논리 크기보다 작게 나올 수 있다.
+- census의 필요 비트는 복원 오차 기준이다(학습 영향 기준은 v0.2). 권고 임계값은 휴리스틱이다.
+- β 수요(E010), 압축 방출(E009), OS 스왑 대비 이득(E011)은 배포 전 검증 과제이다(0036). 그 전까지 OS 대비 우위는 주장하지 않는다.
 
 ## 6. 원칙 (요약)
 

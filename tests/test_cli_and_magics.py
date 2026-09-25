@@ -70,14 +70,15 @@ def test_magics_register_and_never_raise(capsys):
     shell = FakeShell()
     memopro.load_ipython_extension(shell)
     assert set(shell.magics) == {"hibernate", "wake", "memopro"}
-    assert shell.magics["hibernate"]("model_a") is None
+    assert shell.magics["hibernate"]("model_a") is None  # not a tensor: printed, not raised
     assert shell.magics["hibernate"]("missing") is None
     assert shell.magics["hibernate"]("model_a --mode nope") is None
     assert shell.magics["wake"]("model_a") is None
     assert shell.magics["memopro"]("status") is None
     out = capsys.readouterr().out
-    assert "not implemented yet" in out
+    assert "cannot hibernate object" in out
     assert "'missing' is not defined" in out
+    assert "not hibernated" in out
 
 
 def test_fail_open_records_and_continues():

@@ -1,32 +1,32 @@
 from os import PathLike
-from typing import Any
+from typing import Any, TypeAlias
+
+Buffer: TypeAlias = Any  # collections.abc.Buffer needs Python 3.12
 
 __version__: str
+DIGEST_CHUNK: int
 
 def core_version() -> str: ...
+
+# hwinfo
 def hwinfo_memory() -> dict[str, Any]: ...
 def hwinfo_cpu() -> dict[str, Any]: ...
+def hwinfo_process_rss() -> int: ...
 def hwinfo_disk(path: str | PathLike[str]) -> dict[str, Any]: ...
 
-# E008 prototypes (bytes input, RS2 violation); removed when the spill engine lands (0027).
-def codec_compress(
-    data: bytes, itemsize: int, level: int = 1, chunk_bytes: int = ..., threads: int = 0
-) -> list[bytes]: ...
-def codec_decompress(
-    chunks: list[bytes],
-    itemsize: int,
-    total_len: int,
-    chunk_bytes: int = ...,
-    threads: int = 0,
+# spill engine (buffers are borrowed through the buffer protocol, RS2)
+def engine_digest(data: Buffer) -> bytes: ...
+def engine_read_source_into(
+    path: str | PathLike[str], offset: int, dst: Buffer, expected: bytes | None = None
 ) -> bytes: ...
-def codec_compress_reuse_size(
-    data: bytes, itemsize: int, level: int = 1, chunk_bytes: int = ..., threads: int = 0
-) -> int: ...
-def codec_spill_to_file(
-    data: bytes,
-    itemsize: int,
-    path: str,
-    level: int = 1,
-    chunk_bytes: int = ...,
-    threads: int = 0,
-) -> int: ...
+def engine_write(data: Buffer, directory: str | PathLike[str]) -> tuple[str, int, bytes]: ...
+
+# lossless in-RAM codec
+class Compressed:
+    @property
+    def raw_bytes(self) -> int: ...
+    @property
+    def stored_bytes(self) -> int: ...
+    def unpack_into(self, dst: Buffer) -> None: ...
+
+def codec_pack(data: Buffer, itemsize: int, level: int = 1) -> Compressed: ...

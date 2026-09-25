@@ -2,7 +2,7 @@
 
 import pytest
 
-from memopro import InvalidArgument, NotYetImplemented, PolicyError, hibernate
+from memopro import InvalidArgument, PolicyError, hibernate
 from memopro.config import Config, configure, reset_config
 from memopro.hibernate import Step, resolve_modes
 
@@ -62,5 +62,5 @@ def test_now_enforces_policy_before_anything_else():
     configure(disk_writes="never")
     with pytest.raises(PolicyError):
         hibernate.now(object(), mode="spill")
-    with pytest.raises(NotYetImplemented):
+    with pytest.raises(TypeError, match="cannot hibernate"):
         hibernate.now(object(), mode="source")

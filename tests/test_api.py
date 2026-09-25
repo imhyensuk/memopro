@@ -33,16 +33,8 @@ def test_not_yet_implemented_is_a_not_implemented_error():
         (lambda: memopro.optimize(object()), "v0.2"),
         (lambda: memopro.train_session(object(), object()), "v0.2"),
         (lambda: memopro.check("gpt2"), "v0.2"),
-        (lambda: memopro.census.record(), "v0.1"),
         (lambda: memopro.census.record(mode="deep"), "v0.2"),
-        (lambda: memopro.hibernate.plan(object()), "v0.1"),
-        (lambda: memopro.hibernate.wake(object()), "v0.1"),
-        (lambda: memopro.hibernate.suggest(), "v0.1"),
-        (lambda: memopro.hibernate.status(), "v0.1"),
-        (lambda: memopro.hibernate.Handle("x", "source", 1).wake(), "v0.1"),
         (lambda: memopro.elastic.enable(), "v0.3"),
-        (lambda: memopro.integrations.hf.census_callback(), "v0.1"),
-        (lambda: memopro.integrations.lightning.census_callback(), "v0.1"),
     ],
 )
 def test_skeleton_features_name_their_plan(call, planned):
@@ -56,6 +48,12 @@ def test_census_rejects_unknown_mode():
 
 
 def test_integrations_do_not_import_frameworks():
+    import subprocess
     import sys
 
-    assert "lightning" not in sys.modules
+    code = (
+        "import sys, memopro.integrations.hf, memopro.integrations.lightning; "
+        "print(sorted(m for m in ('transformers', 'lightning', 'torch') if m in sys.modules))"
+    )
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+    assert out.stdout.strip() == "[]"

@@ -7,23 +7,52 @@ memopro is for developers who build their own projects, services, experiments an
 with PyTorch on machines with little memory. "Memory" here means hardware memory (GPU/RAM), not
 agent or conversation memory.
 
-> **Status: early development (0.0.x).** Only the package skeleton exists: the designed API is in
-> place and every feature that is not built yet raises `memopro.NotYetImplemented` naming its
-> planned version. `import memopro` has no side effects and does not import torch.
+> **Status: development build (0.0.x), not released yet.** The 0.1 features below work and are
+> tested on macOS (CPU and Apple MPS); CUDA and Linux-container validation are still pending.
+> `import memopro` has no side effects and does not import torch.
 
-## Planned for 0.1
+## 0.1 features
 
-- **Idle memory hibernation for notebooks** - memopro suggests idle tensors/models and how much
-  memory they hold. `%hibernate <name>` reclaims it using write-free methods first: drop a model
-  that is unchanged since loading and re-read it from its original file later (hash-verified), move
-  CUDA tensors to host RAM, or compress in RAM. Writing to the SSD is off by default and needs your
-  consent (`disk_writes="ask"`). `--plan` compares the methods before running, `--mode` picks one,
-  and `h = memopro.hibernate.now(obj)` / `h.wake()` works without proxy objects.
-- **`memopro.census`** - where memory goes during training, and how many bits each category
-  (weights, gradients, optimizer state, saved activations) really needs, with actionable advice.
-  Callbacks for the Hugging Face `Trainer` and Lightning.
-- **`memopro doctor`** - available memory per pool (device, host RAM, disk), aware of container
-  (cgroup) limits and Apple Silicon unified-memory limits.
+```python
+%load_ext memopro             # after a cell, names idle models/tensors and how much they hold
+%hibernate old_model --plan   # compare methods first: reclaim, restore time, SSD writes
+%hibernate old_model          # write-free methods first; the model wakes by itself when called
+%memopro status
+
+import memopro
+h = memopro.hibernate.now(model)   # outside notebooks: explicit handle, no proxies
+model = h.wake()
+
+with memopro.census.record(model, optimizer, mode="light") as c:
+    model(**batch).loss.backward(); optimizer.step()
+print(c.summary())                 # bytes per category, compressibility, needed bits, advice
+```
+
+- **Hibernation methods**, tried in this order: `source` (drop the memory, re-read the original
+  safetensors file on wake, verified bit for bit), `host` (CUDA -> RAM), `compress` (lossless, in
+  RAM, only if it pays off), `spill` (SSD). **SSD writes are off by default** (`disk_writes="ask"`):
+  memopro writes only with your consent (`--spill`, `allow_spill=True`), into private (0600) files,
+  never below a 20% free-space floor, within a daily limit, and removes them at exit. `bf16`
+  (changes numerics) is used only when you ask for it.
+- **`memopro doctor`**: available memory per pool (device, host RAM, disk) with a conservative
+  definition of "available" (memory obtainable without compressing or swapping anything),
+  container limits and the Apple Silicon MPS limit.
+- **`memopro.census`**: where training memory goes and how many bits each category really needs,
+  with actionable advice. Callbacks for the Hugging Face `Trainer` and Lightning.
+- Measured on an 8 GB M1 (MPS, GPT-2 124M): 498 MB released without any SSD write, restored bit
+  for bit in 3 of 3 cycles; wake + forward 0.42 s vs. 0.56 s to reload with `from_pretrained`.
+
+See `examples/quickstart.ipynb`.
+
+## Known limitations
+
+- `source` works for models loaded with Hugging Face `from_pretrained` from safetensors (local
+  folder or the HF cache) and for files registered with `memopro.hibernate.register_source`.
+  If the original file changes while the model sleeps, restore is refused (`IntegrityError`).
+- A sleeping tensor used directly fails loudly (it has 0 elements); modules and optimizers wake
+  themselves on call/`step()`.
+- Reclaimed memory is measured (RSS, MPS/CUDA driver memory); allocators may keep pages, so it
+  can be smaller than the logical size.
 
 ## Later
 

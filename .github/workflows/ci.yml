@@ -40,6 +40,14 @@ jobs:
         with:
           python-version: ${{ matrix.python }}
       - run: python -m pip install --upgrade pip maturin pytest ruff
+      - name: Install test dependencies (CPU torch on Linux)
+        run: |
+          if [ "$RUNNER_OS" = "Linux" ]; then
+            python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+          else
+            python -m pip install torch
+          fi
+          python -m pip install numpy ipython transformers accelerate
       - run: ruff check python tests experiments
       - run: maturin build --release --out dist
       - run: python -m pip install --no-index --find-links dist memopro
