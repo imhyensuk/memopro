@@ -1,25 +1,36 @@
-"""β hibernate: reclaim memory held by idle tensors and modules (architecture §5.1 β, 0032).
+"""β hibernate: reclaim memory held by idle tensors, modules and optimizers (0032, 0036).
 
 Methods, tried in this order by ``mode="auto"`` (no SSD writes before the last one):
 
-1. ``source``   drop the memory; restore by re-reading the original file (hash-verified)
+1. ``source``   drop the memory; restore by re-reading the original file (bit-exact, verified)
 2. ``host``     move a CUDA tensor to host RAM
-3. ``compress`` lossless compression in RAM
-4. ``spill``    write to SSD, only when ``disk_writes`` allows it
+3. ``compress`` lossless compression in RAM (only if it pays off)
+4. ``spill``    write to SSD, only when ``disk_writes`` allows it (consent under "ask")
 
-``bf16`` (lossy) is never chosen automatically. Two styles are offered: an explicit handle
-(``h = now(obj)`` then ``obj = h.wake()``, no proxies) and the notebook magics
-(``%hibernate``/``%wake``), which rebind the name through a proxy.
+``bf16`` (lossy, halves float32) is never chosen automatically. Methods apply per tensor, so a
+model can end up partly ``source`` and partly ``compress``.
 
-Status: skeleton. The policy is enforced already; the methods arrive in v0.1 after gate Gβ.
+Two styles::
+
+    h = memopro.hibernate.now(model)      # explicit handle, no proxies (0032 I5)
+    model = h.wake()                      # modules also wake by themselves when called
+
+    %hibernate model                      # notebook magics (0032 H6)
+
+The tensors keep their identity: memopro swaps their storage for an empty one while they sleep
+(0036 B1), so optimizers and other holders see the data again after waking. Using a sleeping
+tensor directly fails loudly (it has 0 elements); a sleeping module or optimizer wakes itself on
+``forward`` or ``step``.
 """
 
 from __future__ import annotations
 
+import inspect
+from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
 
-from memopro._errors import NotYetImplemented
+from memopro._errors import InvalidArgument, MemoproError, ModeUnavailable
 from memopro.config import get_config
 from memopro.hibernate._policy import MODES, Step, resolve_modes
 
@@ -28,17 +39,22 @@ __all__ = [
     "Handle",
     "PlanRow",
     "Step",
+    "Suggestion",
     "enable",
+    "handles",
     "now",
     "plan",
+    "register_source",
     "resolve_modes",
     "status",
     "suggest",
     "wake",
 ]
 
-_PLANNED = "v0.1 (N1c, after gate Gβ)"
-_REF = "docs/research/0032-adopt-group1-2.md"
+MIN_OBJECT_BYTES = 1 << 20  # objects under 1 MiB are not worth suggesting (architecture §5.1)
+
+# Rough transfer rates for restore-time estimates in plan(); orders of magnitude only (U6).
+_RATES = {"source": 2e9, "spill": 2e9, "host": 10e9, "compress": 1.5e9, "bf16": 20e9}
 
 
 @dataclass(frozen=True)
@@ -49,52 +65,390 @@ class PlanRow:
     available: bool
     reason: str  # why not, when unavailable
     reclaim_bytes: int
-    restore_seconds: float | None  # estimate
+    restore_seconds: float | None  # rough estimate
     disk_write_bytes: int
     fidelity: str  # "exact" | "numerics"
 
 
+@dataclass(frozen=True)
+class Suggestion:
+    name: str
+    type: str
+    nbytes: int
+    idle_cells: int | None
+
+
+@dataclass
+class _Record:
+    slot: Any
+    sleeping: Any
+
+
+def _measure() -> dict[str, int]:
+    """Memory per pool now: process RSS and accelerator driver memory (after emptying caches)."""
+    import torch
+
+    from memopro import _core
+
+    out = {"rss": _core.hwinfo_process_rss()}
+    if torch.cuda.is_available():
+        torch.cuda.empty_cache()
+        out["cuda"] = int(
+            sum(torch.cuda.memory_reserved(i) for i in range(torch.cuda.device_count()))
+        )
+    mps = getattr(torch.backends, "mps", None)
+    if mps is not None and mps.is_available():
+        torch.mps.empty_cache()
+        out["mps"] = int(torch.mps.driver_allocated_memory())
+    return out
+
+
 class Handle:
-    """Explicit handle to a hibernated object (0032 I5). ``wake()`` returns the restored object."""
+    """A hibernated object. ``wake()`` restores it (in place) and returns it."""
 
-    def __init__(self, name: str, mode: str, nbytes: int) -> None:
+    def __init__(self, obj: Any, name: str, mode: str) -> None:
+        self._obj = obj
         self.name = name
-        self.mode = mode
-        self.nbytes = nbytes
+        self.requested_mode = mode
+        self.records: list[_Record] = []
+        self.kept: dict[str, list[str]] = defaultdict(list)  # reason -> tensor names left awake
+        self.reclaimed: dict[str, int] = {}  # measured, per pool
+        self.asleep = False
+        self._hooks: list[Any] = []
 
-    def wake(self) -> Any:
-        raise NotYetImplemented("memopro.hibernate.Handle.wake", _PLANNED, _REF)
+    # ------------------------------------------------------------ info
+    @property
+    def object(self) -> Any:
+        return self._obj
+
+    @property
+    def nbytes(self) -> int:
+        return sum(r.sleeping.nbytes for r in self.records)
+
+    def bytes_by_mode(self) -> dict[str, int]:
+        out: dict[str, int] = defaultdict(int)
+        for r in self.records:
+            out[r.sleeping.mode] += r.sleeping.nbytes
+        return dict(out)
+
+    @property
+    def disk_write_bytes(self) -> int:
+        return sum(r.sleeping.disk_write_bytes for r in self.records)
 
     def __repr__(self) -> str:
-        return f"Handle(name={self.name!r}, mode={self.mode!r}, nbytes={self.nbytes})"
+        state = "asleep" if self.asleep else "awake"
+        modes = ", ".join(f"{m} {b}" for m, b in self.bytes_by_mode().items())
+        return f"<memopro.hibernate.Handle {self.name!r} {state}: {modes or 'nothing'}>"
+
+    # ------------------------------------------------------------ wake
+    def wake(self) -> Any:
+        from memopro.hibernate import _methods
+        from memopro.hibernate._tensors import asleep
+        from memopro.report import report
+
+        if not self.asleep:
+            return self._obj
+        for h in self._hooks:
+            h.remove()
+        self._hooks.clear()
+        failed = []
+        for r in self.records:
+            if not asleep(r.slot):
+                continue
+            try:
+                _methods.WAKE[r.sleeping.mode](r.slot, r.sleeping)
+            except MemoproError as e:
+                failed.append(f"{r.slot.names[0] or 'tensor'}: {e}")
+        self.asleep = False
+        report().add("hibernate", "reverted", f"{self.name} woke up")
+        if failed:
+            raise failed_error(failed)
+        return self._obj
 
 
-def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False) -> Handle:
-    """Hibernate ``obj`` now and return a handle."""
-    resolve_modes(mode, get_config(), allow_spill=allow_spill)  # policy errors surface today
-    raise NotYetImplemented("memopro.hibernate.now", _PLANNED, _REF)
+def failed_error(failed: list[str]) -> MemoproError:
+    from memopro._errors import IntegrityError
+
+    return IntegrityError("some tensors could not be restored: " + "; ".join(failed))
 
 
-def plan(obj: Any) -> list[PlanRow]:
-    """Compare every method for ``obj`` (reclaim, restore time, SSD writes) without running it."""
-    raise NotYetImplemented("memopro.hibernate.plan", _PLANNED, _REF)
+_handles: dict[int, Handle] = {}
+
+
+def handles() -> list[Handle]:
+    """Handles of hibernated objects in this process (asleep or woken)."""
+    return list(_handles.values())
+
+
+def _guess_name(obj: Any) -> str:
+    frame = inspect.currentframe()
+    try:
+        caller = frame.f_back.f_back if frame and frame.f_back else None
+        if caller is not None:
+            for name, value in {**caller.f_globals, **caller.f_locals}.items():
+                if value is obj and not name.startswith("_"):
+                    return name
+    finally:
+        del frame
+    return type(obj).__name__
+
+
+def _install_auto_wake(handle: Handle) -> None:
+    import torch
+
+    obj = handle.object
+
+    def wake_hook(*_: Any, **__: Any) -> None:
+        handle.wake()
+
+    if isinstance(obj, torch.nn.Module):
+        for m in obj.modules():
+            handle._hooks.append(m.register_forward_pre_hook(wake_hook))
+    elif isinstance(obj, torch.optim.Optimizer):
+        handle._hooks.append(obj.register_step_pre_hook(wake_hook))
+
+
+def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False, name: str | None = None):
+    """Hibernate ``obj`` (tensor, ``nn.Module`` or optimizer) now and return a `Handle`.
+
+    ``allow_spill=True`` gives consent to write to SSD when ``disk_writes="ask"``.
+    With an explicit ``mode`` no other method is used; tensors it does not fit stay in memory
+    and are listed in ``handle.kept``. If it fits none, `ModeUnavailable` explains why.
+    """
+    import torch
+
+    from memopro.hibernate import _source
+    from memopro.hibernate._tensors import collect, release
+    from memopro.report import report
+
+    cfg = get_config()
+    steps = resolve_modes(mode, cfg, allow_spill=allow_spill)
+    existing = _handles.get(id(obj))
+    if existing is not None and existing.asleep:
+        return existing
+    slots = collect(obj)
+    handle = Handle(obj, name or _guess_name(obj), mode)
+    regions = (
+        _source.regions(obj)
+        if isinstance(obj, torch.nn.Module) and any(s.mode == "source" for s in steps)
+        else {}
+    )
+    explicit = mode != "auto"
+    last_reason = "no method fits"
+    before = _measure()
+    for slot in slots:
+        if not slot.tensor.is_contiguous():
+            handle.kept["not contiguous"].append(slot.names[0])
+            continue
+        done = False
+        for step in steps:
+            try:
+                if step.needs_confirmation:
+                    raise ModeUnavailable(
+                        "spill",
+                        "SSD writes need consent (disk_writes='ask'): pass allow_spill=True "
+                        "or use %hibernate --spill",
+                    )
+                sleeping = _sleep(step.mode, slot, regions, cfg, explicit)
+            except ModeUnavailable as e:
+                last_reason = e.reason
+                continue
+            release(slot)
+            handle.records.append(_Record(slot, sleeping))
+            done = True
+            break
+        if not done:
+            handle.kept[last_reason].append(slot.names[0] or "tensor")
+    if not handle.records:
+        reasons = "; ".join(handle.kept) or "nothing to hibernate"
+        raise ModeUnavailable(mode, reasons, tuple(m for m in MODES if m != mode))
+    after = _measure()
+    handle.reclaimed = {k: max(0, before[k] - after.get(k, 0)) for k in before}
+    handle.asleep = True
+    _install_auto_wake(handle)
+    _handles[id(obj)] = handle
+    detail = f"{handle.name}: " + ", ".join(f"{m} {b}" for m, b in handle.bytes_by_mode().items())
+    report().add("hibernate", "applied", detail, reclaimed_bytes=max(handle.reclaimed.values()))
+    return handle
+
+
+def _sleep(mode: str, slot: Any, regions: dict, cfg: Any, explicit: bool) -> Any:
+    from memopro.hibernate import _methods
+
+    match mode:
+        case "source":
+            return _methods.sleep_source(slot, regions)
+        case "host":
+            return _methods.sleep_host(slot)
+        case "compress":
+            return _methods.sleep_compress(slot, explicit=explicit)
+        case "bf16":
+            return _methods.sleep_bf16(slot)
+        case "spill":
+            return _methods.sleep_spill(slot, cfg)
+    raise InvalidArgument(f"unknown mode {mode!r}")
 
 
 def wake(target: Any) -> Any:
-    """Restore a hibernated object (a `Handle` or a proxy) right away."""
-    raise NotYetImplemented("memopro.hibernate.wake", _PLANNED, _REF)
+    """Restore a hibernated object now: a `Handle`, the object itself, or a notebook proxy."""
+    if isinstance(target, Handle):
+        return target.wake()
+    wake_proxy = getattr(type(target), "_memopro_wake", None)
+    if wake_proxy is not None:
+        return wake_proxy(target)
+    handle = _handles.get(id(target))
+    if handle is None:
+        raise InvalidArgument("this object is not hibernated")
+    return handle.wake()
 
 
-def suggest() -> list[Any]:
-    """List idle objects worth hibernating, with the reclaimable amount per method."""
-    raise NotYetImplemented("memopro.hibernate.suggest", _PLANNED, _REF)
+def register_source(model: Any, *paths: str) -> None:
+    """Declare the safetensors files a model was loaded from, for write-free restore."""
+    from memopro.hibernate import _source
+
+    _source.register(model, *paths)
+
+
+def plan(obj: Any) -> list[PlanRow]:
+    """Compare every method for ``obj`` without running it (0032 H6)."""
+    import torch
+
+    from memopro import _core
+    from memopro.hibernate import _source, _ssd
+    from memopro.hibernate._methods import COMPRESS_WORTH
+    from memopro.hibernate._tensors import collect, cpu_bytes
+
+    cfg = get_config()
+    slots = [s for s in collect(obj) if s.tensor.numel()]
+    total = sum(s.nbytes for s in slots)
+    rows = []
+
+    regions = _source.regions(obj) if isinstance(obj, torch.nn.Module) else {}
+    matched = sum(
+        s.nbytes
+        for s in slots
+        if any(n in regions and _source.matches_shape(regions[n], s.shape) for n in s.names)
+    )
+    rows.append(
+        PlanRow(
+            "source",
+            matched > 0,
+            "" if matched else "no original file found",
+            matched,
+            matched / _RATES["source"],
+            0,
+            "exact",
+        )
+    )
+
+    cuda = sum(s.nbytes for s in slots if s.device.type == "cuda")
+    reason = "" if cuda else "no CUDA tensors (unified memory or already in RAM)"
+    rows.append(PlanRow("host", cuda > 0, reason, cuda, cuda / _RATES["host"], 0, "exact"))
+
+    sample = max(slots, key=lambda s: s.nbytes, default=None)
+    ratio = 1.0
+    if sample is not None:
+        piece = sample.tensor.detach().reshape(-1)[
+            : (4 << 20) // max(sample.tensor.element_size(), 1)
+        ]
+        live, view = cpu_bytes(piece)
+        packed = _core.codec_pack(view, live.element_size())
+        ratio = packed.stored_bytes / max(packed.raw_bytes, 1)
+    saving = int(total * (1 - ratio))
+    rows.append(
+        PlanRow(
+            "compress",
+            ratio <= COMPRESS_WORTH,
+            f"estimated {ratio:.0%} of size",
+            saving,
+            total / _RATES["compress"],
+            0,
+            "exact",
+        )
+    )
+
+    f32 = sum(s.nbytes for s in slots if s.dtype in (torch.float32, torch.float64))
+    rows.append(
+        PlanRow(
+            "bf16",
+            f32 > 0,
+            "" if f32 else "no float32 tensors",
+            f32 // 2,
+            f32 / _RATES["bf16"],
+            0,
+            "numerics",
+        )
+    )
+
+    reason = ""
+    ok = cfg.disk_writes != "never"
+    if not ok:
+        reason = "disk_writes='never'"
+    else:
+        try:
+            _ssd.check_room(cfg, total)
+        except ModeUnavailable as e:
+            ok, reason = False, e.reason
+    if ok and cfg.disk_writes == "ask":
+        reason = "needs consent (--spill / allow_spill=True)"
+    rows.append(PlanRow("spill", ok, reason, total, total / _RATES["spill"], total, "exact"))
+    return rows
+
+
+def suggest(namespace: dict[str, Any] | None = None, min_bytes: int = MIN_OBJECT_BYTES):
+    """Objects worth hibernating in ``namespace`` (default: the notebook or the caller's globals),
+    largest first, with how many cells they have been idle when the notebook tracker runs."""
+    from memopro.hibernate import _tracker
+    from memopro.hibernate._tensors import storage_bytes
+
+    if namespace is None:
+        namespace = _tracker.namespace() or inspect.currentframe().f_back.f_globals
+    out = []
+    for name, obj in list(namespace.items()):
+        if name.startswith("_") or id(obj) in _handles and _handles[id(obj)].asleep:
+            continue
+        n = storage_bytes(obj)
+        if n >= min_bytes:
+            out.append(Suggestion(name, type(obj).__name__, n, _tracker.idle_cells(name)))
+    return sorted(out, key=lambda s: -s.nbytes)
 
 
 def enable(auto: bool = False, idle_cells: int | None = None, idle_seconds: float | None = None):
-    """Turn on suggestions (and, optionally, automatic hibernation) in a notebook session."""
-    raise NotYetImplemented("memopro.hibernate.enable", _PLANNED, _REF)
+    """Notebook tracking: suggestions after cells, and optionally automatic hibernation.
+
+    Automatic hibernation only uses write-free methods unless ``disk_writes="allow"``.
+    """
+    from memopro.hibernate import _tracker
+
+    if idle_seconds is not None:
+        raise InvalidArgument("idle_seconds is not supported yet; use idle_cells")
+    _tracker.enable(auto=auto, idle_cells=idle_cells)
 
 
 def status() -> dict[str, Any]:
-    """Hibernated objects, reclaimed bytes and SSD writes (today, total) (0032 H5)."""
-    raise NotYetImplemented("memopro.hibernate.status", _PLANNED, _REF)
+    """Hibernated objects, reclaimed memory and SSD writes (0032 H5)."""
+    from memopro.hibernate import _ssd
+
+    cfg = get_config()
+    try:
+        directory = _ssd.spill_dir(cfg)
+        today, total = _ssd.written_today(directory), _ssd.written_total(directory)
+    except OSError:
+        directory, today, total = None, 0, 0
+    return {
+        "objects": [
+            {
+                "name": h.name,
+                "asleep": h.asleep,
+                "bytes": h.nbytes,
+                "by_mode": h.bytes_by_mode(),
+                "reclaimed": h.reclaimed,
+                "kept_awake": {k: len(v) for k, v in h.kept.items()},
+            }
+            for h in _handles.values()
+        ],
+        "ssd_written_today": today,
+        "ssd_written_total": total,
+        "spill_dir": str(directory) if directory else None,
+        "disk_writes": cfg.disk_writes,
+    }

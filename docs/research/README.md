@@ -62,6 +62,11 @@
 | [0033](0033-research-direction.md) | 2026-09-25 | decision | 연구 방향 확정: 논문 A(센서스 측정 연구) 주력·E012, 논문 B는 v0.1 이후, G3 장기 과제와 후보 탐색 절차, K1~K6 원칙화, 연구·제품 성공 기준 분리 | 확정 (게재처·GPU 환경 대기) |
 | [0034](0034-library-skeleton.md) | 2026-09-25 | design+milestone | S2 라이브러리 전체 뼈대: 공개 API(지연 import), 오류 계층(NotYetImplemented), 설정 계층, β 방법 선택 정책, fail-open, CLI 종료 코드, 노트북 매직, Rust 모듈(error·hwinfo·spill·ledger·pressure). 테스트 Python 60·Rust 17 | 확정 |
 | [0035](0035-hwinfo-doctor.md) | 2026-09-25 | design+milestone | A1a hwinfo·N1a doctor: 보수적 가용 메모리(macOS 1.55 대 OS 추정 3.27 GiB 발견), 풀별 예산 규칙, `memopro doctor`. macOS 검증, Linux 컨테이너는 CI 대기 | 확정 (Linux 미검증) |
+| [0036](0036-build-v01-end-to-end.md) | 2026-09-25 | decision | v0.1 전 구간 제작 결정: Gβ를 배포 전 검증으로 이동, 구현 설계 B1(정체성 유지 해제)~B5 | 확정 |
+| [0037](0037-census-v01.md) | 2026-09-25 | design+milestone | N1b census: 범주별 바이트·엔트로피·필요 비트(복원 오차 기준)·거대 값·희소도·coverage·권고, HF·Lightning 콜백 | 확정 |
+| [0038](0038-spill-engine-v01.md) | 2026-09-25 | design+milestone | A1b 저장 엔진: xxh3-128 다이제스트, 중간 버퍼 없는 병렬 읽기·쓰기, 0600 방출 파일, 저우선순위 쓰기 풀, codec pack/unpack, buffer protocol 바인딩, E008 프로토타입 제거 | 확정 |
+| [0039](0039-hibernate-v01.md) | 2026-09-25 | design+milestone+experiment | N1c β hibernate와 노트북 통합, M1 시연: GPT-2 498MB를 SSD 쓰기 없이 해제·비트 동일 복원 3/3, 깨우기 0.42s 대 다시 불러오기 0.56s | 확정 (CUDA 미검증) |
+| [0040](0040-v01-development-build.md) | 2026-09-25 | milestone | v0.1 개발판 완성: 테스트 Python 97·Rust 21, 패키징 확인(미배포), 완료 조건 대비표, 배포 전 검증 V1~V5 | 확정 (검증 대기) |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

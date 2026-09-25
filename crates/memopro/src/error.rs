@@ -13,6 +13,8 @@ pub enum Error {
     },
     /// An argument is outside its valid range.
     InvalidArgument(String),
+    /// Data read back does not match what was stored (digest mismatch, changed source file).
+    Integrity(String),
     /// An operating-system I/O error.
     Io(io::Error),
 }
@@ -33,6 +35,7 @@ impl fmt::Display for Error {
                 write!(f, "{feature} is not implemented yet (planned: {planned})")
             }
             Error::InvalidArgument(msg) => write!(f, "invalid argument: {msg}"),
+            Error::Integrity(msg) => write!(f, "integrity check failed: {msg}"),
             Error::Io(e) => write!(f, "I/O error: {e}"),
         }
     }

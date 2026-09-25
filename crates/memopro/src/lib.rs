@@ -5,12 +5,12 @@
 //!
 //! Modules:
 //! - [`hwinfo`]: host memory, container limit and disk capacity for the per-pool budget (v0.1)
-//! - [`spill`]: write-free restore from original files, and bounded spill files (v0.1, after Gβ)
+//! - [`spill`]: write-free restore from original files with digest checks, and spill files (v0.1)
 //! - [`ledger`]: bookkeeping of hibernated buffers and SSD bytes written (v0.1)
-//! - [`codec`]: byte shuffle + zstd, prototype from experiment E008 (docs/research/0023)
+//! - [`codec`]: byte shuffle + zstd for lossless in-RAM compression (v0.1)
 //! - [`pressure`]: OS memory-pressure signal for γ elastic (v0.3)
 //!
-//! Status: skeleton. Unbuilt functions return [`Error::NotImplemented`] with the planned milestone.
+//! Unbuilt functions return [`Error::NotImplemented`] with the planned milestone; nothing panics.
 
 pub mod codec;
 pub mod error;

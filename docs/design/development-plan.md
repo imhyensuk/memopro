@@ -1,7 +1,7 @@
 # memopro 개발 단계 계획
 
-- **버전**: 계획 v0.3.9 (2026-09-25) — A1a hwinfo·N1a doctor 완료 ([0035](../research/0035-hwinfo-doctor.md)) / v0.3.8 — S2 라이브러리 뼈대 완료 ([0034](../research/0034-library-skeleton.md)) / v0.3.7 — 연구 트랙: 논문 A(센서스) 주력·E012, G3 후보 탐색 절차, 성공 기준 분리 ([0033](../research/0033-research-direction.md)) / v0.3.6 — 수요 측정 관문 Gβ, 순서 변경(doctor·census 먼저), E010·E011, β SSD 정책, 채택 관련 완료 조건 ([0032](../research/0032-adopt-group1-2.md)) / v0.3.5 — 중복성 검사 3차 반영: E009 기준선, A2 비교 조건, v0.3 착수 전 재조사 ([0030](../research/0030-adopt-c1-c5.md)) / v0.3.4 — A1 = 방출 엔진 중심, RS1~RS5 완료 조건, 방출 엔진 → E009 순서 ([0027](../research/0027-adopt-rs1-rs5.md)) / v0.3.3: X1 결과 반영 ([0021](../research/0021-x1-consequences.md)): α 트랙 종료, 로드맵 재번호 (v0.3.2: P1·P2 채택, 0015)
-- **이력**: v0.1(0008) → v0.2 범용성(0010) → v0.2.1(0011) → v0.3.1(0012·0013) → v0.3.2(0015) → v0.3.3(0021) → v0.3.4(0027) → v0.3.5(0030) → v0.3.6(0032) → v0.3.7(0033) → v0.3.8(0034) → v0.3.9(0035)
+- **버전**: 계획 v0.3.10 (2026-09-25) — v0.1 개발판 완성, Gβ·E009·E011을 배포 전 검증으로 이동 ([0036](../research/0036-build-v01-end-to-end.md)~[0040](../research/0040-v01-development-build.md)) / v0.3.9 — A1a hwinfo·N1a doctor 완료 ([0035](../research/0035-hwinfo-doctor.md)) / v0.3.8 — S2 라이브러리 뼈대 완료 ([0034](../research/0034-library-skeleton.md)) / v0.3.7 — 연구 트랙: 논문 A(센서스) 주력·E012, G3 후보 탐색 절차, 성공 기준 분리 ([0033](../research/0033-research-direction.md)) / v0.3.6 — 수요 측정 관문 Gβ, 순서 변경(doctor·census 먼저), E010·E011, β SSD 정책, 채택 관련 완료 조건 ([0032](../research/0032-adopt-group1-2.md)) / v0.3.5 — 중복성 검사 3차 반영: E009 기준선, A2 비교 조건, v0.3 착수 전 재조사 ([0030](../research/0030-adopt-c1-c5.md)) / v0.3.4 — A1 = 방출 엔진 중심, RS1~RS5 완료 조건, 방출 엔진 → E009 순서 ([0027](../research/0027-adopt-rs1-rs5.md)) / v0.3.3: X1 결과 반영 ([0021](../research/0021-x1-consequences.md)): α 트랙 종료, 로드맵 재번호 (v0.3.2: P1·P2 채택, 0015)
+- **이력**: v0.1(0008) → v0.2 범용성(0010) → v0.2.1(0011) → v0.3.1(0012·0013) → v0.3.2(0015) → v0.3.3(0021) → v0.3.4(0027) → v0.3.5(0030) → v0.3.6(0032) → v0.3.7(0033) → v0.3.8(0034) → v0.3.9(0035) → v0.3.10(0036~0040)
 - **관련**: [architecture.md](architecture.md), [use-cases.md](use-cases.md), [0012](../research/0012-revision-v03.md), [0013](../research/0013-revision-v03-verification.md)
 
 ---
@@ -28,7 +28,11 @@
       │
       ▼
  E010 실사용 수요 수집 (사전 등록, 병행) ─────────────────┐
- A1a hwinfo ✅ ─▶ N1a doctor ✅ (0035) ─▶ N1b census (빠른 + 정밀 경량) │   ▲ R2 센서스 연구와 코드 공유
+ (0036: 사용자 지시로 β·엔진을 Gβ 전에 제작. Gβ·E009·E011은 배포 전 검증으로 이동)
+ A1a hwinfo ✅ ─▶ N1a doctor ✅ (0035) ─▶ N1b census ✅ (0037) ─▶ A1b 엔진 ✅ (0038) ─▶ N1c β ✅ (0039) ─▶ v0.1 개발판 ✅ (0040)
+ 배포 전 검증: CI(Linux·cgroup) · Colab CUDA · E010(Gβ) · E011 · E009 ─▶ 🚀 v0.1.0 (사용자 확인)
+ (아래는 0032 당시 순서도, 보존)
+ A1a hwinfo ─▶ N1a doctor ─▶ N1b census (빠른 + 정밀 경량) │   ▲ R2 센서스 연구와 코드 공유
                                                            ▼
                               ◆ 관문 Gβ (β 수요 판정, 0032 I1)
                                  ├ 통과 → A1b 방출 엔진 → E009 → E011 → N1c β ─▶ 🚀 v0.1.0

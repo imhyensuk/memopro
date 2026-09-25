@@ -19,6 +19,7 @@ from typing import Any
 from memopro._core import __version__, core_version
 from memopro._errors import (
     ConfigError,
+    IntegrityError,
     InvalidArgument,
     MemoproError,
     ModeUnavailable,
@@ -84,6 +85,7 @@ __all__ = [
     "Availability",
     "ConfigError",
     "Fidelity",
+    "IntegrityError",
     "InvalidArgument",
     "MemoproError",
     "ModeUnavailable",

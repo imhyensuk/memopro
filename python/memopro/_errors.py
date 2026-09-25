@@ -38,6 +38,10 @@ class ModeUnavailable(MemoproError):
         super().__init__(f"mode {mode!r} is not available: {reason}{hint}")
 
 
+class IntegrityError(MemoproError):
+    """Restored data does not match what was hibernated (changed source file, corrupted spill)."""
+
+
 class NotYetImplemented(MemoproError, NotImplementedError):
     """The feature is part of the designed API but is not built yet."""
 
