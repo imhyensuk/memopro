@@ -1,0 +1,493 @@
+{
+  "experiment": "E008",
+  "config": {
+    "chunk_bytes": 4194304,
+    "threads": 8,
+    "repeats": 5
+  },
+  "rows": [
+    {
+      "payload": "fp32",
+      "variant": "B0 memcpy",
+      "level": null,
+      "median_s": 0.14420616696588695,
+      "mib_per_s": 3291.816191361593,
+      "ratio": 1.0
+    },
+    {
+      "payload": "fp32",
+      "variant": "B1 python 1-thread",
+      "level": 1,
+      "median_s": 0.6721969579812139,
+      "all_s": [
+        0.5997671670047566,
+        0.6558253329712898,
+        0.6721969579812139,
+        0.7885030409088358,
+        0.87561262503732
+      ],
+      "mib_per_s": 706.1921207411453,
+      "ratio": 1.1863357703781225
+    },
+    {
+      "payload": "fp32",
+      "variant": "B2 python threads(8)",
+      "level": 1,
+      "median_s": 0.22201579192187637,
+      "all_s": [
+        0.14993933297228068,
+        0.3240908329607919,
+        0.20901833300013095,
+        0.23720929096452892,
+        0.22201579192187637
+      ],
+      "mib_per_s": 2138.137072157187,
+      "ratio": 1.1863357703781225
+    },
+    {
+      "payload": "fp32",
+      "variant": "B3 numpy shuffle + zstd MT(8)",
+      "level": 1,
+      "median_s": 1.089386459090747,
+      "all_s": [
+        1.104507040930912,
+        1.089386459090747,
+        1.0970690000103787,
+        0.6996745410142466,
+        0.39876041701063514
+      ],
+      "mib_per_s": 435.75004200869824,
+      "ratio": 1.18635032913014
+    },
+    {
+      "payload": "fp32",
+      "variant": "R1 rust rayon(8)",
+      "level": 1,
+      "median_s": 0.28783437493257225,
+      "all_s": [
+        0.28783437493257225,
+        0.217777083045803,
+        0.21929475001525134,
+        0.33053033403120935,
+        0.3180769579485059
+      ],
+      "mib_per_s": 1649.213008083912,
+      "ratio": 1.1863357703781225
+    },
+    {
+      "payload": "fp32",
+      "variant": "R1 rust rayon(4)",
+      "level": 1,
+      "median_s": 0.479541499982588,
+      "all_s": [
+        0.4059903749730438,
+        0.5402469160035253,
+        0.37420037505216897,
+        0.479541499982588,
+        0.6709364580456167
+      ],
+      "mib_per_s": 989.9043051117291,
+      "ratio": 1.1863357703781225
+    },
+    {
+      "payload": "fp32",
+      "variant": "decompress python 1-thread",
+      "level": 1,
+      "median_s": 1.0322157919872552,
+      "mib_per_s": 459.8846471807914
+    },
+    {
+      "payload": "fp32",
+      "variant": "decompress rust rayon(8)",
+      "level": 1,
+      "median_s": 0.33245554205495864,
+      "mib_per_s": 1427.8606768842094
+    },
+    {
+      "payload": "fp32",
+      "variant": "B1 python 1-thread",
+      "level": 3,
+      "median_s": 1.1658055000007153,
+      "all_s": [
+        1.0566891670459881,
+        1.342504124972038,
+        1.5325885830679908,
+        1.1641813339665532,
+        1.1658055000007153
+      ],
+      "mib_per_s": 407.18644346094504,
+      "ratio": 1.1679433793240843
+    },
+    {
+      "payload": "fp32",
+      "variant": "B2 python threads(8)",
+      "level": 3,
+      "median_s": 0.2987647079862654,
+      "all_s": [
+        0.25900266703683883,
+        0.45090900000650436,
+        0.2987647079862654,
+        0.3187233329517767,
+        0.2835765000199899
+      ],
+      "mib_per_s": 1588.876405490044,
+      "ratio": 1.1679433793240843
+    },
+    {
+      "payload": "fp32",
+      "variant": "B3 numpy shuffle + zstd MT(8)",
+      "level": 3,
+      "median_s": 0.7476507090032101,
+      "all_s": [
+        0.7476507090032101,
+        0.6738701249705628,
+        0.7296065409900621,
+        2.519706332939677,
+        1.2803525408962741
+      ],
+      "mib_per_s": 634.9224171075612,
+      "ratio": 1.1678195316630569
+    },
+    {
+      "payload": "fp32",
+      "variant": "R1 rust rayon(8)",
+      "level": 3,
+      "median_s": 0.7570089170476422,
+      "all_s": [
+        0.5041754590347409,
+        0.6101009589619935,
+        0.7687383750453591,
+        0.9466098330449313,
+        0.7570089170476422
+      ],
+      "mib_per_s": 627.0734526666413,
+      "ratio": 1.1679433793240843
+    },
+    {
+      "payload": "fp32",
+      "variant": "R1 rust rayon(4)",
+      "level": 3,
+      "median_s": 0.7623465830693021,
+      "all_s": [
+        0.683142708032392,
+        0.7084364589536563,
+        0.7793215831043199,
+        0.9201017499435693,
+        0.7623465830693021
+      ],
+      "mib_per_s": 622.6829185766112,
+      "ratio": 1.1679433793240843
+    },
+    {
+      "payload": "fp32",
+      "variant": "decompress python 1-thread",
+      "level": 3,
+      "median_s": 1.2420125829521567,
+      "mib_per_s": 382.20240424954363
+    },
+    {
+      "payload": "fp32",
+      "variant": "decompress rust rayon(8)",
+      "level": 3,
+      "median_s": 0.1581202499801293,
+      "mib_per_s": 3002.1467545880732
+    },
+    {
+      "payload": "bf16",
+      "variant": "B0 memcpy",
+      "level": null,
+      "median_s": 0.029312208062037826,
+      "mib_per_s": 8097.312121758632,
+      "ratio": 1.0
+    },
+    {
+      "payload": "bf16",
+      "variant": "B1 python 1-thread",
+      "level": 1,
+      "median_s": 0.49875200004316866,
+      "all_s": [
+        0.4150480420794338,
+        0.49875200004316866,
+        0.42675529106054455,
+        0.5585053330287337,
+        0.5270888750674203
+      ],
+      "mib_per_s": 475.88801174873794,
+      "ratio": 1.4578565120438594
+    },
+    {
+      "payload": "bf16",
+      "variant": "B2 python threads(8)",
+      "level": 1,
+      "median_s": 0.13313770899549127,
+      "all_s": [
+        0.13737875001970679,
+        0.1463085839059204,
+        0.11692066700197756,
+        0.13313770899549127,
+        0.12689033395145088
+      ],
+      "mib_per_s": 1782.7413393773202,
+      "ratio": 1.4578565120438594
+    },
+    {
+      "payload": "bf16",
+      "variant": "B3 numpy shuffle + zstd MT(8)",
+      "level": 1,
+      "median_s": 0.23979904095176607,
+      "all_s": [
+        0.25150716700591147,
+        0.28240508306771517,
+        0.2397309170337394,
+        0.23979904095176607,
+        0.2147477079415694
+      ],
+      "mib_per_s": 989.7875183912489,
+      "ratio": 1.457873121858576
+    },
+    {
+      "payload": "bf16",
+      "variant": "R1 rust rayon(8)",
+      "level": 1,
+      "median_s": 0.17122037499211729,
+      "all_s": [
+        0.14841891697142273,
+        0.15810250001959503,
+        0.17122037499211729,
+        0.2366548749851063,
+        0.1895065000280738
+      ],
+      "mib_per_s": 1386.2257787204194,
+      "ratio": 1.4578565120438594
+    },
+    {
+      "payload": "bf16",
+      "variant": "R1 rust rayon(4)",
+      "level": 1,
+      "median_s": 0.20693195797502995,
+      "all_s": [
+        0.20514370896853507,
+        0.2143265421036631,
+        0.19415183400269598,
+        0.20693195797502995,
+        0.24489362491294742
+      ],
+      "mib_per_s": 1146.9958530276438,
+      "ratio": 1.4578565120438594
+    },
+    {
+      "payload": "bf16",
+      "variant": "decompress python 1-thread",
+      "level": 1,
+      "median_s": 0.577548542059958,
+      "mib_per_s": 410.961296533945
+    },
+    {
+      "payload": "bf16",
+      "variant": "decompress rust rayon(8)",
+      "level": 1,
+      "median_s": 0.05673574993852526,
+      "mib_per_s": 4183.431045036425
+    },
+    {
+      "payload": "bf16",
+      "variant": "B1 python 1-thread",
+      "level": 3,
+      "median_s": 1.0046795000089332,
+      "all_s": [
+        0.7935335419606417,
+        0.893568875035271,
+        1.0445379170123488,
+        1.0046795000089332,
+        1.078742083045654
+      ],
+      "mib_per_s": 236.2445910901333,
+      "ratio": 1.4018620607398455
+    },
+    {
+      "payload": "bf16",
+      "variant": "B2 python threads(8)",
+      "level": 3,
+      "median_s": 0.23394145793281496,
+      "all_s": [
+        0.2186240419978276,
+        0.24536729196552187,
+        0.23394145793281496,
+        0.23824354202952236,
+        0.22608725004829466
+      ],
+      "mib_per_s": 1014.5704816647503,
+      "ratio": 1.4018620607398455
+    },
+    {
+      "payload": "bf16",
+      "variant": "B3 numpy shuffle + zstd MT(8)",
+      "level": 3,
+      "median_s": 0.5134864579886198,
+      "all_s": [
+        0.3747939160093665,
+        0.3542175410548225,
+        0.5134864579886198,
+        0.5236453330144286,
+        0.7080628341063857
+      ],
+      "mib_per_s": 462.23243858460296,
+      "ratio": 1.4017469822517201
+    },
+    {
+      "payload": "bf16",
+      "variant": "R1 rust rayon(8)",
+      "level": 3,
+      "median_s": 0.2601787500316277,
+      "all_s": [
+        0.30099549994338304,
+        0.2601787500316277,
+        0.25550283398479223,
+        0.27111095807049423,
+        0.25957029208075255
+      ],
+      "mib_per_s": 912.2578136277363,
+      "ratio": 1.4018620607398455
+    },
+    {
+      "payload": "bf16",
+      "variant": "R1 rust rayon(4)",
+      "level": 3,
+      "median_s": 0.3371962079545483,
+      "all_s": [
+        0.3371962079545483,
+        0.36043954209890217,
+        0.32923379202838987,
+        0.3806709588970989,
+        0.3354139169678092
+      ],
+      "mib_per_s": 703.8931401276112,
+      "ratio": 1.4018620607398455
+    },
+    {
+      "payload": "bf16",
+      "variant": "decompress python 1-thread",
+      "level": 3,
+      "median_s": 0.7553344169864431,
+      "mib_per_s": 314.2318055666064
+    },
+    {
+      "payload": "bf16",
+      "variant": "decompress rust rayon(8)",
+      "level": 3,
+      "median_s": 0.08383904199581593,
+      "mib_per_s": 2831.0211090925295
+    }
+  ],
+  "correctness": [
+    {
+      "payload": "fp32",
+      "level": 1,
+      "rust_roundtrip_bit_exact": true,
+      "python_roundtrip_bit_exact": true,
+      "ratio_python": 1.1863357703781225,
+      "ratio_rust": 1.1863357703781225,
+      "ratio_rel_diff": 0.0
+    },
+    {
+      "payload": "fp32",
+      "level": 3,
+      "rust_roundtrip_bit_exact": true,
+      "python_roundtrip_bit_exact": true,
+      "ratio_python": 1.1679433793240843,
+      "ratio_rust": 1.1679433793240843,
+      "ratio_rel_diff": 0.0
+    },
+    {
+      "payload": "bf16",
+      "level": 1,
+      "rust_roundtrip_bit_exact": true,
+      "python_roundtrip_bit_exact": true,
+      "ratio_python": 1.4578565120438594,
+      "ratio_rust": 1.4578565120438594,
+      "ratio_rel_diff": 0.0
+    },
+    {
+      "payload": "bf16",
+      "level": 3,
+      "rust_roundtrip_bit_exact": true,
+      "python_roundtrip_bit_exact": true,
+      "ratio_python": 1.4018620607398455,
+      "ratio_rust": 1.4018620607398455,
+      "ratio_rel_diff": 0.0
+    }
+  ],
+  "memory_probe": [
+    {
+      "base_maxrss": 380796928,
+      "after_maxrss": 1169063936,
+      "output_bytes": 419577024,
+      "payload": "fp32",
+      "growth_bytes": 788267008,
+      "bound_bytes": 553794752,
+      "C4_pass": false
+    },
+    {
+      "base_maxrss": 263667712,
+      "after_maxrss": 635699200,
+      "output_bytes": 170716126,
+      "payload": "bf16",
+      "growth_bytes": 372031488,
+      "bound_bytes": 304933854,
+      "C4_pass": false
+    }
+  ],
+  "spill": [
+    {
+      "payload": "fp32",
+      "raw_write_median_s": 0.7711627919925377,
+      "compressed_write_median_s": 0.907633375027217,
+      "raw_mib_per_s": 615.5641846852662,
+      "compressed_effective_mib_per_s": 523.008748216498,
+      "C5_compressed_faster": false
+    },
+    {
+      "payload": "bf16",
+      "raw_write_median_s": 0.15575191704556346,
+      "compressed_write_median_s": 0.2674617499578744,
+      "raw_mib_per_s": 1523.8984030406245,
+      "compressed_effective_mib_per_s": 887.4169771701298,
+      "C5_compressed_faster": false
+    }
+  ],
+  "criteria": [
+    {
+      "payload": "fp32",
+      "level": 1,
+      "rust_vs_b1": 2.335360250625666,
+      "rust_vs_best_python_parallel": 0.771331749287713,
+      "C2_pass": false,
+      "C3_pass": false
+    },
+    {
+      "payload": "fp32",
+      "level": 3,
+      "rust_vs_b1": 1.540015545057768,
+      "rust_vs_best_python_parallel": 0.3946647143225959,
+      "C2_pass": false,
+      "C3_pass": false
+    },
+    {
+      "payload": "bf16",
+      "level": 1,
+      "rust_vs_b1": 2.9129243529932136,
+      "rust_vs_best_python_parallel": 0.7775809917576733,
+      "C2_pass": false,
+      "C3_pass": false
+    },
+    {
+      "payload": "bf16",
+      "level": 3,
+      "rust_vs_b1": 3.8614971433554928,
+      "rust_vs_best_python_parallel": 0.8991566678845859,
+      "C2_pass": true,
+      "C3_pass": false
+    }
+  ],
+  "runtime_s": 132.0
+}
