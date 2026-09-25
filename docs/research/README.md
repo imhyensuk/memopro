@@ -73,6 +73,7 @@
 | [0044](0044-alpha-prep.md) | 2026-09-25 | milestone | 알파 준비: 버전 0.1.0a1, 배포 워크플로(태그·버전 일치, 깨끗한 환경 wheel 확인, 신뢰 게시, 수동 실행은 Linux wheel만), Colab CUDA 확인 노트북 | 확정 (배포 대기) |
 | [0045](0045-colab-cuda-v2.md) | 2026-09-25 | experiment+milestone | 관문 V2 Colab T4: doctor CUDA 정확, host·source 동면 GPU 512MB 회수·비트 동일, D2 확인 / F1 회수량 음수 숨김 → 부호 있는 보고, F2 census 분류율 82.9% → cuBLAS 작업 공간 분류(2차 확인 대기) | V2 통과, F2 확인(→0046) |
 | [0046](0046-colab-cuda-run2.md) | 2026-09-25 | experiment | Colab T4 2차: cuBLAS 작업 공간 독립 측정 일치(18,087,936), CUDA 분류율 100%, host의 RAM 증가 −494.8MB 보고, source의 임시 사본 약 19MB 관찰 → V2 완료 | 확정 |
+| [0047](0047-verification-record-and-assessment.md) | 2026-09-25 | survey+milestone | 검증 과정 종합(8개 층: Rust 21·Python 105 테스트, 독립 기준 7종, CI 10회, 탐색적·실기 검증으로 결함 D1~D3·F1·F2 발견)과 완성도 평가: v0.1 약 80%, 가장 큰 공백은 제품 가치 검증 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
