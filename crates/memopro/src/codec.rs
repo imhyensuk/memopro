@@ -1,12 +1,20 @@
 //! Lossless codec for floating-point buffers: byte shuffle + zstd, in independent chunks.
 //!
-//! Chunks are compressed and decompressed in parallel (rayon). Every worker only touches its own
-//! chunk and one scratch buffer, so extra memory is bounded by `threads x chunk` plus the output.
-//! Status: prototype for experiment E008 (docs/research/0023). No novelty is claimed: this is the
-//! well-known byte-shuffle idea (as in blosc) on top of the zstd library.
+//! Used by `hibernate(mode="compress")` to keep idle tensors compressed in RAM. Chunks are
+//! processed in parallel on the process-wide rayon pool; every worker thread keeps one zstd
+//! context and one scratch buffer for the life of the process (RS3), so extra memory is bounded
+//! by `threads x CHUNK` plus the output. No novelty is claimed: this is the well-known
+//! byte-shuffle idea (as in blosc) on top of the zstd library.
+//!
+//! The E008 prototypes (a thread pool per call, `bytes` inputs) were removed in 0038; E008 is
+//! reproduced from commit 9fd9bd3.
 
 use rayon::prelude::*;
+use std::cell::RefCell;
 use std::io;
+
+/// Uncompressed bytes per chunk (a multiple of every element size up to 16).
+pub const CHUNK: usize = 4 << 20;
 
 /// Group byte `b` of every element together (byte planes). `src.len()` must be a multiple of `elem`.
 pub fn shuffle(src: &[u8], elem: usize, dst: &mut [u8]) {
@@ -78,162 +86,84 @@ pub fn unshuffle(src: &[u8], elem: usize, dst: &mut [u8]) {
     }
 }
 
-fn chunk_len(chunk_bytes: usize, elem: usize) -> usize {
-    (chunk_bytes - chunk_bytes % elem).max(elem)
-}
-
-fn pool(threads: usize) -> io::Result<rayon::ThreadPool> {
-    rayon::ThreadPoolBuilder::new()
-        .num_threads(threads) // 0 = rayon default (all logical CPUs)
-        .build()
-        .map_err(io::Error::other)
-}
-
-/// Shuffle + zstd-compress `src` in independent chunks, in parallel.
-pub fn compress(
-    src: &[u8],
-    elem: usize,
-    chunk_bytes: usize,
-    level: i32,
-    threads: usize,
-) -> io::Result<Vec<Vec<u8>>> {
-    let chunk = chunk_len(chunk_bytes, elem);
-    pool(threads)?.install(|| {
-        src.par_chunks(chunk)
-            .map(|c| {
-                let mut shuffled = vec![0u8; c.len()];
-                shuffle(c, elem, &mut shuffled);
-                zstd::bulk::compress(&shuffled, level)
-            })
-            .collect()
-    })
-}
-
-/// Per-worker state reused across chunks: zstd context, shuffle scratch and output buffer.
 struct Worker {
-    zstd: zstd::bulk::Compressor<'static>,
+    level: i32,
+    cctx: zstd::bulk::Compressor<'static>,
+    dctx: zstd::bulk::Decompressor<'static>,
     scratch: Vec<u8>,
 }
 
-fn worker(level: i32) -> io::Result<Worker> {
-    Ok(Worker {
-        zstd: zstd::bulk::Compressor::new(level)?,
-        scratch: Vec::new(),
+thread_local! {
+    static WORKER: RefCell<Option<Worker>> = const { RefCell::new(None) };
+}
+
+/// Run `f` with this thread's reusable zstd contexts and scratch buffer (RS3).
+fn with_worker<R>(level: i32, f: impl FnOnce(&mut Worker) -> io::Result<R>) -> io::Result<R> {
+    WORKER.with(|cell| {
+        let mut slot = cell.borrow_mut();
+        let fresh = !matches!(slot.as_ref(), Some(w) if w.level == level);
+        if fresh {
+            *slot = Some(Worker {
+                level,
+                cctx: zstd::bulk::Compressor::new(level)?,
+                dctx: zstd::bulk::Decompressor::new()?,
+                scratch: Vec::new(),
+            });
+        }
+        f(slot.as_mut().expect("worker initialised above"))
     })
 }
 
-fn compress_chunk(w: &mut io::Result<Worker>, c: &[u8], elem: usize) -> io::Result<Vec<u8>> {
-    let w = w
-        .as_mut()
-        .map_err(|e| io::Error::new(e.kind(), e.to_string()))?;
-    w.scratch.resize(c.len(), 0);
-    shuffle(c, elem, &mut w.scratch);
-    w.zstd.compress(&w.scratch)
-}
-
-/// Like [`compress`] but reuses per-thread zstd contexts and scratch buffers (E008b, exploratory).
-pub fn compress_reuse(
-    src: &[u8],
-    elem: usize,
-    chunk_bytes: usize,
-    level: i32,
-    threads: usize,
-) -> io::Result<Vec<Vec<u8>>> {
-    let chunk = chunk_len(chunk_bytes, elem);
-    pool(threads)?.install(|| {
-        src.par_chunks(chunk)
-            .map_init(|| worker(level), |w, c| compress_chunk(w, c, elem))
-            .collect()
-    })
-}
-
-/// Compress in parallel and stream length-prefixed chunks to `path`, overlapping compression of
-/// the next window with writing of the previous one. Extra memory is bounded by roughly
-/// `5 x threads x chunk` regardless of `src.len()`; the file is fully synced (F_FULLFSYNC on
-/// macOS) before returning. Returns the number of bytes written. (E008b, exploratory)
-pub fn spill_to_file(
-    src: &[u8],
-    elem: usize,
-    chunk_bytes: usize,
-    level: i32,
-    threads: usize,
-    path: &std::path::Path,
-) -> io::Result<u64> {
-    use std::io::Write;
-    let chunk = chunk_len(chunk_bytes, elem);
-    let pool = pool(threads)?;
-    let window = pool.current_num_threads() * 2;
-    let (tx, rx) = std::sync::mpsc::sync_channel::<Vec<u8>>(window);
-    let file = std::fs::File::create(path)?;
-    let writer = std::thread::spawn(move || -> io::Result<u64> {
-        let mut f = io::BufWriter::with_capacity(1 << 20, file);
-        let mut written = 0u64;
-        for buf in rx {
-            f.write_all(&(buf.len() as u64).to_le_bytes())?;
-            f.write_all(&buf)?;
-            written += 8 + buf.len() as u64;
-        }
-        f.into_inner().map_err(|e| e.into_error())?.sync_all()?;
-        Ok(written)
-    });
-    let chunks: Vec<&[u8]> = src.chunks(chunk).collect();
-    let mut result = Ok(());
-    for win in chunks.chunks(window) {
-        let outs: io::Result<Vec<Vec<u8>>> = pool.install(|| {
-            win.par_iter()
-                .map_init(|| worker(level), |w, c| compress_chunk(w, c, elem))
-                .collect()
-        });
-        match outs {
-            Ok(v) => {
-                if v.into_iter().any(|o| tx.send(o).is_err()) {
-                    break; // writer failed; its error is reported below
-                }
-            }
-            Err(e) => {
-                result = Err(e);
-                break;
-            }
-        }
+fn check_elem(len: usize, elem: usize) -> io::Result<()> {
+    if elem == 0 || elem > 16 || CHUNK % elem != 0 || len % elem != 0 {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("element size {elem} does not divide the buffer ({len} bytes)"),
+        ));
     }
-    drop(tx);
-    let written = writer
-        .join()
-        .map_err(|_| io::Error::other("writer thread panicked"))??;
-    result.map(|()| written)
+    Ok(())
 }
 
-/// Decompress chunks produced by [`compress`] directly into `dst` (length = original length).
-pub fn decompress_into(
-    chunks: &[&[u8]],
-    elem: usize,
-    chunk_bytes: usize,
-    dst: &mut [u8],
-    threads: usize,
-) -> io::Result<()> {
-    let chunk = chunk_len(chunk_bytes, elem);
-    let expected = dst.len().div_ceil(chunk);
+/// Shuffle + zstd-compress `src` in independent [`CHUNK`]-sized chunks, in parallel.
+pub fn pack(src: &[u8], elem: usize, level: i32) -> io::Result<Vec<Vec<u8>>> {
+    check_elem(src.len(), elem)?;
+    src.par_chunks(CHUNK)
+        .map(|c| {
+            with_worker(level, |w| {
+                w.scratch.resize(c.len(), 0);
+                shuffle(c, elem, &mut w.scratch);
+                w.cctx.compress(&w.scratch)
+            })
+        })
+        .collect()
+}
+
+/// Decompress chunks from [`pack`] directly into `dst` (length = original length).
+pub fn unpack_into(chunks: &[Vec<u8>], elem: usize, dst: &mut [u8]) -> io::Result<()> {
+    check_elem(dst.len(), elem)?;
+    let expected = dst.len().div_ceil(CHUNK);
     if chunks.len() != expected {
         return Err(io::Error::new(
             io::ErrorKind::InvalidInput,
             format!("expected {expected} chunks, got {}", chunks.len()),
         ));
     }
-    pool(threads)?.install(|| {
-        dst.par_chunks_mut(chunk)
-            .zip(chunks.par_iter())
-            .try_for_each(|(out, comp)| {
-                let shuffled = zstd::bulk::decompress(comp, out.len())?;
-                if shuffled.len() != out.len() {
+    dst.par_chunks_mut(CHUNK)
+        .zip(chunks.par_iter())
+        .try_for_each(|(out, comp)| {
+            with_worker(0, |w| {
+                w.scratch.resize(out.len(), 0);
+                let n = w.dctx.decompress_to_buffer(comp, &mut w.scratch)?;
+                if n != out.len() {
                     return Err(io::Error::new(
                         io::ErrorKind::InvalidData,
                         "chunk length mismatch",
                     ));
                 }
-                unshuffle(&shuffled, elem, out);
+                unshuffle(&w.scratch, elem, out);
                 Ok(())
             })
-    })
+        })
 }
 
 #[cfg(test)]
@@ -270,18 +200,6 @@ mod tests {
     }
 
     #[test]
-    fn compress_roundtrip_bit_exact_with_ragged_last_chunk() {
-        let src = sample(300_001);
-        for threads in [1, 4] {
-            let chunks = compress(&src, 4, 64 * 1024, 1, threads).unwrap();
-            let refs: Vec<&[u8]> = chunks.iter().map(|c| c.as_slice()).collect();
-            let mut out = vec![0u8; src.len()];
-            decompress_into(&refs, 4, 64 * 1024, &mut out, threads).unwrap();
-            assert_eq!(src, out);
-        }
-    }
-
-    #[test]
     fn fast_shuffle_matches_generic_for_2_and_4() {
         let src = sample(10_001);
         for elem in [2usize, 4] {
@@ -304,40 +222,32 @@ mod tests {
     }
 
     #[test]
-    fn compress_reuse_matches_compress() {
-        let src = sample(200_003);
-        let a = compress(&src, 4, 64 * 1024, 1, 3).unwrap();
-        let b = compress_reuse(&src, 4, 64 * 1024, 1, 3).unwrap();
-        assert_eq!(a, b);
-    }
-
-    #[test]
-    fn spill_to_file_roundtrip() {
-        let src = sample(250_001);
-        let path =
-            std::env::temp_dir().join(format!("memopro_spill_test_{}.bin", std::process::id()));
-        let written = spill_to_file(&src, 4, 64 * 1024, 1, 3, &path).unwrap();
-        let bytes = std::fs::read(&path).unwrap();
-        std::fs::remove_file(&path).unwrap();
-        assert_eq!(bytes.len() as u64, written);
-        let mut chunks = Vec::new();
-        let mut off = 0;
-        while off < bytes.len() {
-            let len = u64::from_le_bytes(bytes[off..off + 8].try_into().unwrap()) as usize;
-            chunks.push(&bytes[off + 8..off + 8 + len]);
-            off += 8 + len;
+    fn pack_roundtrip_is_bit_exact_across_chunks_and_levels() {
+        // 2.5 chunks: exercises the ragged last chunk; NaN/Inf/subnormal included
+        let src = sample(CHUNK * 5 / 8 + 7);
+        for (elem, level) in [(4usize, 1), (2, 3), (1, 1)] {
+            let n = src.len() / elem * elem;
+            let chunks = pack(&src[..n], elem, level).unwrap();
+            assert_eq!(chunks.len(), n.div_ceil(CHUNK));
+            let mut out = vec![0u8; n];
+            unpack_into(&chunks, elem, &mut out).unwrap();
+            assert_eq!(&src[..n], &out[..]);
         }
-        let mut out = vec![0u8; src.len()];
-        decompress_into(&chunks, 4, 64 * 1024, &mut out, 2).unwrap();
-        assert_eq!(out, src);
     }
 
     #[test]
-    fn wrong_chunk_count_is_an_error() {
-        let src = sample(1000);
-        let chunks = compress(&src, 4, 1024, 1, 1).unwrap();
-        let refs: Vec<&[u8]> = chunks.iter().take(1).map(|c| c.as_slice()).collect();
-        let mut out = vec![0u8; src.len()];
-        assert!(decompress_into(&refs, 4, 1024, &mut out, 1).is_err());
+    fn compressible_data_shrinks() {
+        let src = vec![7u8; CHUNK + 100];
+        let chunks = pack(&src, 1, 1).unwrap();
+        assert!(chunks.iter().map(Vec::len).sum::<usize>() < src.len() / 100);
+    }
+
+    #[test]
+    fn bad_element_size_and_chunk_count_are_rejected() {
+        assert!(pack(&[0u8; 10], 4, 1).is_err());
+        assert!(pack(&[0u8; 12], 0, 1).is_err());
+        let chunks = pack(&[1u8; 16], 4, 1).unwrap();
+        let mut out = vec![0u8; CHUNK + 16];
+        assert!(unpack_into(&chunks, 4, &mut out).is_err());
     }
 }

@@ -22,8 +22,13 @@ dynamic = ["version"]
 dependencies = []
 
 [project.optional-dependencies]
-torch = ["torch>=2.4"]
+torch = ["torch>=2.4", "numpy"]
+hf = ["torch>=2.4", "numpy", "transformers", "accelerate", "safetensors"]
+notebook = ["ipython"]
 dev = ["pytest>=8", "ruff>=0.6"]
+
+[project.scripts]
+memopro = "memopro.cli:main"
 
 [tool.maturin]
 python-source = "python"
@@ -45,7 +50,8 @@ known-first-party = ["memopro", "experiments"]
 # Research scripts whose SHA-256 is recorded in docs/research/data/*/env.json must not be
 # rewritten after they produced results; keep lint exceptions here instead of editing them.
 "experiments/**/*.py" = ["SIM115", "UP017"]  # UP017 appeared with target py311 (0026)
+"experiments/n1c_demo/*.py" = ["RUF100", "RUF015"]  # frozen after the N1c demo run (0039)
 
 [tool.ruff.format]
 # Frozen: experiment scripts are hashed in env.json when they produce results (see above).
-exclude = ["experiments/e0*/*.py"]
+exclude = ["experiments/e0*/*.py", "experiments/n1c_demo/*.py"]
