@@ -2,7 +2,7 @@
 
 - **날짜**: 2026-09-25
 - **유형**: experiment + design + decision
-- **상태**: 사전 등록 판정 확정(E008) / 탐색 결과(E008b) 기록 / β 방출 기본값 변경 확정(사전 규칙 C5) / 설계 제안 RS1~RS8 승인 대기
+- **상태**: 사전 등록 판정 확정(E008) / 탐색 결과(E008b) 기록 / β 방출 기본값 변경 확정(사전 규칙 C5) / 설계 제안: RS1~RS5 채택, RS6~RS8 보류(→ 0027)
 - **관련 기록**: 0023 (사전 등록), 0022 R1 (Rust 역할), 0019·0021 D2 (방출 기본값), 0013 V6 (동면 중 메모리 급증 금지)
 - **원시 데이터**: `docs/research/data/e008/` (results.json·env.json = E008, results_v2.json·env_v2.json = E008b, codec_and_spill.png)
 - **코드**: `crates/memopro/src/codec.rs`, `crates/memopro-py/src/lib.rs`, `experiments/e008_rust_codec/`
@@ -84,7 +84,7 @@ Rust가 유리한 점은 이 설계를 **GIL과 데이터 경쟁 걱정 없이, 
 | C 라이브러리를 호출만 하는 단순 병렬 | Python 스레드도 GIL을 풀고 병렬로 돈다 | E008 C3 |
 | 작은 호출이 잦은 경로 | FFI 경계 비용이 이득을 삼킨다 | 일반 원칙 |
 
-### Rust를 써야 할 곳과 설계 규칙 (제안 RS1~RS8)
+### Rust를 써야 할 곳과 설계 규칙 (제안 RS1~RS8 — RS1~RS5 채택, RS6~RS8 보류: 0027)
 
 | # | 규칙 | 근거 | 적용 대상 |
 |---|---|---|---|

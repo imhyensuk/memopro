@@ -35,7 +35,7 @@ memopro doctor        # 내 환경의 풀별 예산: 장치·호스트 RAM·디�
 import memopro
 
 %load_ext memopro     # 한동안 안 쓴 텐서·모델과 회수 가능량을 제안
-%hibernate old_model  # β: 제안받은 객체를 압축·방출, 다시 쓰면 복원 (자동 모드는 선택 — 0015 P4)
+%hibernate old_model  # β: 제안받은 객체를 SSD로 방출(CUDA는 호스트로 이동), 다시 쓰면 복원 (자동 모드는 선택 — 0015 P4)
 
 with memopro.census.record(model, optimizer) as c:    # 메모리가 어디에 쓰이고, 얼마나 중복(낭비)인가
     loss = model(**batch).loss; loss.backward()
@@ -70,6 +70,7 @@ memopro.report()   # 무엇을 적용했고, 실측으로 얼마나 줄였고, �
 - α 가설 H1·H2·H3 모두 기각 → α 트랙 종료 (사전 등록 규칙).
 - 학습 중 fp32 텐서의 무손실 중복은 약 14%에 불과하고, OS 방식(페이지 단위 LZ4) 압축은 fp32 텐서에 사실상 효과가 없다(1.00배) → β의 CPU 기본 모드를 **SSD 방출**로 변경, bf16 손실 모드는 명시적 선택(fp32 대비 2.75~3.8배).
 - 노트북 유휴 메모리 계측 도구를 만들고 검증했다. 실제 수요 데이터는 사용자·동료 노트북에서 수집할 예정이다.
+- 후속 실험(0024·0025): Muon 옵티마이저는 M1 소배치에서 3배 느려 후보에서 제외. 단순한 Rust 코덱은 Python 스레드보다 느렸고, 설계를 바꾼 Rust(버퍼 재사용·파이프라인·복사 제거)는 1.49배 빨랐다 → Rust 코어 설계 규칙 RS1~RS5 채택(0027), β 방출 기본값은 무압축.
 
 ## 개발 환경 (S1)
 
@@ -96,7 +97,7 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 | S0 | 조사, 방향 설정, 설계, 검증 (연구 기록 0001~0015) | | ✅ |
 | S1 | 기반 구축 + 걷는 뼈대: git, 가상환경, Cargo workspace, PyO3·maturin, CI 설정, `Technique` 뼈대, 실험 하네스, wheel·sdist·crate 패키징 확인 | 0.0.1 (로컬 빌드만, 미배포) | ✅ |
 | X1 | **첫 실험** (0015 P1): α E001~E003(→ 기각), 텐서 중복도·OS 압축 기준선 E005, 노트북 유휴 계측 도구 E006 | | ✅ (0018~0021) |
-| A1 | Rust 코어(v0.1 범위): hwinfo(sysinfo 기반, cgroup), codec(셔플 + zstd), ledger, spill, census 커널 | | |
+| A1 | Rust 코어(v0.1 범위): **방출 엔진**(설계 규칙 RS1~RS5 — 0027) + E009 확인 실험, hwinfo(sysinfo 기반, cgroup), codec(셔플 + zstd), ledger, census 커널 | | 설계 규칙 확정, 프로토타입 codec 완료(E008) |
 | N1 | **doctor + census + β** | 🚀 v0.1.0 (crates.io + PyPI) | |
 | R2 | 메모리 센서스 연구 (census와 코드 공유, 연구 주력 후보 — 0021 Q2) | | |
 | A2 | 범용 접근: `optimize`, `train_session`, `load`, `check`, 생태계 통합 | 🚀 v0.2.0 | |
