@@ -61,6 +61,7 @@
 | [0032](0032-adopt-group1-2.md) | 2026-09-25 | decision | 개발 착수 전 결정(I1·R1·H1~H4·H6·P5·I4·I5·병합)과 v0.1 범위(Q1·R2·P6·P7·R3·I2·I3·I7·I8·I9) 일괄 채택 → Gβ 관문, 순서 변경, β SSD 정책, 제품 중심 β + census | 확정 |
 | [0033](0033-research-direction.md) | 2026-09-25 | decision | 연구 방향 확정: 논문 A(센서스 측정 연구) 주력·E012, 논문 B는 v0.1 이후, G3 장기 과제와 후보 탐색 절차, K1~K6 원칙화, 연구·제품 성공 기준 분리 | 확정 (게재처·GPU 환경 대기) |
 | [0034](0034-library-skeleton.md) | 2026-09-25 | design+milestone | S2 라이브러리 전체 뼈대: 공개 API(지연 import), 오류 계층(NotYetImplemented), 설정 계층, β 방법 선택 정책, fail-open, CLI 종료 코드, 노트북 매직, Rust 모듈(error·hwinfo·spill·ledger·pressure). 테스트 Python 60·Rust 17 | 확정 |
+| [0035](0035-hwinfo-doctor.md) | 2026-09-25 | design+milestone | A1a hwinfo·N1a doctor: 보수적 가용 메모리(macOS 1.55 대 OS 추정 3.27 GiB 발견), 풀별 예산 규칙, `memopro doctor`. macOS 검증, Linux 컨테이너는 CI 대기 | 확정 (Linux 미검증) |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

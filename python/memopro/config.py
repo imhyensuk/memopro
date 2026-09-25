@@ -11,6 +11,7 @@ from __future__ import annotations
 
 import dataclasses
 import os
+import sys
 import tomllib
 from collections.abc import Mapping
 from dataclasses import dataclass
@@ -31,6 +32,7 @@ AUTO_MODES = ("source", "host", "compress")
 @dataclass(frozen=True)
 class Config:
     budget: str | int = "auto"  # "auto" or a byte count
+    headroom: float = 0.10  # fraction of usable memory never budgeted (U3 prevention, 0035)
     quality: str = "balanced"
     prefer: str = "quality"
     hibernate_modes: tuple[str, ...] = AUTO_MODES
@@ -81,6 +83,11 @@ def _validate(key: str, value: Any) -> Any:
             return _choice(key, value, DISK_WRITES)
         case "daily_write_limit":
             return None if value in (None, "", "auto") else parse_size(value)
+        case "headroom":
+            fraction = float(value)
+            if not 0.0 <= fraction < 0.9:
+                raise InvalidArgument(f"headroom must be in [0, 0.9); got {value!r}")
+            return fraction
         case "min_free_disk_fraction":
             fraction = float(value)
             if not 0.0 <= fraction < 1.0:
@@ -127,6 +134,21 @@ def _env_layer() -> dict[str, Any]:
         if env in os.environ:
             values[key] = os.environ[env]
     return _layer("environment", values)
+
+
+def default_spill_dir() -> Path:
+    """Per-user cache location for spill files (created only when something is spilled)."""
+    home = Path.home()
+    if sys.platform == "darwin":
+        return home / "Library" / "Caches" / "memopro"
+    if sys.platform == "win32":
+        return Path(os.environ.get("LOCALAPPDATA", home / "AppData" / "Local")) / "memopro"
+    return Path(os.environ.get("XDG_CACHE_HOME", home / ".cache")) / "memopro"
+
+
+def spill_location(config: Config) -> Path:
+    """Where spill files would go: ``spill_dir`` if set, otherwise `default_spill_dir()`."""
+    return Path(config.spill_dir).expanduser() if config.spill_dir else default_spill_dir()
 
 
 def get_config() -> Config:

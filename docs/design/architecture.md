@@ -1,6 +1,6 @@
 # memopro 아키텍처 설계
 
-- **버전**: 설계 v0.3.9 (2026-09-25) — 패키지 구조를 실제 뼈대에 맞춤, 오류 계층·설정 계층·지연 import 명시 (0034) / v0.3.8 — G3 장기 과제 명시, 실험 규칙 K1~K6 원칙화 (0033) / v0.3.7 — β SSD 쓰기 최소화(원본 재읽기 우선, SSD 기본 끔)·방법 선택 인터페이스·명시 핸들, census 재정의와 정밀 경량판 v0.1 (0032) / v0.3.6 — 중복성 검사 3차 반영: census 정밀 모드 재정의, 방출 엔진의 존재 이유와 기준선 명시(0029·0030) / v0.3.5: Rust 코어 설계 규칙 RS1~RS5 채택(0027) / v0.3.4: β 방출 기본값 무압축(0025 E008 C5) / v0.3.3: α 기각(0018), β 기본 모드 변경(0019)
+- **버전**: 설계 v0.3.10 (2026-09-25) — 보수적 가용 메모리 정의, 예산 규칙 구현 반영 (0035) / v0.3.9 — 패키지 구조를 실제 뼈대에 맞춤, 오류 계층·설정 계층·지연 import 명시 (0034) / v0.3.8 — G3 장기 과제 명시, 실험 규칙 K1~K6 원칙화 (0033) / v0.3.7 — β SSD 쓰기 최소화(원본 재읽기 우선, SSD 기본 끔)·방법 선택 인터페이스·명시 핸들, census 재정의와 정밀 경량판 v0.1 (0032) / v0.3.6 — 중복성 검사 3차 반영: census 정밀 모드 재정의, 방출 엔진의 존재 이유와 기준선 명시(0029·0030) / v0.3.5: Rust 코어 설계 규칙 RS1~RS5 채택(0027) / v0.3.4: β 방출 기본값 무압축(0025 E008 C5) / v0.3.3: α 기각(0018), β 기본 모드 변경(0019)
 - **이력**: v0.1 기법 모듈 중심(0008) → v0.2 범용성 2계층(0010) → v0.2.1 논리 수정(0011) → v0.3 대상·범위 조정(0012) → v0.3.1 검증 수정(0013) → v0.3.2 P1~P4 채택(0015) → v0.3.3 X1 결과 반영(0021)
 - **근거 기록**: [0006](../research/0006-novel-technique-exploration.md), [0009](../research/0009-use-case-analysis.md), [0010](../research/0010-universality-redesign.md), [0011](../research/0011-design-v02-verification.md), [0012](../research/0012-revision-v03.md), [0013](../research/0013-revision-v03-verification.md)
 
@@ -80,6 +80,7 @@
 
 ### 3.1 환경 감지 (`memopro.env`)
 - **메모리**: 물리 RAM, 현재 가용 RAM, 스왑, **cgroup v1/v2 한도**(Docker·Kubernetes), 통합 메모리 여부(Apple Silicon), GPU별 여유 메모리(CUDA·MPS)
+  - **가용 RAM은 보수적으로 정의한다 (0035)**: `total − used`. used는 압축이나 스왑 없이는 내줄 수 없는 메모리이다. macOS는 앱(익명) − 퍼저블 + wired + 압축기(Activity Monitor 기준), Linux는 `MemTotal − MemAvailable`이다. macOS 자체 추정값(active 익명 페이지 포함)은 참고용 `kernel_available_bytes`로만 보고한다. 8GB M1 실측: 1.55 GiB 대 3.27 GiB(스왑 4.9GB 사용 중).
 - **장치**: CPU / MPS / CUDA (ROCm·XPU는 감지만 하고 미지원 시 fail-open)
 - **소프트웨어**: torch 버전, 설치된 백엔드(bitsandbytes, torchao, HQQ, accelerate, peft)와 **현재 장치에서의 동작 가능 여부**
 - **디스크**: SSD 여유 공간, 읽기 속도 (오프로드·방출 계획용)
@@ -94,11 +95,13 @@ Budget = { device: 장치 메모리 예산,  host: 호스트 RAM 예산,  disk: 
 
 | 환경 | device | host | disk |
 |---|---|---|---|
-| 분리형 GPU (CUDA) | GPU 여유 메모리 − 여유분 | min(가용 RAM, cgroup 한도) − 여유분 | SSD 여유 공간 × 허용 비율 |
-| 통합 메모리 (Apple Silicon, MPS) | **host와 같은 풀**. MPS 한도(`recommendedMaxWorkingSetSize` × 워터마크 비율) 이내 | 단일 풀: min(가용 RAM, MPS 한도) − 여유분 | 위와 같음 |
-| CPU 전용 | — | min(가용 RAM, cgroup 한도) − 여유분 | 위와 같음 |
+| 분리형 GPU (CUDA) | GPU 여유 메모리(`mem_get_info`) × (1 − 여유분) | min(가용 RAM, 컨테이너 여유) × (1 − 여유분) | 여유 공간 − 전체 × `min_free_disk_fraction`(기본 20%, 0032 H4) |
+| 통합 메모리 (Apple Silicon, MPS) | **host와 같은 풀**. min(MPS 권장 한도 − 드라이버 할당량, host 사용 가능량) × (1 − 여유분) (K5) | min(가용 RAM, 컨테이너 여유) × (1 − 여유분). CPU 텐서는 MPS 한도를 받지 않는다 | 위와 같음 |
+| CPU 전용 | — | min(가용 RAM, 컨테이너 여유) × (1 − 여유분) | 위와 같음 |
 
-- 여유분 기본값 10%. 사용자는 `budget="6GB"`(주 장치 기준), `budget={"device": "10GB", "host": "16GB"}`, `0.7`(가용분 비율) 등으로 지정할 수 있다.
+- 구현: `memopro.orchestrator.budget.compute_budget` (0035). 디스크에 쓸 수 있는지는 예산이 아니라 `disk_writes` 정책이 정한다.
+
+- 여유분(`headroom`) 기본값 10%(초기값, 실측으로 보정 예정). 사용자는 `budget="6GB"`로 device와 host를 함께 제한할 수 있다. 풀별 지정(`{"device": …, "host": …}`)과 비율 지정(`0.7`)은 설계만 있고 아직 구현하지 않았다(v0.2).
 - 통합 메모리에서는 "CPU 오프로드"가 메모리를 줄이지 못한다(같은 풀). 후보 구성에서 자동으로 제외한다.
 
 ### 3.3 전략 선택: 후보 구성 목록 (0011 L5 수정 — 선형 "사다리"에서 변경)
@@ -355,7 +358,7 @@ class Technique(Protocol):
 
 | 모듈 | 책임 | 비고 |
 |---|---|---|
-| **`hwinfo`** (v0.1) | 풀별 예산 벡터의 OS 수준 기반: 물리·가용 RAM, 스왑, **cgroup v1/v2 한도**, 통합 메모리 여부, 디스크 여유·속도 | `sysinfo` 크레이트(cgroup 한도 포함)를 의존성으로 쓰고 빠진 부분만 구현 (0011 L13). MPS 권장 한도는 Python에서 torch로 조회 (0013 V12) |
+| **`hwinfo`** (v0.1, ✅ 0035) | 풀별 예산 벡터의 OS 수준 기반: 물리·가용(보수적)·OS 추정 RAM, 스왑, **cgroup v1/v2 한도**, CPU, 디스크 용량(`statvfs`) | `sysinfo` 0.39(system 기능만, cgroup 포함)와 `libc::statvfs`. MPS·CUDA 한도는 Python에서 torch로 조회 (0013 V12) |
 | `pressure` (v0.3) | OS 메모리 압박 구독 (macOS memory pressure, Linux PSI) | γ. v0.1의 β는 유휴 기준으로만 동작 (0013 V14) |
 | `codec` (v0.1) | 바이트 셔플 + **zstd 크레이트**로 부동소수 무손실 압축, lowbit(2/3/4비트) | β(방출 파일 압축), census. **기존 크레이트 위에 얇게 구현하며 신규성 주장 없음** (0013 V11). 성능 부족 시 blosc2 연동 검토 |
 | `ledger`, `spill` (v0.1), `policy` | 텐서 원장, **방출 엔진**(상주 풀 + 고정 버퍼 풀 + 파이프라인 방출·복원, 아래 RS1~RS5). **주 경로는 원본 파일 → 텐서 읽기와 병렬 해시 확인**, SSD 쓰기는 최후 수단 (0032 H1). 결정 로직 | β, γ. v0.1 Rust 코어의 중심 (0027). **신규성 주장 없음**: 비동기 텐서 SSD 방출은 TensorNVMe·DeepNVMe·kvikio가 이미 제공한다(0029 D20). 직접 만드는 이유는 ① macOS 지원(기존 도구는 Linux 전용) ② RS4 메모리 상한 보장 ③ β 프록시·원장과의 결합. Linux에서 TensorNVMe를 선택 백엔드로 쓸지는 E009 결과로 판단 (0030 C2) |

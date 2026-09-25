@@ -24,6 +24,9 @@ def _parser() -> argparse.ArgumentParser:
 
     doctor = sub.add_parser("doctor", help="available memory per pool (device, host, disk)")
     doctor.add_argument("--json", action="store_true", help="machine-readable output")
+    doctor.add_argument(
+        "--no-devices", action="store_true", help="skip GPU detection (does not import torch)"
+    )
 
     check = sub.add_parser("check", help="does a model or script fit my budget? (v0.2)")
     check.add_argument("target", help="model id or script path")
@@ -38,9 +41,12 @@ def _parser() -> argparse.ArgumentParser:
 
 
 def _doctor(args: argparse.Namespace) -> None:
-    from memopro.env import detect
+    import json
 
-    detect()
+    from memopro._doctor import doctor
+
+    result = doctor(devices=not args.no_devices)
+    print(json.dumps(result.to_json(), indent=2) if args.json else result.summary())
 
 
 def _check(args: argparse.Namespace) -> None:

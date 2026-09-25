@@ -1,5 +1,6 @@
 """memopro: memory relief and redundancy diagnostics for PyTorch developers.
 
+``memopro.doctor()`` (and ``memopro doctor``) reports memory per pool and the budget.
 Product core (0032 I7): β hibernate (reclaim idle memory, no SSD writes unless allowed) and
 census (where memory goes and how much is redundant). The access layer (load, optimize,
 train_session, check) follows in v0.2, γ elastic and ``memopro run`` in v0.3.
@@ -44,6 +45,7 @@ _LAZY: dict[str, tuple[str, str | None]] = {
     "optimize": ("memopro.access", "optimize"),
     "train_session": ("memopro.access", "train_session"),
     "check": ("memopro.access", "check"),
+    "doctor": ("memopro._doctor", "doctor"),
     "configure": ("memopro.config", "configure"),
     "get_config": ("memopro.config", "get_config"),
     "census": ("memopro.census", None),
@@ -99,6 +101,7 @@ __all__ = [
     "check",
     "configure",
     "core_version",
+    "doctor",
     "elastic",
     "get_config",
     "hibernate",
