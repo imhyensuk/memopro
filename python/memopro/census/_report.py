@@ -39,6 +39,10 @@ def render(result: dict[str, Any]) -> str:
             line += f" {shown:>7s}"
         lines.append(line)
     lines.append(f"{'total':20s} {format_size(sum(c['bytes'] for c in cats.values())):>11s}")
+    for dev, n in result.get("framework_workspace", {}).items():
+        lines.append(
+            f"{dev} framework workspace (cuBLAS): {format_size(n)} (counted as attributed)"
+        )
     for dev, cov in result["coverage_at_end"].items():
         lines.append(
             f"{dev} coverage at end: {cov:.0%} of allocated memory attributed "

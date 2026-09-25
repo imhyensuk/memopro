@@ -226,3 +226,17 @@ def test_lightning_callback_records_one_batch(tmp_path):
     trainer.fit(Module(), data)
     assert cb.census is not None
     assert cb.census.to_json()["categories"]["optimizer_state"]["bytes"] > 0
+
+
+def test_f2_cublas_workspace_is_zero_without_cuda_and_rendered_when_present():
+    from memopro.census._collect import cublas_workspace_bytes
+    from memopro.census._report import render
+
+    if not torch.cuda.is_available():
+        assert cublas_workspace_bytes() == 0
+    model = tiny_model()
+    with memopro.census.record(model) as c:
+        pass
+    result = dict(c.to_json())
+    result["framework_workspace"] = {"cuda": 18 << 20}
+    assert "cuda framework workspace (cuBLAS): 18.00 MiB" in render(result)

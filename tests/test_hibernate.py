@@ -335,3 +335,19 @@ def test_d3_unexpected_method_errors_keep_the_tensor_awake(monkeypatch):
     with pytest.raises(ModeUnavailable, match="RuntimeError: backend exploded"):
         hibernate.now(t, mode="compress")
     assert t.numel() == 1 << 16
+
+
+def test_f1_reclaimed_is_signed_and_shows_added_memory(monkeypatch):
+    """0045 F1: mode 'host' frees GPU memory but adds host RAM; the report must say so."""
+    from memopro.integrations.ipython import _describe
+
+    readings = iter([{"rss": 100, "cuda": 1000}, {"rss": 600, "cuda": 0}])
+    monkeypatch.setattr(hibernate, "_measure", lambda: next(readings))
+    t = torch.zeros(1 << 16)
+    h = hibernate.now(t, mode="compress")
+    assert h.reclaimed == {"rss": -500, "cuda": 1000}
+    text = _describe(h)
+    assert "freed cuda" in text and "added rss" in text
+    detail = memopro.report().entries[-1].detail
+    assert "cuda freed 1000" in detail and "rss added 500" in detail
+    h.wake()

@@ -65,6 +65,24 @@ class SavedTensorLog:
         return t
 
 
+def cublas_workspace_bytes() -> int | None:
+    """CUDA memory held by cuBLAS/cuBLASLt workspaces, which PyTorch allocates through its
+    caching allocator (0045 F2): the drop in ``memory_allocated`` when they are cleared.
+
+    Clearing is safe: PyTorch recreates a workspace at the next matrix multiply. None when the
+    private hook is missing; 0 without CUDA.
+    """
+    if not torch.cuda.is_available():
+        return 0
+    clear = getattr(torch._C, "_cuda_clearCublasWorkspaces", None)
+    if clear is None:
+        return None
+    torch.cuda.synchronize()
+    before = torch.cuda.memory_allocated()
+    clear()
+    return max(0, before - torch.cuda.memory_allocated())
+
+
 def allocator_snapshot() -> dict[str, dict[str, int]]:
     from memopro import _core
 
@@ -202,11 +220,13 @@ def build_result(census: Any) -> dict[str, Any]:
         categories[name] = _summarise(name, cat.nbytes, cat.tensors, samples, light)
 
     after = allocator_snapshot()
+    workspace = cublas_workspace_bytes()
     coverage, unclassified = {}, {}
     live_by_device: dict[str, int] = defaultdict(int)
     for name in ("parameters", "gradients", "optimizer_state"):
         for dev, n in categories[name]["devices"].items():
             live_by_device[dev] += n
+    live_by_device["cuda"] += workspace or 0
     for dev in ("cuda", "mps"):
         if dev in after and after[dev]["allocated"] > 0:
             allocated = after[dev]["allocated"]
@@ -218,6 +238,7 @@ def build_result(census: Any) -> dict[str, Any]:
         "categories": categories,
         "allocator_before": census._alloc_before,
         "allocator_after": after,
+        "framework_workspace": {"cuda": workspace} if workspace else {},
         "coverage_at_end": coverage,
         "unclassified_at_end": unclassified,
         "criteria": {
