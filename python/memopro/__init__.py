@@ -16,7 +16,8 @@ from __future__ import annotations
 import importlib
 from typing import Any
 
-from memopro._core import __version__, core_version
+from memopro._core import __version__ as _cargo_version
+from memopro._core import core_version
 from memopro._errors import (
     ConfigError,
     IntegrityError,
@@ -39,6 +40,16 @@ from memopro.techniques import (
     register_technique,
     registry,
 )
+
+
+def _pep440(cargo: str) -> str:
+    """Cargo pre-release version -> PEP 440, as maturin writes it: 0.1.0-alpha.1 -> 0.1.0a1."""
+    for cargo_tag, pep_tag in (("-alpha.", "a"), ("-beta.", "b"), ("-rc.", "rc")):
+        cargo = cargo.replace(cargo_tag, pep_tag)
+    return cargo
+
+
+__version__ = _pep440(_cargo_version)
 
 # name -> (module, attribute or None for the module itself), resolved on first access (PEP 562)
 _LAZY: dict[str, tuple[str, str | None]] = {

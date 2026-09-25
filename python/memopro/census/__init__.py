@@ -78,12 +78,21 @@ class Census:
         self._hooks.__enter__()
         return self
 
-    def __exit__(self, *exc: object) -> None:
+    def __exit__(self, exc_type: object, exc: object, tb: object) -> None:
+        from memopro._errors import MemoproError
         from memopro.census._collect import build_result
 
-        self._hooks.__exit__(*exc)
-        self._result = build_result(self)
-        self._saved = None  # drop samples of saved tensors
+        self._hooks.__exit__(exc_type, exc, tb)
+        try:
+            self._result = build_result(self)
+        except Exception as e:
+            if exc_type is not None:  # never hide the user's own exception (0048)
+                return
+            if isinstance(e, MemoproError):
+                raise
+            raise MemoproError(f"census could not build its result: {type(e).__name__}: {e}") from e
+        finally:
+            self._saved = None  # drop samples of saved tensors
 
     # ------------------------------------------------------------------ results
     def _require(self) -> dict[str, Any]:

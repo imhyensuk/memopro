@@ -7,8 +7,9 @@ memopro is for developers who build their own projects, services, experiments an
 with PyTorch on machines with little memory. "Memory" here means hardware memory (GPU/RAM), not
 agent or conversation memory.
 
-> **Status: development build (0.0.x), not released yet.** The 0.1 features below work and are
-> tested on macOS (CPU and Apple MPS); CUDA and Linux-container validation are still pending.
+> **Status: alpha (0.1.0a1).** The features below work and are tested on Linux (CI, including a
+> memory-limited container) and macOS (CPU and Apple MPS). Real NVIDIA GPUs are not validated
+> yet. Install with `pip install --pre "memopro[torch]"`; APIs may still change before 0.1.0.
 > `import memopro` has no side effects and does not import torch.
 
 ## 0.1 features
@@ -50,7 +51,13 @@ See `examples/quickstart.ipynb`.
   folder or the HF cache) and for files registered with `memopro.hibernate.register_source`.
   If the original file changes while the model sleeps, restore is refused (`IntegrityError`).
 - A sleeping tensor used directly fails loudly (it has 0 elements); modules and optimizers wake
-  themselves on call, `step()` or a backward pass already in flight.
+  themselves on call, `step()`, `state_dict()`/`load_state_dict()`, `torch.save`/pickle,
+  `copy.deepcopy`, `.to()`, `parameters()` or a backward pass already in flight. If data cannot be
+  restored (source file changed, spill file lost), memopro raises `IntegrityError` and keeps the
+  object guarded until you call `handle.discard()`.
+- "Bit-exact" refers to tensor values. On CPU, weights memory-mapped from safetensors may be
+  unaligned; after any re-allocation (memopro, `.clone()`, `.to()`) the first BLAS results can
+  differ in the last digits.
 - Tensors that share memory with other tensors (views, tensors saved for backward) and meta
   tensors are left awake, with the reason reported.
 - Reclaimed memory is measured (RSS, MPS/CUDA driver memory); allocators may keep pages, so it

@@ -26,6 +26,8 @@ tensor directly fails loudly (it has 0 elements); a sleeping module or optimizer
 from __future__ import annotations
 
 import inspect
+import threading
+import weakref
 from collections import defaultdict
 from dataclasses import dataclass
 from typing import Any
@@ -113,9 +115,12 @@ class Handle:
         self.requested_mode = mode
         self.records: list[_Record] = []
         self.kept: dict[str, list[str]] = defaultdict(list)  # reason -> tensor names left awake
-        self.reclaimed: dict[str, int] = {}  # measured, per pool
+        # Measured change per pool, signed (0045 F1): positive = freed, negative = added.
+        # E.g. mode "host" frees CUDA memory and adds the same amount of host RAM.
+        self.reclaimed: dict[str, int] = {}
         self.asleep = False
-        self._hooks: list[Any] = []
+        self._lock = threading.RLock()  # concurrent forwards may all try to wake (0048 S5)
+        self._guards: Any = None
 
     # ------------------------------------------------------------ info
     @property
@@ -147,37 +152,79 @@ class Handle:
         from memopro.hibernate._tensors import asleep
         from memopro.report import report
 
-        if not self.asleep:
-            return self._obj
-        for h in self._hooks:
-            h.remove()
-        self._hooks.clear()
-        failed = []
-        for r in self.records:
-            if not asleep(r.slot):
-                continue
-            try:
-                _methods.WAKE[r.sleeping.mode](r.slot, r.sleeping)
-            except Exception as e:  # noqa: BLE001 - restore every other tensor, then report
-                failed.append(f"{r.slot.names[0] or 'tensor'}: {type(e).__name__}: {e}")
-        self.asleep = False
+        with self._lock:
+            if not self.asleep:
+                return self._obj
+            failed = []
+            for r in self.records:
+                if not asleep(r.slot):
+                    continue
+                try:
+                    _methods.WAKE[r.sleeping.mode](r.slot, r.sleeping)
+                except Exception as e:  # noqa: BLE001 - restore every other tensor, then report
+                    failed.append(f"{r.slot.names[0] or 'tensor'}: {type(e).__name__}: {e}")
+            if failed:  # keep the guards: the object stays protected while data is missing
+                raise failed_error(failed)
+            # data first, then guards: an interrupted wake leaves the rest still guarded
+            if self._guards is not None:
+                self._guards.remove()
+                self._guards = None
+            self.asleep = False
         report().add("hibernate", "reverted", f"{self.name} woke up")
-        if failed:
-            raise failed_error(failed)
         return self._obj
+
+    def discard(self) -> None:
+        """Give up on data that cannot be restored: remove the guards and leave those tensors
+        empty. Only for after `wake()` raised `IntegrityError`; restorable tensors are restored."""
+        from memopro.hibernate import _methods
+        from memopro.hibernate._tensors import asleep
+
+        with self._lock:
+            for r in self.records:
+                if asleep(r.slot):
+                    try:
+                        _methods.WAKE[r.sleeping.mode](r.slot, r.sleeping)
+                    except Exception:  # noqa: BLE001, S110 - discarding: leave it empty
+                        pass
+            if self._guards is not None:
+                self._guards.remove()
+                self._guards = None
+            self.asleep = False
 
 
 def failed_error(failed: list[str]) -> MemoproError:
     from memopro._errors import IntegrityError
 
-    return IntegrityError("some tensors could not be restored: " + "; ".join(failed))
+    by_reason: dict[str, list[str]] = defaultdict(list)
+    for item in failed:
+        name, _, reason = item.partition(": ")
+        by_reason[reason].append(name)
+    parts = [
+        f"{len(names)} tensor(s) ({', '.join(names[:3])}{', ...' if len(names) > 3 else ''}): "
+        f"{reason}"
+        for reason, names in by_reason.items()
+    ]
+    return IntegrityError(
+        "could not restore " + "; ".join(parts) + ". The object stays hibernated and guarded; "
+        "handle.discard() gives up on the missing data and removes the guards"
+    )
 
 
-_handles: dict[int, Handle] = {}
+# id(object) -> handle. Weak: a sleeping object keeps its own handle alive (guards), and a woken
+# object and its handle are freed as soon as the user drops them (0048 S4).
+_handles: weakref.WeakValueDictionary[int, Handle] = weakref.WeakValueDictionary()
+# Serialises now(): two threads hibernating the same object at once would each pack tensors the
+# other had already emptied (0048 T1).
+_now_lock = threading.RLock()
+
+
+def _lookup(obj: Any) -> Handle | None:
+    handle = _handles.get(id(obj))
+    return handle if handle is not None and handle.object is obj else None
 
 
 def handles() -> list[Handle]:
-    """Handles of hibernated objects in this process (asleep or woken)."""
+    """Handles of hibernated objects still alive in this process (asleep or woken)."""
     return list(_handles.values())
 
 
@@ -194,47 +241,28 @@ def _guess_name(obj: Any) -> str:
     return type(obj).__name__
 
 
-def _install_auto_wake(handle: Handle) -> None:
-    import torch
-
-    obj = handle.object
-
-    def wake_hook(*_: Any, **__: Any) -> None:
-        handle.wake()
-
-    def wake_on_grad(grad: Any) -> Any:
-        # A backward pass that was already running reaches a sleeping parameter: wake before
-        # its gradient is accumulated (0041 D2). Hooks on leaves run before accumulation.
-        handle.wake()
-        return grad
-
-    if isinstance(obj, torch.nn.Module):
-        for m in obj.modules():
-            handle._hooks.append(m.register_forward_pre_hook(wake_hook))
-    elif isinstance(obj, torch.optim.Optimizer):
-        handle._hooks.append(obj.register_step_pre_hook(wake_hook))
-    for r in handle.records:
-        t = r.slot.tensor
-        if r.slot.kind in ("param", "tensor") and t.requires_grad:
-            handle._hooks.append(t.register_hook(wake_on_grad))
-
-
 def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False, name: str | None = None):
     """Hibernate ``obj`` (tensor, ``nn.Module`` or optimizer) now and return a `Handle`.
 
     ``allow_spill=True`` gives consent to write to SSD when ``disk_writes="ask"``.
     With an explicit ``mode`` no other method is used; tensors it does not fit stay in memory
     and are listed in ``handle.kept``. If it fits none, `ModeUnavailable` explains why.
+    Safe to call from several threads; calls run one at a time.
     """
+    with _now_lock:
+        return _now(obj, mode, allow_spill, name)
+
+
+def _now(obj: Any, mode: str, allow_spill: bool, name: str | None) -> Handle:
     import torch
 
     from memopro.hibernate import _source
-    from memopro.hibernate._tensors import collect, release, shared_reason
+    from memopro.hibernate._tensors import collect
     from memopro.report import report
 
     cfg = get_config()
     steps = resolve_modes(mode, cfg, allow_spill=allow_spill)
-    existing = _handles.get(id(obj))
+    existing = _lookup(obj)
     if existing is not None and existing.asleep:
         return existing
     slots = collect(obj)
@@ -245,10 +273,51 @@ def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False, name: str | 
         else {}
     )
     explicit = mode != "auto"
-    last_reason = "no method fits"
     before = _measure()
+    try:
+        _sleep_all(handle, slots, steps, regions, cfg, explicit)
+    except BaseException:
+        _roll_back(handle)  # Ctrl-C or a bug midway: nothing may stay empty (0048 S3)
+        raise
+    if not handle.records:
+        reasons = "; ".join(handle.kept) or "nothing to hibernate"
+        others = () if mode == "auto" else tuple(m for m in MODES if m not in (mode, "auto"))
+        raise ModeUnavailable(mode, reasons, others)
+    after = _measure()
+    handle.reclaimed = {k: before[k] - after.get(k, before[k]) for k in before}
+    handle.asleep = True
+    _handles[id(obj)] = handle
+    detail = f"{handle.name}: " + ", ".join(f"{m} {b}" for m, b in handle.bytes_by_mode().items())
+    detail += "; measured " + ", ".join(
+        f"{pool} {'freed' if v >= 0 else 'added'} {abs(v)}" for pool, v in handle.reclaimed.items()
+    )
+    freed = max(handle.reclaimed.values(), default=0)
+    report().add("hibernate", "applied", detail, reclaimed_bytes=max(freed, 0))
+    return handle
+
+
+def _roll_back(handle: Handle) -> None:
+    from memopro.hibernate import _methods
+
+    if handle._guards is not None:
+        handle._guards.remove()
+        handle._guards = None
+    for r in reversed(handle.records):
+        try:
+            _methods.WAKE[r.sleeping.mode](r.slot, r.sleeping)
+        except Exception:  # noqa: BLE001, S110 - best effort; the original error is re-raised
+            pass
+    handle.records.clear()
+
+
+def _sleep_all(handle: Handle, slots: list, steps: list, regions: dict, cfg: Any, explicit: bool):
+    from memopro.hibernate._guards import Guards
+    from memopro.hibernate._tensors import release, shared_reason
+
     for slot in slots:
         label = slot.names[0] or "tensor"
+        if slot.tensor.numel() == 0:  # emptied meanwhile (e.g. already asleep in another handle)
+            continue
         if slot.tensor.is_meta:
             handle.kept["meta tensor: it holds no memory"].append(label)  # D3
             continue
@@ -260,6 +329,7 @@ def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False, name: str | 
             handle.kept[shared].append(label)  # D1
             continue
         done = False
+        reasons: list[str] = []
         for step in steps:
             try:
                 if step.needs_confirmation:
@@ -270,29 +340,20 @@ def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False, name: str | 
                     )
                 sleeping = _sleep(step.mode, slot, regions, cfg, explicit)
             except ModeUnavailable as e:
-                last_reason = e.reason
+                reasons.append(f"{step.mode}: {e.reason}")
                 continue
             except Exception as e:  # noqa: BLE001 - fail-open: this tensor stays awake (D3)
-                last_reason = f"{step.mode} failed ({type(e).__name__}: {e})"
+                reasons.append(f"{step.mode}: failed ({type(e).__name__}: {e})")
                 continue
             release(slot)
             handle.records.append(_Record(slot, sleeping))
             done = True
             break
-        if not done:
-            handle.kept[last_reason].append(label)
-    if not handle.records:
-        reasons = "; ".join(handle.kept) or "nothing to hibernate"
-        others = () if mode == "auto" else tuple(m for m in MODES if m not in (mode, "auto"))
-        raise ModeUnavailable(mode, reasons, others)
-    after = _measure()
-    handle.reclaimed = {k: max(0, before[k] - after.get(k, 0)) for k in before}
-    handle.asleep = True
-    _install_auto_wake(handle)
-    _handles[id(obj)] = handle
-    detail = f"{handle.name}: " + ", ".join(f"{m} {b}" for m, b in handle.bytes_by_mode().items())
-    report().add("hibernate", "applied", detail, reclaimed_bytes=max(handle.reclaimed.values()))
-    return handle
+        if not done:  # every method tried, with its own reason (0048)
+            handle.kept["; ".join(reasons) or "no method fits"].append(label)
+    if handle.records:
+        handle._guards = Guards(handle)
+        handle._guards.install()
 
 
 def _sleep(mode: str, slot: Any, regions: dict, cfg: Any, explicit: bool) -> Any:
@@ -319,7 +380,7 @@ def wake(target: Any) -> Any:
     wake_proxy = getattr(type(target), "_memopro_wake", None)
     if wake_proxy is not None:
         return wake_proxy(target)
-    handle = _handles.get(id(target))
+    handle = _lookup(target)
     if handle is None:
         raise InvalidArgument("this object is not hibernated")
     return handle.wake()
@@ -341,6 +402,11 @@ def plan(obj: Any) -> list[PlanRow]:
     from memopro.hibernate._methods import COMPRESS_WORTH
     from memopro.hibernate._tensors import collect, cpu_bytes
 
+    existing = _lookup(obj)
+    if existing is not None and existing.asleep:
+        raise InvalidArgument(
+            "this object is hibernated; plan() compares methods before hibernating"
+        )
     cfg = get_config()
     slots = [s for s in collect(obj) if s.tensor.numel() and not s.tensor.is_meta]
     total = sum(s.nbytes for s in slots)
@@ -428,7 +494,8 @@ def suggest(namespace: dict[str, Any] | None = None, min_bytes: int = MIN_OBJECT
         namespace = _tracker.namespace() or inspect.currentframe().f_back.f_globals
     out = []
     for name, obj in list(namespace.items()):
-        if name.startswith("_") or id(obj) in _handles and _handles[id(obj)].asleep:
+        handle = _lookup(obj)
+        if name.startswith("_") or (handle is not None and handle.asleep):
             continue
         n = storage_bytes(obj)
         if n >= min_bytes:
@@ -468,7 +535,7 @@ def status() -> dict[str, Any]:
                 "reclaimed": h.reclaimed,
                 "kept_awake": {k: len(v) for k, v in h.kept.items()},
             }
-            for h in _handles.values()
+            for h in list(_handles.values())
         ],
         "ssd_written_today": today,
         "ssd_written_total": total,

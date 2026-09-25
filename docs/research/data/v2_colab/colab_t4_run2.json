@@ -1,0 +1,14 @@
+{
+  "_source": "examples/colab_cuda_check.ipynb (run 2, with the independent workspace check) run by the user on Google Colab (Tesla T4), 2026-09-25, memopro 0.1.0a1 wheel from Release run 36137636028 (F1/F2 fixes); JSON pasted verbatim",
+  "memopro": "0.1.0a1",
+  "torch": "2.11.0+cu128",
+  "cuda": true,
+  "gpu": "Tesla T4",
+  "doctor": {"cuda_devices": 1, "device_budget": 13974405120, "free_reported": 15527116800, "free_torch": 15527116800, "notes": []},
+  "census_cuda": {"coverage_cuda": 1.0, "unattributed_cuda": 2048, "framework_workspace": {"cuda": 18087936}, "independent_workspace": 18087936, "bytes": {"parameters": 21878784, "gradients": 21878784, "optimizer_state": 43757776, "saved_activations": 32379460}},
+  "hibernate_gpt2": {
+    "host": {"modes": {"host": 497759232}, "kept": {}, "cuda_reserved_freed": 532676608, "reclaimed_report": {"rss": -494833664, "cuda": 532676608}, "bit_exact": true, "asleep_after_forward": false},
+    "auto": {"modes": {"source": 497759232}, "kept": {}, "cuda_reserved_freed": 532676608, "reclaimed_report": {"rss": -18894848, "cuda": 532676608}, "bit_exact": true, "asleep_after_forward": false}
+  },
+  "backward_in_flight": {"grads_equal": true, "kept": {"memory shared with other tensors (a view, or saved by autograd for backward)": 2}}
+}
