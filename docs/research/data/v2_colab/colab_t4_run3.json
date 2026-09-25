@@ -1,0 +1,206 @@
+{
+  "_source": "examples/colab_cuda_check.ipynb (run 3, commit 7a773eb: guards_cuda, guards_gpt2, guards_compile) run by the user on Google Colab (Tesla T4), 2026-09-26, memopro 0.1.0a1 wheel cross-built locally from 7a773eb (SHA-256 c484ad3194d2a1a0e2780fffe8aea2a04eba9e9902bc663119b32e86386e4aee, 0049); JSON pasted verbatim",
+  "memopro": "0.1.0a1",
+  "torch": "2.11.0+cu128",
+  "transformers": "5.16.1",
+  "wheel": "memopro-0.1.0a1-cp311-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+  "guards_0049": true,
+  "cuda": true,
+  "gpu": "Tesla T4",
+  "doctor": {
+    "cuda_devices": 1,
+    "device_budget": 13872483532,
+    "free_reported": 15413870592,
+    "free_torch": 15413870592,
+    "notes": []
+  },
+  "census_cuda": {
+    "coverage_cuda": 0.9894,
+    "unattributed_cuda": 1126912,
+    "framework_workspace": {
+      "cuda": 18087936
+    },
+    "independent_workspace": 18087936,
+    "bytes": {
+      "parameters": 21878784,
+      "gradients": 21878784,
+      "optimizer_state": 43757776,
+      "saved_activations": 30284356
+    }
+  },
+  "hibernate_gpt2": {
+    "host": {
+      "modes": {
+        "host": 497759232
+      },
+      "kept": {},
+      "cuda_reserved_freed": 532676608,
+      "reclaimed_report": {
+        "rss": -151457792,
+        "cuda": 532676608
+      },
+      "bit_exact": true,
+      "asleep_after_forward": false
+    },
+    "auto": {
+      "modes": {
+        "source": 497759232
+      },
+      "kept": {},
+      "cuda_reserved_freed": 534773760,
+      "reclaimed_report": {
+        "rss": -18878464,
+        "cuda": 534773760
+      },
+      "bit_exact": true,
+      "asleep_after_forward": false
+    }
+  },
+  "backward_in_flight": {
+    "grads_equal": true,
+    "kept": {
+      "memory shared with other tensors (a view, or saved by autograd for backward)": 2
+    }
+  },
+  "guards_cuda": {
+    "state_dict": {
+      "ok": true,
+      "slept": {
+        "host": 279616
+      }
+    },
+    "torch_save": {
+      "ok": true,
+      "no_memopro_in_pickle": true
+    },
+    "deepcopy": {
+      "ok": true,
+      "copied_marks": 0
+    },
+    "pickle_tensor": {
+      "ok": true,
+      "elements": 100000
+    },
+    "load_state_dict": {
+      "ok": true
+    },
+    "move": {
+      "ok": true,
+      "to_cpu": true,
+      "to_half": true
+    },
+    "count": {
+      "ok": true,
+      "params": 69904
+    },
+    "step_foreach": {
+      "ok": true,
+      "slept": {
+        "host": 559232
+      }
+    },
+    "step_fused": {
+      "ok": true,
+      "slept": {
+        "host": 559232
+      }
+    },
+    "training": {
+      "ok": true,
+      "control_deterministic": true,
+      "device_freed": [
+        840192,
+        840192
+      ]
+    },
+    "interrupt": {
+      "ok": true,
+      "interrupted": true,
+      "intact": true,
+      "clean": true
+    },
+    "threads": {
+      "ok": true,
+      "calls_ok": true,
+      "concurrent_now_ok": true,
+      "errors": []
+    },
+    "lifetime": {
+      "ok": true,
+      "asleep_freed": true,
+      "awake_freed": true
+    },
+    "clean_state": {
+      "ok": true,
+      "owners": 0,
+      "global_hook": false
+    },
+    "all_ok": true
+  },
+  "guards_gpt2": {
+    "generate": {
+      "ok": true,
+      "tokens": 48
+    },
+    "state_dict": {
+      "ok": true
+    },
+    "save_pretrained": {
+      "ok": true
+    },
+    "step": {
+      "ok": true,
+      "slept": {
+        "source": 497759232,
+        "host": 497759232
+      }
+    },
+    "all_ok": true,
+    "first_sleep": {
+      "modes": {
+        "source": 497759232
+      },
+      "kept": {},
+      "device_freed": 498690048
+    }
+  },
+  "guards_compile": {
+    "compiled_wrapper": {
+      "ok": true,
+      "graph_breaks": 0,
+      "new_graphs": 0,
+      "warnings": 0
+    },
+    "fullgraph": {
+      "ok": true,
+      "graph_breaks": 0,
+      "new_graphs": 0,
+      "warnings": 0
+    },
+    "module_compile": {
+      "ok": true,
+      "graph_breaks": 0,
+      "new_graphs": 0,
+      "warnings": 0
+    },
+    "reduce_overhead": {
+      "ok": true,
+      "graph_breaks": 0,
+      "new_graphs": 0,
+      "warnings": 0
+    },
+    "compiled_after_hibernate": {
+      "ok": true,
+      "warnings": 1
+    },
+    "training": {
+      "ok": true,
+      "control_deterministic": true,
+      "graph_breaks": 0
+    },
+    "optimizer_step": {
+      "ok": true
+    },
+    "all_ok": true
+  }
+}

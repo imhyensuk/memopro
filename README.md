@@ -131,7 +131,7 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 
 ## 알려진 한계 (v0.1 개발판)
 
-- **아직 배포 전이다.** CUDA는 Colab T4에서 확인했고(0045·0046), Linux 컨테이너 한도 인식은 CI에서 확인했다(0042).
+- **아직 배포 전이다.** CUDA는 Colab T4에서 확인했고(0045·0046, 가드와 torch.compile은 0050), Linux 컨테이너 한도 인식은 CI에서 확인했다(0042).
 - `source` 복원은 Hugging Face `from_pretrained`로 불러온 safetensors 모델(로컬 폴더 또는 HF 캐시)과 `register_source`로 등록한 파일에서만 쓸 수 있다. 불러온 뒤 바뀐 텐서는 비트 단위 확인에서 걸러져 다른 방법으로 넘어간다. **동면 중에 원본 파일을 바꾸면 복원이 거부된다**(데이터 복구 불가, `IntegrityError`).
 - 동면 중인 텐서를 직접 쓰면 크기 0이라 오류가 난다(조용히 틀리지 않음). 모듈과 옵티마이저는 호출·`step()`·진행 중이던 역전파에서 스스로 깨어난다. 노트북의 텐서 대리 객체는 `isinstance`·`id()`가 원래 텐서와 다르다.
 - 다른 텐서와 메모리를 공유하는 텐서(뷰, 역전파용으로 저장된 텐서)와 meta 텐서는 동면하지 않고 이유를 알려 준다(0041). 공유 판정에는 torch 내부 API를 쓰며, 없으면 뷰 여부만 검사한다.
