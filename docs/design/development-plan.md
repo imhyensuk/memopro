@@ -1,7 +1,7 @@
 # memopro 개발 단계 계획
 
-- **버전**: 계획 v0.3.4 (2026-09-25) — A1 = 방출 엔진 중심, RS1~RS5 완료 조건, 방출 엔진 → E009 순서 ([0027](../research/0027-adopt-rs1-rs5.md)) / v0.3.3: X1 결과 반영 ([0021](../research/0021-x1-consequences.md)): α 트랙 종료, 로드맵 재번호 (v0.3.2: P1·P2 채택, 0015)
-- **이력**: v0.1(0008) → v0.2 범용성(0010) → v0.2.1(0011) → v0.3.1(0012·0013) → v0.3.2(0015) → v0.3.3(0021) → v0.3.4(0027)
+- **버전**: 계획 v0.3.5 (2026-09-25) — 중복성 검사 3차 반영: E009 기준선, A2 비교 조건, v0.3 착수 전 재조사 ([0030](../research/0030-adopt-c1-c5.md)) / v0.3.4 — A1 = 방출 엔진 중심, RS1~RS5 완료 조건, 방출 엔진 → E009 순서 ([0027](../research/0027-adopt-rs1-rs5.md)) / v0.3.3: X1 결과 반영 ([0021](../research/0021-x1-consequences.md)): α 트랙 종료, 로드맵 재번호 (v0.3.2: P1·P2 채택, 0015)
+- **이력**: v0.1(0008) → v0.2 범용성(0010) → v0.2.1(0011) → v0.3.1(0012·0013) → v0.3.2(0015) → v0.3.3(0021) → v0.3.4(0027) → v0.3.5(0030)
 - **관련**: [architecture.md](architecture.md), [use-cases.md](use-cases.md), [0012](../research/0012-revision-v03.md), [0013](../research/0013-revision-v03-verification.md)
 
 ---
@@ -75,7 +75,7 @@
 | `hwinfo` (sysinfo 기반) | macOS·Linux에서 RAM·스왑·디스크, **cgroup v1/v2 한도**(Docker `--memory` 컨테이너에서 검증) |
 | `codec` (바이트 셔플 + zstd, lowbit) | 비트 단위 정확 왕복(proptest: 무작위·NaN·Inf·비정규 수), 청크 스트리밍, bf16 압축률 측정 |
 | `ledger`, `spill` (**방출 엔진**, 0027) | 동시성 테스트, 방출 후 복원 비트 정확, 청크 단위 I/O. **RS1~RS5 완료 조건**(architecture §6.1): Python 할당 최대치 < 청크 1개, 입력 주소 = `data_ptr()`, 반복 호출 시 스레드·문맥 수 불변, 입력 2배에도 RSS 증가량 불변(E008b의 367MiB 초과 원인 제거), 파이프라인 시간 < 순차 합 |
-| E009 (방출 엔진 뒤, 0027) | 압축 방출 대 무압축 방출 확인 실험. **엔진 구현 후 사전 등록**하고 여러 크기·여러 날에 걸쳐 실행. 통과 시에만 β 방출 기본값을 압축으로 변경(그 전까지 무압축, 0025 C5) |
+| E009 (방출 엔진 뒤, 0027) | 압축 방출 대 무압축 방출 확인 실험. **엔진 구현 후 사전 등록**하고 여러 크기·여러 날에 걸쳐 실행. 통과 시에만 β 방출 기본값을 압축으로 변경(그 전까지 무압축, 0025 C5). **기준선(0030 C2)**: macOS는 `torch.save`·`numpy.tofile`, Linux는 TensorNVMe. 결과로 Linux에서 TensorNVMe 선택 백엔드 연동 여부도 판단 |
 | 프로토타입 정리 | `bytes` 입력 바인딩(`codec_*`, E008용)을 공개 API에서 제거하고 기록 (E008 재현은 커밋 `9fd9bd3`) |
 | `census` 커널 | 표본 엔트로피가 numpy 기준 구현과 일치 |
 | PyO3 바인딩 | buffer protocol로 복사 없이 전달(RS2, bf16은 uint8 뷰), GIL 해제 |
@@ -122,6 +122,7 @@
   - M1 8GB에서 기본 fp32 로드 시 MPS 한도를 넘는 **3B급 HF 모델**을 `optimize`/`load`로 예산 안에서 실행
   - 기본 설정으로는 OOM이 나는 **파인튜닝**(예: GPT-2 medium 전체 파인튜닝 또는 1B급 LoRA, 문장 길이 1024)을 `train_session`으로 완주
   - `check`의 예상 메모리가 실측 대비 ±15% 이내
+  - **기존 도구와 같은 과제에서 비교 (0030 C4)**: `check` 대 vram-check·accelerate estimate-memory, `train_session` 대 ProTrain·AutoCheckpoint·HF `auto_find_batch_size`. 우위가 없으면 그 사실을 문서에 적는다
   - (선택) 이미지 생성 파이프라인을 예산 안에서 실행
 
 ### ~~N2. α 등록~~ — 취소 (0021 D1)
@@ -131,6 +132,7 @@
 
 ### ◆ 관문 Gγ → N3. γ + pressure + 무수정 실행 → 🚀 v0.3.0 — 규모 L (0021 D3 재번호)
 - Rust `pressure`(macOS·Linux PSI), γ(실행 중 구성 변경), `memopro run app.py`(L0)
+- **착수 조건 (0030 C5)**: `memopro run`(코드 수정 없는 실행)과 γ의 중복성 재조사를 먼저 기록한다(0029 D23·D24는 검색 한계가 있었다)
 
 ### S6. 안정화 → 🚀 v1.0.0
 - API 동결, 문서 사이트(영어·한국어), 튜토리얼, 어댑터 확충, 전용 Metal/CUDA 커널
