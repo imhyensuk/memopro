@@ -50,7 +50,9 @@ See `examples/quickstart.ipynb`.
   folder or the HF cache) and for files registered with `memopro.hibernate.register_source`.
   If the original file changes while the model sleeps, restore is refused (`IntegrityError`).
 - A sleeping tensor used directly fails loudly (it has 0 elements); modules and optimizers wake
-  themselves on call/`step()`.
+  themselves on call, `step()` or a backward pass already in flight.
+- Tensors that share memory with other tensors (views, tensors saved for backward) and meta
+  tensors are left awake, with the reason reported.
 - Reclaimed memory is measured (RSS, MPS/CUDA driver memory); allocators may keep pages, so it
   can be smaller than the logical size.
 
