@@ -7,8 +7,9 @@ memopro is for developers who build their own projects, services, experiments an
 with PyTorch on machines with little memory. "Memory" here means hardware memory (GPU/RAM), not
 agent or conversation memory.
 
-> **Status: development build (0.0.x), not released yet.** The 0.1 features below work and are
-> tested on macOS (CPU and Apple MPS); CUDA and Linux-container validation are still pending.
+> **Status: alpha (0.1.0a1).** The features below work and are tested on Linux (CI, including a
+> memory-limited container) and macOS (CPU and Apple MPS). Real NVIDIA GPUs are not validated
+> yet. Install with `pip install --pre "memopro[torch]"`; APIs may still change before 0.1.0.
 > `import memopro` has no side effects and does not import torch.
 
 ## 0.1 features

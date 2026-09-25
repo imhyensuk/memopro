@@ -11,10 +11,13 @@ ROOT = Path(__file__).resolve().parents[1]
 
 
 def test_version_matches_cargo_workspace():
-    cargo = tomllib.loads((ROOT / "Cargo.toml").read_text())
-    assert memopro.__version__ == cargo["workspace"]["package"]["version"]
-    assert memopro.core_version() == memopro.__version__
-    assert re.fullmatch(r"\d+\.\d+\.\d+.*", memopro.__version__)
+    cargo = tomllib.loads((ROOT / "Cargo.toml").read_text())["workspace"]["package"]["version"]
+    assert memopro.core_version() == cargo
+    assert memopro.__version__ == memopro._pep440(cargo)
+    assert re.fullmatch(r"\d+\.\d+\.\d+((a|b|rc)\d+)?", memopro.__version__)
+    assert memopro._pep440("0.1.0-alpha.1") == "0.1.0a1"
+    assert memopro._pep440("1.2.3-rc.2") == "1.2.3rc2"
+    assert memopro._pep440("0.2.0") == "0.2.0"
 
 
 def test_registry_starts_empty_and_accepts_techniques():

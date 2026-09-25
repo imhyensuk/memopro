@@ -2,7 +2,21 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased (development build, 0.0.1)
+## 0.1.0a1 (alpha, not published yet)
+
+### Changed (0044)
+- Version 0.1.0-alpha.1 (Cargo) / 0.1.0a1 (PyPI, PEP 440); `memopro.__version__` uses the PEP 440
+  form, `memopro.core_version()` the Cargo form.
+- Release workflow: tag must match the version; wheels are smoke-tested in a clean environment
+  without torch; a manual run builds the Linux wheel only (macOS on request) and never publishes.
+- Apple MPS counts as usable only if a tiny allocation works (CI macOS VMs report it available
+  but cannot allocate) (0042).
+- CI: pull requests on Linux only, macOS once per push to main (0043).
+
+### Added
+- `examples/colab_cuda_check.ipynb`: pre-release check on a real NVIDIA GPU (0044).
+
+## Development build (0.0.1)
 
 ### Added
 - `memopro doctor` / `memopro.doctor()`: memory per pool (device, host, disk) with a conservative
