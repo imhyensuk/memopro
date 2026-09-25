@@ -16,15 +16,15 @@
 | **`memopro.train_session` / `optimize(goal="train")`** [v0.2] | 범용 접근 | 학습·파인튜닝 | **학습 후보 구성**(혼합 정밀도 → 체크포인팅 → 활성값 오프로드 → 8비트 옵티마이저 → 마이크로배치 → 오프로드), LoRA는 제안만 |
 | **`memopro doctor`** [v0.1] / **`check`** [v0.2] | 범용 접근 | 전 단계 | doctor: 풀별 예산 벡터(장치·호스트·디스크) 진단 / check: "이 PyTorch 모델이 내 예산에 들어가는가, 어떤 구성으로" |
 | **census** [v0.1] | 연구 코어 | 개발·학습·추론 | 메모리가 어디에 쓰이고 **얼마나 중복(낭비)인지** 진단 |
-| **β hibernate** [v0.1] | 연구 코어 | 개발 (대화형) | 노트북·REPL에 쌓인 유휴 텐서·모델을 제안하고 한 줄로 압축·방출 (자동 모드는 선택). 1순위 환경: CUDA VRAM, 스왑 없는 환경 |
+| **β hibernate** [v0.1] | 연구 코어 | 개발 (대화형) | 노트북·REPL에 쌓인 유휴 텐서·모델을 제안하고 한 줄로 SSD 방출(CUDA는 호스트 이동) (자동 모드는 선택). 1순위 환경: CUDA VRAM, 스왑 없는 환경 |
 | ~~α rfc~~ | — | — | **0018에서 기각** (비수축 블록 + 체인 오차 누적) |
-| **γ elastic** [v0.4] | 연구 코어 | 학습·추론·서비스 | 실행 중 메모리 압박에 따라 구성을 바꾸며 OOM 대신 단계적 열화 |
+| **γ elastic** [v0.3] | 연구 코어 | 학습·추론·서비스 | 실행 중 메모리 압박에 따라 구성을 바꾸며 OOM 대신 단계적 열화 |
 
 ## 1.1 사용자 유형별 진입점
 
 | 사용자 | 수준 | 시작 방법 |
 |---|---|---|
-| Python 서비스 운영자 | L0 | `memopro doctor` → (v0.4) `memopro run app.py --budget auto` 또는 `memopro.toml` |
+| Python 서비스 운영자 | L0 | `memopro doctor` → (v0.3) `memopro run app.py --budget auto` 또는 `memopro.toml` |
 | 일반 사용자, 학생 | L1 | `model = memopro.load("모델ID")`, `%load_ext memopro` |
 | 실무 개발자 | L2 | `memopro.load(id, budget="6GB", quality="lossless", prefer="speed")` |
 | 연구자 | L3 | `memopro.census.record(..., mode="deep")`, `memopro.hibernate.now(...)` |
@@ -98,7 +98,7 @@ with memopro.train_session(model, opt, batch_size=8) as s: ...   # v0.2: 체크�
 
 | 환경 | 상태 | 비고 |
 |---|---|---|
-| 추론·서빙 (PyTorch 코드) | ✅ 범용 접근 계층이 담당 (v0.2) | 기존 기법 연동. γ가 실행 중 적응을 더함 (v0.4) |
+| 추론·서빙 (PyTorch 코드) | ✅ 범용 접근 계층이 담당 (v0.2) | 기존 기법 연동. γ가 실행 중 적응을 더함 (v0.3) |
 | 잔차 연결이 없는 구조 | ✅ | (α 기각으로 구조 제약 없음) |
 | TensorFlow, JAX | ❌ 초기 미지원 | Rust 코어는 프레임워크와 무관 |
 | 수천 GPU 규모 분산 학습 | ❌ 초기 목표 아님 | DeepSpeed, Megatron |

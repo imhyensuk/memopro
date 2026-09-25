@@ -193,7 +193,7 @@ memopro.report()
 ```bash
 memopro doctor                       # [v0.1] 내 환경: 풀별 예산 벡터, 장치, 설치된 백엔드
 memopro check <모델ID 또는 스크립트>   # [v0.2] 이 PyTorch 모델이 내 예산에 들어가는가, 어떤 구성으로
-memopro run app.py --budget auto     # [v0.4] 프로세스 수준 기능(β, γ, census, 로딩 정책) 적용 후 실행
+memopro run app.py --budget auto     # [v0.3] 프로세스 수준 기능(β, γ, census, 로딩 정책) 적용 후 실행
 ```
 - `memopro run`은 `from_pretrained` 로딩 정책 적용, β, γ, census처럼 **모델 코드를 몰라도 되는 기능**만 자동 적용한다. 전역 패치는 이 모드에서만 허용한다(P4 예외).
 - 모델 구조가 필요한 기법(예: 학습 후보 기법)은 L1 이상에서 사용한다.
@@ -320,7 +320,7 @@ class Technique(Protocol):
 | 모듈 | 책임 | 비고 |
 |---|---|---|
 | **`hwinfo`** (v0.1) | 풀별 예산 벡터의 OS 수준 기반: 물리·가용 RAM, 스왑, **cgroup v1/v2 한도**, 통합 메모리 여부, 디스크 여유·속도 | `sysinfo` 크레이트(cgroup 한도 포함)를 의존성으로 쓰고 빠진 부분만 구현 (0011 L13). MPS 권장 한도는 Python에서 torch로 조회 (0013 V12) |
-| `pressure` (v0.4) | OS 메모리 압박 구독 (macOS memory pressure, Linux PSI) | γ. v0.1의 β는 유휴 기준으로만 동작 (0013 V14) |
+| `pressure` (v0.3) | OS 메모리 압박 구독 (macOS memory pressure, Linux PSI) | γ. v0.1의 β는 유휴 기준으로만 동작 (0013 V14) |
 | `codec` (v0.1) | 바이트 셔플 + **zstd 크레이트**로 부동소수 무손실 압축, lowbit(2/3/4비트) | β(방출 파일 압축), census. **기존 크레이트 위에 얇게 구현하며 신규성 주장 없음** (0013 V11). 성능 부족 시 blosc2 연동 검토 |
 | `ledger`, `spill` (v0.1), `policy` | 텐서 원장, **방출 엔진**(상주 풀 + 고정 버퍼 풀 + 파이프라인 방출·복원, 아래 RS1~RS5), 결정 로직 | β, γ. v0.1 Rust 코어의 중심 (0027) |
 | `census` (v0.1) | 표본 엔트로피 등 통계 커널 | census |

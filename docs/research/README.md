@@ -54,6 +54,7 @@
 | [0025](0025-e008-rust-results-and-strategy.md) | 2026-09-25 | experiment+design+decision | E008: 단순 Rust는 Python 스레드보다 느림, 압축 방출은 무압축보다 느림 → β 방출 기본 무압축 / E008b(탐색): 설계한 Rust는 1.49배·방출 −18% / 전략 RS1~RS8 | 판정 확정, RS1~RS5 채택·RS6~RS8 보류(→0027) |
 | [0026](0026-min-python-311.md) | 2026-09-25 | decision | 최소 Python 3.10 → 3.11 상향(abi3-py311, buffer protocol 전제)과 3.10 흔적 정리 | 확정 |
 | [0027](0027-adopt-rs1-rs5.md) | 2026-09-25 | decision | Rust 코어 설계 규칙 RS1~RS5 채택(완료 조건 확정), RS6~RS8 보류 → A1 = 방출 엔진, 방출 엔진 → E009 순서 | 확정 |
+| [0028](0028-status-and-roadmap.md) | 2026-09-25 | survey+design | 현황 종합: 성과, 연구 결과(E001~E008b), 최종 설계(v0.3.5), 남은 개발 단계와 결정 대기 항목 | 확정 (현황) |
 
 ## 연구 질문 (Research Questions) — 초안 (0006 기준으로 갱신)
 
