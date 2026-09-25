@@ -75,6 +75,7 @@
 | [0046](0046-colab-cuda-run2.md) | 2026-09-25 | experiment | Colab T4 2차: cuBLAS 작업 공간 독립 측정 일치(18,087,936), CUDA 분류율 100%, host의 RAM 증가 −494.8MB 보고, source의 임시 사본 약 19MB 관찰 → V2 완료 | 확정 |
 | [0047](0047-verification-record-and-assessment.md) | 2026-09-25 | survey+milestone | 검증 과정 종합(8개 층: Rust 21·Python 105 테스트, 독립 기준 7종, CI 10회, 탐색적·실기 검증으로 결함 D1~D3·F1·F2 발견)과 완성도 평가: v0.1 약 80%, 가장 큰 공백은 제품 가치 검증 | 확정 |
 | [0048](0048-defect-sweep.md) | 2026-09-25 | survey+milestone | 결함 소탕: 탐색적 시험 40종(3차례)으로 결함 16건(조용한 오류 6) 발견·수정. 가드(저장·복사·이동·스텝에서 먼저 깨움), 롤백, 약한 레지스트리, 잠금, 이름 변환 대응 / 관찰: CPU 매핑 가중치 정렬로 BLAS 결과 1e-4 차이(memopro 무관) | 확정 |
+| [0049](0049-colab-run3-and-torch-compile.md) | 2026-09-25 | milestone+experiment | PR #2 병합, Colab 3차 검사 사전 등록(가드 CUDA 14·GPT-2 4·compile 7, 로컬 CPU 25/25), wheel 로컬 교차 빌드. torch.compile 결함 발견·수정: 동면 중 호출 시 dynamo 오류, 분할 뒤 조건 없는 eager 캐시로 이후 호출이 모두 eager(조용함) → 컴파일된 프레임 전에 깨움 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
