@@ -267,3 +267,70 @@ def test_notebook_suggests_idle_objects(ipython, capsys, monkeypatch):
     out = capsys.readouterr().out
     assert "idle: idle_blob" in out and "%hibernate idle_blob" in out
     assert any(s.name == "idle_blob" for s in hibernate.suggest(ipython.user_ns))
+
+
+# ---------- regressions found in the completeness review (0041) ----------
+
+
+def test_d1_shared_storage_stays_awake_and_keeps_aliasing():
+    base = torch.randn(512, 512)
+    view = base[:4]
+    for target in (base, view):
+        with pytest.raises(ModeUnavailable, match="shared|view"):
+            hibernate.now(target, mode="compress")
+    base[0, 0] = 42.0
+    assert view[0, 0].item() == 42.0  # still the same memory
+    del view, target  # the loop variable still pointed at the view
+    h = hibernate.now(base, mode="compress")  # no longer shared
+    h.wake()
+
+
+def test_d1_module_keeps_only_shared_parameters_awake():
+    model = torch.nn.Sequential(torch.nn.Linear(64, 64), torch.nn.Linear(64, 64))
+    peek = model[0].weight[:1]  # someone holds a view of one weight
+    h = hibernate.now(model, mode="compress")
+    assert any("shared" in reason for reason in h.kept)
+    assert model[0].weight.numel() > 0 and model[1].weight.numel() == 0
+    h.wake()
+    assert peek.data_ptr() == model[0].weight.data_ptr()
+
+
+def test_d2_hibernating_between_forward_and_backward_gives_same_gradients():
+    torch.manual_seed(0)
+    x = torch.randn(8, 128, requires_grad=True)
+    model = torch.nn.Sequential(torch.nn.Linear(128, 128), torch.nn.Tanh(), torch.nn.Linear(128, 1))
+    ref = torch.nn.Sequential(torch.nn.Linear(128, 128), torch.nn.Tanh(), torch.nn.Linear(128, 1))
+    ref.load_state_dict(model.state_dict())
+    ref(x).sum().backward()
+    loss = model(x).sum()
+    h = hibernate.now(model, mode="compress")  # parameters saved by autograd stay awake (D1)
+    loss.backward()  # the rest wake before their gradients are accumulated
+    assert not h.asleep
+    for p, q in zip(model.parameters(), ref.parameters(), strict=True):
+        assert torch.equal(p.grad, q.grad)
+
+
+def test_d3_meta_tensors_are_skipped_with_a_memopro_error():
+    with pytest.raises(ModeUnavailable, match="meta tensor"):
+        hibernate.now(torch.nn.Linear(1024, 1024, device="meta"))
+    mixed = torch.nn.ModuleDict(
+        {"real": torch.nn.Linear(256, 256), "meta": torch.nn.Linear(256, 256, device="meta")}
+    )
+    h = hibernate.now(mixed, mode="compress")
+    assert h.bytes_by_mode()["compress"] > 0
+    assert "meta tensor: it holds no memory" in h.kept
+    h.wake()
+    assert len(hibernate.plan(mixed)) == 5  # plan skips meta tensors instead of failing
+
+
+def test_d3_unexpected_method_errors_keep_the_tensor_awake(monkeypatch):
+    from memopro.hibernate import _methods
+
+    def broken(slot, *, explicit):
+        raise RuntimeError("backend exploded")
+
+    monkeypatch.setattr(_methods, "sleep_compress", broken)
+    t = torch.zeros(1 << 16)
+    with pytest.raises(ModeUnavailable, match="RuntimeError: backend exploded"):
+        hibernate.now(t, mode="compress")
+    assert t.numel() == 1 << 16

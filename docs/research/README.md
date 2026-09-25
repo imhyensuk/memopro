@@ -67,6 +67,7 @@
 | [0038](0038-spill-engine-v01.md) | 2026-09-25 | design+milestone | A1b 저장 엔진: xxh3-128 다이제스트, 중간 버퍼 없는 병렬 읽기·쓰기, 0600 방출 파일, 저우선순위 쓰기 풀, codec pack/unpack, buffer protocol 바인딩, E008 프로토타입 제거 | 확정 |
 | [0039](0039-hibernate-v01.md) | 2026-09-25 | design+milestone+experiment | N1c β hibernate와 노트북 통합, M1 시연: GPT-2 498MB를 SSD 쓰기 없이 해제·비트 동일 복원 3/3, 깨우기 0.42s 대 다시 불러오기 0.56s | 확정 (CUDA 미검증) |
 | [0040](0040-v01-development-build.md) | 2026-09-25 | milestone | v0.1 개발판 완성: 테스트 Python 97·Rust 21, 패키징 확인(미배포), 완료 조건 대비표, 배포 전 검증 V1~V5 | 확정 (검증 대기) |
+| [0041](0041-completeness-review-d1-d3.md) | 2026-09-25 | survey+milestone | 자기 비판 3차(완성도 평가, 탐색적 시험 6종): 결함 D1(공유 저장공간이 조용히 깨짐)·D2(역전파 도중 동면)·D3(meta 텐서 예외 누출) 발견·수정, 회귀 테스트 5개 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

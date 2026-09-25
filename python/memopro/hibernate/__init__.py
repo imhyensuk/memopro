@@ -157,8 +157,8 @@ class Handle:
                 continue
             try:
                 _methods.WAKE[r.sleeping.mode](r.slot, r.sleeping)
-            except MemoproError as e:
-                failed.append(f"{r.slot.names[0] or 'tensor'}: {e}")
+            except Exception as e:  # noqa: BLE001 - restore every other tensor, then report
+                failed.append(f"{r.slot.names[0] or 'tensor'}: {type(e).__name__}: {e}")
         self.asleep = False
         report().add("hibernate", "reverted", f"{self.name} woke up")
         if failed:
@@ -201,11 +201,21 @@ def _install_auto_wake(handle: Handle) -> None:
     def wake_hook(*_: Any, **__: Any) -> None:
         handle.wake()
 
+    def wake_on_grad(grad: Any) -> Any:
+        # A backward pass that was already running reaches a sleeping parameter: wake before
+        # its gradient is accumulated (0041 D2). Hooks on leaves run before accumulation.
+        handle.wake()
+        return grad
+
     if isinstance(obj, torch.nn.Module):
         for m in obj.modules():
             handle._hooks.append(m.register_forward_pre_hook(wake_hook))
     elif isinstance(obj, torch.optim.Optimizer):
         handle._hooks.append(obj.register_step_pre_hook(wake_hook))
+    for r in handle.records:
+        t = r.slot.tensor
+        if r.slot.kind in ("param", "tensor") and t.requires_grad:
+            handle._hooks.append(t.register_hook(wake_on_grad))
 
 
 def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False, name: str | None = None):
@@ -218,7 +228,7 @@ def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False, name: str | 
     import torch
 
     from memopro.hibernate import _source
-    from memopro.hibernate._tensors import collect, release
+    from memopro.hibernate._tensors import collect, release, shared_reason
     from memopro.report import report
 
     cfg = get_config()
@@ -237,8 +247,16 @@ def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False, name: str | 
     last_reason = "no method fits"
     before = _measure()
     for slot in slots:
+        label = slot.names[0] or "tensor"
+        if slot.tensor.is_meta:
+            handle.kept["meta tensor: it holds no memory"].append(label)  # D3
+            continue
         if not slot.tensor.is_contiguous():
-            handle.kept["not contiguous"].append(slot.names[0])
+            handle.kept["not contiguous"].append(label)
+            continue
+        shared = shared_reason(slot.tensor)
+        if shared is not None:
+            handle.kept[shared].append(label)  # D1
             continue
         done = False
         for step in steps:
@@ -253,15 +271,19 @@ def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False, name: str | 
             except ModeUnavailable as e:
                 last_reason = e.reason
                 continue
+            except Exception as e:  # noqa: BLE001 - fail-open: this tensor stays awake (D3)
+                last_reason = f"{step.mode} failed ({type(e).__name__}: {e})"
+                continue
             release(slot)
             handle.records.append(_Record(slot, sleeping))
             done = True
             break
         if not done:
-            handle.kept[last_reason].append(slot.names[0] or "tensor")
+            handle.kept[last_reason].append(label)
     if not handle.records:
         reasons = "; ".join(handle.kept) or "nothing to hibernate"
-        raise ModeUnavailable(mode, reasons, tuple(m for m in MODES if m != mode))
+        others = () if mode == "auto" else tuple(m for m in MODES if m not in (mode, "auto"))
+        raise ModeUnavailable(mode, reasons, others)
     after = _measure()
     handle.reclaimed = {k: max(0, before[k] - after.get(k, 0)) for k in before}
     handle.asleep = True
@@ -319,7 +341,7 @@ def plan(obj: Any) -> list[PlanRow]:
     from memopro.hibernate._tensors import collect, cpu_bytes
 
     cfg = get_config()
-    slots = [s for s in collect(obj) if s.tensor.numel()]
+    slots = [s for s in collect(obj) if s.tensor.numel() and not s.tensor.is_meta]
     total = sum(s.nbytes for s in slots)
     rows = []
 

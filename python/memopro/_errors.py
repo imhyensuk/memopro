@@ -34,7 +34,7 @@ class ModeUnavailable(MemoproError):
         self.mode = mode
         self.reason = reason
         self.alternatives = alternatives
-        hint = f" -> available: {', '.join(alternatives)}" if alternatives else ""
+        hint = f" (other modes to try: {', '.join(alternatives)})" if alternatives else ""
         super().__init__(f"mode {mode!r} is not available: {reason}{hint}")
 
 
