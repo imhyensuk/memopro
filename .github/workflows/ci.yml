@@ -44,3 +44,17 @@ jobs:
       - run: maturin build --release --out dist
       - run: python -m pip install --no-index --find-links dist memopro
       - run: pytest -q
+
+  cgroup:
+    # hwinfo must report the container memory limit (A1a completion condition, 0035).
+    name: Container memory limit (Linux, cgroup v2)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Build tests without a memory limit
+        run: docker run --rm -v "$PWD":/src -w /src rust:1 cargo test -p memopro --no-run
+      - name: Run the ignored cgroup test inside a 512 MiB container
+        run: >
+          docker run --rm --memory=512m -e MEMOPRO_EXPECT_CGROUP_LIMIT=536870912
+          -v "$PWD":/src -w /src rust:1
+          cargo test -p memopro -- --ignored cgroup_limit_matches_container

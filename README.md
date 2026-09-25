@@ -9,7 +9,7 @@
 
 > 여기서 "메모리"는 에이전트·대화 기억(agent memory)이 아니라 GPU/RAM **하드웨어 메모리**를 뜻한다.
 
-상태: **S2 라이브러리 전체 뼈대 완료** (2026-09-25) — 공개 API 구조와 공통 기반(설정, 방법 선택 정책, fail-open, CLI, 노트북 매직)은 동작한다. 아래 기능은 아직 구현되지 않았으며, 호출하면 `NotYetImplemented`가 예정 버전을 알려 준다.
+상태: **첫 기능 `memopro doctor` 동작** (2026-09-25) — 공개 API 구조와 공통 기반(설정, 방법 선택 정책, fail-open, CLI, 노트북 매직), 그리고 doctor(풀별 가용 메모리와 예산)가 동작한다. 나머지 기능은 아직 구현되지 않았으며, 호출하면 `NotYetImplemented`가 예정 버전을 알려 준다.
 
 ---
 
@@ -112,7 +112,8 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 | S2 | **라이브러리 전체 뼈대** (0034): 공개 API, 오류·설정 계층, β 방법 선택 정책, fail-open, CLI, 노트북 매직, Rust 모듈 구조. 테스트 Python 60·Rust 17 | | ✅ |
 | X1 | **첫 실험** (0015 P1): α E001~E003(→ 기각), 텐서 중복도·OS 압축 기준선 E005, 노트북 유휴 계측 도구 E006 | | ✅ (0018~0021) |
 | E010 | β 실사용 수요 수집 (사전 등록, 동료 3~5명) → **◆ Gβ** (0032) | | |
-| A1a·N1a·N1b | hwinfo → **doctor** → **census**(빠른 + 정밀 경량, HF·Lightning 콜백) | | |
+| A1a·N1a | hwinfo → **doctor** (0035): 보수적 가용 메모리, 풀별 예산, `memopro doctor [--json]` | | ✅ (macOS 검증, Linux 컨테이너는 CI 대기) |
+| N1b | **census**(빠른 + 정밀 경량, HF·Lightning 콜백) | | |
 | A1b·N1c | (Gβ 통과 시) 방출 엔진(원본 재읽기·해시 우선, RS1~RS5, SSD 정책) → E009·E011 → **β** | | 설계 규칙 확정, 프로토타입 codec 완료(E008) |
 | N1 | **doctor + census + β** 통합, 5분 시연 노트북, 공개 시연 수치 | 🚀 v0.1.0 (crates.io + PyPI) | |
 | R2 | 메모리 센서스 연구 (census와 코드 공유, 연구 주력 후보 — 0021 Q2) | | |

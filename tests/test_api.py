@@ -40,7 +40,6 @@ def test_not_yet_implemented_is_a_not_implemented_error():
         (lambda: memopro.hibernate.suggest(), "v0.1"),
         (lambda: memopro.hibernate.status(), "v0.1"),
         (lambda: memopro.hibernate.Handle("x", "source", 1).wake(), "v0.1"),
-        (lambda: memopro.env.detect(), "v0.1"),
         (lambda: memopro.elastic.enable(), "v0.3"),
         (lambda: memopro.integrations.hf.census_callback(), "v0.1"),
         (lambda: memopro.integrations.lightning.census_callback(), "v0.1"),
