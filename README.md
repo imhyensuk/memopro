@@ -78,7 +78,7 @@ python3 -m venv .venv && .venv/bin/pip install "maturin>=1.9,<2" pytest ruff
 VIRTUAL_ENV=$PWD/.venv .venv/bin/maturin develop --release   # Rust 확장 빌드 + 설치
 .venv/bin/pytest -q                                           # Python 테스트
 cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings && cargo test -p memopro
-.venv/bin/maturin build --release --out dist                  # wheel (abi3, Python ≥ 3.10)
+.venv/bin/maturin build --release --out dist                  # wheel (abi3, Python ≥ 3.11)
 ```
 
 구성: Rust 코어 `crates/memopro`(crates.io) · PyO3 바인딩 `crates/memopro-py`(비공개) · Python 패키지 `python/memopro`(PyPI) · 실험 `experiments/`(환경 자동 기록 하네스 포함)
