@@ -1,0 +1,6640 @@
+{
+  "pressure_bytes": 4294967296,
+  "trials": [
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1500938240,
+        "kernel_available": 4915134464,
+        "swap_used": 6621432381
+      },
+      "start": {
+        "load_s": 0.15119870798662305,
+        "warm_forward_s": 0.08781879208981991,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 30970,
+        "resident_size": 831995904,
+        "phys_footprint": 359943552,
+        "diskio_bytesread": 605650944,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 4.5625027269124985e-05,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 30970,
+        "resident_size": 832012288,
+        "phys_footprint": 359943552,
+        "diskio_bytesread": 605650944,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 30350,
+        "total_pages": 30529
+      },
+      "fill": {
+        "fill_s": 6.255611874978058,
+        "max_chunk_s": 0.1387077090330422
+      },
+      "a_pressed": {
+        "pageins": 30970,
+        "resident_size": 36405248,
+        "phys_footprint": 317263168,
+        "diskio_bytesread": 610959360,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 51,
+        "resident_size": 14598144,
+        "phys_footprint": 4318291008,
+        "diskio_bytesread": 630784,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 846,
+        "total_pages": 30529
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 469024,
+        "Pages occupied by compressor": 92963,
+        "Swapouts": 276236,
+        "Swapins": 53745
+      },
+      "host_pressed": {
+        "available": 1571815424,
+        "kernel_available": 2524659712,
+        "swap_used": 10245636096
+      },
+      "resume": {
+        "restore_s": 2.779101487249136e-05,
+        "resume_s": 2.125181291019544,
+        "second_forward_s": 0.921670833020471,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 71627,
+        "resident_size": 559546368,
+        "phys_footprint": 354061696,
+        "diskio_bytesread": 1302175744,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 40657,
+        "diskio_bytesread": 687022080
+      },
+      "b_pass": {
+        "pass_s": 36.02417791693006,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 130,
+        "resident_size": 157892608,
+        "phys_footprint": 4318356544,
+        "diskio_bytesread": 3566866432,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 60.340607166988775
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1581711360,
+        "kernel_available": 5336940544,
+        "swap_used": 8924105277
+      },
+      "start": {
+        "load_s": 0.14177733298856765,
+        "warm_forward_s": 0.10395541694015265,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32768,
+        "resident_size": 886423552,
+        "phys_footprint": 358272448,
+        "diskio_bytesread": 671277056,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.8290036249672994,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 39913,
+        "resident_size": 596541440,
+        "phys_footprint": 529862016,
+        "diskio_bytesread": 790339584,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 5.303812082973309,
+        "max_chunk_s": 0.12550816708244383
+      },
+      "a_pressed": {
+        "pageins": 39913,
+        "resident_size": 159121408,
+        "phys_footprint": 335317952,
+        "diskio_bytesread": 796762112,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 51,
+        "resident_size": 15106048,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 4038656,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 322404,
+        "Pages occupied by compressor": 132906,
+        "Swapouts": 197476,
+        "Swapins": 46580
+      },
+      "host_pressed": {
+        "available": 1515765760,
+        "kernel_available": 2512568320,
+        "swap_used": 9502782914
+      },
+      "resume": {
+        "restore_s": 0.5365045419894159,
+        "resume_s": 0.8966298329178244,
+        "second_forward_s": 0.08559358294587582,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40031,
+        "resident_size": 601538560,
+        "phys_footprint": 869961920,
+        "diskio_bytesread": 1322176512,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 118,
+        "diskio_bytesread": 522530816
+      },
+      "b_pass": {
+        "pass_s": 34.96617687493563,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 61,
+        "resident_size": 146833408,
+        "phys_footprint": 4318372928,
+        "diskio_bytesread": 4293599232,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 58.17929887503851
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 2579267584,
+        "kernel_available": 4889968640,
+        "swap_used": 7468881018
+      },
+      "start": {
+        "load_s": 0.13916133297607303,
+        "warm_forward_s": 0.0988346670055762,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32498,
+        "resident_size": 764559360,
+        "phys_footprint": 358878592,
+        "diskio_bytesread": 673083392,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.130900708027184,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 39623,
+        "resident_size": 579420160,
+        "phys_footprint": 837260032,
+        "diskio_bytesread": 790138880,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 6.211392583092675,
+        "max_chunk_s": 0.4213856670539826
+      },
+      "a_pressed": {
+        "pageins": 39646,
+        "resident_size": 11550720,
+        "phys_footprint": 793727744,
+        "diskio_bytesread": 794218496,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 100,
+        "resident_size": 5881856,
+        "phys_footprint": 4318274624,
+        "diskio_bytesread": 5419008,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 113520,
+        "Pages occupied by compressor": 91464,
+        "Swapouts": 223356,
+        "Swapins": 76114
+      },
+      "host_pressed": {
+        "available": 1563557888,
+        "kernel_available": 2522267648,
+        "swap_used": 9866512957
+      },
+      "resume": {
+        "restore_s": 2.1067569160368294,
+        "resume_s": 2.855222250102088,
+        "second_forward_s": 0.10309887502808124,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40058,
+        "resident_size": 633077760,
+        "phys_footprint": 1324881856,
+        "diskio_bytesread": 1338884096,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 389,
+        "diskio_bytesread": 539750400
+      },
+      "b_pass": {
+        "pass_s": 42.63462874991819,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 139,
+        "resident_size": 283967488,
+        "phys_footprint": 4318274624,
+        "diskio_bytesread": 4351307776,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 68.50010824995115
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1638006784,
+        "kernel_available": 4870668288,
+        "swap_used": 7055081472
+      },
+      "start": {
+        "load_s": 0.14652900001965463,
+        "warm_forward_s": 0.09148295898921788,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32701,
+        "resident_size": 852983808,
+        "phys_footprint": 357993856,
+        "diskio_bytesread": 674082816,
+        "diskio_byteswritten": 32768
+      },
+      "act": {
+        "act_s": 0.1523352909134701,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32701,
+        "resident_size": 355811328,
+        "phys_footprint": 357714240,
+        "diskio_bytesread": 674082816,
+        "diskio_byteswritten": 32768
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 5.388119166949764,
+        "max_chunk_s": 0.12080733303446323
+      },
+      "a_pressed": {
+        "pageins": 32701,
+        "resident_size": 59637760,
+        "phys_footprint": 316934400,
+        "diskio_bytesread": 677752832,
+        "diskio_byteswritten": 32768
+      },
+      "b_pressed": {
+        "pageins": 53,
+        "resident_size": 17694720,
+        "phys_footprint": 4318258240,
+        "diskio_bytesread": 5124096,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 345105,
+        "Pages occupied by compressor": 141185,
+        "Swapouts": 194200,
+        "Swapins": 37415
+      },
+      "host_pressed": {
+        "available": 1399668736,
+        "kernel_available": 2522005504,
+        "swap_used": 9561964544
+      },
+      "resume": {
+        "restore_s": 1.0984016250586137,
+        "resume_s": 2.856694916030392,
+        "second_forward_s": 0.12183775007724762,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 62926,
+        "resident_size": 593526784,
+        "phys_footprint": 350883200,
+        "diskio_bytesread": 1301057536,
+        "diskio_byteswritten": 32768
+      },
+      "a_resume_io": {
+        "pageins": 30225,
+        "diskio_bytesread": 619700224
+      },
+      "b_pass": {
+        "pass_s": 28.650909707997926,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 81,
+        "resident_size": 284934144,
+        "phys_footprint": 4318323776,
+        "diskio_bytesread": 4298534912,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 52.5546638329979
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1495777280,
+        "kernel_available": 4693868544,
+        "swap_used": 7022512701
+      },
+      "start": {
+        "load_s": 0.8853747500106692,
+        "warm_forward_s": 0.07920712500344962,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32777,
+        "resident_size": 729513984,
+        "phys_footprint": 854838720,
+        "diskio_bytesread": 673484800,
+        "diskio_byteswritten": 32768
+      },
+      "act": {
+        "act_s": 0.8618425829336047,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40029,
+        "resident_size": 1050279936,
+        "phys_footprint": 1031705024,
+        "diskio_bytesread": 789262336,
+        "diskio_byteswritten": 45056
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 6.034492792095989,
+        "max_chunk_s": 0.24508295801933855
+      },
+      "a_pressed": {
+        "pageins": 40037,
+        "resident_size": 37306368,
+        "phys_footprint": 328584128,
+        "diskio_bytesread": 795275264,
+        "diskio_byteswritten": 45056
+      },
+      "b_pressed": {
+        "pageins": 120,
+        "resident_size": 13254656,
+        "phys_footprint": 4318274624,
+        "diskio_bytesread": 4890624,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 410467,
+        "Pages occupied by compressor": 96515,
+        "Swapouts": 271284,
+        "Swapins": 63011
+      },
+      "host_pressed": {
+        "available": 1576468480,
+        "kernel_available": 2583183360,
+        "swap_used": 10369493893
+      },
+      "resume": {
+        "restore_s": 0.508911709068343,
+        "resume_s": 1.0169716670643538,
+        "second_forward_s": 0.36301800003275275,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40407,
+        "resident_size": 397787136,
+        "phys_footprint": 866242688,
+        "diskio_bytesread": 1322704896,
+        "diskio_byteswritten": 45056
+      },
+      "a_resume_io": {
+        "pageins": 351,
+        "diskio_bytesread": 524939264
+      },
+      "b_pass": {
+        "pass_s": 32.46184179210104,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 153,
+        "resident_size": 514179072,
+        "phys_footprint": 4318340160,
+        "diskio_bytesread": 3990507520,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 55.082010208046995
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1582284800,
+        "kernel_available": 5408047104,
+        "swap_used": 8989242818
+      },
+      "start": {
+        "load_s": 1.2545447080628946,
+        "warm_forward_s": 0.08598666591569781,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32633,
+        "resident_size": 816103424,
+        "phys_footprint": 853659072,
+        "diskio_bytesread": 636370944,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.5802550420630723,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 32650,
+        "resident_size": 1387593728,
+        "phys_footprint": 1287100096,
+        "diskio_bytesread": 636837888,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 5.151168582960963,
+        "max_chunk_s": 0.13858383300248533
+      },
+      "a_pressed": {
+        "pageins": 32658,
+        "resident_size": 150339584,
+        "phys_footprint": 846321024,
+        "diskio_bytesread": 643473408,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 160,
+        "resident_size": 12500992,
+        "phys_footprint": 4318356544,
+        "diskio_bytesread": 2985984,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 309532,
+        "Pages occupied by compressor": 109661,
+        "Swapouts": 258012,
+        "Swapins": 74464
+      },
+      "host_pressed": {
+        "available": 1550614528,
+        "kernel_available": 2542927872,
+        "swap_used": 10026221568
+      },
+      "resume": {
+        "restore_s": 3.7643837080104277,
+        "resume_s": 5.68495816597715,
+        "second_forward_s": 0.22996016696561128,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 33066,
+        "resident_size": 606158848,
+        "phys_footprint": 1378047936,
+        "diskio_bytesread": 1267408896,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 385,
+        "diskio_bytesread": 619610112
+      },
+      "b_pass": {
+        "pass_s": 47.30782683403231,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 199,
+        "resident_size": 227426304,
+        "phys_footprint": 4318422080,
+        "diskio_bytesread": 4345683968,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 75.55632575007621
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1700282368,
+        "kernel_available": 4952915968,
+        "swap_used": 7804676997
+      },
+      "start": {
+        "load_s": 0.6834998750127852,
+        "warm_forward_s": 0.07741575001273304,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32888,
+        "resident_size": 895418368,
+        "phys_footprint": 853478848,
+        "diskio_bytesread": 677945344,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.12742358294781297,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32888,
+        "resident_size": 883015680,
+        "phys_footprint": 853478848,
+        "diskio_bytesread": 677945344,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 5.702228499925695,
+        "max_chunk_s": 0.15470029192510992
+      },
+      "a_pressed": {
+        "pageins": 32888,
+        "resident_size": 59686912,
+        "phys_footprint": 318064896,
+        "diskio_bytesread": 683843584,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 99,
+        "resident_size": 14581760,
+        "phys_footprint": 4318225472,
+        "diskio_bytesread": 4812800,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 464648,
+        "Pages occupied by compressor": 144384,
+        "Swapouts": 195740,
+        "Swapins": 29344
+      },
+      "host_pressed": {
+        "available": 1461272576,
+        "kernel_available": 2599763968,
+        "swap_used": 10222168965
+      },
+      "resume": {
+        "restore_s": 3.101712166913785,
+        "resume_s": 3.4683572499779984,
+        "second_forward_s": 0.0965951660182327,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 63482,
+        "resident_size": 576258048,
+        "phys_footprint": 851725760,
+        "diskio_bytesread": 1315241984,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 30594,
+        "diskio_bytesread": 627990528
+      },
+      "b_pass": {
+        "pass_s": 30.273884334019385,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 114,
+        "resident_size": 161234944,
+        "phys_footprint": 4318291008,
+        "diskio_bytesread": 4309331968,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 55.03173195803538
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "source_nocache",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 2422620160,
+        "kernel_available": 4801265664,
+        "swap_used": 7207586365
+      },
+      "start": {
+        "load_s": 1.1914936249377206,
+        "warm_forward_s": 0.10248087497893721,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32148,
+        "resident_size": 847085568,
+        "phys_footprint": 815074560,
+        "diskio_bytesread": 661004288,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.900684166001156,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 39122,
+        "resident_size": 453181440,
+        "phys_footprint": 334482176,
+        "diskio_bytesread": 1006686208,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 4.945831084041856,
+        "max_chunk_s": 0.1521634580567479
+      },
+      "a_pressed": {
+        "pageins": 39122,
+        "resident_size": 162742272,
+        "phys_footprint": 327207680,
+        "diskio_bytesread": 1008128000,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 114,
+        "resident_size": 15876096,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 8056832,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 324262,
+        "Pages occupied by compressor": 137165,
+        "Swapouts": 177360,
+        "Swapins": 26005
+      },
+      "host_pressed": {
+        "available": 1438285824,
+        "kernel_available": 2511273984,
+        "swap_used": 9638709821
+      },
+      "resume": {
+        "restore_s": 0.44641579198651016,
+        "resume_s": 0.8119990420527756,
+        "second_forward_s": 0.10345141706056893,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 39232,
+        "resident_size": 572456960,
+        "phys_footprint": 825970560,
+        "diskio_bytesread": 1524674560,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 110,
+        "diskio_bytesread": 515497984
+      },
+      "b_pass": {
+        "pass_s": 33.895174916950054,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 185,
+        "resident_size": 120471552,
+        "phys_footprint": 4318372928,
+        "diskio_bytesread": 4321435648,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 55.25065583293326
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1575436288,
+        "kernel_available": 5081579520,
+        "swap_used": 7185492869
+      },
+      "start": {
+        "load_s": 1.290585708920844,
+        "warm_forward_s": 0.08337408397346735,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32940,
+        "resident_size": 835649536,
+        "phys_footprint": 854576640,
+        "diskio_bytesread": 677363712,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.7499551177024841e-06,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32940,
+        "resident_size": 835796992,
+        "phys_footprint": 854576640,
+        "diskio_bytesread": 677363712,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 30462,
+        "total_pages": 30462
+      },
+      "fill": {
+        "fill_s": 5.490920374984853,
+        "max_chunk_s": 0.15418208402115852
+      },
+      "a_pressed": {
+        "pageins": 32940,
+        "resident_size": 62259200,
+        "phys_footprint": 816352704,
+        "diskio_bytesread": 682278912,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 53,
+        "resident_size": 19234816,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 4452352,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 30462
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 340301,
+        "Pages occupied by compressor": 123641,
+        "Swapouts": 221344,
+        "Swapins": 41102
+      },
+      "host_pressed": {
+        "available": 1495236608,
+        "kernel_available": 2519744512,
+        "swap_used": 10086252544
+      },
+      "resume": {
+        "restore_s": 1.8375110812485218e-05,
+        "resume_s": 3.8581674160668626,
+        "second_forward_s": 0.17284587491303682,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 32940,
+        "resident_size": 608911360,
+        "phys_footprint": 849907200,
+        "diskio_bytesread": 1158660096,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 0,
+        "diskio_bytesread": 470745088
+      },
+      "b_pass": {
+        "pass_s": 31.679790583904833,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 53,
+        "resident_size": 288964608,
+        "phys_footprint": 4318372928,
+        "diskio_bytesread": 4308447232,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 56.02140129101463
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1515094016,
+        "kernel_available": 5085396992,
+        "swap_used": 9588116029
+      },
+      "start": {
+        "load_s": 1.053857000079006,
+        "warm_forward_s": 0.03535237500909716,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40215,
+        "resident_size": 375275520,
+        "phys_footprint": 1466289088,
+        "diskio_bytesread": 790093824,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.6603117500199005,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40245,
+        "resident_size": 612352000,
+        "phys_footprint": 2082395264,
+        "diskio_bytesread": 791031808,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 5.8750097919255495,
+        "max_chunk_s": 0.18784729193430394
+      },
+      "a_pressed": {
+        "pageins": 40251,
+        "resident_size": 146685952,
+        "phys_footprint": 811340608,
+        "diskio_bytesread": 794750976,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 59,
+        "resident_size": 16973824,
+        "phys_footprint": 4318258240,
+        "diskio_bytesread": 4431872,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 253503,
+        "Pages occupied by compressor": 62061,
+        "Swapouts": 248760,
+        "Swapins": 60294
+      },
+      "host_pressed": {
+        "available": 1572601856,
+        "kernel_available": 2523824128,
+        "swap_used": 12463835709
+      },
+      "resume": {
+        "restore_s": 2.9991226659622043,
+        "resume_s": 3.3939347499981523,
+        "second_forward_s": 0.043406917015090585,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 41304,
+        "resident_size": 92209152,
+        "phys_footprint": 1923847104,
+        "diskio_bytesread": 1279283200,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 1053,
+        "diskio_bytesread": 480862208
+      },
+      "b_pass": {
+        "pass_s": 37.36450783291366,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 117,
+        "resident_size": 240959488,
+        "phys_footprint": 4318340160,
+        "diskio_bytesread": 4186214400,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 63.3612115830183
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1960198144,
+        "kernel_available": 4799528960,
+        "swap_used": 7788822528
+      },
+      "start": {
+        "load_s": 1.0773708330234513,
+        "warm_forward_s": 0.04006400005891919,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 41029,
+        "resident_size": 314818560,
+        "phys_footprint": 1465797696,
+        "diskio_bytesread": 802615296,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.26496512501034886,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 41031,
+        "resident_size": 458309632,
+        "phys_footprint": 1465797696,
+        "diskio_bytesread": 802615296,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 5.160272917011753,
+        "max_chunk_s": 0.1349894170416519
+      },
+      "a_pressed": {
+        "pageins": 41033,
+        "resident_size": 161726464,
+        "phys_footprint": 340773888,
+        "diskio_bytesread": 807415808,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 378,
+        "resident_size": 14614528,
+        "phys_footprint": 4318176320,
+        "diskio_bytesread": 15933440,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 187674,
+        "Pages occupied by compressor": 107944,
+        "Swapouts": 161624,
+        "Swapins": 20514
+      },
+      "host_pressed": {
+        "available": 1573994496,
+        "kernel_available": 2495823872,
+        "swap_used": 10088475525
+      },
+      "resume": {
+        "restore_s": 2.231284249923192,
+        "resume_s": 2.5652548340149224,
+        "second_forward_s": 0.035457082907669246,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 72508,
+        "resident_size": 85573632,
+        "phys_footprint": 1459031104,
+        "diskio_bytesread": 1450418176,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 31475,
+        "diskio_bytesread": 639987712
+      },
+      "b_pass": {
+        "pass_s": 27.878062915988266,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 398,
+        "resident_size": 287522816,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 4306771968,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 51.979673958034255
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1530363904,
+        "kernel_available": 5065605120,
+        "swap_used": 9709876674
+      },
+      "start": {
+        "load_s": 0.9612946669803932,
+        "warm_forward_s": 0.03407441696617752,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40670,
+        "resident_size": 377241600,
+        "phys_footprint": 1465568256,
+        "diskio_bytesread": 799191040,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.8583028577268124e-05,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 40670,
+        "resident_size": 377372672,
+        "phys_footprint": 1465568256,
+        "diskio_bytesread": 799191040,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 4.973667541053146,
+        "max_chunk_s": 0.17568916699383408
+      },
+      "a_pressed": {
+        "pageins": 40670,
+        "resident_size": 167411712,
+        "phys_footprint": 1423723456,
+        "diskio_bytesread": 805679104,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 53,
+        "resident_size": 15958016,
+        "phys_footprint": 4318356544,
+        "diskio_bytesread": 4386816,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 212657,
+        "Pages occupied by compressor": 86277,
+        "Swapouts": 227256,
+        "Swapins": 36707
+      },
+      "host_pressed": {
+        "available": 1380630528,
+        "kernel_available": 2924675072,
+        "swap_used": 12765490053
+      },
+      "resume": {
+        "restore_s": 0.001539041055366397,
+        "resume_s": 2.7665667079854757,
+        "second_forward_s": 0.06699404097162187,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40672,
+        "resident_size": 186613760,
+        "phys_footprint": 1434258432,
+        "diskio_bytesread": 1341861888,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 2,
+        "diskio_bytesread": 533823488
+      },
+      "b_pass": {
+        "pass_s": 29.0424778329907,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 53,
+        "resident_size": 454393856,
+        "phys_footprint": 4318438464,
+        "diskio_bytesread": 4210421760,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 51.33578700001817
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1423785984,
+        "kernel_available": 5590876160,
+        "swap_used": 7545427066
+      },
+      "start": {
+        "load_s": 1.0381622919812799,
+        "warm_forward_s": 0.037917417008429766,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 39010,
+        "resident_size": 424198144,
+        "phys_footprint": 1465748352,
+        "diskio_bytesread": 775168000,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.4076799169415608,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 39030,
+        "resident_size": 753778688,
+        "phys_footprint": 1774341632,
+        "diskio_bytesread": 776003584,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 5.2635282090632245,
+        "max_chunk_s": 0.18877700006123632
+      },
+      "a_pressed": {
+        "pageins": 39030,
+        "resident_size": 17088512,
+        "phys_footprint": 344099712,
+        "diskio_bytesread": 781148160,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 53,
+        "resident_size": 7307264,
+        "phys_footprint": 4318225472,
+        "diskio_bytesread": 3989504,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 361994,
+        "Pages occupied by compressor": 108972,
+        "Swapouts": 274332,
+        "Swapins": 94607
+      },
+      "host_pressed": {
+        "available": 1471315968,
+        "kernel_available": 2362785792,
+        "swap_used": 10475274240
+      },
+      "resume": {
+        "restore_s": 1.2814221669686958,
+        "resume_s": 1.8251951250713319,
+        "second_forward_s": 0.039711875026114285,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40276,
+        "resident_size": 55672832,
+        "phys_footprint": 1434815424,
+        "diskio_bytesread": 1325531136,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 1226,
+        "diskio_bytesread": 540680192
+      },
+      "b_pass": {
+        "pass_s": 42.07635083294008,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 143,
+        "resident_size": 237355008,
+        "phys_footprint": 4318291008,
+        "diskio_bytesread": 4356321280,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 0,
+      "wall_s": 65.12653379200492
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1607598080,
+        "kernel_available": 5059657728,
+        "swap_used": 6977161789
+      },
+      "start": {
+        "load_s": 0.16593345906585455,
+        "warm_forward_s": 0.09926141600590199,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32880,
+        "resident_size": 757661696,
+        "phys_footprint": 358452608,
+        "diskio_bytesread": 673005568,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.8709852920146659,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40003,
+        "resident_size": 582533120,
+        "phys_footprint": 521702656,
+        "diskio_bytesread": 792285184,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 5.520633167005144,
+        "max_chunk_s": 0.14904420904349536
+      },
+      "a_pressed": {
+        "pageins": 40003,
+        "resident_size": 160661504,
+        "phys_footprint": 326486912,
+        "diskio_bytesread": 799150080,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 53,
+        "resident_size": 17219584,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 4071424,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 288287,
+        "Pages occupied by compressor": 95135,
+        "Swapouts": 228920,
+        "Swapins": 45059
+      },
+      "host_pressed": {
+        "available": 1488732160,
+        "kernel_available": 2485616640,
+        "swap_used": 9498787840
+      },
+      "resume": {
+        "restore_s": 0.9463031250052154,
+        "resume_s": 1.4024604160804302,
+        "second_forward_s": 0.08954587497282773,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40111,
+        "resident_size": 603930624,
+        "phys_footprint": 861622336,
+        "diskio_bytesread": 1325023232,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 108,
+        "diskio_bytesread": 521809920
+      },
+      "b_pass": {
+        "pass_s": 37.50234916701447,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 112,
+        "resident_size": 365543424,
+        "phys_footprint": 4318323776,
+        "diskio_bytesread": 4303900672,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 62.853691666037776
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1507295232,
+        "kernel_available": 5191548928,
+        "swap_used": 9015918592
+      },
+      "start": {
+        "load_s": 0.20035025000106543,
+        "warm_forward_s": 0.10202733299229294,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32835,
+        "resident_size": 846151680,
+        "phys_footprint": 358485376,
+        "diskio_bytesread": 676397056,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.073524291976355,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 39987,
+        "resident_size": 893239296,
+        "phys_footprint": 828101376,
+        "diskio_bytesread": 793329664,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 6.233456082991324,
+        "max_chunk_s": 0.18767308292444795
+      },
+      "a_pressed": {
+        "pageins": 39995,
+        "resident_size": 46628864,
+        "phys_footprint": 793842432,
+        "diskio_bytesread": 800342016,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 59,
+        "resident_size": 16678912,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 4317184,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 316054,
+        "Pages occupied by compressor": 112586,
+        "Swapouts": 231296,
+        "Swapins": 54694
+      },
+      "host_pressed": {
+        "available": 1508016128,
+        "kernel_available": 2488008704,
+        "swap_used": 9806681210
+      },
+      "resume": {
+        "restore_s": 4.322782500064932,
+        "resume_s": 4.950239083031192,
+        "second_forward_s": 0.1203479579417035,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40115,
+        "resident_size": 628375552,
+        "phys_footprint": 1326208960,
+        "diskio_bytesread": 1291943936,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 120,
+        "diskio_bytesread": 487407616
+      },
+      "b_pass": {
+        "pass_s": 47.81930454191752,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 161,
+        "resident_size": 100122624,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 4306411520,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 76.83005641703494
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 2510389248,
+        "kernel_available": 3653042176,
+        "swap_used": 6090255237
+      },
+      "start": {
+        "load_s": 0.1896214170847088,
+        "warm_forward_s": 0.09543120802845806,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32949,
+        "resident_size": 595886080,
+        "phys_footprint": 358600128,
+        "diskio_bytesread": 682123264,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.2765409160638228,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32949,
+        "resident_size": 311623680,
+        "phys_footprint": 358320512,
+        "diskio_bytesread": 682123264,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 7.204032333102077,
+        "max_chunk_s": 0.2830713330768049
+      },
+      "a_pressed": {
+        "pageins": 32957,
+        "resident_size": 17842176,
+        "phys_footprint": 317081920,
+        "diskio_bytesread": 688316416,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 345,
+        "resident_size": 15450112,
+        "phys_footprint": 4318405696,
+        "diskio_bytesread": 10801152,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 285712,
+        "Pages occupied by compressor": 36317,
+        "Swapouts": 318348,
+        "Swapins": 91325
+      },
+      "host_pressed": {
+        "available": 1346338816,
+        "kernel_available": 2485567488,
+        "swap_used": 9671666565
+      },
+      "resume": {
+        "restore_s": 1.9702152920654044,
+        "resume_s": 4.141534083057195,
+        "second_forward_s": 0.1093739999923855,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 63402,
+        "resident_size": 568459264,
+        "phys_footprint": 348573120,
+        "diskio_bytesread": 1303330816,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 30445,
+        "diskio_bytesread": 612720640
+      },
+      "b_pass": {
+        "pass_s": 39.316274500102736,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 414,
+        "resident_size": 234405888,
+        "phys_footprint": 4318405696,
+        "diskio_bytesread": 4379312128,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 68.22402274992783
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1795014656,
+        "kernel_available": 3351756800,
+        "swap_used": 7980061818
+      },
+      "start": {
+        "load_s": 0.14297766599338502,
+        "warm_forward_s": 0.08828333299607038,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 33005,
+        "resident_size": 847544320,
+        "phys_footprint": 359533888,
+        "diskio_bytesread": 679129088,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.0333023965358734e-05,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 33005,
+        "resident_size": 847609856,
+        "phys_footprint": 359533888,
+        "diskio_bytesread": 679129088,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 30351,
+        "total_pages": 30529
+      },
+      "fill": {
+        "fill_s": 7.021403291029856,
+        "max_chunk_s": 0.21787954191677272
+      },
+      "a_pressed": {
+        "pageins": 33005,
+        "resident_size": 80297984,
+        "phys_footprint": 317263104,
+        "diskio_bytesread": 683978752,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 55,
+        "resident_size": 14565376,
+        "phys_footprint": 4318323776,
+        "diskio_bytesread": 6594560,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 3481,
+        "total_pages": 30529
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 415600,
+        "Pages occupied by compressor": 79643,
+        "Swapouts": 272936,
+        "Swapins": 51049
+      },
+      "host_pressed": {
+        "available": 1544912896,
+        "kernel_available": 2435153920,
+        "swap_used": 11582371266
+      },
+      "resume": {
+        "restore_s": 2.3541972041130066e-05,
+        "resume_s": 2.43265758396592,
+        "second_forward_s": 1.1634091660380363,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 76414,
+        "resident_size": 559300608,
+        "phys_footprint": 350637440,
+        "diskio_bytesread": 1418629120,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 43405,
+        "diskio_bytesread": 729915392
+      },
+      "b_pass": {
+        "pass_s": 41.72056237491779,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 143,
+        "resident_size": 196886528,
+        "phys_footprint": 4318389312,
+        "diskio_bytesread": 4357423104,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 68.44364829198457
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1573191680,
+        "kernel_available": 4804706304,
+        "swap_used": 6942820925
+      },
+      "start": {
+        "load_s": 1.3182418330106884,
+        "warm_forward_s": 0.08503408392425627,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32959,
+        "resident_size": 751632384,
+        "phys_footprint": 856395200,
+        "diskio_bytesread": 678563840,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.363799958024174,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 39947,
+        "resident_size": 1302233088,
+        "phys_footprint": 1280054912,
+        "diskio_bytesread": 794533888,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 8.322916458011605,
+        "max_chunk_s": 0.30603391607291996
+      },
+      "a_pressed": {
+        "pageins": 39952,
+        "resident_size": 12828672,
+        "phys_footprint": 838522176,
+        "diskio_bytesread": 801087488,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 162,
+        "resident_size": 7225344,
+        "phys_footprint": 4318192704,
+        "diskio_bytesread": 9256960,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 415881,
+        "Pages occupied by compressor": 93801,
+        "Swapouts": 309608,
+        "Swapins": 75837
+      },
+      "host_pressed": {
+        "available": 1507524608,
+        "kernel_available": 2406563840,
+        "swap_used": 10742262661
+      },
+      "resume": {
+        "restore_s": 3.2215724169509485,
+        "resume_s": 3.8539153329329565,
+        "second_forward_s": 0.09255850000772625,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40363,
+        "resident_size": 610729984,
+        "phys_footprint": 1367381888,
+        "diskio_bytesread": 1317216256,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 388,
+        "diskio_bytesread": 512524288
+      },
+      "b_pass": {
+        "pass_s": 41.82954983296804,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 216,
+        "resident_size": 143736832,
+        "phys_footprint": 4318274624,
+        "diskio_bytesread": 4332978176,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 72.7928487919271
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1785806848,
+        "kernel_available": 3983491072,
+        "swap_used": 6168898437
+      },
+      "start": {
+        "load_s": 1.5285907089710236,
+        "warm_forward_s": 0.16370062506757677,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32866,
+        "resident_size": 624001024,
+        "phys_footprint": 859344384,
+        "diskio_bytesread": 670994432,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.2652258329326287,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32866,
+        "resident_size": 835731456,
+        "phys_footprint": 859344384,
+        "diskio_bytesread": 670994432,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 7.3710462499875575,
+        "max_chunk_s": 0.1770181249594316
+      },
+      "a_pressed": {
+        "pageins": 32866,
+        "resident_size": 40747008,
+        "phys_footprint": 317852032,
+        "diskio_bytesread": 677220352,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 122,
+        "resident_size": 25149440,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 6488064,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 254539,
+        "Pages occupied by compressor": 55154,
+        "Swapouts": 258996,
+        "Swapins": 40983
+      },
+      "host_pressed": {
+        "available": 1474412544,
+        "kernel_available": 2460942336,
+        "swap_used": 9438106746
+      },
+      "resume": {
+        "restore_s": 2.9468160839751363,
+        "resume_s": 3.309414208983071,
+        "second_forward_s": 0.11602545797359198,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 63425,
+        "resident_size": 597016576,
+        "phys_footprint": 854740480,
+        "diskio_bytesread": 1308569600,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 30559,
+        "diskio_bytesread": 628924416
+      },
+      "b_pass": {
+        "pass_s": 33.85055220895447,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 130,
+        "resident_size": 334823424,
+        "phys_footprint": 4318389312,
+        "diskio_bytesread": 4314574848,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 63.306299832998775
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "source_nocache",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1552187392,
+        "kernel_available": 5351604224,
+        "swap_used": 9207608770
+      },
+      "start": {
+        "load_s": 1.287743541994132,
+        "warm_forward_s": 0.17099079198669642,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32775,
+        "resident_size": 849215488,
+        "phys_footprint": 814795968,
+        "diskio_bytesread": 676413440,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.0002771669533104,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 39906,
+        "resident_size": 413548544,
+        "phys_footprint": 326585024,
+        "diskio_bytesread": 792330240,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 7.176488458062522,
+        "max_chunk_s": 0.23548108397517353
+      },
+      "a_pressed": {
+        "pageins": 39908,
+        "resident_size": 42156032,
+        "phys_footprint": 326372032,
+        "diskio_bytesread": 796950528,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 53,
+        "resident_size": 13713408,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 6987776,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 333890,
+        "Pages occupied by compressor": 151567,
+        "Swapouts": 186916,
+        "Swapins": 50618
+      },
+      "host_pressed": {
+        "available": 1548435456,
+        "kernel_available": 2457092096,
+        "swap_used": 11364403773
+      },
+      "resume": {
+        "restore_s": 0.6305760419927537,
+        "resume_s": 1.2920530829578638,
+        "second_forward_s": 0.3483677079202607,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40204,
+        "resident_size": 546865152,
+        "phys_footprint": 824987456,
+        "diskio_bytesread": 1336995840,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 296,
+        "diskio_bytesread": 535654400
+      },
+      "b_pass": {
+        "pass_s": 44.235723500023596,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 116,
+        "resident_size": 268107776,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 4341370880,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 72.56906574999448
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1610465280,
+        "kernel_available": 4920049664,
+        "swap_used": 7009468416
+      },
+      "start": {
+        "load_s": 1.53456529090181,
+        "warm_forward_s": 0.15619841602165252,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32946,
+        "resident_size": 664059904,
+        "phys_footprint": 857836992,
+        "diskio_bytesread": 676184064,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 2.749962732195854e-06,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32946,
+        "resident_size": 658997248,
+        "phys_footprint": 857836992,
+        "diskio_bytesread": 676184064,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 30291,
+        "total_pages": 30463
+      },
+      "fill": {
+        "fill_s": 8.485207125078887,
+        "max_chunk_s": 0.4013572910334915
+      },
+      "a_pressed": {
+        "pageins": 32946,
+        "resident_size": 6275072,
+        "phys_footprint": 816156032,
+        "diskio_bytesread": 679723008,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 126,
+        "resident_size": 6144000,
+        "phys_footprint": 4385498304,
+        "diskio_bytesread": 5767168,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 1,
+        "total_pages": 30463
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 469235,
+        "Pages occupied by compressor": 116458,
+        "Swapouts": 268056,
+        "Swapins": 51879
+      },
+      "host_pressed": {
+        "available": 1581645824,
+        "kernel_available": 2471100416,
+        "swap_used": 10361702973
+      },
+      "resume": {
+        "restore_s": 0.0004814580315724015,
+        "resume_s": 4.588627457967959,
+        "second_forward_s": 0.5725917080417275,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 33362,
+        "resident_size": 565673984,
+        "phys_footprint": 857247232,
+        "diskio_bytesread": 1248038912,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 380,
+        "diskio_bytesread": 560222208
+      },
+      "b_pass": {
+        "pass_s": 35.61981599999126,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 189,
+        "resident_size": 196411392,
+        "phys_footprint": 4318422080,
+        "diskio_bytesread": 4361023488,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 68.80531379207969
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1577074688,
+        "kernel_available": 3959275520,
+        "swap_used": 6896547266
+      },
+      "start": {
+        "load_s": 1.625529499957338,
+        "warm_forward_s": 0.19142804096918553,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 33055,
+        "resident_size": 764051456,
+        "phys_footprint": 858623360,
+        "diskio_bytesread": 674607104,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.3261347920633852,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40372,
+        "resident_size": 1038532608,
+        "phys_footprint": 1026937216,
+        "diskio_bytesread": 1261285376,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 7.489012332982384,
+        "max_chunk_s": 0.20828162506222725
+      },
+      "a_pressed": {
+        "pageins": 40372,
+        "resident_size": 159973376,
+        "phys_footprint": 327601024,
+        "diskio_bytesread": 1264431104,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 427,
+        "resident_size": 23314432,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 12423168,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 225011,
+        "Pages occupied by compressor": 48116,
+        "Swapouts": 236008,
+        "Swapins": 35219
+      },
+      "host_pressed": {
+        "available": 1271365632,
+        "kernel_available": 2459140096,
+        "swap_used": 10169352192
+      },
+      "resume": {
+        "restore_s": 0.6130492079537362,
+        "resume_s": 0.9726274169515818,
+        "second_forward_s": 0.09118091699201614,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40479,
+        "resident_size": 606273536,
+        "phys_footprint": 863916096,
+        "diskio_bytesread": 1791057920,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 107,
+        "diskio_bytesread": 523087872
+      },
+      "b_pass": {
+        "pass_s": 23.487191000021994,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 433,
+        "resident_size": 628457472,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 3503919104,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 52.65573433297686
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1726218240,
+        "kernel_available": 5581914112,
+        "swap_used": 9481748480
+      },
+      "start": {
+        "load_s": 1.0795693330001086,
+        "warm_forward_s": 0.04590962501242757,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40671,
+        "resident_size": 368590848,
+        "phys_footprint": 1466076224,
+        "diskio_bytesread": 807235584,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.3440967919304967,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 40672,
+        "resident_size": 480116736,
+        "phys_footprint": 1466108992,
+        "diskio_bytesread": 807235584,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 6.701644084067084,
+        "max_chunk_s": 0.16170279099605978
+      },
+      "a_pressed": {
+        "pageins": 40672,
+        "resident_size": 180715520,
+        "phys_footprint": 340069376,
+        "diskio_bytesread": 807366656,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 110,
+        "resident_size": 14598144,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 4874240,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 400501,
+        "Pages occupied by compressor": 172449,
+        "Swapouts": 174712,
+        "Swapins": 42996
+      },
+      "host_pressed": {
+        "available": 1525579776,
+        "kernel_available": 2486075392,
+        "swap_used": 11485315072
+      },
+      "resume": {
+        "restore_s": 2.028728416073136,
+        "resume_s": 2.514667749986984,
+        "second_forward_s": 0.05475804198067635,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 72151,
+        "resident_size": 80363520,
+        "phys_footprint": 1455803456,
+        "diskio_bytesread": 1397641216,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 31479,
+        "diskio_bytesread": 589750272
+      },
+      "b_pass": {
+        "pass_s": 36.41077375004534,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 183,
+        "resident_size": 69648384,
+        "phys_footprint": 4318372928,
+        "diskio_bytesread": 4333277184,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 62.88705108303111
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1698627584,
+        "kernel_available": 5180030976,
+        "swap_used": 7142113280
+      },
+      "start": {
+        "load_s": 1.2979673750232905,
+        "warm_forward_s": 0.06592374993488193,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 41015,
+        "resident_size": 355696640,
+        "phys_footprint": 1465748608,
+        "diskio_bytesread": 806240256,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 3.374996595084667e-05,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 41015,
+        "resident_size": 355827712,
+        "phys_footprint": 1465748608,
+        "diskio_bytesread": 806240256,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 8.377016291953623,
+        "max_chunk_s": 0.3827336250105873
+      },
+      "a_pressed": {
+        "pageins": 41021,
+        "resident_size": 160661504,
+        "phys_footprint": 1423412288,
+        "diskio_bytesread": 812122112,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 53,
+        "resident_size": 17039360,
+        "phys_footprint": 4318340160,
+        "diskio_bytesread": 6967296,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 328390,
+        "Pages occupied by compressor": 107129,
+        "Swapouts": 231100,
+        "Swapins": 48610
+      },
+      "host_pressed": {
+        "available": 1533460480,
+        "kernel_available": 2429403136,
+        "swap_used": 10004662845
+      },
+      "resume": {
+        "restore_s": 0.006738665979355574,
+        "resume_s": 3.216132999979891,
+        "second_forward_s": 0.1498892909148708,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 41046,
+        "resident_size": 49577984,
+        "phys_footprint": 1434537024,
+        "diskio_bytesread": 1358462976,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 25,
+        "diskio_bytesread": 542605312
+      },
+      "b_pass": {
+        "pass_s": 38.87521145900246,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 126,
+        "resident_size": 320798720,
+        "phys_footprint": 4318340160,
+        "diskio_bytesread": 3968204800,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 70.2914536659373
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1887322112,
+        "kernel_available": 3374645248,
+        "swap_used": 5554506301
+      },
+      "start": {
+        "load_s": 1.369645957951434,
+        "warm_forward_s": 0.03688083402812481,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 43202,
+        "resident_size": 201834496,
+        "phys_footprint": 1461128256,
+        "diskio_bytesread": 840785920,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.8553586249472573,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 43257,
+        "resident_size": 331694080,
+        "phys_footprint": 1775570688,
+        "diskio_bytesread": 1339916288,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 8.662010542000644,
+        "max_chunk_s": 0.2244131671031937
+      },
+      "a_pressed": {
+        "pageins": 43259,
+        "resident_size": 10600448,
+        "phys_footprint": 344755264,
+        "diskio_bytesread": 1347715072,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 754,
+        "resident_size": 8798208,
+        "phys_footprint": 4318192704,
+        "diskio_bytesread": 22351872,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 270136,
+        "Pages occupied by compressor": 30921,
+        "Swapouts": 358088,
+        "Swapins": 128592
+      },
+      "host_pressed": {
+        "available": 1521418240,
+        "kernel_available": 2353954816,
+        "swap_used": 10467210690
+      },
+      "resume": {
+        "restore_s": 3.4068339159712195,
+        "resume_s": 7.126288624946028,
+        "second_forward_s": 0.054136167047545314,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 44568,
+        "resident_size": 68354048,
+        "phys_footprint": 1464175744,
+        "diskio_bytesread": 1920577536,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 1271,
+        "diskio_bytesread": 569335808
+      },
+      "b_pass": {
+        "pass_s": 50.00431954092346,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 841,
+        "resident_size": 101122048,
+        "phys_footprint": 4318258240,
+        "diskio_bytesread": 4392968192,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 92.96823141700588
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1578254336,
+        "kernel_available": 4134535168,
+        "swap_used": 6499661250
+      },
+      "start": {
+        "load_s": 1.163882999913767,
+        "warm_forward_s": 0.041696541011333466,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 41189,
+        "resident_size": 231030784,
+        "phys_footprint": 1459325952,
+        "diskio_bytesread": 808009728,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.7369574590120465,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 41241,
+        "resident_size": 401113088,
+        "phys_footprint": 1891603328,
+        "diskio_bytesread": 809009152,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 6.042180167045444,
+        "max_chunk_s": 0.12456208292860538
+      },
+      "a_pressed": {
+        "pageins": 41247,
+        "resident_size": 163119104,
+        "phys_footprint": 809456512,
+        "diskio_bytesread": 815464448,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 493,
+        "resident_size": 19136512,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 16662528,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 249045,
+        "Pages occupied by compressor": 52048,
+        "Swapouts": 267108,
+        "Swapins": 53269
+      },
+      "host_pressed": {
+        "available": 1351303168,
+        "kernel_available": 2473672704,
+        "swap_used": 10606220410
+      },
+      "resume": {
+        "restore_s": 2.2247832500142977,
+        "resume_s": 2.375536417006515,
+        "second_forward_s": 0.04657608305569738,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 41250,
+        "resident_size": 529776640,
+        "phys_footprint": 2096813312,
+        "diskio_bytesread": 1297866752,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 3,
+        "diskio_bytesread": 480370688
+      },
+      "b_pass": {
+        "pass_s": 33.04872787510976,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 495,
+        "resident_size": 400097280,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 4197728256,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 1,
+      "wall_s": 58.61744108295534
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1762099200,
+        "kernel_available": 4812406784,
+        "swap_used": 6592722370
+      },
+      "start": {
+        "load_s": 0.14332250005099922,
+        "warm_forward_s": 0.09068904200103134,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32152,
+        "resident_size": 878985216,
+        "phys_footprint": 358419840,
+        "diskio_bytesread": 660619264,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.7649281249614432,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 33998,
+        "resident_size": 579977216,
+        "phys_footprint": 828560128,
+        "diskio_bytesread": 690593792,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 5.193868207978085,
+        "max_chunk_s": 0.1086313750129193
+      },
+      "a_pressed": {
+        "pageins": 33998,
+        "resident_size": 162824192,
+        "phys_footprint": 793826048,
+        "diskio_bytesread": 698720256,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 53,
+        "resident_size": 15761408,
+        "phys_footprint": 4318323776,
+        "diskio_bytesread": 4464640,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 288937,
+        "Pages occupied by compressor": 83787,
+        "Swapouts": 255296,
+        "Swapins": 65325
+      },
+      "host_pressed": {
+        "available": 1313669120,
+        "kernel_available": 2481373184,
+        "swap_used": 9565634560
+      },
+      "resume": {
+        "restore_s": 2.924002500018105,
+        "resume_s": 3.4809384580003098,
+        "second_forward_s": 0.11829604196827859,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 34047,
+        "resident_size": 823705600,
+        "phys_footprint": 1324308416,
+        "diskio_bytesread": 1159487488,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 49,
+        "diskio_bytesread": 458014720
+      },
+      "b_pass": {
+        "pass_s": 39.365947667043656,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 53,
+        "resident_size": 326615040,
+        "phys_footprint": 4318389312,
+        "diskio_bytesread": 4323221504,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 64.03557970898692
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1570979840,
+        "kernel_available": 3538124800,
+        "swap_used": 6110450810
+      },
+      "start": {
+        "load_s": 0.13335329201072454,
+        "warm_forward_s": 0.0851053330115974,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32083,
+        "resident_size": 881229824,
+        "phys_footprint": 358157696,
+        "diskio_bytesread": 658497536,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.14357420802116394,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32083,
+        "resident_size": 386121728,
+        "phys_footprint": 357878080,
+        "diskio_bytesread": 658497536,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 5.9690553329419345,
+        "max_chunk_s": 0.2628404169809073
+      },
+      "a_pressed": {
+        "pageins": 32083,
+        "resident_size": 59637760,
+        "phys_footprint": 316770560,
+        "diskio_bytesread": 664461312,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 110,
+        "resident_size": 14598144,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 4575232,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 418352,
+        "Pages occupied by compressor": 79829,
+        "Swapouts": 279284,
+        "Swapins": 57719
+      },
+      "host_pressed": {
+        "available": 1564622848,
+        "kernel_available": 2493972480,
+        "swap_used": 9754839613
+      },
+      "resume": {
+        "restore_s": 1.7773901249747723,
+        "resume_s": 4.736473958939314,
+        "second_forward_s": 2.663423417019658,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 93022,
+        "resident_size": 545832960,
+        "phys_footprint": 356355456,
+        "diskio_bytesread": 1795010560,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 60939,
+        "diskio_bytesread": 1126551552
+      },
+      "b_pass": {
+        "pass_s": 38.7824991249945,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 203,
+        "resident_size": 192970752,
+        "phys_footprint": 4318372928,
+        "diskio_bytesread": 3914977280,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 67.94683633302338
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1897316352,
+        "kernel_available": 3375677440,
+        "swap_used": 5870651965
+      },
+      "start": {
+        "load_s": 0.17458508303388953,
+        "warm_forward_s": 0.10139662504661828,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 34024,
+        "resident_size": 696008704,
+        "phys_footprint": 358485376,
+        "diskio_bytesread": 693870592,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.3416982255876064e-05,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 34024,
+        "resident_size": 696172544,
+        "phys_footprint": 358485376,
+        "diskio_bytesread": 693870592,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 30351,
+        "total_pages": 30529
+      },
+      "fill": {
+        "fill_s": 5.699899708037265,
+        "max_chunk_s": 0.12748837505932897
+      },
+      "a_pressed": {
+        "pageins": 34030,
+        "resident_size": 109232128,
+        "phys_footprint": 317001024,
+        "diskio_bytesread": 698884096,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 70,
+        "resident_size": 16482304,
+        "phys_footprint": 4318258240,
+        "diskio_bytesread": 4874240,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 4219,
+        "total_pages": 30529
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 255457,
+        "Pages occupied by compressor": 47706,
+        "Swapouts": 254568,
+        "Swapins": 35261
+      },
+      "host_pressed": {
+        "available": 1513668608,
+        "kernel_available": 2474180608,
+        "swap_used": 9460577730
+      },
+      "resume": {
+        "restore_s": 0.00042645796202123165,
+        "resume_s": 2.376345166005194,
+        "second_forward_s": 0.19172395800706,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 61556,
+        "resident_size": 565444608,
+        "phys_footprint": 351325568,
+        "diskio_bytesread": 1163423744,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 27526,
+        "diskio_bytesread": 460427264
+      },
+      "b_pass": {
+        "pass_s": 45.17594866605941,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 143,
+        "resident_size": 148897792,
+        "phys_footprint": 4318340160,
+        "diskio_bytesread": 4310093824,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 69.09582183300517
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1721450496,
+        "kernel_available": 4847026176,
+        "swap_used": 9555473858
+      },
+      "start": {
+        "load_s": 0.1465164580149576,
+        "warm_forward_s": 0.09204808296635747,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32902,
+        "resident_size": 896057344,
+        "phys_footprint": 358272384,
+        "diskio_bytesread": 676352000,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.7823968749726191,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40415,
+        "resident_size": 661159936,
+        "phys_footprint": 529927360,
+        "diskio_bytesread": 802140160,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 5.902028499986045,
+        "max_chunk_s": 0.1341217498993501
+      },
+      "a_pressed": {
+        "pageins": 40419,
+        "resident_size": 43909120,
+        "phys_footprint": 326601600,
+        "diskio_bytesread": 808693760,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 53,
+        "resident_size": 15302656,
+        "phys_footprint": 4318405696,
+        "diskio_bytesread": 4120576,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 423387,
+        "Pages occupied by compressor": 141340,
+        "Swapouts": 198716,
+        "Swapins": 34024
+      },
+      "host_pressed": {
+        "available": 1578434560,
+        "kernel_available": 2520793088,
+        "swap_used": 12123048509
+      },
+      "resume": {
+        "restore_s": 0.6015186249278486,
+        "resume_s": 1.266486749984324,
+        "second_forward_s": 0.12986166693735868,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40739,
+        "resident_size": 571834368,
+        "phys_footprint": 861736960,
+        "diskio_bytesread": 1346957312,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 317,
+        "diskio_bytesread": 534921216
+      },
+      "b_pass": {
+        "pass_s": 26.688906083931215,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 73,
+        "resident_size": 199966720,
+        "phys_footprint": 4318471232,
+        "diskio_bytesread": 3988299776,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 49.53319204109721
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1772191744,
+        "kernel_available": 2979954688,
+        "swap_used": 5991301120
+      },
+      "start": {
+        "load_s": 3.788965417072177,
+        "warm_forward_s": 0.9230038749519736,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 33879,
+        "resident_size": 566362112,
+        "phys_footprint": 856706624,
+        "diskio_bytesread": 709095424,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.37651262502186,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 33919,
+        "resident_size": 651935744,
+        "phys_footprint": 856706624,
+        "diskio_bytesread": 713846784,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 6.323720541084185,
+        "max_chunk_s": 0.23352775000967085
+      },
+      "a_pressed": {
+        "pageins": 33919,
+        "resident_size": 13385728,
+        "phys_footprint": 318032192,
+        "diskio_bytesread": 714698752,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 750,
+        "resident_size": 7749632,
+        "phys_footprint": 4318356608,
+        "diskio_bytesread": 22376448,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 209209,
+        "Pages occupied by compressor": 312,
+        "Swapouts": 321012,
+        "Swapins": 71664
+      },
+      "host_pressed": {
+        "available": 1444265984,
+        "kernel_available": 2493988864,
+        "swap_used": 10164109312
+      },
+      "resume": {
+        "restore_s": 2.503550583962351,
+        "resume_s": 3.0403550839982927,
+        "second_forward_s": 0.12580670893657953,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 64774,
+        "resident_size": 573538304,
+        "phys_footprint": 855281216,
+        "diskio_bytesread": 1360203776,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 30855,
+        "diskio_bytesread": 643342336
+      },
+      "b_pass": {
+        "pass_s": 42.71414783294313,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 823,
+        "resident_size": 166019072,
+        "phys_footprint": 4318340224,
+        "diskio_bytesread": 4351000576,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 80.67795724992175
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "source_nocache",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 2027683840,
+        "kernel_available": 3785621504,
+        "swap_used": 5752687165
+      },
+      "start": {
+        "load_s": 1.4030328749213368,
+        "warm_forward_s": 0.10615829098969698,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 33110,
+        "resident_size": 554745856,
+        "phys_footprint": 815418624,
+        "diskio_bytesread": 679358464,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.0965087919030339,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 41367,
+        "resident_size": 317620224,
+        "phys_footprint": 326978304,
+        "diskio_bytesread": 902701056,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 6.699663458042778,
+        "max_chunk_s": 0.19196366693358868
+      },
+      "a_pressed": {
+        "pageins": 41373,
+        "resident_size": 111951872,
+        "phys_footprint": 326683392,
+        "diskio_bytesread": 909123584,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 510,
+        "resident_size": 14073856,
+        "phys_footprint": 4318340160,
+        "diskio_bytesread": 19251200,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 287097,
+        "Pages occupied by compressor": 43949,
+        "Swapouts": 282240,
+        "Swapins": 50976
+      },
+      "host_pressed": {
+        "available": 1546289152,
+        "kernel_available": 2441134080,
+        "swap_used": 9519035842
+      },
+      "resume": {
+        "restore_s": 1.0957408749964088,
+        "resume_s": 1.7773485829820856,
+        "second_forward_s": 0.1930840000277385,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 41665,
+        "resident_size": 547733504,
+        "phys_footprint": 825397120,
+        "diskio_bytesread": 1435308032,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 292,
+        "diskio_bytesread": 522448896
+      },
+      "b_pass": {
+        "pass_s": 41.13667254103348,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 536,
+        "resident_size": 212090880,
+        "phys_footprint": 4318405696,
+        "diskio_bytesread": 4370276352,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 68.48505583393853
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1633468416,
+        "kernel_available": 4529520640,
+        "swap_used": 6567231488
+      },
+      "start": {
+        "load_s": 1.296823124983348,
+        "warm_forward_s": 0.10344008298125118,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32887,
+        "resident_size": 751763456,
+        "phys_footprint": 855281088,
+        "diskio_bytesread": 674574336,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 3.7919962778687477e-06,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32887,
+        "resident_size": 751796224,
+        "phys_footprint": 855281088,
+        "diskio_bytesread": 674574336,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 30282,
+        "total_pages": 30462
+      },
+      "fill": {
+        "fill_s": 6.070515832980163,
+        "max_chunk_s": 0.35755616694223136
+      },
+      "a_pressed": {
+        "pageins": 32887,
+        "resident_size": 59686912,
+        "phys_footprint": 816303424,
+        "diskio_bytesread": 678834176,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 53,
+        "resident_size": 16777216,
+        "phys_footprint": 4318291008,
+        "diskio_bytesread": 3907584,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 30462
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 285268,
+        "Pages occupied by compressor": 73513,
+        "Swapouts": 279256,
+        "Swapins": 51106
+      },
+      "host_pressed": {
+        "available": 1516748800,
+        "kernel_available": 2474442752,
+        "swap_used": 9837540802
+      },
+      "resume": {
+        "restore_s": 1.8707942217588425e-05,
+        "resume_s": 4.142078832956031,
+        "second_forward_s": 0.19141270907130092,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 32887,
+        "resident_size": 608485376,
+        "phys_footprint": 851152320,
+        "diskio_bytesread": 1225142272,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 0,
+        "diskio_bytesread": 540934144
+      },
+      "b_pass": {
+        "pass_s": 35.483902083011344,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 53,
+        "resident_size": 171081728,
+        "phys_footprint": 4318356544,
+        "diskio_bytesread": 4303691776,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 61.61949520907365
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1622589440,
+        "kernel_available": 4241768448,
+        "swap_used": 6140398141
+      },
+      "start": {
+        "load_s": 1.60842116700951,
+        "warm_forward_s": 0.11368366691749543,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32487,
+        "resident_size": 577028096,
+        "phys_footprint": 856886656,
+        "diskio_bytesread": 666464256,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 2.0152895828941837,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40113,
+        "resident_size": 800636928,
+        "phys_footprint": 1025069376,
+        "diskio_bytesread": 1110806528,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 8.36336591700092,
+        "max_chunk_s": 0.3969439590582624
+      },
+      "a_pressed": {
+        "pageins": 40123,
+        "resident_size": 15106048,
+        "phys_footprint": 327568192,
+        "diskio_bytesread": 1113579520,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 705,
+        "resident_size": 9650176,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 19881984,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 216350,
+        "Pages occupied by compressor": 25781,
+        "Swapouts": 320192,
+        "Swapins": 88757
+      },
+      "host_pressed": {
+        "available": 1527496704,
+        "kernel_available": 2451144704,
+        "swap_used": 9437771202
+      },
+      "resume": {
+        "restore_s": 0.6005672919563949,
+        "resume_s": 1.2823890839936212,
+        "second_forward_s": 0.1617145830532536,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40502,
+        "resident_size": 575160320,
+        "phys_footprint": 863932416,
+        "diskio_bytesread": 1650958336,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 356,
+        "diskio_bytesread": 533069824
+      },
+      "b_pass": {
+        "pass_s": 41.971512707998045,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 777,
+        "resident_size": 190005248,
+        "phys_footprint": 4318372928,
+        "diskio_bytesread": 4372975616,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 77.06897866597865
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1649098752,
+        "kernel_available": 3319234560,
+        "swap_used": 6252071485
+      },
+      "start": {
+        "load_s": 1.7321502920240164,
+        "warm_forward_s": 0.16791687509976327,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 33048,
+        "resident_size": 600293376,
+        "phys_footprint": 856378816,
+        "diskio_bytesread": 677154816,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.775080999941565,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40628,
+        "resident_size": 774389760,
+        "phys_footprint": 1280399104,
+        "diskio_bytesread": 803819520,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 6.102908582892269,
+        "max_chunk_s": 0.16331733402330428
+      },
+      "a_pressed": {
+        "pageins": 40638,
+        "resident_size": 130449408,
+        "phys_footprint": 838620544,
+        "diskio_bytesread": 805982208,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 493,
+        "resident_size": 17170432,
+        "phys_footprint": 4318422144,
+        "diskio_bytesread": 14553088,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 230764,
+        "Pages occupied by compressor": 248,
+        "Swapouts": 320624,
+        "Swapins": 70455
+      },
+      "host_pressed": {
+        "available": 1404780544,
+        "kernel_available": 2483945472,
+        "swap_used": 10470555648
+      },
+      "resume": {
+        "restore_s": 4.484353582956828,
+        "resume_s": 7.51834420801606,
+        "second_forward_s": 3.2827761250082403,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40814,
+        "resident_size": 196444160,
+        "phys_footprint": 1371166656,
+        "diskio_bytesread": 1581043712,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 176,
+        "diskio_bytesread": 770539520
+      },
+      "b_pass": {
+        "pass_s": 40.318281583022326,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 513,
+        "resident_size": 302530560,
+        "phys_footprint": 4318487680,
+        "diskio_bytesread": 4331433984,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 76.74895170901436
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1590968320,
+        "kernel_available": 3942580224,
+        "swap_used": 6474956800
+      },
+      "start": {
+        "load_s": 1.2280490000266582,
+        "warm_forward_s": 0.054010999971069396,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40824,
+        "resident_size": 230424576,
+        "phys_footprint": 1458146432,
+        "diskio_bytesread": 802177024,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 4.866695962846279e-05,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 40825,
+        "resident_size": 230604800,
+        "phys_footprint": 1458146432,
+        "diskio_bytesread": 802193408,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 8.498874958022498,
+        "max_chunk_s": 0.4077551669906825
+      },
+      "a_pressed": {
+        "pageins": 40852,
+        "resident_size": 20447232,
+        "phys_footprint": 1423608896,
+        "diskio_bytesread": 809959424,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 462,
+        "resident_size": 10797056,
+        "phys_footprint": 4318438464,
+        "diskio_bytesread": 14716928,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 344283,
+        "Pages occupied by compressor": 78251,
+        "Swapouts": 307308,
+        "Swapins": 85942
+      },
+      "host_pressed": {
+        "available": 1552334848,
+        "kernel_available": 2476621824,
+        "swap_used": 10756816896
+      },
+      "resume": {
+        "restore_s": 0.000636707991361618,
+        "resume_s": 5.2561837079701945,
+        "second_forward_s": 0.05426404194440693,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 41319,
+        "resident_size": 48578560,
+        "phys_footprint": 1434733632,
+        "diskio_bytesread": 1360969728,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 447,
+        "diskio_bytesread": 547602432
+      },
+      "b_pass": {
+        "pass_s": 50.754509082995355,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 553,
+        "resident_size": 194002944,
+        "phys_footprint": 4318504000,
+        "diskio_bytesread": 4357619712,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 83.36139104200993
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1860435968,
+        "kernel_available": 3361914880,
+        "swap_used": 5592055808
+      },
+      "start": {
+        "load_s": 1.054869542014785,
+        "warm_forward_s": 0.031059667002409697,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 42899,
+        "resident_size": 200802304,
+        "phys_footprint": 1458900032,
+        "diskio_bytesread": 842547200,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.6489276249194518,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 43006,
+        "resident_size": 503660544,
+        "phys_footprint": 1771753216,
+        "diskio_bytesread": 1342648320,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 4.944985375041142,
+        "max_chunk_s": 0.1657502920133993
+      },
+      "a_pressed": {
+        "pageins": 43115,
+        "resident_size": 7684096,
+        "phys_footprint": 343985216,
+        "diskio_bytesread": 1350004736,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 813,
+        "resident_size": 1359872,
+        "phys_footprint": 4318356544,
+        "diskio_bytesread": 19030016,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 348281,
+        "Pages occupied by compressor": 35618,
+        "Swapouts": 294640,
+        "Swapins": 50107
+      },
+      "host_pressed": {
+        "available": 1309016064,
+        "kernel_available": 2621292544,
+        "swap_used": 10305866301
+      },
+      "resume": {
+        "restore_s": 1.293314708978869,
+        "resume_s": 1.9797956249676645,
+        "second_forward_s": 0.03170712501741946,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 44361,
+        "resident_size": 76890112,
+        "phys_footprint": 1463618688,
+        "diskio_bytesread": 1911869440,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 1226,
+        "diskio_bytesread": 558374912
+      },
+      "b_pass": {
+        "pass_s": 30.741496999980882,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 898,
+        "resident_size": 336625664,
+        "phys_footprint": 4318422080,
+        "diskio_bytesread": 4348645376,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 56.63151554192882
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1772339200,
+        "kernel_available": 4436361216,
+        "swap_used": 6564347904
+      },
+      "start": {
+        "load_s": 0.9663057090947405,
+        "warm_forward_s": 0.03976295795291662,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 41866,
+        "resident_size": 209928192,
+        "phys_footprint": 1465683008,
+        "diskio_bytesread": 819212288,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.6449925410561264,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 41958,
+        "resident_size": 426704896,
+        "phys_footprint": 2081707328,
+        "diskio_bytesread": 820899840,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 4.3931115419836715,
+        "max_chunk_s": 0.184140708995983
+      },
+      "a_pressed": {
+        "pageins": 41993,
+        "resident_size": 11993088,
+        "phys_footprint": 810177536,
+        "diskio_bytesread": 829485056,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 632,
+        "resident_size": 11927552,
+        "phys_footprint": 4318372992,
+        "diskio_bytesread": 19865600,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 222348,
+        "Pages occupied by compressor": 42389,
+        "Swapouts": 254524,
+        "Swapins": 47904
+      },
+      "host_pressed": {
+        "available": 1306427392,
+        "kernel_available": 2469789696,
+        "swap_used": 9974904258
+      },
+      "resume": {
+        "restore_s": 5.765306540997699,
+        "resume_s": 6.456908416002989,
+        "second_forward_s": 0.05387712502852082,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 43318,
+        "resident_size": 70844416,
+        "phys_footprint": 1941804160,
+        "diskio_bytesread": 1358495744,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 1305,
+        "diskio_bytesread": 525389824
+      },
+      "b_pass": {
+        "pass_s": 35.377512749983,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 687,
+        "resident_size": 160628736,
+        "phys_footprint": 4318438528,
+        "diskio_bytesread": 4365017088,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 63.31587175000459
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1980956672,
+        "kernel_available": 3905241088,
+        "swap_used": 6601436037
+      },
+      "start": {
+        "load_s": 1.4818516250234097,
+        "warm_forward_s": 0.04019683296792209,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 42474,
+        "resident_size": 188907520,
+        "phys_footprint": 1461161024,
+        "diskio_bytesread": 830836736,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.4665887919254601,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 42534,
+        "resident_size": 371343360,
+        "phys_footprint": 1461177408,
+        "diskio_bytesread": 832200704,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 4.811824709060602,
+        "max_chunk_s": 0.2673267499776557
+      },
+      "a_pressed": {
+        "pageins": 42555,
+        "resident_size": 15826944,
+        "phys_footprint": 341363712,
+        "diskio_bytesread": 842506240,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 764,
+        "resident_size": 6062080,
+        "phys_footprint": 4318291072,
+        "diskio_bytesread": 24096768,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 220554,
+        "Pages occupied by compressor": 47288,
+        "Swapouts": 272796,
+        "Swapins": 57498
+      },
+      "host_pressed": {
+        "available": 1280475136,
+        "kernel_available": 2443919360,
+        "swap_used": 10461642752
+      },
+      "resume": {
+        "restore_s": 4.313962583080865,
+        "resume_s": 4.893795958021656,
+        "second_forward_s": 0.03903354099020362,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 74584,
+        "resident_size": 47267840,
+        "phys_footprint": 1432865792,
+        "diskio_bytesread": 1509736448,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 32029,
+        "diskio_bytesread": 664805376
+      },
+      "b_pass": {
+        "pass_s": 32.37364162504673,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 843,
+        "resident_size": 108265472,
+        "phys_footprint": 4318356608,
+        "diskio_bytesread": 4364267520,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 2,
+      "wall_s": 61.22713683301117
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1884307456,
+        "kernel_available": 3416965120,
+        "swap_used": 6370822717
+      },
+      "start": {
+        "load_s": 0.1561029169242829,
+        "warm_forward_s": 2.43297662504483,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 125803,
+        "resident_size": 342016000,
+        "phys_footprint": 355323200,
+        "diskio_bytesread": 2248855552,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.32807979092467576,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 125861,
+        "resident_size": 266551296,
+        "phys_footprint": 355043584,
+        "diskio_bytesread": 2250559488,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 7.141478167031892,
+        "max_chunk_s": 0.8051747500430793
+      },
+      "a_pressed": {
+        "pageins": 125926,
+        "resident_size": 1064960,
+        "phys_footprint": 317049024,
+        "diskio_bytesread": 2253983744,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 943,
+        "resident_size": 65536,
+        "phys_footprint": 4318356544,
+        "diskio_bytesread": 25890816,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 265289,
+        "Pages occupied by compressor": 70683,
+        "Swapouts": 285172,
+        "Swapins": 67131
+      },
+      "host_pressed": {
+        "available": 1545895936,
+        "kernel_available": 2415738880,
+        "swap_used": 10069150269
+      },
+      "resume": {
+        "restore_s": 1.1340450419811532,
+        "resume_s": 3.253822207916528,
+        "second_forward_s": 0.09649808402173221,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 156751,
+        "resident_size": 562839552,
+        "phys_footprint": 352587072,
+        "diskio_bytesread": 2873532416,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 30810,
+        "diskio_bytesread": 616976384
+      },
+      "b_pass": {
+        "pass_s": 30.993145292042755,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 1033,
+        "resident_size": 95502336,
+        "phys_footprint": 4318356544,
+        "diskio_bytesread": 4329885696,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 72.14924229204189
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1752023040,
+        "kernel_available": 3156492288,
+        "swap_used": 7195066368
+      },
+      "start": {
+        "load_s": 0.12230854202061892,
+        "warm_forward_s": 1.0467859170166776,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 80601,
+        "resident_size": 567394304,
+        "phys_footprint": 359157120,
+        "diskio_bytesread": 1458286592,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 2.429191954433918e-05,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 80602,
+        "resident_size": 567721984,
+        "phys_footprint": 359157120,
+        "diskio_bytesread": 1458286592,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 30351,
+        "total_pages": 30529
+      },
+      "fill": {
+        "fill_s": 3.8107343750307336,
+        "max_chunk_s": 0.11251262505538762
+      },
+      "a_pressed": {
+        "pageins": 80627,
+        "resident_size": 5439488,
+        "phys_footprint": 317017408,
+        "diskio_bytesread": 1464233984,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 945,
+        "resident_size": 8994816,
+        "phys_footprint": 4318110784,
+        "diskio_bytesread": 19427328,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 30529
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 82776,
+        "Pages occupied by compressor": 59810,
+        "Swapouts": 228652,
+        "Swapins": 55242
+      },
+      "host_pressed": {
+        "available": 1631633408,
+        "kernel_available": 2482028544,
+        "swap_used": 9915533885
+      },
+      "resume": {
+        "restore_s": 2.1042069420218468e-05,
+        "resume_s": 3.0928787500597537,
+        "second_forward_s": 3.441537332953885,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 141635,
+        "resident_size": 464191488,
+        "phys_footprint": 354307456,
+        "diskio_bytesread": 2485751808,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 60978,
+        "diskio_bytesread": 1016586240
+      },
+      "b_pass": {
+        "pass_s": 42.578977124998346,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 1033,
+        "resident_size": 42582016,
+        "phys_footprint": 4318176320,
+        "diskio_bytesread": 4367130624,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 71.75765454210341
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1844035584,
+        "kernel_available": 3886448640,
+        "swap_used": 6238702141
+      },
+      "start": {
+        "load_s": 0.11409845796879381,
+        "warm_forward_s": 0.09077045798767358,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32798,
+        "resident_size": 794247168,
+        "phys_footprint": 361090368,
+        "diskio_bytesread": 672800768,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.8104987079277635,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40307,
+        "resident_size": 547209216,
+        "phys_footprint": 524258560,
+        "diskio_bytesread": 796483584,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.5573844590689987,
+        "max_chunk_s": 0.07052562502212822
+      },
+      "a_pressed": {
+        "pageins": 40307,
+        "resident_size": 162775040,
+        "phys_footprint": 326175616,
+        "diskio_bytesread": 800088064,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 55,
+        "resident_size": 14958592,
+        "phys_footprint": 4318176320,
+        "diskio_bytesread": 4165632,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 259771,
+        "Pages occupied by compressor": 58179,
+        "Swapouts": 235364,
+        "Swapins": 31497
+      },
+      "host_pressed": {
+        "available": 1444102144,
+        "kernel_available": 2452291584,
+        "swap_used": 9552202301
+      },
+      "resume": {
+        "restore_s": 0.5361206249799579,
+        "resume_s": 0.8530169159639627,
+        "second_forward_s": 0.07869116694200784,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40439,
+        "resident_size": 611467264,
+        "phys_footprint": 861556800,
+        "diskio_bytesread": 1309933568,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 132,
+        "diskio_bytesread": 506109952
+      },
+      "b_pass": {
+        "pass_s": 28.593160334043205,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 70,
+        "resident_size": 102154240,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 4310175744,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 47.78428641706705
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1684258816,
+        "kernel_available": 5111037952,
+        "swap_used": 7196702146
+      },
+      "start": {
+        "load_s": 0.11241308401804417,
+        "warm_forward_s": 0.08302358398213983,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32395,
+        "resident_size": 891191296,
+        "phys_footprint": 358796672,
+        "diskio_bytesread": 664395776,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.704763583955355,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 38034,
+        "resident_size": 983449600,
+        "phys_footprint": 828986176,
+        "diskio_bytesread": 757284864,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.4675807910971344,
+        "max_chunk_s": 0.07146966701839119
+      },
+      "a_pressed": {
+        "pageins": 38036,
+        "resident_size": 40452096,
+        "phys_footprint": 794022656,
+        "diskio_bytesread": 760479744,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 121,
+        "resident_size": 15319040,
+        "phys_footprint": 4318209088,
+        "diskio_bytesread": 5545984,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 343427,
+        "Pages occupied by compressor": 131449,
+        "Swapouts": 227764,
+        "Swapins": 48472
+      },
+      "host_pressed": {
+        "available": 1433370624,
+        "kernel_available": 2458976256,
+        "swap_used": 9880270274
+      },
+      "resume": {
+        "restore_s": 3.3619841668987647,
+        "resume_s": 3.9253433329286054,
+        "second_forward_s": 0.09805170889012516,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 38303,
+        "resident_size": 707592192,
+        "phys_footprint": 1326028736,
+        "diskio_bytesread": 1268051968,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 247,
+        "diskio_bytesread": 503803904
+      },
+      "b_pass": {
+        "pass_s": 39.268256750074215,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 140,
+        "resident_size": 243859456,
+        "phys_footprint": 4318274624,
+        "diskio_bytesread": 4320501760,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 61.55892870796379
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "source_nocache",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1755889664,
+        "kernel_available": 5064032256,
+        "swap_used": 7051411456
+      },
+      "start": {
+        "load_s": 1.209584042080678,
+        "warm_forward_s": 0.08972220798023045,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32694,
+        "resident_size": 830111744,
+        "phys_footprint": 815467840,
+        "diskio_bytesread": 671559680,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.7015440419781953,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 39641,
+        "resident_size": 386383872,
+        "phys_footprint": 335121280,
+        "diskio_bytesread": 785485824,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.691833500051871,
+        "max_chunk_s": 0.07750845805276185
+      },
+      "a_pressed": {
+        "pageins": 39649,
+        "resident_size": 41304064,
+        "phys_footprint": 326699904,
+        "diskio_bytesread": 788992000,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 106,
+        "resident_size": 12779520,
+        "phys_footprint": 4318258240,
+        "diskio_bytesread": 7397376,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 390432,
+        "Pages occupied by compressor": 108207,
+        "Swapouts": 231364,
+        "Swapins": 41222
+      },
+      "host_pressed": {
+        "available": 1363755008,
+        "kernel_available": 2469298176,
+        "swap_used": 10090646077
+      },
+      "resume": {
+        "restore_s": 0.9622684579808265,
+        "resume_s": 1.7562059160554782,
+        "second_forward_s": 0.10042137489654124,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40064,
+        "resident_size": 545112064,
+        "phys_footprint": 825364480,
+        "diskio_bytesread": 1319174144,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 392,
+        "diskio_bytesread": 527478784
+      },
+      "b_pass": {
+        "pass_s": 30.74552491598297,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 126,
+        "resident_size": 241680384,
+        "phys_footprint": 4318323776,
+        "diskio_bytesread": 3941539840,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 50.87331320892554
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1551663104,
+        "kernel_available": 4913905664,
+        "swap_used": 6770193858
+      },
+      "start": {
+        "load_s": 1.0896083749830723,
+        "warm_forward_s": 0.07983583398163319,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32703,
+        "resident_size": 837009408,
+        "phys_footprint": 855592384,
+        "diskio_bytesread": 671985664,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 2.624932676553726e-06,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32703,
+        "resident_size": 837140480,
+        "phys_footprint": 855592384,
+        "diskio_bytesread": 671985664,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 30462,
+        "total_pages": 30462
+      },
+      "fill": {
+        "fill_s": 3.5764900419162586,
+        "max_chunk_s": 0.06782012502662838
+      },
+      "a_pressed": {
+        "pageins": 32703,
+        "resident_size": 60063744,
+        "phys_footprint": 816352640,
+        "diskio_bytesread": 676835328,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 53,
+        "resident_size": 20037632,
+        "phys_footprint": 4318291072,
+        "diskio_bytesread": 4284416,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 30462
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 328312,
+        "Pages occupied by compressor": 115600,
+        "Swapouts": 236328,
+        "Swapins": 42954
+      },
+      "host_pressed": {
+        "available": 1440989184,
+        "kernel_available": 2469298176,
+        "swap_used": 9898158981
+      },
+      "resume": {
+        "restore_s": 1.295795664191246e-05,
+        "resume_s": 3.1256044999463484,
+        "second_forward_s": 0.12570750003214926,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 32703,
+        "resident_size": 606830592,
+        "phys_footprint": 850333120,
+        "diskio_bytesread": 1204989952,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 0,
+        "diskio_bytesread": 522584064
+      },
+      "b_pass": {
+        "pass_s": 33.56651045801118,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 57,
+        "resident_size": 249905152,
+        "phys_footprint": 4318291072,
+        "diskio_bytesread": 4307210240,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 54.11992154200561
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1939963904,
+        "kernel_available": 4435116032,
+        "swap_used": 8266910269
+      },
+      "start": {
+        "load_s": 1.580224750097841,
+        "warm_forward_s": 0.0993871670216322,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32930,
+        "resident_size": 568377344,
+        "phys_footprint": 854527424,
+        "diskio_bytesread": 714190848,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.464535125065595,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40155,
+        "resident_size": 548306944,
+        "phys_footprint": 1022628288,
+        "diskio_bytesread": 1330733056,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 4.639686624985188,
+        "max_chunk_s": 0.132593416958116
+      },
+      "a_pressed": {
+        "pageins": 40182,
+        "resident_size": 10043392,
+        "phys_footprint": 327617472,
+        "diskio_bytesread": 1337892864,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 791,
+        "resident_size": 5668864,
+        "phys_footprint": 4318340160,
+        "diskio_bytesread": 20934656,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 261743,
+        "Pages occupied by compressor": 10530,
+        "Swapouts": 296948,
+        "Swapins": 56905
+      },
+      "host_pressed": {
+        "available": 1423343616,
+        "kernel_available": 2283585536,
+        "swap_used": 10742398976
+      },
+      "resume": {
+        "restore_s": 0.7385257079731673,
+        "resume_s": 1.323563541052863,
+        "second_forward_s": 0.1134144589304924,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40595,
+        "resident_size": 573423616,
+        "phys_footprint": 863146112,
+        "diskio_bytesread": 1873248256,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 390,
+        "diskio_bytesread": 532193280
+      },
+      "b_pass": {
+        "pass_s": 36.06905695796013,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 878,
+        "resident_size": 112656384,
+        "phys_footprint": 4318405696,
+        "diskio_bytesread": 4342095872,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 61.34714745893143
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 2087419904,
+        "kernel_available": 3653844992,
+        "swap_used": 6493181050
+      },
+      "start": {
+        "load_s": 1.299261375097558,
+        "warm_forward_s": 0.07489162497222424,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 33042,
+        "resident_size": 750682112,
+        "phys_footprint": 854330816,
+        "diskio_bytesread": 675618816,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.9046460420358926,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40309,
+        "resident_size": 1275772928,
+        "phys_footprint": 1279252160,
+        "diskio_bytesread": 795422720,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 4.058786457986571,
+        "max_chunk_s": 0.10654508299194276
+      },
+      "a_pressed": {
+        "pageins": 40316,
+        "resident_size": 21512192,
+        "phys_footprint": 837408128,
+        "diskio_bytesread": 797569024,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 422,
+        "resident_size": 15974400,
+        "phys_footprint": 4318323776,
+        "diskio_bytesread": 15155200,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 298365,
+        "Pages occupied by compressor": 51844,
+        "Swapouts": 279616,
+        "Swapins": 36990
+      },
+      "host_pressed": {
+        "available": 1714290688,
+        "kernel_available": 2299281408,
+        "swap_used": 10340595138
+      },
+      "resume": {
+        "restore_s": 1.9238321660086513,
+        "resume_s": 2.292189750005491,
+        "second_forward_s": 0.0847704999614507,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40493,
+        "resident_size": 873742336,
+        "phys_footprint": 1367185344,
+        "diskio_bytesread": 1288433664,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 173,
+        "diskio_bytesread": 487276544
+      },
+      "b_pass": {
+        "pass_s": 31.605381250032224,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 486,
+        "resident_size": 212336640,
+        "phys_footprint": 4318389312,
+        "diskio_bytesread": 4320718848,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 53.62929775007069
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1915879424,
+        "kernel_available": 3683844096,
+        "swap_used": 7143098941
+      },
+      "start": {
+        "load_s": 1.2248240410117432,
+        "warm_forward_s": 0.07831908308435231,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32931,
+        "resident_size": 702562304,
+        "phys_footprint": 854494656,
+        "diskio_bytesread": 678567936,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.17079287499655038,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32931,
+        "resident_size": 836452352,
+        "phys_footprint": 854494656,
+        "diskio_bytesread": 678567936,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.3471816249657422,
+        "max_chunk_s": 0.07388704200275242
+      },
+      "a_pressed": {
+        "pageins": 32931,
+        "resident_size": 42565632,
+        "phys_footprint": 317720896,
+        "diskio_bytesread": 683597824,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 115,
+        "resident_size": 17006592,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 4579328,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 349164,
+        "Pages occupied by compressor": 88745,
+        "Swapouts": 237484,
+        "Swapins": 41287
+      },
+      "host_pressed": {
+        "available": 1455636480,
+        "kernel_available": 2293350400,
+        "swap_used": 10321007738
+      },
+      "resume": {
+        "restore_s": 6.994728167075664,
+        "resume_s": 7.366284542018548,
+        "second_forward_s": 0.08779012504965067,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 63685,
+        "resident_size": 572047360,
+        "phys_footprint": 854412736,
+        "diskio_bytesread": 1281785856,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 30754,
+        "diskio_bytesread": 596680704
+      },
+      "b_pass": {
+        "pass_s": 30.217479250044562,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 150,
+        "resident_size": 341426176,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 4316160000,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 54.60543662507553
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1552449536,
+        "kernel_available": 4948541440,
+        "swap_used": 7932278210
+      },
+      "start": {
+        "load_s": 0.8851391250500455,
+        "warm_forward_s": 0.03603220800869167,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40839,
+        "resident_size": 363528192,
+        "phys_footprint": 1466813504,
+        "diskio_bytesread": 803164160,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.44691775005776435,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40862,
+        "resident_size": 672530432,
+        "phys_footprint": 1775914688,
+        "diskio_bytesread": 804036608,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.4794105000328273,
+        "max_chunk_s": 0.13777245895471424
+      },
+      "a_pressed": {
+        "pageins": 40882,
+        "resident_size": 16941056,
+        "phys_footprint": 344804416,
+        "diskio_bytesread": 811130880,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 587,
+        "resident_size": 16089088,
+        "phys_footprint": 4318192704,
+        "diskio_bytesread": 15429632,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 250741,
+        "Pages occupied by compressor": 109137,
+        "Swapouts": 191516,
+        "Swapins": 34089
+      },
+      "host_pressed": {
+        "available": 1342865408,
+        "kernel_available": 2289500160,
+        "swap_used": 9843968573
+      },
+      "resume": {
+        "restore_s": 1.0221253329655156,
+        "resume_s": 1.4121210830053315,
+        "second_forward_s": 0.03853266697842628,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 42165,
+        "resident_size": 81346560,
+        "phys_footprint": 1463602304,
+        "diskio_bytesread": 1365561344,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 1271,
+        "diskio_bytesread": 551251968
+      },
+      "b_pass": {
+        "pass_s": 33.86269383400213,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 673,
+        "resident_size": 215252992,
+        "phys_footprint": 4318258240,
+        "diskio_bytesread": 4329009152,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 53.22154820803553
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1570422784,
+        "kernel_available": 4344102912,
+        "swap_used": 9622456893
+      },
+      "start": {
+        "load_s": 0.7257544579915702,
+        "warm_forward_s": 0.0327258330071345,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40879,
+        "resident_size": 315588608,
+        "phys_footprint": 1467092032,
+        "diskio_bytesread": 803840000,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.5097045840229839,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40913,
+        "resident_size": 540803072,
+        "phys_footprint": 2083001600,
+        "diskio_bytesread": 804548608,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.732230291934684,
+        "max_chunk_s": 0.10033887496683747
+      },
+      "a_pressed": {
+        "pageins": 40920,
+        "resident_size": 164020224,
+        "phys_footprint": 810685376,
+        "diskio_bytesread": 811692032,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 480,
+        "resident_size": 14598144,
+        "phys_footprint": 4318340160,
+        "diskio_bytesread": 13938688,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 214605,
+        "Pages occupied by compressor": 44806,
+        "Swapouts": 252552,
+        "Swapins": 39453
+      },
+      "host_pressed": {
+        "available": 2038251520,
+        "kernel_available": 2770092032,
+        "swap_used": 13101233602
+      },
+      "resume": {
+        "restore_s": 1.7092903329757974,
+        "resume_s": 1.8717055829474702,
+        "second_forward_s": 0.04760483303107321,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40937,
+        "resident_size": 477167616,
+        "phys_footprint": 1942721600,
+        "diskio_bytesread": 1296506880,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 17,
+        "diskio_bytesread": 481931264
+      },
+      "b_pass": {
+        "pass_s": 34.83066770900041,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 532,
+        "resident_size": 120766464,
+        "phys_footprint": 4318422080,
+        "diskio_bytesread": 4323090432,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 54.52261845895555
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 2070740992,
+        "kernel_available": 4561534976,
+        "swap_used": 7279015362
+      },
+      "start": {
+        "load_s": 0.6979052081005648,
+        "warm_forward_s": 0.02954658295493573,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40530,
+        "resident_size": 336576512,
+        "phys_footprint": 1466797120,
+        "diskio_bytesread": 793968640,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.1742472080513835,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 40531,
+        "resident_size": 463798272,
+        "phys_footprint": 1458424896,
+        "diskio_bytesread": 793968640,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.4550066250376403,
+        "max_chunk_s": 0.07182004197966307
+      },
+      "a_pressed": {
+        "pageins": 40531,
+        "resident_size": 166248448,
+        "phys_footprint": 341511168,
+        "diskio_bytesread": 796196864,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 115,
+        "resident_size": 14548992,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 4792320,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 391512,
+        "Pages occupied by compressor": 116910,
+        "Swapouts": 207452,
+        "Swapins": 27989
+      },
+      "host_pressed": {
+        "available": 1501085696,
+        "kernel_available": 2539601920,
+        "swap_used": 10199299522
+      },
+      "resume": {
+        "restore_s": 1.2456004169071093,
+        "resume_s": 1.5694747919915244,
+        "second_forward_s": 0.03595391695853323,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 71983,
+        "resident_size": 83935232,
+        "phys_footprint": 1459457088,
+        "diskio_bytesread": 1333006336,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 31452,
+        "diskio_bytesread": 536219648
+      },
+      "b_pass": {
+        "pass_s": 29.04955329198856,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 136,
+        "resident_size": 199360512,
+        "phys_footprint": 4318323776,
+        "diskio_bytesread": 4303396864,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 47.03302445902955
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1634975744,
+        "kernel_available": 5421645824,
+        "swap_used": 7500789186
+      },
+      "start": {
+        "load_s": 0.8327234169701114,
+        "warm_forward_s": 0.03318108292296529,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40809,
+        "resident_size": 463798272,
+        "phys_footprint": 1466502208,
+        "diskio_bytesread": 797548544,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 9.458046406507492e-06,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 40809,
+        "resident_size": 463929344,
+        "phys_footprint": 1466502208,
+        "diskio_bytesread": 797548544,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.4489632920594886,
+        "max_chunk_s": 0.13708429201506078
+      },
+      "a_pressed": {
+        "pageins": 40817,
+        "resident_size": 154845184,
+        "phys_footprint": 1424378880,
+        "diskio_bytesread": 803086336,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 125,
+        "resident_size": 12845056,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 5709824,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 372354,
+        "Pages occupied by compressor": 152226,
+        "Swapouts": 208100,
+        "Swapins": 51556
+      },
+      "host_pressed": {
+        "available": 1568423936,
+        "kernel_available": 2516566016,
+        "swap_used": 10044770877
+      },
+      "resume": {
+        "restore_s": 0.005326749989762902,
+        "resume_s": 3.6503425830742344,
+        "second_forward_s": 0.05021016695536673,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 41136,
+        "resident_size": 48152576,
+        "phys_footprint": 1434749952,
+        "diskio_bytesread": 1377820672,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 299,
+        "diskio_bytesread": 571916288
+      },
+      "b_pass": {
+        "pass_s": 28.675880124908872,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 200,
+        "resident_size": 173178880,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 4267118592,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 3,
+      "wall_s": 48.93477479205467
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1677918208,
+        "kernel_available": 5343592448,
+        "swap_used": 9550692352
+      },
+      "start": {
+        "load_s": 0.11112820799462497,
+        "warm_forward_s": 0.07856637507211417,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32696,
+        "resident_size": 747995136,
+        "phys_footprint": 358321536,
+        "diskio_bytesread": 672722944,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 5.541951395571232e-06,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32696,
+        "resident_size": 748158976,
+        "phys_footprint": 358321536,
+        "diskio_bytesread": 672722944,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 30352,
+        "total_pages": 30529
+      },
+      "fill": {
+        "fill_s": 3.4693519580177963,
+        "max_chunk_s": 0.07548604195471853
+      },
+      "a_pressed": {
+        "pageins": 32713,
+        "resident_size": 73809920,
+        "phys_footprint": 317230400,
+        "diskio_bytesread": 677343232,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 125,
+        "resident_size": 6717440,
+        "phys_footprint": 4318340160,
+        "diskio_bytesread": 4825088,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 3923,
+        "total_pages": 30529
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 572675,
+        "Pages occupied by compressor": 156491,
+        "Swapouts": 203104,
+        "Swapins": 31374
+      },
+      "host_pressed": {
+        "available": 1565212672,
+        "kernel_available": 2507735040,
+        "swap_used": 12355045949
+      },
+      "resume": {
+        "restore_s": 1.4874967746436596e-05,
+        "resume_s": 2.167587124975398,
+        "second_forward_s": 2.087598624988459,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 93682,
+        "resident_size": 441499648,
+        "phys_footprint": 345771392,
+        "diskio_bytesread": 1694994432,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 60939,
+        "diskio_bytesread": 1013161984
+      },
+      "b_pass": {
+        "pass_s": 28.08261062495876,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 214,
+        "resident_size": 378159104,
+        "phys_footprint": 4318405696,
+        "diskio_bytesread": 4337262592,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 49.5255533750169
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1696579584,
+        "kernel_available": 4761026560,
+        "swap_used": 7590641664
+      },
+      "start": {
+        "load_s": 0.11200383305549622,
+        "warm_forward_s": 0.08346724999137223,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32761,
+        "resident_size": 879853568,
+        "phys_footprint": 358026688,
+        "diskio_bytesread": 672649216,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.6894542910158634,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 39917,
+        "resident_size": 673923072,
+        "phys_footprint": 529665344,
+        "diskio_bytesread": 791465984,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.4838603750104085,
+        "max_chunk_s": 0.14762804203201085
+      },
+      "a_pressed": {
+        "pageins": 39917,
+        "resident_size": 46891008,
+        "phys_footprint": 335170496,
+        "diskio_bytesread": 796577792,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 111,
+        "resident_size": 14548992,
+        "phys_footprint": 4318372928,
+        "diskio_bytesread": 4874240,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 257917,
+        "Pages occupied by compressor": 111485,
+        "Swapouts": 176392,
+        "Swapins": 29040
+      },
+      "host_pressed": {
+        "available": 1559953408,
+        "kernel_available": 2505670656,
+        "swap_used": 9982181376
+      },
+      "resume": {
+        "restore_s": 0.5568317499710247,
+        "resume_s": 0.9511284169275314,
+        "second_forward_s": 0.07654325000476092,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40029,
+        "resident_size": 600702976,
+        "phys_footprint": 869765248,
+        "diskio_bytesread": 1330380800,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 112,
+        "diskio_bytesread": 530001920
+      },
+      "b_pass": {
+        "pass_s": 24.974598709028214,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 168,
+        "resident_size": 442728448,
+        "phys_footprint": 4318438464,
+        "diskio_bytesread": 4293267456,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 43.668350583990104
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1639088128,
+        "kernel_available": 5216010240,
+        "swap_used": 9014020669
+      },
+      "start": {
+        "load_s": 0.11920879199169576,
+        "warm_forward_s": 0.08459945791400969,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32752,
+        "resident_size": 870105088,
+        "phys_footprint": 358272448,
+        "diskio_bytesread": 671907840,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.8368298748973757,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40070,
+        "resident_size": 907198464,
+        "phys_footprint": 836948736,
+        "diskio_bytesread": 793063424,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.6060240829829127,
+        "max_chunk_s": 0.07010825001634657
+      },
+      "a_pressed": {
+        "pageins": 40070,
+        "resident_size": 129843200,
+        "phys_footprint": 802968320,
+        "diskio_bytesread": 797585408,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 107,
+        "resident_size": 14581760,
+        "phys_footprint": 4318340160,
+        "diskio_bytesread": 5021696,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 413145,
+        "Pages occupied by compressor": 121177,
+        "Swapouts": 246624,
+        "Swapins": 43082
+      },
+      "host_pressed": {
+        "available": 1477001216,
+        "kernel_available": 2503999488,
+        "swap_used": 12316175237
+      },
+      "resume": {
+        "restore_s": 1.7227934590773657,
+        "resume_s": 2.0685960840201005,
+        "second_forward_s": 0.09067458298522979,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40242,
+        "resident_size": 1146535936,
+        "phys_footprint": 1333909440,
+        "diskio_bytesread": 1244753920,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 169,
+        "diskio_bytesread": 444153856
+      },
+      "b_pass": {
+        "pass_s": 34.40745833306573,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 164,
+        "resident_size": 119226368,
+        "phys_footprint": 4318405696,
+        "diskio_bytesread": 4301385728,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 54.65692600002512
+    },
+    {
+      "device": "cpu",
+      "backing": "mmap",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1829093376,
+        "kernel_available": 4805935104,
+        "swap_used": 7535266365
+      },
+      "start": {
+        "load_s": 0.12859441700857133,
+        "warm_forward_s": 0.10162249999120831,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32767,
+        "resident_size": 829145088,
+        "phys_footprint": 358862208,
+        "diskio_bytesread": 672604160,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.15065529197454453,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32767,
+        "resident_size": 377454592,
+        "phys_footprint": 358582592,
+        "diskio_bytesread": 672604160,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.52124133403413,
+        "max_chunk_s": 0.0813203330617398
+      },
+      "a_pressed": {
+        "pageins": 32773,
+        "resident_size": 40222720,
+        "phys_footprint": 316786944,
+        "diskio_bytesread": 675979264,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 127,
+        "resident_size": 19726336,
+        "phys_footprint": 4318323776,
+        "diskio_bytesread": 4841472,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 303436,
+        "Pages occupied by compressor": 113701,
+        "Swapouts": 210864,
+        "Swapins": 39753
+      },
+      "host_pressed": {
+        "available": 1499922432,
+        "kernel_available": 2504966144,
+        "swap_used": 10320210821
+      },
+      "resume": {
+        "restore_s": 0.8775712080532685,
+        "resume_s": 2.745788916014135,
+        "second_forward_s": 0.0939934579655528,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 63240,
+        "resident_size": 574734336,
+        "phys_footprint": 353553792,
+        "diskio_bytesread": 1272053760,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 30467,
+        "diskio_bytesread": 594763776
+      },
+      "b_pass": {
+        "pass_s": 35.5294874580577,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 200,
+        "resident_size": 167903232,
+        "phys_footprint": 4318389312,
+        "diskio_bytesread": 4246888448,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 56.16710687498562
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1759690752,
+        "kernel_available": 4186112000,
+        "swap_used": 6338243461
+      },
+      "start": {
+        "load_s": 1.1186729999026284,
+        "warm_forward_s": 0.08122041705064476,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32944,
+        "resident_size": 735789056,
+        "phys_footprint": 853364160,
+        "diskio_bytesread": 677490688,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 2.00001522898674e-06,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32944,
+        "resident_size": 735805440,
+        "phys_footprint": 853364160,
+        "diskio_bytesread": 677490688,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 30282,
+        "total_pages": 30462
+      },
+      "fill": {
+        "fill_s": 3.636120207956992,
+        "max_chunk_s": 0.07649104204028845
+      },
+      "a_pressed": {
+        "pageins": 32944,
+        "resident_size": 60424192,
+        "phys_footprint": 816237952,
+        "diskio_bytesread": 682471424,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 112,
+        "resident_size": 16154624,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 5169152,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 30462
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 290960,
+        "Pages occupied by compressor": 88396,
+        "Swapouts": 259444,
+        "Swapins": 37294
+      },
+      "host_pressed": {
+        "available": 1411530752,
+        "kernel_available": 2509242368,
+        "swap_used": 9968161914
+      },
+      "resume": {
+        "restore_s": 0.0008485839935019612,
+        "resume_s": 2.8378704170463607,
+        "second_forward_s": 0.11594612500630319,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 32944,
+        "resident_size": 597082112,
+        "phys_footprint": 852594112,
+        "diskio_bytesread": 1074835456,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 0,
+        "diskio_bytesread": 388562944
+      },
+      "b_pass": {
+        "pass_s": 31.55179533304181,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 116,
+        "resident_size": 246792192,
+        "phys_footprint": 4318372928,
+        "diskio_bytesread": 4285325312,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 51.82770766597241
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 2054225920,
+        "kernel_available": 5109907456,
+        "swap_used": 7085427261
+      },
+      "start": {
+        "load_s": 1.123805750044994,
+        "warm_forward_s": 0.07709504093509167,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32892,
+        "resident_size": 873070592,
+        "phys_footprint": 853560768,
+        "diskio_bytesread": 676368384,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.7514317500172183,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40031,
+        "resident_size": 1088307200,
+        "phys_footprint": 1030214016,
+        "diskio_bytesread": 794206208,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.5150974160060287,
+        "max_chunk_s": 0.11428149999119341
+      },
+      "a_pressed": {
+        "pageins": 40048,
+        "resident_size": 17547264,
+        "phys_footprint": 336448384,
+        "diskio_bytesread": 797712384,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 153,
+        "resident_size": 14073856,
+        "phys_footprint": 4318340160,
+        "diskio_bytesread": 5971968,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 269744,
+        "Pages occupied by compressor": 120008,
+        "Swapouts": 188924,
+        "Swapins": 42137
+      },
+      "host_pressed": {
+        "available": 1472544768,
+        "kernel_available": 2498920448,
+        "swap_used": 9492108410
+      },
+      "resume": {
+        "restore_s": 0.8794312080135569,
+        "resume_s": 1.703209458035417,
+        "second_forward_s": 0.09738475002814084,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40432,
+        "resident_size": 575930368,
+        "phys_footprint": 869158976,
+        "diskio_bytesread": 1328828416,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 368,
+        "diskio_bytesread": 528445440
+      },
+      "b_pass": {
+        "pass_s": 35.49900129099842,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 219,
+        "resident_size": 272433152,
+        "phys_footprint": 4318405696,
+        "diskio_bytesread": 4303364096,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 55.28836720797699
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1552465920,
+        "kernel_available": 5305614336,
+        "swap_used": 7936409600
+      },
+      "start": {
+        "load_s": 1.0577012079302222,
+        "warm_forward_s": 0.0751436670543626,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32883,
+        "resident_size": 884228096,
+        "phys_footprint": 853872064,
+        "diskio_bytesread": 672579584,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.8275583339855075,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40093,
+        "resident_size": 1428668416,
+        "phys_footprint": 1283954368,
+        "diskio_bytesread": 790216704,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.3998004170134664,
+        "max_chunk_s": 0.10728987504262477
+      },
+      "a_pressed": {
+        "pageins": 40101,
+        "resident_size": 40566784,
+        "phys_footprint": 847320512,
+        "diskio_bytesread": 795475968,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 144,
+        "resident_size": 12304384,
+        "phys_footprint": 4318372928,
+        "diskio_bytesread": 5054464,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 308433,
+        "Pages occupied by compressor": 131541,
+        "Swapouts": 214200,
+        "Swapins": 42857
+      },
+      "host_pressed": {
+        "available": 1341833216,
+        "kernel_available": 2528673792,
+        "swap_used": 9955180544
+      },
+      "resume": {
+        "restore_s": 3.6743800409603864,
+        "resume_s": 4.2097324159694836,
+        "second_forward_s": 0.093642707914114,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40411,
+        "resident_size": 800194560,
+        "phys_footprint": 1367218112,
+        "diskio_bytesread": 1322975232,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 288,
+        "diskio_bytesread": 522584064
+      },
+      "b_pass": {
+        "pass_s": 34.56103774998337,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 217,
+        "resident_size": 149143552,
+        "phys_footprint": 4318438464,
+        "diskio_bytesread": 4312559616,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 56.815859791007824
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1836564480,
+        "kernel_available": 5198725120,
+        "swap_used": 6983641989
+      },
+      "start": {
+        "load_s": 1.2589075840078294,
+        "warm_forward_s": 0.08641070907469839,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 32938,
+        "resident_size": 713916416,
+        "phys_footprint": 854183296,
+        "diskio_bytesread": 673210368,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.16920070792548358,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 32938,
+        "resident_size": 834813952,
+        "phys_footprint": 854183296,
+        "diskio_bytesread": 673210368,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.5565349999815226,
+        "max_chunk_s": 0.07787729101255536
+      },
+      "a_pressed": {
+        "pageins": 32938,
+        "resident_size": 42057728,
+        "phys_footprint": 317688000,
+        "diskio_bytesread": 677666816,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 116,
+        "resident_size": 14565376,
+        "phys_footprint": 4318389312,
+        "diskio_bytesread": 4595712,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 191538,
+        "Pages occupied by compressor": 68381,
+        "Swapouts": 222904,
+        "Swapins": 40782
+      },
+      "host_pressed": {
+        "available": 1603551232,
+        "kernel_available": 2718302208,
+        "swap_used": 9956103290
+      },
+      "resume": {
+        "restore_s": 3.059311666060239,
+        "resume_s": 3.571884333039634,
+        "second_forward_s": 0.13220041699241847,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 63608,
+        "resident_size": 572686336,
+        "phys_footprint": 855297408,
+        "diskio_bytesread": 1290108928,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 30670,
+        "diskio_bytesread": 610410496
+      },
+      "b_pass": {
+        "pass_s": 29.92320425005164,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 196,
+        "resident_size": 113246208,
+        "phys_footprint": 4318454848,
+        "diskio_bytesread": 4307312640,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 51.22104950004723
+    },
+    {
+      "device": "cpu",
+      "backing": "anon",
+      "arm": "source_nocache",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 2882338816,
+        "kernel_available": 4324343808,
+        "swap_used": 6980307517
+      },
+      "start": {
+        "load_s": 1.226987999980338,
+        "warm_forward_s": 0.09296141599770635,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 33000,
+        "resident_size": 569049088,
+        "phys_footprint": 815353088,
+        "diskio_bytesread": 684974080,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.3523629159899428,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 41174,
+        "resident_size": 326516736,
+        "phys_footprint": 335055616,
+        "diskio_bytesread": 1076047872,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.819379041902721,
+        "max_chunk_s": 0.08899429196026176
+      },
+      "a_pressed": {
+        "pageins": 41176,
+        "resident_size": 119422976,
+        "phys_footprint": 335334144,
+        "diskio_bytesread": 1081520128,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 482,
+        "resident_size": 14598144,
+        "phys_footprint": 4318356544,
+        "diskio_bytesread": 13262848,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 307850,
+        "Pages occupied by compressor": 78682,
+        "Swapouts": 232812,
+        "Swapins": 27976
+      },
+      "host_pressed": {
+        "available": 1553776640,
+        "kernel_available": 2521235456,
+        "swap_used": 10180425154
+      },
+      "resume": {
+        "restore_s": 0.518686999916099,
+        "resume_s": 0.9197314159246162,
+        "second_forward_s": 0.14634212490636855,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 41329,
+        "resident_size": 546947072,
+        "phys_footprint": 833949568,
+        "diskio_bytesread": 1605050368,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 153,
+        "diskio_bytesread": 519925760
+      },
+      "b_pass": {
+        "pass_s": 27.073260292061605,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 508,
+        "resident_size": 231800832,
+        "phys_footprint": 4318422080,
+        "diskio_bytesread": 4303331328,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 47.95379433303606
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "compress",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1859043328,
+        "kernel_available": 4916887552,
+        "swap_used": 9278062592
+      },
+      "start": {
+        "load_s": 0.8429294590605423,
+        "warm_forward_s": 0.04058266698848456,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40734,
+        "resident_size": 365232128,
+        "phys_footprint": 1466747968,
+        "diskio_bytesread": 802742272,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.6150048340205103,
+        "bytes_by_mode": {
+          "compress": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40767,
+        "resident_size": 402112512,
+        "phys_footprint": 2082755840,
+        "diskio_bytesread": 803434496,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.498942791018635,
+        "max_chunk_s": 0.12120525003410876
+      },
+      "a_pressed": {
+        "pageins": 40772,
+        "resident_size": 161267712,
+        "phys_footprint": 811340736,
+        "diskio_bytesread": 808251392,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 499,
+        "resident_size": 16465920,
+        "phys_footprint": 4318307392,
+        "diskio_bytesread": 15773696,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 256528,
+        "Pages occupied by compressor": 77365,
+        "Swapouts": 229132,
+        "Swapins": 41933
+      },
+      "host_pressed": {
+        "available": 1528594432,
+        "kernel_available": 2505752576,
+        "swap_used": 12245071298
+      },
+      "resume": {
+        "restore_s": 2.3458137090783566,
+        "resume_s": 2.6475702500902116,
+        "second_forward_s": 0.032518250052817166,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 41966,
+        "resident_size": 297844736,
+        "phys_footprint": 1925125184,
+        "diskio_bytesread": 1284468736,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 1190,
+        "diskio_bytesread": 473923584
+      },
+      "b_pass": {
+        "pass_s": 40.626599958050065,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 532,
+        "resident_size": 210468864,
+        "phys_footprint": 4318372928,
+        "diskio_bytesread": 4335357952,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 60.8285281250719
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "reload",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1528856576,
+        "kernel_available": 5652709376,
+        "swap_used": 7423393792
+      },
+      "start": {
+        "load_s": 0.8707547079538926,
+        "warm_forward_s": 0.030143958050757647,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40778,
+        "resident_size": 307658752,
+        "phys_footprint": 1466551424,
+        "diskio_bytesread": 796598272,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.20197583304252476,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 40779,
+        "resident_size": 456933376,
+        "phys_footprint": 1466584192,
+        "diskio_bytesread": 796598272,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.295580332982354,
+        "max_chunk_s": 0.10141537501476705
+      },
+      "a_pressed": {
+        "pageins": 40779,
+        "resident_size": 164970496,
+        "phys_footprint": 341412928,
+        "diskio_bytesread": 803217408,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 197,
+        "resident_size": 14548992,
+        "phys_footprint": 4318225472,
+        "diskio_bytesread": 7778304,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 295729,
+        "Pages occupied by compressor": 110884,
+        "Swapouts": 200148,
+        "Swapins": 33009
+      },
+      "host_pressed": {
+        "available": 1570553856,
+        "kernel_available": 2513584128,
+        "swap_used": 10177478656
+      },
+      "resume": {
+        "restore_s": 1.7379632500233129,
+        "resume_s": 1.9419076660415158,
+        "second_forward_s": 0.03554637497290969,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 72049,
+        "resident_size": 88752128,
+        "phys_footprint": 1460735104,
+        "diskio_bytesread": 1441366016,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 31270,
+        "diskio_bytesread": 635330560
+      },
+      "b_pass": {
+        "pass_s": 23.6145647080848,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 199,
+        "resident_size": 165527552,
+        "phys_footprint": 4318291008,
+        "diskio_bytesread": 4297748480,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 42.19520333397668
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "os",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1348272128,
+        "kernel_available": 5867962368,
+        "swap_used": 7665740677
+      },
+      "start": {
+        "load_s": 0.8805580839980394,
+        "warm_forward_s": 0.03335641697049141,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40663,
+        "resident_size": 371916800,
+        "phys_footprint": 1467943936,
+        "diskio_bytesread": 793022464,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 1.1874944902956486e-05,
+        "bytes_by_mode": {}
+      },
+      "a_idle": {
+        "pageins": 40663,
+        "resident_size": 372031488,
+        "phys_footprint": 1467943936,
+        "diskio_bytesread": 793022464,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.5682830420555547,
+        "max_chunk_s": 0.10071854200214148
+      },
+      "a_pressed": {
+        "pageins": 40676,
+        "resident_size": 132218880,
+        "phys_footprint": 1424804800,
+        "diskio_bytesread": 798986240,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 155,
+        "resident_size": 10977280,
+        "phys_footprint": 4318192704,
+        "diskio_bytesread": 5578752,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 473837,
+        "Pages occupied by compressor": 148427,
+        "Swapouts": 217228,
+        "Swapins": 35723
+      },
+      "host_pressed": {
+        "available": 1505394688,
+        "kernel_available": 2574548992,
+        "swap_used": 10628240506
+      },
+      "resume": {
+        "restore_s": 0.0013472919818013906,
+        "resume_s": 2.6859317920170724,
+        "second_forward_s": 0.04783008398953825,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40995,
+        "resident_size": 68812800,
+        "phys_footprint": 1434913728,
+        "diskio_bytesread": 1312346112,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 300,
+        "diskio_bytesread": 510345216
+      },
+      "b_pass": {
+        "pass_s": 21.98288337502163,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 176,
+        "resident_size": 318128128,
+        "phys_footprint": 4318274624,
+        "diskio_bytesread": 3365380096,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 41.1523529170081
+    },
+    {
+      "device": "mps",
+      "backing": "anon",
+      "arm": "source",
+      "pressure_bytes": 4294967296,
+      "host_before": {
+        "available": 1754300416,
+        "kernel_available": 5359124480,
+        "swap_used": 7291923333
+      },
+      "start": {
+        "load_s": 0.7945902079809457,
+        "warm_forward_s": 0.032132291002199054,
+        "model_bytes": 497759232
+      },
+      "a_loaded": {
+        "pageins": 40117,
+        "resident_size": 394264576,
+        "phys_footprint": 1466747968,
+        "diskio_bytesread": 787091456,
+        "diskio_byteswritten": 8192
+      },
+      "act": {
+        "act_s": 0.40071824996266514,
+        "bytes_by_mode": {
+          "source": 497759232
+        }
+      },
+      "a_idle": {
+        "pageins": 40140,
+        "resident_size": 746815488,
+        "phys_footprint": 1775849152,
+        "diskio_bytesread": 788033536,
+        "diskio_byteswritten": 8192
+      },
+      "probe_idle": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "fill": {
+        "fill_s": 3.2603131249779835,
+        "max_chunk_s": 0.11544374993536621
+      },
+      "a_pressed": {
+        "pageins": 40140,
+        "resident_size": 165396480,
+        "phys_footprint": 345197632,
+        "diskio_bytesread": 790130688,
+        "diskio_byteswritten": 8192
+      },
+      "b_pressed": {
+        "pageins": 108,
+        "resident_size": 18759680,
+        "phys_footprint": 4318241856,
+        "diskio_bytesread": 4640768,
+        "diskio_byteswritten": 0
+      },
+      "probe_pressed": {
+        "resident_pages": 0,
+        "total_pages": 0
+      },
+      "compressor_delta": {
+        "Pages stored in compressor": 264025,
+        "Pages occupied by compressor": 132861,
+        "Swapouts": 181236,
+        "Swapins": 39738
+      },
+      "host_pressed": {
+        "available": 1556430848,
+        "kernel_available": 2508816384,
+        "swap_used": 9584309698
+      },
+      "resume": {
+        "restore_s": 0.7837310830364004,
+        "resume_s": 1.0608469999860972,
+        "second_forward_s": 0.037567000021226704,
+        "exact": true
+      },
+      "a_resumed": {
+        "pageins": 40712,
+        "resident_size": 88604672,
+        "phys_footprint": 1435913280,
+        "diskio_bytesread": 1328062464,
+        "diskio_byteswritten": 8192
+      },
+      "a_resume_io": {
+        "pageins": 572,
+        "diskio_bytesread": 536424448
+      },
+      "b_pass": {
+        "pass_s": 26.390098458970897,
+        "checksum": 33371185
+      },
+      "b_after": {
+        "pageins": 151,
+        "resident_size": 308445184,
+        "phys_footprint": 4318258240,
+        "diskio_bytesread": 4290498560,
+        "diskio_byteswritten": 0
+      },
+      "repeat": 4,
+      "wall_s": 44.06558708404191
+    }
+  ]
+}

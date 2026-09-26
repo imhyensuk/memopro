@@ -16,6 +16,8 @@ over all arms. Usage:
 
   .venv/bin/python -m experiments.e011_os_swap.run --repeats 5
   .venv/bin/python -m experiments.e011_os_swap.run --pilot   # 1 repeat, cpu/anon, 1 GiB; not judged
+  .venv/bin/python -m experiments.e011_os_swap.run --redo 13-16,22-25   # re-run trials of
+      results.json (same conditions, arms and P) into redo.json; see data/e011/amendment_sleep.md
 """
 
 from __future__ import annotations
@@ -145,7 +147,11 @@ def main() -> None:
     parser.add_argument("--settle", type=float, default=5.0)
     parser.add_argument("--rest", type=float, default=15.0, help="pause between trials")
     parser.add_argument("--pilot", action="store_true")
+    parser.add_argument("--redo", default=None, help="trial indices of results.json, e.g. 13-16")
     args = parser.parse_args()
+    if args.redo:
+        redo(args)
+        return
     if args.pilot:
         args.repeats, args.pressure = 1, str(1 << 30)
     conditions = CONDITIONS[1:2] if args.pilot else CONDITIONS
@@ -167,13 +173,14 @@ def main() -> None:
         for c_i, (device, backing, arms) in enumerate(conditions):
             k = (rep + c_i) % len(arms)
             for arm in arms[k:] + arms[:k]:
-                t0 = time.perf_counter()
+                t0, clock = time.perf_counter(), time.time()
                 try:
                     rec = trial(device, backing, arm, pressure, args.settle)
                 except Exception as e:  # noqa: BLE001 - keep the run going, record the failure
                     rec = {"device": device, "backing": backing, "arm": arm, "error": repr(e)}
                 rec["repeat"] = rep
                 rec["wall_s"] = time.perf_counter() - t0
+                rec["clock"] = [clock, time.time()]  # wall-clock start/end (sleep shows here)
                 trials.append(rec)
                 save_json({"pressure_bytes": pressure, "trials": trials}, OUT / f"{name}.json")
                 brief = {
@@ -185,6 +192,46 @@ def main() -> None:
                     flush=True,
                 )
                 time.sleep(args.rest)
+
+
+def redo(args: argparse.Namespace) -> None:
+    source = json.loads((OUT / "results.json").read_text())
+    indices = []
+    for part in args.redo.split(","):
+        low, _, high = part.partition("-")
+        indices += range(int(low), int(high or low) + 1)
+    pressure = source["pressure_bytes"]
+    save_json(
+        capture(__file__, extra={"argv": sys.argv, "pressure_bytes": pressure, "redo": indices}),
+        OUT / "env_redo.json",
+    )
+    trials = []
+    for i in indices:
+        old = source["trials"][i]
+        t0, clock = time.perf_counter(), time.time()
+        try:
+            rec = trial(old["device"], old["backing"], old["arm"], pressure, args.settle)
+        except Exception as e:  # noqa: BLE001 - keep the run going, record the failure
+            rec = {
+                "device": old["device"],
+                "backing": old["backing"],
+                "arm": old["arm"],
+                "error": repr(e),
+            }
+        rec.update(
+            repeat=old["repeat"],
+            replaces=i,
+            wall_s=time.perf_counter() - t0,
+            clock=[clock, time.time()],
+        )
+        trials.append(rec)
+        save_json({"pressure_bytes": pressure, "trials": trials}, OUT / "redo.json")
+        print(
+            f"redo {i} {old['device']}/{old['backing']} {old['arm']:14} "
+            f"{rec.get('resume', {}).get('resume_s')} {rec.get('error', '')}",
+            flush=True,
+        )
+        time.sleep(args.rest)
 
 
 if __name__ == "__main__":

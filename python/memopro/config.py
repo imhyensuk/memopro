@@ -1,19 +1,22 @@
-"""Configuration: defaults < memopro.toml < MEMOPRO_* environment < memopro.configure().
+"""Configuration: defaults < memopro.toml < MEMOPRO_* < configure() < using() < per-call options.
 
 Nothing is read at import time (0032 I4). Every `get_config()` call resolves the layers again, so
 a change to the environment or the file is picked up without restarting.
 
 The file is `$MEMOPRO_CONFIG` if set, otherwise `./memopro.toml` if it exists. Keys sit at the top
-level of the file and use the same names as `configure()`.
+level of the file and use the same names as `configure()`; a per-pool budget is a ``[budget]``
+table. ``with using(...)`` changes settings inside one block only (0059 D5).
 """
 
 from __future__ import annotations
 
+import contextlib
 import dataclasses
 import os
 import sys
 import tomllib
-from collections.abc import Mapping
+from collections.abc import Iterator, Mapping
+from contextvars import ContextVar
 from dataclasses import dataclass
 from pathlib import Path
 from typing import Any
@@ -25,24 +28,51 @@ from memopro._units import parse_size
 QUALITIES = ("lossless", "high", "balanced", "low")
 PREFERENCES = ("speed", "quality", "memory")
 DISK_WRITES = ("ask", "never", "allow")
+# What the measured host budget starts from (0059 D3); only "conservative" never needs swap
+BUDGET_BASES = ("conservative", "os", "total")
+POOLS = ("device", "host", "disk")
 # Write-free hibernation methods that `mode="auto"` may pick, in order (0032 H1). `bf16` is lossy
 # and only ever explicit; `spill` writes to disk and is governed by `disk_writes` instead.
 AUTO_MODES = ("source", "host", "compress")
 
 
 @dataclass(frozen=True)
-class PoolBudget:
-    """Explicit caps per pool (0052 E3); None leaves that pool to the measured budget."""
+class Limit:
+    """A pool budget beyond a plain size or fraction (0059 D1).
 
-    device: int | None = None
-    host: int | None = None
+    ``use`` is "auto", a size in bytes or a fraction of the measured budget. ``reserve`` leaves that
+    many bytes of the measured budget unused ("-2GB"). ``force`` takes the size ``use`` as it is,
+    even above what is measured ("6GB!"). ``maximum`` caps the result; below ``minimum`` memopro
+    stops with `BudgetExceeded` instead of trying ever smaller configurations ("2GB..6GB").
+    """
+
+    use: str | int | float = "auto"
+    reserve: int = 0
+    force: bool = False
+    minimum: int | None = None
+    maximum: int | None = None
+
+
+# One pool's setting: "auto", bytes (a cap), a fraction of the measured budget, or a Limit
+PoolValue = str | int | float | Limit
+
+
+@dataclass(frozen=True)
+class PoolBudget:
+    """Settings per pool (0052 E3, 0059 D2); None leaves that pool to the measured budget."""
+
+    device: PoolValue | None = None
+    host: PoolValue | None = None
+    disk: PoolValue | None = None
 
 
 @dataclass(frozen=True)
 class Config:
-    # "auto"; bytes (caps device and host); a fraction of the measured budget; or per pool
-    budget: str | int | float | PoolBudget = "auto"
-    headroom: float = 0.10  # fraction of usable memory never budgeted (U3 prevention, 0035)
+    # one pool value for device and host (see PoolValue), or settings per pool
+    budget: PoolValue | PoolBudget = "auto"
+    budget_basis: str = "conservative"
+    # never budgeted (U3 prevention, 0035): a fraction of the measured memory, or bytes (0059 D4)
+    headroom: float = 0.10
     quality: str = "balanced"
     prefer: str = "speed"
     hibernate_modes: tuple[str, ...] = AUTO_MODES
@@ -56,6 +86,7 @@ class Config:
 
 _FIELDS = {f.name for f in dataclasses.fields(Config)}
 _overrides: dict[str, Any] = {}
+_scoped: ContextVar[tuple[dict[str, Any], ...]] = ContextVar("memopro_settings", default=())
 
 
 def _choice(key: str, value: Any, choices: tuple[str, ...]) -> str:
@@ -78,23 +109,8 @@ def _modes(value: Any) -> tuple[str, ...]:
     return modes
 
 
-def _budget(value: Any) -> str | int | float | PoolBudget:
-    """Parse a budget: "auto", a size ("6GB", bytes), a fraction of the measured budget (0.5,
-    "50%") or caps per pool ({"device": "4GB", "host": "6GB"} or "device=4GB,host=6GB")."""
-    if value == "auto":
-        return "auto"
-    if isinstance(value, PoolBudget):
-        return value
-    if isinstance(value, str) and "=" in value:
-        value = dict(item.split("=", 1) for item in value.split(",") if item.strip())
-    if isinstance(value, Mapping):
-        unknown = set(value) - {"device", "host"}
-        if unknown:
-            raise InvalidArgument(f"budget pools are device and host; got {sorted(unknown)}")
-        caps = {
-            k.strip(): parse_size(v.strip() if isinstance(v, str) else v) for k, v in value.items()
-        }
-        return PoolBudget(device=caps.get("device"), host=caps.get("host"))
+def _fraction(value: Any) -> float | None:
+    """0.5, "0.5" or "50%" as a fraction in (0, 1]; None if ``value`` is not written as one."""
     fraction = None
     if isinstance(value, float):
         fraction = value
@@ -102,11 +118,105 @@ def _budget(value: Any) -> str | int | float | PoolBudget:
         fraction = float(value.strip()[:-1]) / 100
     elif isinstance(value, str) and "." in value and value.strip().replace(".", "", 1).isdigit():
         fraction = float(value)
+    if fraction is not None and not 0.0 < fraction <= 1.0:
+        raise InvalidArgument(f"a budget fraction must be in (0, 1]; got {value!r}")
+    return fraction
+
+
+def _optional_size(text: str) -> int | None:
+    return parse_size(text.strip()) if text.strip() else None
+
+
+def _simple(limit: Limit) -> PoolValue:
+    """A Limit that only says ``use`` is that plain value (keeps old settings comparable)."""
+    if limit == Limit(use=limit.use):
+        return limit.use
+    return limit
+
+
+def _pool_value(value: Any) -> PoolValue:
+    """Parse one pool's budget (0059 D1): "auto", "6GB", 0.5 / "50%", "-2GB" (leave 2GB free),
+    "6GB!" (exactly 6GB, even above what is measured), "2GB..6GB" (at least / at most), or a
+    mapping {"use": ..., "min": ..., "max": ...}."""
+    if isinstance(value, Limit):
+        return _simple(value)
+    if isinstance(value, Mapping):
+        unknown = set(value) - {"use", "min", "max"}
+        if unknown:
+            raise InvalidArgument(f"a pool budget takes use, min and max; got {sorted(unknown)}")
+        base = _pool_value(value.get("use", "auto"))
+        if isinstance(base, Limit) and (base.minimum is not None or base.maximum is not None):
+            raise InvalidArgument("use cannot be a range; give min and max instead")
+        limit = base if isinstance(base, Limit) else Limit(use=base)
+        bounds = {k: value[k] for k in ("min", "max") if k in value}
+        limit = dataclasses.replace(
+            limit,
+            minimum=parse_size(bounds["min"]) if "min" in bounds else None,
+            maximum=parse_size(bounds["max"]) if "max" in bounds else None,
+        )
+        return _checked(limit)
+    if value == "auto":
+        return "auto"
+    if isinstance(value, str):
+        text = value.strip()
+        if ".." in text:
+            low, high = (_optional_size(part) for part in text.split("..", 1))
+            if low is None and high is None:
+                raise InvalidArgument("a budget range needs a minimum, a maximum or both: 2GB..6GB")
+            return _checked(Limit(minimum=low, maximum=high))
+        if text.startswith("-"):
+            return Limit(reserve=parse_size(text[1:]))
+        if text.endswith("!"):
+            return Limit(use=parse_size(text[:-1]), force=True)
+    fraction = _fraction(value)
     if fraction is not None:
-        if not 0.0 < fraction <= 1.0:
-            raise InvalidArgument(f"a budget fraction must be in (0, 1]; got {value!r}")
         return fraction
     return parse_size(value)
+
+
+def _checked(limit: Limit) -> PoolValue:
+    if limit.minimum is not None and limit.maximum is not None and limit.minimum > limit.maximum:
+        raise InvalidArgument(
+            f"budget minimum {limit.minimum} is larger than the maximum {limit.maximum}"
+        )
+    return _simple(limit)
+
+
+def _budget(value: Any) -> PoolValue | PoolBudget:
+    """Parse a budget: one pool value for device and host (see `_pool_value`), or settings per
+    pool ({"device": "80%", "host": "-2GB", "disk": "20GB"} or "device=80%,host=-2GB")."""
+    if isinstance(value, PoolBudget):
+        return value
+    if isinstance(value, str) and "=" in value:
+        value = dict(item.split("=", 1) for item in value.split(",") if item.strip())
+        value = {k.strip(): v.strip() for k, v in value.items()}
+    if isinstance(value, Mapping) and not set(value) & {"use", "min", "max"}:
+        unknown = set(value) - set(POOLS)
+        if unknown:
+            raise InvalidArgument(f"budget pools are {', '.join(POOLS)}; got {sorted(unknown)}")
+        return PoolBudget(**{k: _pool_value(v) for k, v in value.items()})
+    return _pool_value(value)
+
+
+def _headroom(value: Any) -> float | int:
+    """A fraction (0.1, "10%") or a size ("1GB", or an integer number of bytes >= 1)."""
+    if isinstance(value, bool):
+        raise InvalidArgument(f"headroom must be a fraction or a size; got {value!r}")
+    if isinstance(value, str):
+        text = value.strip()
+        if text.endswith("%"):
+            fraction = float(text[:-1]) / 100
+        elif any(c.isalpha() for c in text):
+            return parse_size(text)
+        else:
+            fraction = float(text)
+    elif isinstance(value, int) and value >= 1:
+        return value
+    else:
+        fraction = float(value)
+    if not 0.0 <= fraction < 0.9:
+        raise InvalidArgument(f"headroom must be in [0, 0.9) or a size; got {value!r}")
+    return fraction
 
 
 def _validate(key: str, value: Any) -> Any:
@@ -115,6 +225,8 @@ def _validate(key: str, value: Any) -> Any:
     match key:
         case "budget":
             return _budget(value)
+        case "budget_basis":
+            return _choice(key, value, BUDGET_BASES)
         case "quality":
             return _choice(key, value, QUALITIES)
         case "prefer":
@@ -126,10 +238,7 @@ def _validate(key: str, value: Any) -> Any:
         case "daily_write_limit":
             return None if value in (None, "", "auto") else parse_size(value)
         case "headroom":
-            fraction = float(value)
-            if not 0.0 <= fraction < 0.9:
-                raise InvalidArgument(f"headroom must be in [0, 0.9); got {value!r}")
-            return fraction
+            return _headroom(value)
         case "min_free_disk_fraction":
             fraction = float(value)
             if not 0.0 <= fraction < 1.0:
@@ -206,6 +315,8 @@ def get_config() -> Config:
     merged.update(_file_layer())
     merged.update(_env_layer())
     merged.update(_overrides)
+    for layer in _scoped.get():
+        merged.update(layer)
     return Config(**merged)
 
 
@@ -216,6 +327,20 @@ def configure(**settings: Any) -> Config:
     """
     _overrides.update(_layer("configure()", settings))
     return get_config()
+
+
+@contextlib.contextmanager
+def using(**settings: Any) -> Iterator[Config]:
+    """Change settings inside one ``with`` block only (0059 D5); above `configure()`.
+
+    Example: ``with memopro.using(budget="3GB", quality="high"): model = memopro.load(...)``.
+    Each thread and asyncio task sees its own blocks (contextvars).
+    """
+    token = _scoped.set((*_scoped.get(), _layer("using()", settings)))
+    try:
+        yield get_config()
+    finally:
+        _scoped.reset(token)
 
 
 def reset_config() -> None:

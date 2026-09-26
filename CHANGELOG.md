@@ -4,6 +4,15 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Added: budget forms (0059)
+- Per pool (device, host and now disk): `"-2GB"` leaves memory free, `"2GB..6GB"` caps and stops
+  with `BudgetExceeded` below the minimum, `"6GB!"` forces an exact size above what is measured,
+  `{"use": ..., "min": ..., "max": ...}` combines them; `"device=80%,host=-2GB,disk=20GB"` and a
+  `[budget]` table in `memopro.toml`. The disk cap applies to disk offload and `spill`.
+- `budget_basis`: `"conservative"` (default), `"os"` or `"total"`; `headroom` as a size.
+- `memopro.using(**settings)`: settings for one `with` block (per thread and task).
+- `memopro doctor --budget --budget-basis`; `--budget-basis` for `check` and `run`.
+
 ### Added: v0.2 access layer (0052, 0053)
 - `memopro.load(model_id)`: sizes the model from metadata (no download), picks the first
   configuration that fits (as stored, half precision, int8/int4 with bitsandbytes or torchao, CPU
