@@ -44,6 +44,7 @@ def setup(*, device: str | None = None, **options: Any) -> Setup:
     cfg = settings(**options)
     env = detect(config=cfg)
     budget = compute_budget(env, cfg)
+    _require_minimums(budget, cfg)
     budget = _under_pressure(budget)
     kinds = [d.kind for d in env.devices]
     if device == "cpu":
@@ -63,8 +64,28 @@ def setup(*, device: str | None = None, **options: Any) -> Setup:
     return Setup(cfg, env, budget, device, half)
 
 
+def _require_minimums(budget: Budget, cfg: Config) -> None:
+    """Stop when a pool is below the minimum the budget setting asks for (0059 D1)."""
+    if not budget.shortfalls:
+        return
+    from memopro._errors import BudgetExceeded
+    from memopro._units import format_size
+    from memopro.orchestrator.budget import describe_setting
+
+    short = "; ".join(
+        f"{s.pool} has {format_size(s.available)}, needs at least {format_size(s.required)}"
+        for s in budget.shortfalls
+    )
+    raise BudgetExceeded(
+        f"the budget setting ({describe_setting(cfg.budget)}) asks for more than is available: "
+        f"{short}. Free memory, lower the minimum, or choose budget_basis='os' to count memory "
+        "the OS can reclaim by compressing or swapping"
+    )
+
+
 def _under_pressure(budget: Budget) -> Budget:
-    """Shrink the budget while the OS reports memory pressure (γ, 0052 E6)."""
+    """Shrink the budget while the OS reports memory pressure (γ, 0052 E6); forced pools keep
+    the exact size the user asked for (0059 D1)."""
     try:
         from memopro.elastic import budget_factor
     except ImportError:
@@ -72,8 +93,8 @@ def _under_pressure(budget: Budget) -> Budget:
     factor = budget_factor()
     if factor >= 1.0:
         return budget
-    return dataclasses.replace(
-        budget,
-        host=int(budget.host * factor),
-        device=None if budget.device is None else int(budget.device * factor),
-    )
+    host = budget.host if "host" in budget.forced else int(budget.host * factor)
+    device = budget.device
+    if device is not None and "device" not in budget.forced:
+        device = int(device * factor)
+    return dataclasses.replace(budget, host=host, device=device)

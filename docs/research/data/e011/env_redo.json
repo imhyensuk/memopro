@@ -1,0 +1,79 @@
+{
+  "timestamp_utc": "2026-09-26T13:49:37+00:00",
+  "os": {
+    "system": "Darwin",
+    "release": "25.6.0",
+    "mac_ver": "26.6.2"
+  },
+  "hardware": {
+    "machine": "arm64",
+    "page_size": 16384,
+    "cpu": "Apple M1",
+    "ram_bytes": 8589934592,
+    "model": "MacBookAir10,1",
+    "logical_cpus": 8
+  },
+  "python": {
+    "version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
+    "implementation": "CPython",
+    "gil_enabled": true
+  },
+  "packages": {
+    "memopro": "0.1.0a1",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "datasets": "5.0.1",
+    "tokenizers": "0.23.2",
+    "safetensors": "0.8.0",
+    "numpy": "2.5.3",
+    "zstandard": "0.25.0",
+    "lz4": "4.4.5",
+    "matplotlib": "3.11.2",
+    "ipython": "9.17.1"
+  },
+  "torch": {
+    "available": true,
+    "num_threads": 4,
+    "cuda": false,
+    "mps": true,
+    "mps_recommended_max_memory": 5726633984
+  },
+  "git": {
+    "commit": "139726e24f8d56d045412d7029dd0799d7fa8bbf",
+    "branch": "e011-budget",
+    "dirty": true
+  },
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "script": {
+    "path": "experiments/e011_os_swap/run.py",
+    "sha256": "1abe36aeaab16fd6e478f2e428eaae8452835ec43e066ed81940a8a3ef543309"
+  },
+  "modules_sha256": {
+    "experiments/_harness/env.py": "c92732b420e676362a2685b3b18103e250d14c0d77600075739023fb9da8cbe6",
+    "experiments/e011_os_swap/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "experiments/e011_os_swap/analyze.py": "b34631aa620060d94c9ae5c9c1c5a348f2c12c86a017150df5f875f4fa0114ef",
+    "experiments/e011_os_swap/common.py": "3a1c8ab2bbc3f0b1fb1f4b85342739f65ffab33f4bea1bcd4c036335f80fa76f",
+    "experiments/e011_os_swap/holder.py": "f976f2cb59d2290253244dd93559e1e4a0e9f50ca4b5849644668423dbe6d3bf",
+    "experiments/e011_os_swap/pressure.py": "2d54c23692a1cdbca75311622e31b236ff802504f1cddd7274e763652671ad75",
+    "experiments/e011_os_swap/ratio.py": "14d863c5693d9f91eb8eed3d8049a38505b397af61a32f5de3bbee5a46621b41",
+    "experiments/e011_os_swap/run.py": "1abe36aeaab16fd6e478f2e428eaae8452835ec43e066ed81940a8a3ef543309"
+  },
+  "extra": {
+    "argv": [
+      "/Users/imhyeonseok/Desktop/memopro/experiments/e011_os_swap/run.py",
+      "--redo",
+      "13-16,22-25"
+    ],
+    "pressure_bytes": 4294967296,
+    "redo": [
+      13,
+      14,
+      15,
+      16,
+      22,
+      23,
+      24,
+      25
+    ]
+  }
+}
