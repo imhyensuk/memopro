@@ -385,17 +385,18 @@ class TrainSession:
             except Exception as e:
                 if not is_oom(e):
                     raise
-                self.optimizer.zero_grad(set_to_none=True)
-                del e
-                _release()
-                self.retries += 1
-                if not self.degrade("out of memory"):
-                    raise BudgetExceeded(
-                        "training does not fit even with micro-batch 1, checkpointing"
-                        + (" and activation offload" if self.device == "cuda" else "")
-                        + ": consider an 8-bit optimizer (numerics change) or LoRA (changes what "
-                        "is trained); memopro suggests them but does not switch them for you"
-                    ) from None
+            # outside the except block: the exception and the failed attempt's tensors (held by
+            # its traceback) are gone, so releasing caches really returns that memory (0054)
+            self.optimizer.zero_grad(set_to_none=True)
+            _release()
+            self.retries += 1
+            if not self.degrade("out of memory"):
+                raise BudgetExceeded(
+                    "training does not fit even with micro-batch 1, checkpointing"
+                    + (" and activation offload" if self.device == "cuda" else "")
+                    + ": consider an 8-bit optimizer (numerics change) or LoRA (changes what "
+                    "is trained); memopro suggests them but does not switch them for you"
+                ) from None
 
     def _step_once(self, batch: Any, loss_fn: Callable[[Any], Any], n: int) -> float:
         self.optimizer.zero_grad(set_to_none=True)
