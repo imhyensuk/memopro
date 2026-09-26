@@ -163,8 +163,36 @@ pub fn disk(path: &Path) -> Result<DiskInfo> {
     })
 }
 
+/// Capacity of the file system that holds `path` (which must exist): `GetDiskFreeSpaceExW`.
+/// "Available" is what the calling user may use (quotas included), like `statvfs`'s `f_bavail`.
+#[cfg(windows)]
+pub fn disk(path: &Path) -> Result<DiskInfo> {
+    use std::os::windows::ffi::OsStrExt;
+    use windows_sys::Win32::Storage::FileSystem::GetDiskFreeSpaceExW;
+
+    if !path.exists() {
+        return Err(std::io::Error::new(
+            std::io::ErrorKind::NotFound,
+            format!("no such path: {path:?}"),
+        )
+        .into());
+    }
+    let wide: Vec<u16> = path.as_os_str().encode_wide().chain(Some(0)).collect();
+    let (mut available, mut total, mut free) = (0u64, 0u64, 0u64);
+    // SAFETY: `wide` is NUL-terminated and the three out-pointers are valid for writes.
+    let ok = unsafe { GetDiskFreeSpaceExW(wide.as_ptr(), &mut available, &mut total, &mut free) };
+    if ok == 0 {
+        return Err(std::io::Error::last_os_error().into());
+    }
+    Ok(DiskInfo {
+        path: path.to_path_buf(),
+        total_bytes: total,
+        available_bytes: available,
+    })
+}
+
 /// Capacity of the file system that holds `path` (not implemented on this platform yet).
-#[cfg(not(unix))]
+#[cfg(not(any(unix, windows)))]
 pub fn disk(_path: &Path) -> Result<DiskInfo> {
     Err(Error::not_implemented("hwinfo::disk on this OS", "v0.1.x"))
 }
