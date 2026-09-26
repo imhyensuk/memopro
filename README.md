@@ -13,7 +13,7 @@
 - v0.1: doctor, census, β hibernate(방법 5종, 노트북 통합), HF·Lightning 콜백. Linux(CI, 메모리 제한 컨테이너), macOS, 실제 NVIDIA GPU(Colab T4)에서 검증했다.
 - v0.2: `load`, `check`, `optimize`, `train_session`, census 정밀 모드([0053](docs/research/0053-build-v02-v03.md)).
 - v0.3: OS 메모리 압박 신호, γ, `memopro run`.
-- v0.2·v0.3은 로컬(CPU·MPS)에서 검증했다. CUDA 검증(Colab 4차), γ 효과 측정(E013), E009~E011은 남아 있다.
+- v0.2·v0.3은 로컬(CPU·MPS)과 Colab T4에서 검증했다([0054](docs/research/0054-colab-run4-access.md)): 7B 모델 int8 로드, 제한된 장치에서 정확한 학습. **`check`의 ±15% 목표는 4차에서 미달**(작은 배치 학습 과소 예측, 수정 후 5차 대기). γ 효과 측정(E013), E009~E011은 남아 있다.
 - 배포 후 설치: `pip install --pre "memopro[torch]"`.
 
 ---
@@ -167,7 +167,7 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 - census의 필요 비트는 복원 오차 기준이다(학습 영향 기준은 v0.2). 권고 임계값은 휴리스틱이다.
 - β 수요(E010), 압축 방출(E009), OS 스왑 대비 이득(E011)은 배포 전 검증 과제이다(0036). 그 전까지 OS 대비 우위는 주장하지 않는다.
 - `train_session`의 마이크로배치는 모든 표본이 손실에서 같은 무게일 때 정확하다(`reduction="mean"` 또는 `"sum"`). 길이가 다른 패딩 표본의 토큰 평균과 BatchNorm은 근사가 된다(일반 그래디언트 누적과 같음). CPU·통합 메모리에서는 메모리 부족이 예외가 아니라 스왑으로 나타날 수 있어, 첫 표본을 측정해 미리 계획한다.
-- `check`·`train_session` 계획은 torch 내부 도구(`MemTracker`, `FakeTensorMode`)를 쓴다. 없으면 가중치만 예측하고 재시도로만 대응한다. `check`의 ±15% 정확도는 CUDA에서 확인 전이다.
+- `check`·`train_session` 계획은 torch 내부 도구(`MemTracker`, `FakeTensorMode`)를 쓴다. 없으면 가중치만 예측하고 재시도로만 대응한다. `check`는 T4에서 추론 ±5%였지만 작은 배치 학습을 최대 22% 과소 예측했다(0054, 5차에서 재확인).
 - γ의 수준 기준(PSI 문턱값, 예산 계수 경고 ×0.5·위험 ×0.25)은 초기값이다. 8GB Mac에서는 "경고"가 상시일 수 있어 보정이 필요하다(E013). `memopro run`의 로딩 정책은 transformers `from_pretrained`에만 적용한다.
 - 만들지 않은 연동: KV 캐시 양자화, Diffusers·TRL. Windows는 CI에서만 확인한다.
 

@@ -1,0 +1,214 @@
+{
+  "_source": "examples/colab_cuda_access.ipynb (run 4) run by the user on Google Colab (Tesla T4), 2026-09-26, memopro 0.1.0a1 wheel cross-built from 51e9034 (SHA-256 e36c0da8c63270251f45dd601d6cc9ec2a8d0e5f7708909988b6818485ccba67); JSON pasted verbatim (whitespace reformatted)",
+  "memopro": "0.1.0a1",
+  "python": "3.13.15",
+  "torch": "2.11.0+cu128",
+  "transformers": "5.16.1",
+  "accelerate": "1.14.0",
+  "wheel": "memopro-0.1.0a1-cp311-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+  "access_0054": true,
+  "cuda": true,
+  "gpu": "Tesla T4",
+  "bitsandbytes": "0.50.2",
+  "pressure": {
+    "reading": {
+      "level": "normal",
+      "source": "system",
+      "some_avg10": 0.0,
+      "full_avg10": 0.0,
+      "raw_level": null
+    }
+  },
+  "check_accuracy": {
+    "cases": [
+      {
+        "model": "gpt2",
+        "goal": "infer",
+        "batch": 1,
+        "seq": 1024,
+        "predicted": 832603136,
+        "measured": 792631808,
+        "rel_error": 0.0504,
+        "within_15pct": true,
+        "check_said_fits": null,
+        "accelerate": 497759232,
+        "accelerate_rel_error": -0.372
+      },
+      {
+        "model": "gpt2",
+        "goal": "train",
+        "batch": 2,
+        "seq": 512,
+        "predicted": 2581250560,
+        "measured": 3309524480,
+        "rel_error": -0.2201,
+        "within_15pct": false,
+        "check_said_fits": true,
+        "accelerate": 1991036928,
+        "accelerate_rel_error": -0.3984
+      },
+      {
+        "model": "gpt2",
+        "goal": "train",
+        "batch": 8,
+        "seq": 512,
+        "predicted": 9423882240,
+        "measured": 8649762304,
+        "rel_error": 0.0895,
+        "within_15pct": true,
+        "check_said_fits": true,
+        "accelerate": 1991036928,
+        "accelerate_rel_error": -0.7698
+      },
+      {
+        "model": "gpt2-medium",
+        "goal": "infer",
+        "batch": 1,
+        "seq": 1024,
+        "predicted": 1931345920,
+        "measured": 1849811456,
+        "rel_error": 0.0441,
+        "within_15pct": true,
+        "check_said_fits": null,
+        "accelerate": 1419292672,
+        "accelerate_rel_error": -0.2327
+      },
+      {
+        "model": "gpt2-medium",
+        "goal": "train",
+        "batch": 1,
+        "seq": 512,
+        "predicted": 6292619776,
+        "measured": 7115604480,
+        "rel_error": -0.1157,
+        "within_15pct": true,
+        "check_said_fits": true,
+        "accelerate": 5677170688,
+        "accelerate_rel_error": -0.2022
+      },
+      {
+        "model": "gpt2-medium",
+        "goal": "train",
+        "batch": 2,
+        "seq": 512,
+        "predicted": 6496213504,
+        "measured": 7976228352,
+        "rel_error": -0.1856,
+        "within_15pct": false,
+        "check_said_fits": true,
+        "accelerate": 5677170688,
+        "accelerate_rel_error": -0.2882
+      }
+    ],
+    "all_within_15pct": false,
+    "measured_cases": 6
+  },
+  "train_capped": {
+    "sgd": {
+      "plain_peak": 4032189952,
+      "cap_fraction": 0.1676,
+      "plain_step_under_cap": "oom",
+      "session": {
+        "micro": 2,
+        "retries": 2,
+        "active": [
+          "micro-batch 2"
+        ],
+        "seconds": 2.3
+      },
+      "param_rel_diff": 1.5818218912500015e-07
+    },
+    "adamw": {
+      "plain_peak": 5533096448,
+      "cap_fraction": 0.23,
+      "plain_step_under_cap": "oom",
+      "session": {
+        "micro": 2,
+        "retries": 2,
+        "active": [
+          "micro-batch 2"
+        ],
+        "seconds": 2.2
+      },
+      "param_rel_diff": 2.0590368876582943e-05
+    },
+    "pass": true
+  },
+  "baseline_batch_finder": {
+    "tries": [
+      8,
+      7,
+      6,
+      5,
+      4
+    ],
+    "final_batch": 4,
+    "seconds": 2.4,
+    "note": "the batch shrinks: the effective batch (and the result) changes"
+  },
+  "load_small": {
+    "stored": {
+      "chosen": "load.stored",
+      "as_expected": true,
+      "layers": [
+        "Linear"
+      ],
+      "text": "The memory of a GPU is a very important part of the design o",
+      "allocated": 517959680,
+      "budget": null
+    },
+    "half": {
+      "chosen": "load.half",
+      "as_expected": true,
+      "layers": [
+        "Linear"
+      ],
+      "text": "The memory of a GPU is a very important part of the design o",
+      "allocated": 268680192,
+      "budget": 345982694
+    },
+    "quant.int8": {
+      "chosen": "load.quant.int8",
+      "as_expected": true,
+      "layers": [
+        "Linear",
+        "Linear8bitLt"
+      ],
+      "text": "The memory of a GPU is a very important part of the design o",
+      "allocated": 184077312,
+      "budget": 259612554
+    },
+    "quant.int4": {
+      "chosen": "load.quant.int4",
+      "as_expected": true,
+      "layers": [
+        "Linear",
+        "Linear4bit"
+      ],
+      "text": "The memory of a GPU is a memory that is used to store data",
+      "allocated": 146211328,
+      "budget": 221447255
+    },
+    "pass": true
+  },
+  "activation_offload": {
+    "active": [
+      "micro-batch 1",
+      "checkpointing",
+      "activation_offload"
+    ],
+    "param_rel_diff": 2.436522663629148e-07,
+    "pass": true
+  },
+  "load_7b": {
+    "half_weights": 15231233024,
+    "device_budget": 13887583027,
+    "half_fits": false,
+    "chosen": "load.quant.int8",
+    "detail": "Qwen/Qwen2.5-7B-Instruct: quant.int8 (small_loss), estimated 9.64 GiB, weights 8.11 GiB on cuda",
+    "peak": 8972023296,
+    "pass": true,
+    "load_seconds": 721,
+    "text": "GPUs run out of memory when the amount of data they need to process exceeds the capacity of their VRAM (video random-access memory)."
+  }
+}
