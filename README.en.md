@@ -81,7 +81,7 @@ The same forms work in `configure()`, `with memopro.using(...)`, per call (`budg
 |---|---|
 | `"auto"` | the measured budget (default: memory free without compressing or swapping, minus 10%) |
 | `"6GB"` / `0.5`, `"50%"` | a cap / a fraction of the measured budget (never above it) |
-| `"-2GB"` | leave 2 GB of the measured budget for other apps |
+| `"-2GB"` | leave 2 GB of the measured budget for other apps (CLI: `--budget=-2GB`) |
 | `"2GB..6GB"`, `"3GB.."` | at most 6 GB; below 2 GB stop with `BudgetExceeded` instead of squeezing |
 | `"6GB!"` | exactly 6 GB even above what is measured (you accept swapping; a warning is shown) |
 | `{"device": "80%", "host": "-2GB", "disk": "20GB"}` | per pool; the disk cap applies to offload and `spill` |
