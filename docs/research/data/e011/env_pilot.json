@@ -1,0 +1,74 @@
+{
+  "timestamp_utc": "2026-09-26T06:59:10+00:00",
+  "os": {
+    "system": "Darwin",
+    "release": "25.6.0",
+    "mac_ver": "26.6.2"
+  },
+  "hardware": {
+    "machine": "arm64",
+    "page_size": 16384,
+    "cpu": "Apple M1",
+    "ram_bytes": 8589934592,
+    "model": "MacBookAir10,1",
+    "logical_cpus": 8
+  },
+  "python": {
+    "version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
+    "implementation": "CPython",
+    "gil_enabled": true
+  },
+  "packages": {
+    "memopro": "0.1.0a1",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "datasets": "5.0.1",
+    "tokenizers": "0.23.2",
+    "safetensors": "0.8.0",
+    "numpy": "2.5.3",
+    "zstandard": "0.25.0",
+    "lz4": "4.4.5",
+    "matplotlib": "3.11.2",
+    "ipython": "9.17.1"
+  },
+  "torch": {
+    "available": true,
+    "num_threads": 4,
+    "cuda": false,
+    "mps": true,
+    "mps_recommended_max_memory": 5726633984
+  },
+  "git": {
+    "commit": "465a440caf24fe7d55276011fe2f21c71cd4a60d",
+    "branch": "e011-budget",
+    "dirty": true
+  },
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "script": {
+    "path": "experiments/e011_os_swap/run.py",
+    "sha256": "e2250e28b5ce8294c22453e5895284b58dfa1f128d0f953c856756966edc46af"
+  },
+  "modules_sha256": {
+    "experiments/_harness/env.py": "c92732b420e676362a2685b3b18103e250d14c0d77600075739023fb9da8cbe6",
+    "experiments/e011_os_swap/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "experiments/e011_os_swap/common.py": "96abd1470346e9b5549119ce0b962b55b37243ba87e44371037d34af75d9d31c",
+    "experiments/e011_os_swap/holder.py": "51fb67b477ccd4edc3f36ac88309b1442c79135ab11bfdcd50f6515d1ae5d6b1",
+    "experiments/e011_os_swap/pressure.py": "aab3787fe78ac4e90760dce23b3844c3e46cd49c264ee3861dcf4efb65b74a38",
+    "experiments/e011_os_swap/ratio.py": "76f26ba530c5c2fbbfeb58ad92005d2c12e7a8369e33fa1b072846201478ae45",
+    "experiments/e011_os_swap/run.py": "e2250e28b5ce8294c22453e5895284b58dfa1f128d0f953c856756966edc46af"
+  },
+  "extra": {
+    "argv": [
+      "/Users/imhyeonseok/Desktop/memopro/experiments/e011_os_swap/run.py",
+      "--pilot",
+      "--rest",
+      "5"
+    ],
+    "pressure_bytes": 1073741824,
+    "host_at_start": {
+      "available": 1477328896,
+      "kernel_available": 2331115520,
+      "swap_used": 5765332992
+    }
+  }
+}
