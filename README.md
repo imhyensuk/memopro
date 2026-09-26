@@ -2,14 +2,19 @@
 
 > **노트북과 학습 중에 잠든 메모리를 되찾고, 낭비되는 메모리를 보여 준다.**
 > PyTorch 개발자를 위한 메모리 회수·진단 라이브러리 (Rust + Python). 불러온 모델은 SSD에 쓰지 않고 원본에서 복원하며, 모든 절감량은 실측으로 보고한다.
-> 이후 버전(v0.2~)에서는 내 기기의 실제 가용 메모리에 맞춰 모델을 불러오고 학습하는 편의 기능을 더한다.
+> 내 기기의 실제 가용 메모리에 맞춰 모델을 불러오고(`load`) 학습을 맞추며(`train_session`), OS 메모리 압박에 대응하고(γ), 코드 수정 없이 실행한다(`memopro run`).
 
 - **Python** (PyPI `memopro`): PyTorch 개발자를 위한 한 줄 인터페이스
 - **Rust** (crates.io `memopro`): 프레임워크와 무관한 메모리 코어 (환경·예산 감지, 원본 파일 재읽기와 해시 확인, 텐서 원장, 메모리 상한이 보장된 방출)
 
 > 여기서 "메모리"는 에이전트·대화 기억(agent memory)이 아니라 GPU/RAM **하드웨어 메모리**를 뜻한다.
 
-상태: **알파 준비 (0.1.0a1, 미배포)** (2026-09-25) — doctor, census, β hibernate(방법 5종, 노트북 통합), HF·Lightning 콜백. Linux(CI, 메모리 제한 컨테이너 포함)와 macOS에서 검증했다. 실제 NVIDIA GPU 검증(Colab), E009~E011 실험은 남아 있다. 배포 후 설치: `pip install --pre "memopro[torch]"`. v0.2·v0.3 기능은 호출하면 `NotYetImplemented`가 예정 버전을 알려 준다.
+상태: **v0.1~v0.3 설계 전부 구현, 미배포 (0.1.0a1)** (2026-09-26)
+- v0.1: doctor, census, β hibernate(방법 5종, 노트북 통합), HF·Lightning 콜백. Linux(CI, 메모리 제한 컨테이너), macOS, 실제 NVIDIA GPU(Colab T4)에서 검증했다.
+- v0.2: `load`, `check`, `optimize`, `train_session`, census 정밀 모드([0053](docs/research/0053-build-v02-v03.md)).
+- v0.3: OS 메모리 압박 신호, γ, `memopro run`.
+- v0.2·v0.3은 로컬(CPU·MPS)에서 검증했다. CUDA 검증(Colab 4차), γ 효과 측정(E013), E009~E011은 남아 있다.
+- 배포 후 설치: `pip install --pre "memopro[torch]"`.
 
 ---
 
@@ -52,16 +57,36 @@ print(c.summary())            # 범주별 바이트·무손실 비율·필요 �
 - `bf16`(수치 변경)은 `--mode bf16`으로 명시할 때만 쓴다.
 - **실측 (M1 8GB, MPS, GPT-2 124M)**: 원본 재읽기로 498MB를 SSD 쓰기 없이 해제, 3회 모두 비트 단위 동일 복원, 깨우기+추론 0.42초 대 `del` 후 다시 불러오기 0.56초 ([0039](docs/research/0039-hibernate-v01.md)).
 
-**v0.2: 내 예산에 맞추기 (설계안)**
-```python
-model = memopro.optimize(model, goal="infer")          # 예산에 맞는 구성 자동 선택·적용
-with memopro.train_session(model, optimizer, batch_size=32) as s:
-    for batch in s.batches(loader):
-        s.step(model(**batch).loss)
-memopro.report()   # 무엇을 적용했고, 실측으로 얼마나 줄였고, 품질·속도는 어떻게 변했는지
+**v0.2: 내 예산에 맞추기 (동작함, 미배포)**
+```bash
+memopro check Qwen/Qwen2.5-7B-Instruct --batch-size 4 --seq-len 512   # 추론·학습 메모리 예측(할당 없음)과 memopro의 선택
 ```
+```python
+model, tok = memopro.load("Qwen/Qwen2.5-7B-Instruct", tokenizer=True)  # 예산에 맞는 첫 구성으로 불러옴
+# quality="lossless"|"high"|"balanced"(기본)|"low": 자동으로 허용할 손실의 상한 (반정밀도 < int8 < int4)
+# prefer="speed"(기본)|"quality"|"memory", budget="6GB"|0.5|{"device": "4GB"}, allow/deny=기법 이름
 
-**v0.3**: γ 탄력 런타임과 코드 수정 없는 실행 `memopro run app.py` (α 잔차 고정점 체크포인팅은 X1 실험에서 기각 — 0018)
+model = memopro.optimize(model, goal="infer")          # 이미 가진 모델: 필요한 만큼만 (반정밀도 → int8 → 오프로드)
+
+with memopro.train_session(model, optimizer) as s:     # 학습: 마이크로배치·체크포인팅·활성값 오프로드 (정확한 기법 먼저)
+    for batch in loader:
+        s.step(batch, lambda mb: model(**mb).loss)      # OOM이 나면 그 배치를 더 잘게 나눠 처음부터 다시
+
+with memopro.census.record(model, optimizer, mode="deep", probe=lambda: model(**batch).loss) as c:
+    ...                                                 # 학습에 실제로 필요한 비트: 범주별 낭비
+memopro.report()   # 무엇을 왜 골랐고, 무엇이 실패했고, 무엇을 제안하는지
+```
+- 옵티마이저 교체(8비트, CPU 오프로드)와 LoRA는 **제안만** 한다(사용자 객체를 바꾸지 않음).
+
+**v0.3: 압박 대응과 코드 수정 없는 실행 (동작함, 미배포)**
+```bash
+memopro run app.py --budget 6GB     # 스크립트 수정 없이: 들어가지 않는 from_pretrained만 예산에 맞춰, γ 감시
+memopro run --dry-run app.py        # 무엇을 할지만 보기
+```
+```python
+memopro.elastic.enable()   # OS 메모리 압박(macOS 수준, Linux PSI)을 감시. 셀 경계·학습 스텝 경계에서만 조치
+```
+(α 잔차 고정점 체크포인팅은 X1 실험에서 기각 — 0018)
 
 ## 3. 구조: 2계층
 
@@ -124,12 +149,12 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 | A1b·N1c | 저장 엔진(원본 재읽기·다이제스트, RS1~RS5, SSD 정책) → **β** (0038·0039, 0036에서 Gβ 이전 제작으로 변경) | | ✅ (CUDA 실기 미검증) |
 | N1 | **doctor + census + β** 통합, 5분 시연 노트북, 공개 시연 수치 (0040) | 🚀 v0.1.0 (crates.io + PyPI) | 개발판 완성, 배포 전 검증 대기 |
 | R2 | 메모리 센서스 연구 (census와 코드 공유, 연구 주력 후보 — 0021 Q2) | | |
-| A2 | 범용 접근: `optimize`, `train_session`, `load`, `check`, 생태계 통합 | 🚀 v0.2.0 | |
+| A2 | 범용 접근: `load`, `check`, `optimize`, `train_session`, census 정밀 모드 (0052·0053) | 🚀 v0.2.0 | ✅ 구현 (CUDA 검증 Colab 4차 대기) |
 | ~~◆ Gα → N2~~ | ~~α 등록~~ — 0018 기각으로 취소 | | ❌ |
-| ◆ Gγ → N3 | γ + pressure + `memopro run` | 🚀 v0.3.0 | |
+| ◆ Gγ → N3 | γ + pressure + `memopro run` (0051 재조사, 0053) | 🚀 v0.3.0 | ✅ 구현 (Gγ·E013은 배포 전 확인) |
 | S6 | 안정화, 문서 사이트(영어·한국어) | 🚀 v1.0.0 | |
 
-## 알려진 한계 (v0.1 개발판)
+## 알려진 한계 (개발판)
 
 - **아직 배포 전이다.** CUDA는 Colab T4에서 확인했고(0045·0046, 가드와 torch.compile은 0050), Linux 컨테이너 한도 인식은 CI에서 확인했다(0042).
 - `source` 복원은 Hugging Face `from_pretrained`로 불러온 safetensors 모델(로컬 폴더 또는 HF 캐시)과 `register_source`로 등록한 파일에서만 쓸 수 있다. 불러온 뒤 바뀐 텐서는 비트 단위 확인에서 걸러져 다른 방법으로 넘어간다. **동면 중에 원본 파일을 바꾸면 복원이 거부된다**(데이터 복구 불가, `IntegrityError`).
@@ -141,6 +166,10 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 - 회수량은 실측(RSS, MPS·CUDA 드라이버 메모리)으로 보고한다. 할당자가 페이지를 바로 돌려주지 않아 논리 크기보다 작게 나올 수 있다.
 - census의 필요 비트는 복원 오차 기준이다(학습 영향 기준은 v0.2). 권고 임계값은 휴리스틱이다.
 - β 수요(E010), 압축 방출(E009), OS 스왑 대비 이득(E011)은 배포 전 검증 과제이다(0036). 그 전까지 OS 대비 우위는 주장하지 않는다.
+- `train_session`의 마이크로배치는 모든 표본이 손실에서 같은 무게일 때 정확하다(`reduction="mean"` 또는 `"sum"`). 길이가 다른 패딩 표본의 토큰 평균과 BatchNorm은 근사가 된다(일반 그래디언트 누적과 같음). CPU·통합 메모리에서는 메모리 부족이 예외가 아니라 스왑으로 나타날 수 있어, 첫 표본을 측정해 미리 계획한다.
+- `check`·`train_session` 계획은 torch 내부 도구(`MemTracker`, `FakeTensorMode`)를 쓴다. 없으면 가중치만 예측하고 재시도로만 대응한다. `check`의 ±15% 정확도는 CUDA에서 확인 전이다.
+- γ의 수준 기준(PSI 문턱값, 예산 계수 경고 ×0.5·위험 ×0.25)은 초기값이다. 8GB Mac에서는 "경고"가 상시일 수 있어 보정이 필요하다(E013). `memopro run`의 로딩 정책은 transformers `from_pretrained`에만 적용한다.
+- 만들지 않은 연동: KV 캐시 양자화, Diffusers·TRL. Windows는 CI에서만 확인한다.
 
 ## 6. 원칙 (요약)
 

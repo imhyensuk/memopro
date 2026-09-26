@@ -1,6 +1,6 @@
 # memopro 아키텍처 설계
 
-- **버전**: 설계 v0.3.11 (2026-09-25) — v0.1 구현 반영: 정체성 유지 해제(B1), 텐서별 방법 혼합, 자동 복원 hook, 엔진·codec 확정 (0036~0040) / v0.3.10 — 보수적 가용 메모리 정의, 예산 규칙 구현 반영 (0035) / v0.3.9 — 패키지 구조를 실제 뼈대에 맞춤, 오류 계층·설정 계층·지연 import 명시 (0034) / v0.3.8 — G3 장기 과제 명시, 실험 규칙 K1~K6 원칙화 (0033) / v0.3.7 — β SSD 쓰기 최소화(원본 재읽기 우선, SSD 기본 끔)·방법 선택 인터페이스·명시 핸들, census 재정의와 정밀 경량판 v0.1 (0032) / v0.3.6 — 중복성 검사 3차 반영: census 정밀 모드 재정의, 방출 엔진의 존재 이유와 기준선 명시(0029·0030) / v0.3.5: Rust 코어 설계 규칙 RS1~RS5 채택(0027) / v0.3.4: β 방출 기본값 무압축(0025 E008 C5) / v0.3.3: α 기각(0018), β 기본 모드 변경(0019)
+- **버전**: 설계 v0.4.0 (2026-09-26) — v0.2·v0.3 구현 반영: 품질 4등급·선호 기본 speed, 메타데이터 기반 크기, `check`의 할당 없는 추적(스크립트는 `run --dry-run`), `train_session`의 OOM 재시도·옵티마이저 교체는 제안만, census 정밀 모드 정의, γ는 안전 지점에서만, `run`은 필요할 때만 개입 ([0052](../research/0052-build-v02-v03-decision.md)·[0053](../research/0053-build-v02-v03.md)) / v0.3.11 (2026-09-25) — v0.1 구현 반영: 정체성 유지 해제(B1), 텐서별 방법 혼합, 자동 복원 hook, 엔진·codec 확정 (0036~0040) / v0.3.10 — 보수적 가용 메모리 정의, 예산 규칙 구현 반영 (0035) / v0.3.9 — 패키지 구조를 실제 뼈대에 맞춤, 오류 계층·설정 계층·지연 import 명시 (0034) / v0.3.8 — G3 장기 과제 명시, 실험 규칙 K1~K6 원칙화 (0033) / v0.3.7 — β SSD 쓰기 최소화(원본 재읽기 우선, SSD 기본 끔)·방법 선택 인터페이스·명시 핸들, census 재정의와 정밀 경량판 v0.1 (0032) / v0.3.6 — 중복성 검사 3차 반영: census 정밀 모드 재정의, 방출 엔진의 존재 이유와 기준선 명시(0029·0030) / v0.3.5: Rust 코어 설계 규칙 RS1~RS5 채택(0027) / v0.3.4: β 방출 기본값 무압축(0025 E008 C5) / v0.3.3: α 기각(0018), β 기본 모드 변경(0019)
 - **이력**: v0.1 기법 모듈 중심(0008) → v0.2 범용성 2계층(0010) → v0.2.1 논리 수정(0011) → v0.3 대상·범위 조정(0012) → v0.3.1 검증 수정(0013) → v0.3.2 P1~P4 채택(0015) → v0.3.3 X1 결과 반영(0021)
 - **근거 기록**: [0006](../research/0006-novel-technique-exploration.md), [0009](../research/0009-use-case-analysis.md), [0010](../research/0010-universality-redesign.md), [0011](../research/0011-design-v02-verification.md), [0012](../research/0012-revision-v03.md), [0013](../research/0013-revision-v03-verification.md)
 
@@ -101,7 +101,8 @@ Budget = { device: 장치 메모리 예산,  host: 호스트 RAM 예산,  disk: 
 
 - 구현: `memopro.orchestrator.budget.compute_budget` (0035). 디스크에 쓸 수 있는지는 예산이 아니라 `disk_writes` 정책이 정한다.
 
-- 여유분(`headroom`) 기본값 10%(초기값, 실측으로 보정 예정). 사용자는 `budget="6GB"`로 device와 host를 함께 제한할 수 있다. 풀별 지정(`{"device": …, "host": …}`)과 비율 지정(`0.7`)은 설계만 있고 아직 구현하지 않았다(v0.2).
+- 여유분(`headroom`) 기본값 10%(초기값, 실측으로 보정 예정). 사용자는 `budget="6GB"`로 device와 host를 함께 제한할 수 있다. 풀별 지정(`{"device": …, "host": …}`, `device=4GB,host=6GB`)과 비율 지정(`0.7`, `"70%"`)도 된다(0053). 설정은 측정한 예산보다 크게 만들지 않는다.
+- γ가 켜져 있고 OS가 압박을 알리면 `load`의 예산은 경고 ×0.5, 위험 ×0.25가 된다(초기값, E013에서 보정).
 - 통합 메모리에서는 "CPU 오프로드"가 메모리를 줄이지 못한다(같은 풀). 후보 구성에서 자동으로 제외한다.
 
 ### 3.3 전략 선택: 후보 구성 목록 (0011 L5 수정 — 선형 "사다리"에서 변경)
@@ -138,10 +139,14 @@ int8과 int4처럼 서로 **대체** 관계인 기법은 같은 구성에 함께
 | 1 | 활성값 체크포인팅 | **정확** | ✅ | 기존 연동 |
 | 2 | 활성값 오프로드 (분리형 GPU 전용) | 정확 | ✅ | 기존 연동 (Unsloth 방식) |
 | ~~3~~ | ~~α 잔차 고정점 체크포인팅~~ — **0018에서 기각** (교정이 오차를 키움) | — | — | — |
-| 4 | 8비트 옵티마이저 | 수치 변경 | quality 범위 내 | 기존 연동 |
+| 4 | 8비트 옵티마이저 | 수치 변경 | ❌ 제안만 (사용자의 옵티마이저 객체를 바꾸게 되므로, 0052 E3) | 기존 연동 |
 | 5 | 마이크로배치 + 그래디언트 누적 | 정확, 단 **BatchNorm·손실 정규화 감지 시 경고** | ✅ (조건부) | 기존 연동 |
-| 6 | 옵티마이저 상태 CPU 오프로드 (분리형 GPU 전용) | 정확 | ✅ | 기존 연동 |
+| 6 | 옵티마이저 상태 CPU 오프로드 (분리형 GPU 전용) | 정확 | ❌ 제안만 (같은 이유, 0052 E3) | 기존 연동 |
 | 7 | LoRA / QLoRA 전환 | **의미 변경** | ❌ 제안만 | 기존 연동 |
+
+**구현된 학습 순서 (0053)**: 메모리가 부족하면 마이크로배치 절반 → 활성값 체크포인팅 → 활성값 오프로드(CUDA) → 혼합 정밀도(품질 허용 시, float16이면 항상 손실 스케일링). `s.step(batch, loss_fn)`은 OOM이 나면 그 배치의 그래디언트를 버리고 다음 단계로 처음부터 다시 한다. 마이크로배치는 표본 비율로 손실을 가중해 정확하다(`reduction="mean"|"sum"`).
+
+**품질 등급과 선호 (0052 E3)**: `quality`는 자동 적용할 손실의 상한이다 — `"lossless"`(정확만) < `"high"`(+반정밀도) < `"balanced"`(기본, +int8) < `"low"`(+int4). `prefer`는 남은 후보의 순서다 — `"speed"`(기본, 위 추론 표의 순서), `"quality"`(손실 없는 오프로드를 양자화보다 먼저), `"memory"`(작은 것부터). 크기는 불러오기 전에 메타데이터(safetensors 헤더, HF 메타데이터 API, config의 meta 모델)로 계산한다.
 
 **활성값 병목 (0009 관찰, 유효)**: LoRA·QLoRA 이후 남는 활성값 병목은 기존 기법 #1(체크포인팅)과 #2(오프로드)로 대응한다. α로 줄이려던 계획은 0018에서 기각되었다.
 
@@ -203,10 +208,11 @@ memopro.report()
 
 ```bash
 memopro doctor                       # [v0.1] 내 환경: 풀별 예산 벡터, 장치, 설치된 백엔드
-memopro check <모델ID 또는 스크립트>   # [v0.2] 이 PyTorch 모델이 내 예산에 들어가는가, 어떤 구성으로
-memopro run app.py --budget auto     # [v0.3] 프로세스 수준 기능(β, γ, census, 로딩 정책) 적용 후 실행
+memopro check <모델ID 또는 폴더>      # [v0.2] 추론·학습 최대 메모리 예측(할당 없는 추적)과 memopro의 선택
+memopro run app.py --budget auto     # [v0.3] 로딩 정책, γ, census(선택) 적용 후 실행. --dry-run은 계획만
 ```
-- `memopro run`은 `from_pretrained` 로딩 정책 적용, β, γ, census처럼 **모델 코드를 몰라도 되는 기능**만 자동 적용한다. 전역 패치는 이 모드에서만 허용한다(P4 예외).
+- `memopro run`은 `from_pretrained` 로딩 정책, γ, census처럼 **모델 코드를 몰라도 되는 기능**만 자동 적용한다. 전역 패치는 이 모드에서만 허용한다(P4 예외). 로딩 정책은 스크립트가 배치·정밀도를 하나도 정하지 않았고 원래 형식으로는 들어가지 않을 때만 적용하며, 명시한 선택은 바꾸지 않는다(0052 E7).
+- `check`는 스크립트를 받지 않는다. 스크립트에 대해서는 `memopro run --dry-run`이 계획을 보여 준다(0052 E3).
 - 모델 구조가 필요한 기법(예: 학습 후보 기법)은 L1 이상에서 사용한다.
 
 ### 4.3 생태계 통합 (`memopro.integrations`)
@@ -345,7 +351,7 @@ class Technique(Protocol):
 |---|---|---|---|
 | **빠른 모드** | ✅ | ① 범주별 바이트: 파라미터·그래디언트·옵티마이저 상태·역전파 저장 텐서(`saved_tensors_hooks`) ③ 이상치·거대 활성값 탐지, 생애 주기·유휴 시간, 셀 단위 증감(노트북). 무손실 엔트로피는 **보조 지표** (0032 R2) | 낮음 |
 | **정밀 경량판** (v0.1, 0032 Q1) | 선택 | ② 정밀도 중복: 표본 텐서 몇 개에 대해 비트 폭 2·4·8에서의 오차·그래디언트 영향 → 범주별 "필요 비트" 추정 ④ 텐서별 최악 민감도(K3) | 중간 |
-| **정밀 모드** (v0.2, 0015 P2) | 선택 | 학습 상태 범주(가중치·그래디언트·옵티마이저 모멘트·저장 활성값)별로 **필요한 비트 대비 실제 저장 비트**를 측정한다(표본 텐서에 비트 단위 교란 → 그래디언트·손실 영향). 층 간 상관 | 높음 (명시적 선택) |
+| **정밀 모드** (v0.2, 0015 P2, 구현 0053) | 선택 | 학습 상태 범주(가중치·그래디언트·옵티마이저 모멘트·저장 활성값)별로 **필요한 비트 대비 실제 저장 비트**를 측정한다. 범주 전체를 2·4·8·16비트로 교란해 손실 상대 변화·그래디언트 코사인·한 스텝 갱신량 코사인을 잰다(기준 1e-3, 0.999). `probe=`(고정 배치의 손실) 필요. 끝나면 모든 상태를 비트 단위로 복원 | 높음 (명시적 선택) |
 
 - **커버리지 대조**: 할당자 통계(장치·호스트)와 비교해 분류하지 못한 부분을 **"미분류"**로 명시한다. `no_grad` 추론 텐서(KV 캐시 등), 할당자 캐시, 런타임 컨텍스트가 여기에 해당한다. 목표는 할당자 바이트의 90% 이상 분류이다 (V9).
 - **차별점**: "어디에 쓰이나"는 기존 프로파일러(PyTorch Profiler, pytorch_memlab, memray, Scalene)와 겹친다. **"얼마나 중복(낭비)인가"**가 핵심 기능이다 (0013 D9·D10).
@@ -353,7 +359,13 @@ class Technique(Protocol):
 - **행동 가능한 권고 (0032 P6)**: 결과를 조치로 연결한다. 예: "옵티마이저 상태는 원소당 약 k비트면 충분 → 8비트 옵티마이저 적용 시 약 X GB 절감 예상(수치 변경 등급)". memopro 기능이나 일반 기법 이름으로만 표현한다(외부 도구 안내 없음, S2).
 - **정확성 검증 (0032 P7)**: 정보량을 아는 합성 텐서로 측정값을 확인하고, 할당자 통계와 대조한다.
 - **통합 (0032 I8)**: HF Trainer 콜백, Lightning 콜백을 v0.1부터 제공한다.
-- API: `with memopro.census.record(model, optimizer, mode="fast"｜"light"｜"deep") as c: …` → `c.summary()`, `c.to_json()`
+- API: `with memopro.census.record(model, optimizer, mode="fast"｜"light"｜"deep", probe=…) as c: …` → `c.summary()`, `c.to_json()`
+
+### γ. elastic (OS 압박 탄력 런타임) — v0.3, 0052 E6, 구현 0053
+
+- **신호**: Rust `pressure::current()` — macOS `kern.memorystatus_vm_pressure_level`(1·2·4), Linux PSI(자기 cgroup v2의 `memory.pressure`, 없으면 `/proc/pressure/memory`의 some·full avg10; 경고 some ≥ 10 또는 full ≥ 1, 위험 some ≥ 40 또는 full ≥ 10, 초기값). 그 밖의 OS는 `Unsupported`(fail-open).
+- **감시 스레드는 기록만 한다.** 사용 중일 수 있는 텐서를 백그라운드에서 바꾸면 사용자 계산이 깨지기 때문이다. 조치는 안전 지점에서만: 노트북 셀 경계(캐시 비우기 → 유휴 객체 쓰기 없는 동면, `spill`은 위험 수준 + `disk_writes="allow"`만), `train_session` 스텝 경계(수준당 한 단계씩 정확한 기법으로 내리고 `up_after`초 평온하면 한 단계 올림), `load` 예산(경고 ×0.5, 위험 ×0.25), `memopro.elastic.checkpoint()`.
+- 선행 사례와 차이는 0051. 평가(E013)는 별도 사전 등록: 기준선은 자기 VRAM 되먹임(Tri-Accel식)과 OOM 뒤 재시도(accelerate).
 
 ## 6. Rust 코어 (`crates/memopro`) — crates.io
 
@@ -394,19 +406,21 @@ python/memopro/
 ├── _units.py            크기 파싱·표시
 ├── config.py            기본값 < memopro.toml($MEMOPRO_CONFIG) < MEMOPRO_* < configure()
 ├── report.py            report() — 적용·실패·회수량(실측)·SSD 쓰기량
-├── access.py            load · optimize · train_session · check (v0.2)
+├── access/              load · optimize · train_session · check (v0.2): _info(메타데이터 크기) · _load ·
+│                        _check(MemTracker+FakeTensorMode) · _optimize · _train · _common(설정·장치·예산)
+├── _run.py              memopro run: from_pretrained 로딩 정책(run 모드만), γ, census
 ├── cli.py, __main__.py  memopro doctor | check | run  (종료 코드 0/1/2/3=미구현)
 ├── env/                 detect() → Env(HostMemory, Disk, Device…)
 ├── orchestrator/        budget.Budget · candidates.Configuration · apply.fail_open
 ├── hibernate/           now → Handle.wake · plan → PlanRow · wake · suggest · enable · status
 │   └── _policy.py       resolve_modes: 쓰기 없는 방법 우선, bf16 명시만, SSD는 disk_writes 정책
-├── census/              record(mode = fast | light | deep) → Census.summary / to_json
-├── elastic/             γ (v0.3)
+├── census/              record(mode = fast | light | deep) → Census.summary / to_json; _deep(정밀 모드)
+├── elastic/             γ (v0.3): enable · disable · status · current · checkpoint · 안전 지점 hook
 ├── integrations/        ipython(%hibernate · %wake · %memopro) · hf · lightning (census 콜백)
-├── techniques/          base(Technique·Registry) · native/ · integrations/ (어댑터)
+├── techniques/          base(Technique·Registry) · native/ · integrations/loading(로드 시점 기법·백엔드 시험)
 └── _core.*.so           Rust 확장
 
-crates/memopro/src/      error · hwinfo · spill(원본 재읽기·다이제스트·방출 파일) · ledger · pressure · codec(E008)
+crates/memopro/src/      error · hwinfo · spill(원본 재읽기·다이제스트·방출 파일, Unix·Windows) · ledger · pressure(macOS·Linux PSI) · codec
 ```
 
 - **지연 import 규칙 (0032 I4)**: `import memopro`는 Rust 확장과 최상위 모듈만 불러온다. torch·numpy·transformers·IPython과 하위 모듈은 처음 쓸 때 불러온다. `tests/test_import_cost.py`가 보장한다.
