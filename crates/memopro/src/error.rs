@@ -15,6 +15,8 @@ pub enum Error {
     InvalidArgument(String),
     /// Data read back does not match what was stored (digest mismatch, changed source file).
     Integrity(String),
+    /// The operating system does not offer what was asked (e.g. no PSI on this kernel).
+    Unsupported(String),
     /// An operating-system I/O error.
     Io(io::Error),
 }
@@ -23,6 +25,10 @@ pub enum Error {
 pub type Result<T> = std::result::Result<T, Error>;
 
 impl Error {
+    #[cfg_attr(
+        unix,
+        allow(dead_code, reason = "used where statvfs is missing, and in tests")
+    )]
     pub(crate) fn not_implemented(feature: &'static str, planned: &'static str) -> Self {
         Error::NotImplemented { feature, planned }
     }
@@ -36,6 +42,7 @@ impl fmt::Display for Error {
             }
             Error::InvalidArgument(msg) => write!(f, "invalid argument: {msg}"),
             Error::Integrity(msg) => write!(f, "integrity check failed: {msg}"),
+            Error::Unsupported(msg) => write!(f, "not supported here: {msg}"),
             Error::Io(e) => write!(f, "I/O error: {e}"),
         }
     }

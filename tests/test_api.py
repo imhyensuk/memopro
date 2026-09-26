@@ -27,15 +27,17 @@ def test_not_yet_implemented_is_a_not_implemented_error():
     assert "planned: v0.1" in str(e)
 
 
-@pytest.mark.parametrize(
-    ("call", "planned"),
-    [
-        (lambda: memopro.elastic.enable(), "v0.3"),
-    ],
-)
-def test_skeleton_features_name_their_plan(call, planned):
-    with pytest.raises(NotYetImplemented, match=f"planned: {planned}"):
-        call()
+def test_no_designed_feature_is_left_as_a_stub():
+    """Everything in the v0.1-v0.3 design is built (0052); NotYetImplemented stays for later."""
+    import pathlib
+
+    root = pathlib.Path(memopro.__file__).parent
+    raising = [
+        str(p.relative_to(root))
+        for p in root.rglob("*.py")
+        if "raise NotYetImplemented(" in p.read_text()
+    ]
+    assert raising == []
 
 
 @pytest.mark.parametrize(
