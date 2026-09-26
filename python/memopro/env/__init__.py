@@ -10,7 +10,9 @@ swapping anything. macOS' own, larger estimate is kept as ``kernel_available_byt
 
 from __future__ import annotations
 
+import os
 import platform
+import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
@@ -82,6 +84,18 @@ def _os_version() -> str:
     if platform.system() == "Darwin":
         return f"macOS {platform.mac_ver()[0]}"
     return platform.release()
+
+
+MALLOC_CACHE_NOTE = (
+    "macOS keeps CPU memory freed by hibernate or `del` in the allocator cache until memory "
+    "pressure (0060); start Python with MallocLargeCache=0 to return it to other apps at once "
+    "(`memopro run` does this for you)"
+)
+
+
+def macos_malloc_cache_on() -> bool:
+    """True on macOS unless this process started with ``MallocLargeCache=0`` (0061 F4)."""
+    return sys.platform == "darwin" and os.environ.get("MallocLargeCache") != "0"
 
 
 def detect(*, devices: bool = True, config: Config | None = None) -> Env:
