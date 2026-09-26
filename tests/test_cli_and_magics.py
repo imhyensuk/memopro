@@ -7,7 +7,7 @@ import pytest
 
 import memopro
 from memopro import MemoproError
-from memopro.cli import EXIT_ERROR, EXIT_NOT_YET, main
+from memopro.cli import EXIT_ERROR, main
 from memopro.config import reset_config
 from memopro.integrations.ipython import parse_hibernate
 from memopro.orchestrator import fail_open
@@ -30,7 +30,8 @@ def test_version_via_module_entry_point():
 def test_run_validates_options_first(capsys):
     assert main(["run", "--modes", "source,bf16", "app.py"]) == EXIT_ERROR
     assert "bf16" in capsys.readouterr().err
-    assert main(["run", "--disk-writes", "never", "app.py", "--flag"]) == EXIT_NOT_YET
+    assert main(["run", "--disk-writes", "never", "missing_app.py", "--flag"]) == EXIT_ERROR
+    assert "no such script" in capsys.readouterr().err
 
 
 def test_usage_errors_exit_2():

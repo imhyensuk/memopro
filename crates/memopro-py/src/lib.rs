@@ -16,6 +16,7 @@ fn to_py_err(e: memopro::Error) -> PyErr {
         memopro::Error::NotImplemented { .. } => PyNotImplementedError::new_err(e.to_string()),
         memopro::Error::InvalidArgument(_) => PyValueError::new_err(e.to_string()),
         memopro::Error::Integrity(_) => PyRuntimeError::new_err(e.to_string()),
+        memopro::Error::Unsupported(_) => PyNotImplementedError::new_err(e.to_string()),
         memopro::Error::Io(io) => PyOSError::new_err(io.to_string()),
     }
 }
@@ -79,6 +80,19 @@ fn hwinfo_memory(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
 }
 
 /// Resident set size of this process in bytes.
+/// Current OS memory pressure: ``{"level", "source", "some_avg10", "full_avg10", "raw_level"}``.
+#[pyfunction]
+fn pressure_current(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
+    let p = py.detach(memopro::pressure::current).map_err(to_py_err)?;
+    let d = PyDict::new(py);
+    d.set_item("level", p.level.as_str())?;
+    d.set_item("source", p.source)?;
+    d.set_item("some_avg10", p.some_avg10)?;
+    d.set_item("full_avg10", p.full_avg10)?;
+    d.set_item("raw_level", p.raw_level)?;
+    Ok(d)
+}
+
 #[pyfunction]
 fn hwinfo_process_rss(py: Python<'_>) -> PyResult<u64> {
     py.detach(memopro::hwinfo::process_rss).map_err(to_py_err)
@@ -239,6 +253,7 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hwinfo_cpu, m)?)?;
     m.add_function(wrap_pyfunction!(hwinfo_process_rss, m)?)?;
     m.add_function(wrap_pyfunction!(hwinfo_disk, m)?)?;
+    m.add_function(wrap_pyfunction!(pressure_current, m)?)?;
     m.add_function(wrap_pyfunction!(engine_digest, m)?)?;
     m.add_function(wrap_pyfunction!(engine_read_source_into, m)?)?;
     m.add_function(wrap_pyfunction!(engine_write, m)?)?;

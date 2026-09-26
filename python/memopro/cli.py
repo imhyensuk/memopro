@@ -40,10 +40,16 @@ def _parser() -> argparse.ArgumentParser:
     check.add_argument("--quality", choices=("lossless", "high", "balanced", "low"), default=None)
     check.add_argument("--json", action="store_true", help="machine-readable output")
 
-    run = sub.add_parser("run", help="run a script with memopro's process-level features (v0.3)")
-    run.add_argument("--budget", default=None, help='"auto" or a size such as 6GB')
+    run = sub.add_parser(
+        "run", help="run a script with memopro's loading policy, γ and census (no code changes)"
+    )
+    run.add_argument("--budget", default=None, help='"auto", a size such as 6GB, or 50%%')
+    run.add_argument("--quality", choices=("lossless", "high", "balanced", "low"), default=None)
     run.add_argument("--disk-writes", choices=("ask", "never", "allow"), default=None)
     run.add_argument("--modes", default=None, help="write-free hibernate modes, e.g. source,host")
+    run.add_argument("--no-elastic", action="store_true", help="do not watch memory pressure")
+    run.add_argument("--census", action="store_true", help="census of the whole run")
+    run.add_argument("--dry-run", action="store_true", help="show what would be done; do not run")
     run.add_argument("script")
     run.add_argument("script_args", nargs=argparse.REMAINDER)
     return parser
@@ -76,19 +82,27 @@ def _check(args: argparse.Namespace) -> None:
 
 
 def _run(args: argparse.Namespace) -> None:
+    from memopro._run import run
     from memopro.config import configure
 
     settings = {
         k: v
         for k, v in (
             ("budget", args.budget),
+            ("quality", args.quality),
             ("disk_writes", args.disk_writes),
             ("hibernate_modes", args.modes),
         )
         if v is not None
     }
     configure(**settings)  # validate options before anything else
-    raise NotYetImplemented("memopro run", "v0.3 (N3)", "docs/design/architecture.md §4.2")
+    run(
+        args.script,
+        args.script_args,
+        elastic=not args.no_elastic,
+        census=args.census,
+        dry_run=args.dry_run,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:
