@@ -11,7 +11,6 @@ Targets: a Hugging Face model id, a local model directory, or an ``nn.Module`` (
 
 from __future__ import annotations
 
-import contextlib
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
 from typing import Any
@@ -27,9 +26,9 @@ __all__ = ["CheckResult", "Trace", "check"]
 class Trace:
     """Peak bytes of one traced step, by category (MemTracker's names)."""
 
-    peak: int  # steady state: from the second step on, optimizer state already exists
+    peak: int  # steady state: the second traced step, when optimizer state already exists
     params: int = 0
-    grads: int = 0
+    grads: int = 0  # size of the gradients (present during backward and the step)
     optimizer: int = 0  # optimizer state after the step
     activations: int = 0  # activations + temporaries at the peak
     note: str = ""
@@ -161,29 +160,40 @@ def _trace(
                 model.parameters(), lr=1e-4, **_real_implementation(device)
             )
         inputs = example(model) if callable(example) else example
+        # set the mode once, outside the traced step: calling train() inside it makes the fake
+        # trace count a logits-sized tensor that real training does not allocate (0055)
+        model.train(train)
+
+        def run() -> None:
+            if not train:
+                with torch.no_grad():
+                    model(**inputs) if isinstance(inputs, dict) else model(inputs)
+                return
+            labels = inputs.get("input_ids") if isinstance(inputs, dict) else None
+            kwargs = dict(inputs, labels=labels) if labels is not None else inputs
+            # keep only the loss, as `model(**batch).loss.backward()` does: holding the output
+            # would keep the logits alive through backward and the step (0055)
+            loss = _loss(model(**kwargs) if isinstance(kwargs, dict) else model(kwargs))
+            loss.backward()
+            del loss
+            if opt is not None:
+                opt.step()
+                opt.zero_grad(set_to_none=True)
+
+        if train:
+            # The first step creates the optimizer state, so its peak is not the steady-state
+            # peak. Trace the second step, as training runs from then on (Colab run 5, 0055).
+            run()
         tracker = MemTracker()
         tracker.track_external(*(x for x in (model, opt) if x is not None))
-        ctx = contextlib.nullcontext() if train else torch.no_grad()
-        with tracker, ctx:
-            if train:
-                model.train()
-                labels = inputs.get("input_ids") if isinstance(inputs, dict) else None
-                kwargs = dict(inputs, labels=labels) if labels is not None else inputs
-                out = model(**kwargs) if isinstance(kwargs, dict) else model(kwargs)
-                _loss(out).backward()
-                if opt is not None:
-                    opt.step()
-            else:
-                model.eval()
-                model(**inputs) if isinstance(inputs, dict) else model(inputs)
+        with tracker:
+            run()
         peak, final = (_totals(tracker.get_tracker_snapshot(k)) for k in ("peak", "current"))
-    # the traced step is the first: its peak can come before any optimizer state existed, but
-    # from the second step on that state is always there
-    missing_state = max(0, final["OPT"] - peak["OPT"])
+        grads = sum(p.numel() * p.element_size() for p in model.parameters() if p.requires_grad)
     return Trace(
-        peak=peak["Total"] + missing_state,
+        peak=peak["Total"],
         params=peak["PARAM"] + peak["BUFFER"],
-        grads=max(peak["GRAD"], final["GRAD"]),
+        grads=grads if train else 0,
         optimizer=final["OPT"],
         activations=peak["ACT"] + peak["TEMP"] + peak["OTH"],
     )
@@ -361,7 +371,7 @@ def check(
                     activations=t.activations,
                     fits=t.peak <= budget_bytes,
                 )
-                static = t.params + max(t.grads, t.params) + t.optimizer  # during backward
+                static = t.params + t.grads + t.optimizer  # during backward
                 per_sample = max(1, t.activations // max(1, batch_size))
                 room = budget_bytes - static
                 if t.peak <= budget_bytes:

@@ -81,6 +81,7 @@
 | [0052](0052-build-v02-v03-decision.md) | 2026-09-26 | decision | 사용자 지시로 v0.2·v0.3을 Gγ 전에 제작. A2 완료 조건 사전 등록(로컬 소형 + Colab 7B·±15%·실제 OOM), 품질 4등급·선호, `train_session`의 OOM 재시도와 옵티마이저 교체는 제안만, census 정밀 모드 정의, γ는 안전 지점에서만, `run`은 명시 선택을 바꾸지 않음, Windows CI | 확정 |
 | [0053](0053-build-v02-v03.md) | 2026-09-26 | milestone+experiment | v0.2·v0.3 제작: `load`·`check`·`optimize`·`train_session`·census 정밀 모드·pressure·γ·`run`. A2-2 기준 수정(AdamW가 fp32 합산 차이를 3e-4로 증폭 → 그래디언트·SGD 기준). 테스트 166, 탐색 12/12, 탐색 중 고친 것(fp16 손실 스케일링 등). Colab 4차 사전 등록 / 관찰: 경고 상시로 γ 예산 계수 보정 필요, 정밀·경량 필요 비트 차이 | 확정 |
 | [0054](0054-colab-run4-access.md) | 2026-09-26 | experiment | Colab T4 4차: 7B(Qwen2.5-7B) int8 로드·제한된 장치 학습(SGD 1.6e-7)·load 4단계·활성값 오프로드 통과, **`check` ±15%는 불합격(4/6, 작은 배치 학습 과소 예측)** — accelerate보다는 6/6 정확(평균 오차 11.8% 대 37.7%). 원인 하나(가짜 텐서는 foreach 미선택) 수정, 5차 사전 등록. 결함: 실패한 로드가 메모리를 쥔 채 다음 구성 시도 → 수정 | 확정 |
+| [0055](0055-colab-run5-check-diagnosis.md) | 2026-09-26 | experiment | Colab T4 5차: `check` 재검증 불합격(3/6) + **측정 오염 발견**(앞 경우 메모리가 남아 누적, MemTracker 순환 참조) → 경우별 프로세스 격리. 원인 셋 확인·수정: 첫 스텝 추적(→ 둘째 스텝), 출력 보유로 logits 생존, foreach 미선택. CPU에서 실제 추적과 +0.00% 일치, 6차 사전 등록 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

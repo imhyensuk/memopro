@@ -436,3 +436,42 @@ def test_check_traces_the_optimizer_implementation_torch_picks_on_the_device():
 
     assert _real_implementation("cuda") == {"foreach": True}  # torch's default for real tensors
     assert _real_implementation("cpu") == {"foreach": False}
+
+
+@pytest.mark.parametrize("optimizer", ["adamw", "sgd"])
+@pytest.mark.parametrize("batch", [1, 4])
+def test_check_training_peak_matches_real_steady_state_tracking(optimizer, batch):
+    """check's fake-tensor trace must equal torch's MemTracker on real tensors for a
+    steady-state step (second step, loss only kept): the three run-5 causes (0055)."""
+    from torch.distributed._tools.mem_tracker import MemTracker
+
+    from memopro.access._check import _totals, _trace
+
+    config = transformers.GPT2Config(n_layer=2, n_embd=64, n_head=2, vocab_size=500, n_positions=64)
+    torch.manual_seed(0)
+    model = transformers.GPT2LMHeadModel(config)
+    model.train()
+    make = torch.optim.AdamW if optimizer == "adamw" else torch.optim.SGD
+    opt = make(model.parameters(), lr=1e-4)
+    x = torch.randint(0, 500, (batch, 32))
+
+    def step():
+        model(input_ids=x, labels=x).loss.backward()
+        opt.step()
+        opt.zero_grad(set_to_none=True)
+
+    step()
+    tracker = MemTracker()
+    tracker.track_external(model, opt)
+    with tracker:
+        step()
+    real = _totals(tracker.get_tracker_snapshot("peak"))["Total"]
+    predicted = _trace(
+        lambda: transformers.GPT2LMHeadModel(config),
+        lambda m: {"input_ids": torch.randint(0, 500, (batch, 32))},
+        train=True,
+        optimizer=optimizer,
+        checkpointing=False,
+        device="cpu",
+    ).peak
+    assert predicted == pytest.approx(real, rel=0.005)
