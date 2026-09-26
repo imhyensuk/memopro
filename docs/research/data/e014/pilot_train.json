@@ -1,0 +1,104 @@
+{
+  "parts": [
+    "train"
+  ],
+  "idle_probe": [
+    {
+      "part": "train",
+      "n": 39,
+      "p50_ms": 0.5477080121636391,
+      "p95_ms": 61.17574998643249,
+      "max_ms": 85.4182499460876
+    }
+  ],
+  "cases": [
+    {
+      "label": "naive",
+      "args": [
+        "train",
+        "--arm",
+        "naive",
+        "--device",
+        "mps"
+      ],
+      "env": {},
+      "wall_s": 21.838287084014155,
+      "clock": [
+        1790437132.056285,
+        1790437153.8950331
+      ],
+      "returncode": 0,
+      "peak_footprint": 9314176128,
+      "swap_growth": 5083433533,
+      "probe": {
+        "n": 64,
+        "p50_ms": 5.36779104731977,
+        "p95_ms": 675.6975000025705,
+        "max_ms": 1105.9266249649227
+      },
+      "result": {
+        "ok": false,
+        "error": "RuntimeError: MPS backend out of memory (MPS allocated: 8.35 GiB, other allocations: 384.00 KiB, max allowed: 9.07 GiB). Tried to allocate 800.00 MiB on shared pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 231, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 125, in train\n    loss = model(input_ids=x, labels=x).loss\n           ~~~~~^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/transformers/utils/generic.py\", line 939, in wrapper\n    output = func(self, *args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/transformers/models/gpt2/modeling_gpt2.py\", line 697, in forward\n    logits = self.lm_head(hidden_states[:, slice_indices, :])\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/linear.py\", line 134, in forward\n    return F.linear(input, self.weight, self.bias)\n           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: MPS backend out of memory (MPS allocated: 8.35 GiB, other allocations: 384.00 KiB, max allowed: 9.07 GiB). Tried to allocate 800.00 MiB on shared pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).\n"
+      },
+      "stderr_tail": "W0927 00:38:55.890000 7618 .venv/lib/python3.14/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.\nW0927 00:38:55.918000 7618 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\nW0927 00:38:55.950000 7618 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\n\nLoading weights:   0%|          | 0/148 [00:00<?, ?it/s]\nLoading weights: 100%|██████████| 148/148 [00:00<00:00, 6956.12it/s]\n",
+      "part": "train",
+      "repeat": 0
+    },
+    {
+      "label": "session",
+      "args": [
+        "train",
+        "--arm",
+        "session",
+        "--device",
+        "mps"
+      ],
+      "env": {},
+      "wall_s": 56.87396691692993,
+      "clock": [
+        1790437155.943965,
+        1790437212.819147
+      ],
+      "returncode": 0,
+      "peak_footprint": 4944858176,
+      "swap_growth": 2388907787,
+      "probe": {
+        "n": 116,
+        "p50_ms": 121.27250002231449,
+        "p95_ms": 388.41883395798504,
+        "max_ms": 12199.117665993981
+      },
+      "result": {
+        "ok": true,
+        "step_s": [
+          8.003698999993503,
+          7.068821165943518,
+          7.350061125005595,
+          6.850104375043884,
+          8.02246308408212,
+          6.586468333029188
+        ],
+        "steady_step_s": 7.068821165943518,
+        "losses": [
+          12.241837978363037,
+          11.565220475196838,
+          11.272392511367798,
+          11.1664479970932,
+          11.115930795669556,
+          11.081959962844849
+        ],
+        "micro_batch": 1,
+        "report": [
+          [
+            "train_session.plan",
+            "applied"
+          ]
+        ]
+      },
+      "stderr_tail": "",
+      "part": "train",
+      "repeat": 0
+    }
+  ]
+}
