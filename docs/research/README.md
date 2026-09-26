@@ -84,6 +84,9 @@
 | [0055](0055-colab-run5-check-diagnosis.md) | 2026-09-26 | experiment | Colab T4 5차: `check` 재검증 불합격(3/6) + **측정 오염 발견**(앞 경우 메모리가 남아 누적, MemTracker 순환 참조) → 경우별 프로세스 격리. 원인 셋 확인·수정: 첫 스텝 추적(→ 둘째 스텝), 출력 보유로 logits 생존, foreach 미선택. CPU에서 실제 추적과 +0.00% 일치, 6차 사전 등록 | 확정 |
 | [0056](0056-colab-run6-check-pass.md) | 2026-09-26 | experiment | Colab T4 6차: **`check` ±15% 통과(6/6)** — 학습 −0.2~−1.2%, 추론 +5%, 예측이 CUDA 실제 텐서 추적과 0.003% 이내 일치. 세 번 만의 통과에 대한 평가(보정 계수 없음, 독립 기준). **A2 완료 조건 모두 충족**(원래 M1 3B 조건만 열림) | 확정 |
 | [0057](0057-v01-v03-consolidated-record.md) | 2026-09-26 | survey+milestone | v0.1~v0.3 종합 기록(PR #4 병합 시점): 현재 기능 전체와 근거, 테스트 Python 173·Rust 24, CI 3개 OS, 탐색 63종, T4 6회, 결함 목록, 사전 등록 판정(실패 포함), 미확인 영역. 완성도: 설계 범위 약 90%, v1.0 약 45%, 제품 가치 검증 10% 미만 | 확정 |
+| [0058](0058-e011-preregistration.md) | 2026-09-26 | experiment (사전 등록) | E011 β 대 macOS 스왑·압축기. 파일럿에서 발견: 조사가 가드를 건드려 모델을 깨움(수정), CPU fp32 가중치는 mmap, macOS libmalloc이 해제한 메모리를 캐시에 붙잡음(`MallocLargeCache=0`이면 반환). 조건 cpu/mmap·cpu/anon·mps, 방법 os·source·compress·reload(+진단 source_nocache), 기준 D0~D5 | 확정 |
+| [0059](0059-budget-forms-extension.md) | 2026-09-26 | decision+design | 예산 형식 확장: 남기기 `-2GB`, 범위 `2GB..6GB`(최소 미달 시 멈춤), 강제 `6GB!`, 풀별 모든 형식과 디스크 풀, `{use,min,max}`, `budget_basis`(conservative·os·total), 크기 여유분, `memopro.using()`. 측정값을 넘는 것은 `!`와 basis뿐(0035·0052 E3을 명시적 선택에 한해 완화) | 확정 |
+| [0060](0060-e011-results.md) | 2026-09-26 | experiment | E011 결과: D0 비트 동일 73/73 ✅, D3 복귀 지연 OS 대비 0.33×(CPU)·0.45×(MPS) ✅, D2 다른 작업 반응성 이득 없음 ❌, D1 즉시 반환 실패(−0.34·−0.62) ❌ → 결함 F-E011-1(libmalloc 캐시·대조 버퍼), 해결 선택지 F1~F5 사용자 결정 대기. 페이지 LZ4는 파라미터에 1.00, memopro 0.84. 잠자기 중단 8개 시행은 사전 규칙으로 재실행 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

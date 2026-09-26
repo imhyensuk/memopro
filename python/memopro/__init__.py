@@ -61,6 +61,7 @@ _LAZY: dict[str, tuple[str, str | None]] = {
     "doctor": ("memopro._doctor", "doctor"),
     "configure": ("memopro.config", "configure"),
     "get_config": ("memopro.config", "get_config"),
+    "using": ("memopro.config", "using"),
     "access": ("memopro.access", None),
     "census": ("memopro.census", None),
     "config": ("memopro.config", None),
@@ -128,4 +129,5 @@ __all__ = [
     "registry",
     "report",
     "train_session",
+    "using",
 ]

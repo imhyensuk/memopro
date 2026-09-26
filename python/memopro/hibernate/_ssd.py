@@ -115,6 +115,29 @@ def _record(directory: Path, nbytes: int) -> None:
     tmp.replace(path)
 
 
+def spilled_bytes() -> int:
+    """Bytes this process holds in spill files right now."""
+    total = 0
+    for path in list(_own_files):
+        try:
+            total += os.path.getsize(path)
+        except OSError:
+            pass
+    return total
+
+
+def _disk_budget(config: Config, above_floor: int) -> int | None:
+    """The disk pool's budget setting (0059 D2) applied to this disk, or None if it has none."""
+    from memopro.config import PoolBudget
+    from memopro.orchestrator.budget import resolve_pool
+
+    spec = config.budget
+    if not isinstance(spec, PoolBudget) or spec.disk is None:
+        return None
+    # measured before this process wrote anything, so its own files do not shrink the cap
+    return resolve_pool(spec.disk, max(0, above_floor) + spilled_bytes())[0]
+
+
 def check_room(config: Config, nbytes: int) -> Path:
     """Directory to spill into, or ModeUnavailable explaining why SSD writes are not possible."""
     directory = spill_dir(config)
@@ -124,6 +147,13 @@ def check_room(config: Config, nbytes: int) -> Path:
         raise ModeUnavailable(
             "spill",
             f"free disk space would fall below the {config.min_free_disk_fraction:.0%} floor",
+            ("source", "host", "compress"),
+        )
+    cap = _disk_budget(config, disk["available_bytes"] - floor)
+    if cap is not None and spilled_bytes() + nbytes > cap:
+        raise ModeUnavailable(
+            "spill",
+            f"the disk budget ({cap} bytes, budget setting) would be exceeded",
             ("source", "host", "compress"),
         )
     limit = daily_limit(config, disk["total_bytes"])

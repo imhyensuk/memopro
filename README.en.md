@@ -56,7 +56,7 @@ print(result)                      # inference and training peak, what memopro w
 model, tok = memopro.load("Qwen/Qwen2.5-7B-Instruct", tokenizer=True)
 # the first configuration that fits: as stored, half precision, int8, int4, CPU or disk offload
 # quality="lossless" | "high" | "balanced" (default) | "low" bounds automatic loss;
-# prefer="speed" (default) | "quality" | "memory"; budget="6GB" | 0.5 | {"device": "4GB"}
+# prefer="speed" (default) | "quality" | "memory"; budget="6GB" | "-2GB" | "2GB..6GB" | ...
 
 model = memopro.optimize(model, goal="infer")       # a model you already have: only as needed
 
@@ -71,6 +71,25 @@ with memopro.census.record(model, optimizer, mode="deep", probe=lambda: model(**
 `train_session` splits batches into exact micro-batches, then turns on activation checkpointing,
 activation offload (CUDA) and, if `quality` allows, mixed precision (float16 always with loss
 scaling). Swapping the optimizer (8-bit, CPU offload) or switching to LoRA is only suggested.
+
+### Budgets
+
+The same forms work in `configure()`, `with memopro.using(...)`, per call (`budget=`),
+`memopro.toml` (a `[budget]` table), `MEMOPRO_BUDGET` and `--budget`:
+
+| Form | Meaning |
+|---|---|
+| `"auto"` | the measured budget (default: memory free without compressing or swapping, minus 10%) |
+| `"6GB"` / `0.5`, `"50%"` | a cap / a fraction of the measured budget (never above it) |
+| `"-2GB"` | leave 2 GB of the measured budget for other apps (CLI: `--budget=-2GB`) |
+| `"2GB..6GB"`, `"3GB.."` | at most 6 GB; below 2 GB stop with `BudgetExceeded` instead of squeezing |
+| `"6GB!"` | exactly 6 GB even above what is measured (you accept swapping; a warning is shown) |
+| `{"device": "80%", "host": "-2GB", "disk": "20GB"}` | per pool; the disk cap applies to offload and `spill` |
+| `{"use": "-2GB", "min": "1GB"}` | a form together with a range |
+
+`budget_basis` chooses what the host budget starts from: `"conservative"` (default), `"os"`
+(the OS estimate; may compress or swap) or `"total"`. `headroom` is a fraction or a size
+(`"1GB"`).
 
 ## 0.3 features: memory pressure and no code changes
 
