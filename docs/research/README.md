@@ -77,6 +77,12 @@
 | [0048](0048-defect-sweep.md) | 2026-09-25 | survey+milestone | 결함 소탕: 탐색적 시험 40종(3차례)으로 결함 16건(조용한 오류 6) 발견·수정. 가드(저장·복사·이동·스텝에서 먼저 깨움), 롤백, 약한 레지스트리, 잠금, 이름 변환 대응 / 관찰: CPU 매핑 가중치 정렬로 BLAS 결과 1e-4 차이(memopro 무관) | 확정 |
 | [0049](0049-colab-run3-and-torch-compile.md) | 2026-09-25 | milestone+experiment | PR #2 병합, Colab 3차 검사 사전 등록(가드 CUDA 14·GPT-2 4·compile 7, 로컬 CPU 25/25), wheel 로컬 교차 빌드. torch.compile 결함 발견·수정: 동면 중 호출 시 dynamo 오류, 분할 뒤 조건 없는 eager 캐시로 이후 호출이 모두 eager(조용함) → 컴파일된 프레임 전에 깨움 | 확정 |
 | [0050](0050-colab-cuda-run3.md) | 2026-09-26 | experiment | Colab T4 3차: 사전 등록 검사 25/25 통과(가드 CUDA 14·GPT-2 4·compile 7, CUDA graphs 포함, 비트 동일·재컴파일 0), 교차 빌드 wheel 동작 확인 / 관찰: census 적용률 98.9%(환경 변화, 원인 미식별), host의 RSS 증가량은 할당자 재사용에 따라 다름 | 확정 |
+| [0051](0051-resurvey-gamma-run.md) | 2026-09-26 | survey | v0.3 착수 조건(0030 C5): γ·`memopro run` 중복성 재조사. OS 압박 신호로 PyTorch 구성을 되돌릴 수 있게 바꾸는 런타임은 찾지 못함(Tri-Accel, eLLM, LOCAL, OOM 재시도와 차이), `run`은 측정 래퍼·import 패치와 부분 중복(신규성 주장 없음). 연동 도구 로컬 확인(torchao int4 불가, bitsandbytes MPS 가능, MemTracker 할당 없는 추정) / 관찰: 이 Mac은 압박 "경고" 상태 | 확정 |
+| [0052](0052-build-v02-v03-decision.md) | 2026-09-26 | decision | 사용자 지시로 v0.2·v0.3을 Gγ 전에 제작. A2 완료 조건 사전 등록(로컬 소형 + Colab 7B·±15%·실제 OOM), 품질 4등급·선호, `train_session`의 OOM 재시도와 옵티마이저 교체는 제안만, census 정밀 모드 정의, γ는 안전 지점에서만, `run`은 명시 선택을 바꾸지 않음, Windows CI | 확정 |
+| [0053](0053-build-v02-v03.md) | 2026-09-26 | milestone+experiment | v0.2·v0.3 제작: `load`·`check`·`optimize`·`train_session`·census 정밀 모드·pressure·γ·`run`. A2-2 기준 수정(AdamW가 fp32 합산 차이를 3e-4로 증폭 → 그래디언트·SGD 기준). 테스트 166, 탐색 12/12, 탐색 중 고친 것(fp16 손실 스케일링 등). Colab 4차 사전 등록 / 관찰: 경고 상시로 γ 예산 계수 보정 필요, 정밀·경량 필요 비트 차이 | 확정 |
+| [0054](0054-colab-run4-access.md) | 2026-09-26 | experiment | Colab T4 4차: 7B(Qwen2.5-7B) int8 로드·제한된 장치 학습(SGD 1.6e-7)·load 4단계·활성값 오프로드 통과, **`check` ±15%는 불합격(4/6, 작은 배치 학습 과소 예측)** — accelerate보다는 6/6 정확(평균 오차 11.8% 대 37.7%). 원인 하나(가짜 텐서는 foreach 미선택) 수정, 5차 사전 등록. 결함: 실패한 로드가 메모리를 쥔 채 다음 구성 시도 → 수정 | 확정 |
+| [0055](0055-colab-run5-check-diagnosis.md) | 2026-09-26 | experiment | Colab T4 5차: `check` 재검증 불합격(3/6) + **측정 오염 발견**(앞 경우 메모리가 남아 누적, MemTracker 순환 참조) → 경우별 프로세스 격리. 원인 셋 확인·수정: 첫 스텝 추적(→ 둘째 스텝), 출력 보유로 logits 생존, foreach 미선택. CPU에서 실제 추적과 +0.00% 일치, 6차 사전 등록 | 확정 |
+| [0056](0056-colab-run6-check-pass.md) | 2026-09-26 | experiment | Colab T4 6차: **`check` ±15% 통과(6/6)** — 학습 −0.2~−1.2%, 추론 +5%, 예측이 CUDA 실제 텐서 추적과 0.003% 이내 일치. 세 번 만의 통과에 대한 평가(보정 계수 없음, 독립 기준). **A2 완료 조건 모두 충족**(원래 M1 3B 조건만 열림) | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

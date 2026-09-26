@@ -12,6 +12,7 @@ import atexit
 import datetime as _dt
 import json
 import os
+import sys
 from pathlib import Path
 
 from memopro import _core
@@ -26,6 +27,8 @@ _cleaned: set[str] = set()
 
 
 def _pid_alive(pid: int) -> bool:
+    if sys.platform == "win32":
+        return _pid_alive_windows(pid)
     try:
         os.kill(pid, 0)
     except ProcessLookupError:
@@ -33,6 +36,23 @@ def _pid_alive(pid: int) -> bool:
     except PermissionError:
         return True
     return True
+
+
+def _pid_alive_windows(pid: int) -> bool:
+    """Never ``os.kill(pid, 0)`` on Windows: signal 0 is CTRL_C_EVENT there (0052 E8)."""
+    import ctypes
+
+    kernel32 = ctypes.windll.kernel32  # type: ignore[attr-defined]
+    handle = kernel32.OpenProcess(0x1000, False, pid)  # PROCESS_QUERY_LIMITED_INFORMATION
+    if not handle:
+        return kernel32.GetLastError() == 5  # access denied: it exists
+    try:
+        code = ctypes.c_ulong()
+        if not kernel32.GetExitCodeProcess(handle, ctypes.byref(code)):
+            return True
+        return code.value == 259  # STILL_ACTIVE
+    finally:
+        kernel32.CloseHandle(handle)
 
 
 def spill_dir(config: Config) -> Path:

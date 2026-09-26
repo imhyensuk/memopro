@@ -182,7 +182,7 @@ def _summarise(
 
 
 def build_result(census: Any) -> dict[str, Any]:
-    light = census.mode == "light"
+    light = census.mode in ("light", "deep")
     model, optimizer, log = census.model, census.optimizer, census._saved
     cats = {c: _Category() for c in CATEGORIES}
 

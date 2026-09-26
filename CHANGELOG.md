@@ -4,6 +4,37 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Added: v0.2 access layer (0052, 0053)
+- `memopro.load(model_id)`: sizes the model from metadata (no download), picks the first
+  configuration that fits (as stored, half precision, int8/int4 with bitsandbytes or torchao, CPU
+  or disk offload with accelerate) within `quality` ("lossless", "high", "balanced", "low") and
+  `prefer` ("speed", "quality", "memory"), and falls back to the next one if loading fails.
+- `memopro.check(target)` and `memopro check`: inference and training peak memory from one traced
+  step with fake tensors (no allocation), what `load` would choose, and a micro-batch plan.
+- `memopro.optimize(model, goal)`: run-time steps only as far as needed.
+- `memopro.train_session(model, optimizer)`: exact micro-batching with out-of-memory retry, then
+  activation checkpointing, activation offload (CUDA) and mixed precision within `quality`
+  (float16 with loss scaling); `max_grad_norm`, `reduction`; optimizer swaps are suggested only.
+- census `mode="deep"`: bits the training step needs per category, from the effect on the loss,
+  the gradient and one optimizer update; everything restored bit for bit.
+- Budget as a fraction (`0.5`, `"50%"`) or per pool; `idle_seconds`; `device=`; `BudgetExceeded`.
+- Spill writes on Windows; a Windows CI job on main pushes and manual runs.
+
+### Fixed (0054-0056, found on a Colab T4)
+- A failed `load` attempt kept its partly loaded model alive (through the exception kept for the
+  report) while the next configuration loaded; `train_session` released caches before the failed
+  attempt's tensors were gone.
+- `check` underestimated small-batch training by up to 22%: it traced the first step (before any
+  optimizer state), kept the model output alive through backward, and fake tensors could not pick
+  the foreach optimizer. It now traces a steady-state step and matches real tracking.
+
+### Added: v0.3 (0051, 0052, 0053)
+- Memory-pressure signal in the Rust core (macOS level, Linux PSI; `Unsupported` elsewhere).
+- `memopro.elastic` (γ): watches pressure, acts only at safe points (notebook cells, training
+  steps, loading budgets, `elastic.checkpoint()`).
+- `memopro run script.py`: runs a script unchanged with a `from_pretrained` loading policy (only
+  when the script chose nothing and the model does not fit as stored), γ and optional census.
+
 ### Changed (0044)
 - Version 0.1.0-alpha.1 (Cargo) / 0.1.0a1 (PyPI, PEP 440); `memopro.__version__` uses the PEP 440
   form, `memopro.core_version()` the Cargo form.

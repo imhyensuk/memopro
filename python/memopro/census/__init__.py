@@ -6,7 +6,8 @@ Modes:
             outliers and massive activations; lossless entropy as a secondary metric
 - ``light`` + needed bits per category from sampled tensors at 8/4/2 bits (reconstruction
             error, 0036 B4) and the worst-case tensor (K3) (v0.1, 0032 Q1)
-- ``deep``  gradient-impact precision study (v0.2)
+- ``deep``  + needed bits for *training* (v0.2, 0052 E5): each category perturbed as a whole,
+            effect on the loss, the gradient and one optimizer step; needs ``probe``
 
 Usage::
 
@@ -27,7 +28,7 @@ from __future__ import annotations
 import random
 from typing import Any, Self
 
-from memopro._errors import InvalidArgument, NotYetImplemented
+from memopro._errors import InvalidArgument
 
 MODES = ("fast", "light", "deep")
 
@@ -42,15 +43,26 @@ def record(
     samples_per_category: int = 32,
     sample_elements: int = 65536,
     seed: int = 0,
+    probe: Any = None,
+    tolerance: tuple[float, float] | None = None,
 ) -> Census:
-    """Context manager that records memory while the block runs."""
+    """Context manager that records memory while the block runs.
+
+    ``mode="deep"`` needs ``probe``: a function returning the loss of a fixed batch, e.g.
+    ``lambda: model(**batch).loss``. ``tolerance=(loss, cosine)`` overrides (1e-3, 0.999).
+    """
     if mode not in MODES:
         raise InvalidArgument(f"unknown census mode {mode!r}; choose from {', '.join(MODES)}")
-    if mode == "deep":
-        raise NotYetImplemented(
-            "memopro.census.record(mode='deep')", "v0.2 (A2)", "docs/research/0036"
+    if mode == "deep" and (probe is None or model is None):
+        raise InvalidArgument(
+            "census deep mode needs the model and probe=<function returning a loss for a fixed "
+            "batch>, e.g. probe=lambda: model(**batch).loss"
         )
-    return Census(model, optimizer, mode, samples_per_category, sample_elements, seed)
+    census = Census(model, optimizer, mode, samples_per_category, sample_elements, seed)
+    census._probe = probe
+    census._tolerance = tolerance
+    census._seed = seed
+    return census
 
 
 class Census:
@@ -85,6 +97,8 @@ class Census:
         self._hooks.__exit__(exc_type, exc, tb)
         try:
             self._result = build_result(self)
+            if self.mode == "deep" and exc_type is None:
+                self._result["deep"] = self._deep()
         except Exception as e:
             if exc_type is not None:  # never hide the user's own exception (0048)
                 return
@@ -93,6 +107,21 @@ class Census:
             raise MemoproError(f"census could not build its result: {type(e).__name__}: {e}") from e
         finally:
             self._saved = None  # drop samples of saved tensors
+
+    def _deep(self) -> dict[str, Any]:
+        from memopro.census import _deep
+
+        tol = _deep.Tolerance(*self._tolerance) if self._tolerance else _deep.Tolerance()
+        deep = _deep.run(self.model, self.optimizer, self._probe, tolerance=tol, seed=self._seed)
+        cats = self._result["categories"] if self._result else {}
+        for name in ("parameters", "gradients", "optimizer_state", "saved_activations"):
+            entry, cat = deep.get(name), cats.get(name, {})
+            stored, needed = cat.get("stored_bits"), (entry or {}).get("needed_bits")
+            if entry is not None and stored and needed:
+                entry["stored_bits"] = stored
+                entry["waste_bits"] = max(0, stored - needed)
+                entry["saveable_bytes"] = int(cat["bytes"] * max(0.0, 1 - needed / stored))
+        return deep
 
     # ------------------------------------------------------------------ results
     def _require(self) -> dict[str, Any]:

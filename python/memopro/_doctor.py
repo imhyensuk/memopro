@@ -12,7 +12,7 @@ from typing import Any
 from memopro._units import format_size
 from memopro.config import Config, get_config
 from memopro.env import Env, detect
-from memopro.orchestrator.budget import Budget, compute_budget
+from memopro.orchestrator.budget import Budget, compute_budget, describe_setting
 
 __all__ = ["DoctorReport", "doctor"]
 
@@ -46,7 +46,7 @@ class DoctorReport:
                 "will not spill to this disk"
             )
         if budget.capped_by_setting:
-            out.append(f"budget capped by the budget setting ({format_size(int(cfg.budget))})")
+            out.append(f"budget capped by the budget setting ({describe_setting(cfg.budget)})")
         return out + list(env.notes)
 
     def to_json(self) -> dict[str, Any]:

@@ -1,0 +1,207 @@
+{
+  "_source": "examples/colab_check_accuracy.ipynb (run 6, each case measured in a fresh process) run by the user on Google Colab (Tesla T4), 2026-09-26, memopro wheel from 75fde03 (SHA-256 83d4eadb455d8f34df2266fc4831413ae17271ccc1d97f3545aa180ec6019f10); JSON pasted verbatim (whitespace reformatted)",
+  "memopro": "0.1.0a1",
+  "python": "3.13.15",
+  "torch": "2.11.0+cu128",
+  "transformers": "5.16.1",
+  "wheel": "memopro-0.1.0a1-cp311-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+  "check_0055": true,
+  "cuda": true,
+  "gpu": "Tesla T4",
+  "check_accuracy": {
+    "cases": [
+      {
+        "model": "gpt2",
+        "goal": "infer",
+        "batch": 1,
+        "seq": 1024,
+        "predicted": 832603136,
+        "predicted_breakdown": {},
+        "measured": {
+          "allocated_after_load": 498567168,
+          "peak": 792631296
+        },
+        "rel_error": 0.0504,
+        "within_15pct": true,
+        "notes": []
+      },
+      {
+        "model": "gpt2",
+        "goal": "train",
+        "batch": 2,
+        "seq": 512,
+        "predicted": 3270146048,
+        "predicted_breakdown": {
+          "params": 497759232,
+          "grads": 497759232,
+          "optimizer_state": 995594240,
+          "activations": 1776792576
+        },
+        "measured": {
+          "allocated_after_load": 498567168,
+          "phases": {
+            "forward": 3102246400,
+            "backward": 3308082176,
+            "step": 2537458688
+          },
+          "peak": 3308082176,
+          "peak_phase": "backward",
+          "tracker_real": {
+            "PARAM": 497759232,
+            "BUFFER": 0,
+            "GRAD": 0,
+            "ACT": 1365075136,
+            "TEMP": 411705344,
+            "OPT": 995519056,
+            "OTH": 0,
+            "Total": 3270058768
+          },
+          "optimizer_impl": {
+            "foreach": true,
+            "fused": false
+          }
+        },
+        "rel_error": -0.0115,
+        "within_15pct": true,
+        "notes": []
+      },
+      {
+        "model": "gpt2",
+        "goal": "train",
+        "batch": 8,
+        "seq": 512,
+        "predicted": 8600471552,
+        "predicted_breakdown": {
+          "params": 497759232,
+          "grads": 497759232,
+          "optimizer_state": 995594240,
+          "activations": 7107118080
+        },
+        "measured": {
+          "allocated_after_load": 498591744,
+          "phases": {
+            "forward": 7816472064,
+            "backward": 8640586752,
+            "step": 2540615680
+          },
+          "peak": 8640586752,
+          "peak_phase": "backward",
+          "tracker_real": {
+            "PARAM": 497759232,
+            "BUFFER": 0,
+            "GRAD": 0,
+            "ACT": 5460284608,
+            "TEMP": 1646821376,
+            "OPT": 995519056,
+            "OTH": 0,
+            "Total": 8600384272
+          },
+          "optimizer_impl": {
+            "foreach": true,
+            "fused": false
+          }
+        },
+        "rel_error": -0.0046,
+        "within_15pct": true,
+        "notes": []
+      },
+      {
+        "model": "gpt2-medium",
+        "goal": "infer",
+        "batch": 1,
+        "seq": 1024,
+        "predicted": 1931345920,
+        "predicted_breakdown": {},
+        "measured": {
+          "allocated_after_load": 1419300864,
+          "peak": 1840242688
+        },
+        "rel_error": 0.0495,
+        "within_15pct": true,
+        "notes": []
+      },
+      {
+        "model": "gpt2-medium",
+        "goal": "train",
+        "batch": 1,
+        "seq": 512,
+        "predicted": 7096616960,
+        "predicted_breakdown": {
+          "params": 1419292672,
+          "grads": 1419292672,
+          "optimizer_state": 2838734848,
+          "activations": 4096
+        },
+        "measured": {
+          "allocated_after_load": 1419296768,
+          "phases": {
+            "forward": 6022653440,
+            "backward": 6127672320,
+            "step": 7114555392
+          },
+          "peak": 7114555392,
+          "peak_phase": "step",
+          "tracker_real": {
+            "PARAM": 1419292672,
+            "BUFFER": 0,
+            "GRAD": 1419292672,
+            "ACT": 4480,
+            "TEMP": 0,
+            "OPT": 4257879184,
+            "OTH": 0,
+            "Total": 7096469008
+          },
+          "optimizer_impl": {
+            "foreach": true,
+            "fused": false
+          }
+        },
+        "rel_error": -0.0025,
+        "within_15pct": true,
+        "notes": []
+      },
+      {
+        "model": "gpt2-medium",
+        "goal": "train",
+        "batch": 2,
+        "seq": 512,
+        "predicted": 7957265408,
+        "predicted_breakdown": {
+          "params": 1419292672,
+          "grads": 1419292672,
+          "optimizer_state": 2838734848,
+          "activations": 3699237888
+        },
+        "measured": {
+          "allocated_after_load": 1419300864,
+          "phases": {
+            "forward": 7769343488,
+            "backward": 7975179264,
+            "step": 7114559488
+          },
+          "peak": 7975179264,
+          "peak_phase": "backward",
+          "tracker_real": {
+            "PARAM": 1419292672,
+            "BUFFER": 0,
+            "GRAD": 0,
+            "ACT": 3287508352,
+            "TEMP": 411705344,
+            "OPT": 2838586512,
+            "OTH": 0,
+            "Total": 7957092880
+          },
+          "optimizer_impl": {
+            "foreach": true,
+            "fused": false
+          }
+        },
+        "rel_error": -0.0022,
+        "within_15pct": true,
+        "notes": []
+      }
+    ],
+    "measured_cases": 6,
+    "all_within_15pct": true
+  }
+}

@@ -2,6 +2,7 @@
 
 import os
 import stat
+import sys
 
 import pytest
 import torch
@@ -143,7 +144,8 @@ def test_spill_roundtrip_private_file_counted_and_reused(tmp_path):
     ref = t.clone()
     h = hibernate.now(t, mode="spill", allow_spill=True)
     path = h.records[0].sleeping.form[0]
-    assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
+    if sys.platform != "win32":  # Windows: the per-user folder's ACL, not POSIX modes
+        assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
     assert h.disk_write_bytes == t.new_empty(0).element_size() * (1 << 18)
     assert hibernate.status()["ssd_written_today"] == h.disk_write_bytes
     h.wake()

@@ -28,13 +28,28 @@ def _parser() -> argparse.ArgumentParser:
         "--no-devices", action="store_true", help="skip GPU detection (does not import torch)"
     )
 
-    check = sub.add_parser("check", help="does a model or script fit my budget? (v0.2)")
-    check.add_argument("target", help="model id or script path")
+    check = sub.add_parser(
+        "check", help="does a model fit my budget, and how? (inference, training)"
+    )
+    check.add_argument("target", help="Hugging Face model id or local model directory")
+    check.add_argument("--goal", choices=("both", "infer", "train"), default="both")
+    check.add_argument("--batch-size", type=int, default=1)
+    check.add_argument("--seq-len", type=int, default=None)
+    check.add_argument("--optimizer", choices=("adamw", "sgd", "none"), default="adamw")
+    check.add_argument("--budget", default=None, help='"auto", a size such as 6GB, or 50%%')
+    check.add_argument("--quality", choices=("lossless", "high", "balanced", "low"), default=None)
+    check.add_argument("--json", action="store_true", help="machine-readable output")
 
-    run = sub.add_parser("run", help="run a script with memopro's process-level features (v0.3)")
-    run.add_argument("--budget", default=None, help='"auto" or a size such as 6GB')
+    run = sub.add_parser(
+        "run", help="run a script with memopro's loading policy, γ and census (no code changes)"
+    )
+    run.add_argument("--budget", default=None, help='"auto", a size such as 6GB, or 50%%')
+    run.add_argument("--quality", choices=("lossless", "high", "balanced", "low"), default=None)
     run.add_argument("--disk-writes", choices=("ask", "never", "allow"), default=None)
     run.add_argument("--modes", default=None, help="write-free hibernate modes, e.g. source,host")
+    run.add_argument("--no-elastic", action="store_true", help="do not watch memory pressure")
+    run.add_argument("--census", action="store_true", help="census of the whole run")
+    run.add_argument("--dry-run", action="store_true", help="show what would be done; do not run")
     run.add_argument("script")
     run.add_argument("script_args", nargs=argparse.REMAINDER)
     return parser
@@ -50,25 +65,44 @@ def _doctor(args: argparse.Namespace) -> None:
 
 
 def _check(args: argparse.Namespace) -> None:
+    import json
+
     from memopro.access import check
 
-    check(args.target)
+    result = check(
+        args.target,
+        goal=args.goal,
+        batch_size=args.batch_size,
+        seq_len=args.seq_len,
+        optimizer=args.optimizer,
+        budget=args.budget,
+        quality=args.quality,
+    )
+    print(json.dumps(result.to_json(), indent=2, default=str) if args.json else result.summary())
 
 
 def _run(args: argparse.Namespace) -> None:
+    from memopro._run import run
     from memopro.config import configure
 
     settings = {
         k: v
         for k, v in (
             ("budget", args.budget),
+            ("quality", args.quality),
             ("disk_writes", args.disk_writes),
             ("hibernate_modes", args.modes),
         )
         if v is not None
     }
     configure(**settings)  # validate options before anything else
-    raise NotYetImplemented("memopro run", "v0.3 (N3)", "docs/design/architecture.md §4.2")
+    run(
+        args.script,
+        args.script_args,
+        elastic=not args.no_elastic,
+        census=args.census,
+        dry_run=args.dry_run,
+    )
 
 
 def main(argv: Sequence[str] | None = None) -> int:

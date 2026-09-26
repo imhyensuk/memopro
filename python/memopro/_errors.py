@@ -38,6 +38,10 @@ class ModeUnavailable(MemoproError):
         super().__init__(f"mode {mode!r} is not available: {reason}{hint}")
 
 
+class BudgetExceeded(MemoproError):
+    """Nothing memopro may apply fits the memory budget; the message lists what was tried."""
+
+
 class IntegrityError(MemoproError):
     """Restored data does not match what was hibernated (changed source file, corrupted spill)."""
 
