@@ -4,6 +4,7 @@ train_session. Tiny models on CPU; the device is pinned so results do not depend
 import copy
 import dataclasses
 import json
+import math
 import os
 
 import pytest
@@ -333,3 +334,46 @@ def test_idle_seconds_marks_objects_idle_by_time(monkeypatch):
     assert dataclasses.replace(memopro.get_config()).idle_seconds is None
     with pytest.raises(memopro.ConfigError):
         configure(idle_seconds=0)
+
+
+def test_gradient_clipping_matches_a_clipped_full_batch_step():
+    base, batch = gpt2(), _batch()
+    ref = copy.deepcopy(base)
+    ropt = torch.optim.SGD(ref.parameters(), lr=0.1)
+    ref(**batch, labels=batch["input_ids"]).loss.backward()
+    torch.nn.utils.clip_grad_norm_(ref.parameters(), 0.05)
+    ropt.step()
+    model = copy.deepcopy(base)
+    opt = torch.optim.SGD(model.parameters(), lr=0.1)
+    with memopro.train_session(model, opt, micro_batch_size=3, max_grad_norm=0.05) as s:
+        s.step(batch, lambda mb: model(**mb, labels=mb["input_ids"]).loss)
+    assert _max_rel(list(model.parameters()), list(ref.parameters())) < 1e-5
+    with pytest.raises(InvalidArgument):
+        memopro.train_session(model, opt, max_grad_norm=0)
+
+
+def test_float16_autocast_always_comes_with_loss_scaling():
+    model, batch = gpt2(), _batch()
+    opt = torch.optim.SGD(model.parameters(), lr=0.1)
+    with memopro.train_session(model, opt, micro_batch_size=1, quality="high") as s:
+        s._setup = dataclasses.replace(s._setup, half_dtype=torch.float16)
+        while not s.autocast:
+            assert s.degrade("test")
+        assert s._scaler is not None
+        loss = s.step(batch, lambda mb: model(**mb, labels=mb["input_ids"]).loss)
+        assert math.isfinite(loss)
+    assert all(torch.isfinite(p).all() for p in model.parameters())
+
+
+def test_sum_reduction_adds_micro_batch_losses():
+    torch.manual_seed(0)
+    base = torch.nn.Linear(4, 1)
+    x, y = torch.randn(6, 4), torch.randn(6, 1)
+    ref = copy.deepcopy(base)
+    ((ref(x) - y) ** 2).sum().backward()
+    torch.optim.SGD(ref.parameters(), lr=0.01).step()
+    model = copy.deepcopy(base)
+    opt = torch.optim.SGD(model.parameters(), lr=0.01)
+    with memopro.train_session(model, opt, micro_batch_size=2, reduction="sum") as s:
+        s.step((x, y), lambda b: ((model(b[0]) - b[1]) ** 2).sum())
+    assert _max_rel(list(model.parameters()), list(ref.parameters())) < 1e-5

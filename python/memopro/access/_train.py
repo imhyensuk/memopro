@@ -5,11 +5,16 @@ Exact techniques first, in this order when memory runs out:
 1. micro-batches with gradient accumulation (halved on each out-of-memory error)
 2. activation checkpointing (Hugging Face models, or each block of the largest ModuleList)
 3. activation offload to host RAM (discrete GPUs, ``torch.autograd.graph.save_on_cpu``)
-4. mixed precision (``torch.autocast``) only if ``quality`` allows half precision
+4. mixed precision (``torch.autocast``) only if ``quality`` allows half precision; float16
+   (e.g. a T4) always runs with loss scaling (``torch.amp.GradScaler``) so small gradients do
+   not underflow to zero
 
-Micro-batching is exact for losses that average over samples: each micro-batch's loss is
-weighted by its share of the batch, so the accumulated gradient is the full-batch gradient up to
-floating-point summation order. BatchNorm makes it inexact; memopro warns.
+Micro-batching is exact when every sample weighs the same in the loss: with
+``reduction="mean"`` (the default, e.g. ``loss.mean()``, cross-entropy with equal-length
+samples) each micro-batch's loss is weighted by its share of the batch; with ``reduction="sum"``
+losses are added as they are. The accumulated gradient is then the full-batch gradient up to
+floating-point summation order. Token-level means over padded samples of different lengths and
+BatchNorm make it approximate, as with any gradient accumulation; memopro warns about BatchNorm.
 
 ``s.step(batch, loss_fn)`` runs forward, backward and the optimizer step itself, so an
 out-of-memory error can be retried: the gradients of that batch are dropped and the batch starts
@@ -147,6 +152,8 @@ class TrainSession:
         budget: Any = None,
         quality: str | None = None,
         plan: bool = True,
+        max_grad_norm: float | None = None,
+        reduction: str = "mean",
     ) -> None:
         from memopro.access._common import setup
         from memopro.orchestrator.candidates import QUALITY_LIMIT
@@ -165,9 +172,16 @@ class TrainSession:
         self._allow_half = (
             QUALITY_LIMIT[self._setup.config.quality].value >= QualityGrade.NEAR_LOSSLESS.value
         )
+        if reduction not in ("mean", "sum"):
+            raise InvalidArgument(f"reduction must be 'mean' or 'sum'; got {reduction!r}")
+        self.reduction = reduction
+        if max_grad_norm is not None and max_grad_norm <= 0:
+            raise InvalidArgument(f"max_grad_norm must be > 0; got {max_grad_norm}")
+        self.max_grad_norm = max_grad_norm
         self.checkpointing = False
         self.activation_offload = False
         self.autocast = False
+        self._scaler: Any = None
         self._undo: list[Callable[[], None]] = []
         self.steps = 0
         self.retries = 0
@@ -242,6 +256,8 @@ class TrainSession:
             rep.add("train_session.activation_offload", "applied", reason)
             return True
         if not self.autocast and self._allow_half and self.device in ("cuda", "mps", "cpu"):
+            if not self._make_scaler():
+                return False
             self.autocast = True
             rep.add(
                 "train_session.autocast",
@@ -257,6 +273,7 @@ class TrainSession:
         rep = report()
         if self.autocast:
             self.autocast = False
+            self._scaler = None
         elif self.activation_offload:
             self.activation_offload = False
         elif self.checkpointing and self._undo:
@@ -269,6 +286,41 @@ class TrainSession:
         rep.add("train_session", "reverted", f"memory pressure gone: {', '.join(self.active())}")
         return True
 
+    def _make_scaler(self) -> bool:
+        """float16 needs loss scaling; False if this device cannot provide it."""
+        import torch
+
+        if self._setup.half_dtype != torch.float16:
+            return True
+        try:
+            self._scaler = torch.amp.GradScaler(self.device)
+        except Exception as e:  # noqa: BLE001 - no scaler here: do not train in float16
+            report().add("train_session.autocast", "skipped", f"no loss scaling: {e}"[:160])
+            return False
+        return True
+
+    def _share(self, size: int, n: int) -> float:
+        """Weight of a micro-batch's loss so the sum over micro-batches is the batch loss."""
+        return size / n if self.reduction == "mean" else 1.0
+
+    def _backward(self, loss: Any) -> None:
+        (self._scaler.scale(loss) if self._scaler is not None else loss).backward()
+
+    def _optimizer_step(self) -> None:
+        import torch
+
+        if self.max_grad_norm is not None:
+            if self._scaler is not None:
+                self._scaler.unscale_(self.optimizer)
+            params = [p for g in self.optimizer.param_groups for p in g["params"]]
+            torch.nn.utils.clip_grad_norm_(params, self.max_grad_norm)
+        if self._scaler is not None:
+            self._scaler.step(self.optimizer)
+            self._scaler.update()
+        else:
+            self.optimizer.step()
+        self.optimizer.zero_grad(set_to_none=True)
+
     # ------------------------------------------------------------ planning
     def _plan_first(self, batch: Any, loss_fn: Callable[[Any], Any], n: int) -> float:
         """Run one sample under MemTracker to size micro-batches; its gradient counts."""
@@ -280,7 +332,7 @@ class TrainSession:
             tracker.track_external(self.model, self.optimizer)
             with tracker, self._contexts():
                 loss = loss_fn(first)
-            (loss / n).backward()
+            self._backward(loss * self._share(1, n))
             peak = tracker.get_tracker_snapshot("peak")
             act = sum(
                 int(v)
@@ -293,10 +345,10 @@ class TrainSession:
                 raise
             with self._contexts():
                 loss = loss_fn(first)
-            (loss / n).backward()
+            self._backward(loss * self._share(1, n))
             report().add("train_session.plan", "skipped", f"{type(e).__name__}: {e}"[:160])
             self.micro = n
-            return float(loss.detach()) / n
+            return float(loss.detach()) * self._share(1, n)
         params = sum(p.numel() * p.element_size() for p in self.model.parameters())
         state = sum(
             t.numel() * t.element_size()
@@ -315,7 +367,7 @@ class TrainSession:
             f"one sample needs {format_size(act)} of activations; budget "
             f"{format_size(budget)} -> micro-batch {self.micro} of {n}",
         )
-        return float(loss.detach()) / n
+        return float(loss.detach()) * self._share(1, n)
 
     # ------------------------------------------------------------ step with retry
     def step(self, batch: Any, loss_fn: Callable[[Any], Any]) -> float:
@@ -359,10 +411,9 @@ class TrainSession:
         for chunk, size in pieces:
             with self._contexts():
                 loss = loss_fn(chunk)
-            (loss * (size / n)).backward()
-            total += float(loss.detach()) * size / n
-        self.optimizer.step()
-        self.optimizer.zero_grad(set_to_none=True)
+            self._backward(loss * self._share(size, n))
+            total += float(loss.detach()) * self._share(size, n)
+        self._optimizer_step()
         return total
 
     # ------------------------------------------------------------ manual form
@@ -386,10 +437,9 @@ class TrainSession:
             raise InvalidArgument("backward() is for micro-batches from s.batches(loader)")
         size, n, last = self._pending
         self._pending = None
-        (loss * (size / n)).backward()
+        self._backward(loss * self._share(size, n))
         if last:
-            self.optimizer.step()
-            self.optimizer.zero_grad(set_to_none=True)
+            self._optimizer_step()
             self.steps += 1
             _safe_point(self)
 
