@@ -377,3 +377,55 @@ def test_sum_reduction_adds_micro_batch_losses():
     with memopro.train_session(model, opt, micro_batch_size=2, reduction="sum") as s:
         s.step((x, y), lambda b: ((model(b[0]) - b[1]) ** 2).sum())
     assert _max_rel(list(model.parameters()), list(ref.parameters())) < 1e-5
+
+
+def test_memory_of_a_failed_attempt_is_freed_before_the_retry(monkeypatch):
+    """A real OOM happens after allocations: when memopro releases caches and retries, the failed
+    attempt's tensors (held by the exception's traceback) must already be gone (0054)."""
+    import weakref
+
+    from memopro.access import _train
+
+    model = gpt2()
+    opt = torch.optim.SGD(model.parameters(), lr=0.1)
+    held: list = []
+    alive_at_release: list = []
+    release = _train._release
+    monkeypatch.setattr(
+        _train,
+        "_release",
+        lambda: (alive_at_release.append([r() is not None for r in held]), release()),
+    )
+
+    def loss_fn(mb):
+        if mb["input_ids"].shape[0] > 2:
+            big = torch.empty(1 << 20)  # allocated before running out of memory
+            held.append(weakref.ref(big))
+            raise torch.OutOfMemoryError("CUDA out of memory (after allocating)")
+        return model(**mb, labels=mb["input_ids"]).loss
+
+    with memopro.train_session(model, opt, micro_batch_size=8) as s:
+        s.step(_batch(), loss_fn)
+    assert s.micro == 2 and len(held) == 2
+    assert alive_at_release == [[False], [False, False]]
+
+
+def test_memory_of_a_failed_load_is_freed_before_the_next_configuration(model_dir, monkeypatch):
+    import weakref
+
+    cls = transformers.GPT2LMHeadModel
+    original = cls.from_pretrained.__func__
+    held: list = []
+    alive: list = []
+
+    def flaky(klass, *args, **kwargs):
+        alive.append([r() is not None for r in held])  # checked after load (no assert here:
+        if kwargs.get("dtype") == "auto":  # fail-open would swallow it)
+            partial = torch.empty(1 << 20)  # a partly loaded model
+            held.append(weakref.ref(partial))
+            raise RuntimeError("injected failure after allocating")
+        return original(klass, *args, **kwargs)
+
+    monkeypatch.setattr(cls, "from_pretrained", classmethod(flaky))
+    memopro.load(model_dir, device="cpu")
+    assert alive == [[], [False]]

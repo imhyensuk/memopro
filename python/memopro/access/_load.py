@@ -190,6 +190,9 @@ def load(
 
                 return model, AutoTokenizer.from_pretrained(model_id, revision=revision)
             return model
+        # the exception's traceback holds the partly loaded model: drop it before the next try,
+        # or a failed load keeps its memory while the next configuration loads (0054)
+        del outcome
         _release()
     raise BudgetExceeded(
         f"every configuration that fits failed to load {info.source}; see memopro.report()"
