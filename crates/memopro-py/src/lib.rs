@@ -132,6 +132,39 @@ fn engine_digest<'py>(py: Python<'py>, data: &Bound<'py, PyAny>) -> PyResult<Bou
     Ok(PyBytes::new(py, &d.0))
 }
 
+/// Per-chunk hashes of a buffer (16 bytes per `DIGEST_CHUNK`, concatenated); see
+/// `engine_digest_combine`. Lets Python verify large tensors piece by piece (0061 F1).
+#[pyfunction]
+fn engine_digest_parts<'py>(
+    py: Python<'py>,
+    data: &Bound<'py, PyAny>,
+) -> PyResult<Bound<'py, PyBytes>> {
+    let (_keep, raw) = borrow(data, false)?;
+    // SAFETY: `_keep` holds the buffer for the whole call.
+    let parts = py.detach(|| memopro::spill::digest_parts(unsafe { raw.slice() }));
+    let out: Vec<u8> = parts.iter().flat_map(|p| p.to_le_bytes()).collect();
+    Ok(PyBytes::new(py, &out))
+}
+
+/// Digest (16 bytes) of `length` bytes whose chunk hashes are `parts` (from `engine_digest_parts`
+/// over consecutive pieces whose lengths are multiples of `DIGEST_CHUNK`).
+#[pyfunction]
+fn engine_digest_combine<'py>(
+    py: Python<'py>,
+    length: usize,
+    parts: &[u8],
+) -> PyResult<Bound<'py, PyBytes>> {
+    if parts.len() % 16 != 0 {
+        return Err(PyValueError::new_err("parts must be 16 bytes each"));
+    }
+    let hashes: Vec<u128> = parts
+        .chunks_exact(16)
+        .map(|c| u128::from_le_bytes(c.try_into().expect("16 bytes")))
+        .collect();
+    let d = memopro::spill::digest_combine(length, &hashes);
+    Ok(PyBytes::new(py, &d.0))
+}
+
 /// Fill `dst` from `len(dst)` bytes of `path` at `offset`; verify against `expected` if given.
 /// Returns the digest of what was read.
 #[pyfunction]
@@ -255,6 +288,8 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hwinfo_disk, m)?)?;
     m.add_function(wrap_pyfunction!(pressure_current, m)?)?;
     m.add_function(wrap_pyfunction!(engine_digest, m)?)?;
+    m.add_function(wrap_pyfunction!(engine_digest_parts, m)?)?;
+    m.add_function(wrap_pyfunction!(engine_digest_combine, m)?)?;
     m.add_function(wrap_pyfunction!(engine_read_source_into, m)?)?;
     m.add_function(wrap_pyfunction!(engine_write, m)?)?;
     m.add_class::<Compressed>()?;
