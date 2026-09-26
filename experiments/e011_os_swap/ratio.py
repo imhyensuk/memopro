@@ -4,12 +4,16 @@ The macOS compressor works on single pages; libcompression LZ4/LZFSE on 16 KiB (
 pages approximates it. memopro's ``compress`` method compresses whole tensors (byte shuffle +
 zstd). Both are measured on the same fp32 weights and on a bf16 copy.
 
-Usage: .venv/bin/python -m experiments.e011_os_swap.ratio
+Usage: .venv/bin/python -m experiments.e011_os_swap.ratio [--parameters-only]
+
+``--parameters-only`` leaves out the attention mask buffers (``attn.bias``) that the file holds
+but the model does not load as parameters (writes ratio_parameters.json).
 """
 
 from __future__ import annotations
 
 import os
+import sys
 from pathlib import Path
 
 os.environ.setdefault("HF_HOME", str(Path(__file__).resolve().parents[2] / ".cache" / "hf"))
@@ -47,13 +51,19 @@ def measure(tensors: dict[str, torch.Tensor]) -> dict[str, float]:
 
 def main() -> None:
     path = hf_hub_download(MODEL, "model.safetensors", revision=REVISION)
-    weights = {k: v for k, v in load_file(path).items() if v.is_floating_point()}
+    only = "--parameters-only" in sys.argv
+    weights = {
+        k: v
+        for k, v in load_file(path).items()
+        if v.is_floating_point() and not (only and k.endswith(("attn.bias", "attn.masked_bias")))
+    }
     result = {
         "fp32": measure({k: v.float() for k, v in weights.items()}),
         "bf16": measure({k: v.to(torch.bfloat16) for k, v in weights.items()}),
     }
-    save_json(capture(__file__), OUT / "env_ratio.json")
-    save_json(result, OUT / "ratio.json")
+    name = "ratio_parameters" if only else "ratio"
+    save_json(capture(__file__), OUT / f"env_{name}.json")
+    save_json(result, OUT / f"{name}.json")
     for dtype, r in result.items():
         print(dtype, {k: round(v, 4) if isinstance(v, float) else v for k, v in r.items()})
 

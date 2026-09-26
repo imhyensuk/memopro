@@ -65,7 +65,7 @@ def test_budget_forms():
     assert compute_budget(env, memopro.get_config()).host == min(base.host, 10**6)
     assert configure(budget="device=2GB,host=1GB").budget == PoolBudget(2 * 10**9, 10**9)
     assert configure(budget="6GB").budget == 6 * 10**9
-    for bad in ({"disk": "1GB"}, 1.5, "0.0"):
+    for bad in ({"gpu": "1GB"}, 1.5, "0.0"):  # disk became a pool in 0059 D2
         with pytest.raises(memopro.ConfigError):
             configure(budget=bad)
 
