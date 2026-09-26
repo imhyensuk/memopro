@@ -6,7 +6,7 @@ import pytest
 import torch
 
 import memopro
-from memopro import InvalidArgument, NotYetImplemented
+from memopro import InvalidArgument
 from memopro.census import _stats
 from memopro.env._torch import mps_usable
 
@@ -134,8 +134,8 @@ def test_result_needs_the_block_to_finish_and_modes_are_checked():
     c = memopro.census.record(tiny_model())
     with pytest.raises(InvalidArgument):
         c.summary()
-    with pytest.raises(NotYetImplemented, match="v0.2"):
-        memopro.census.record(mode="deep")
+    with pytest.raises(InvalidArgument, match="probe"):
+        memopro.census.record(tiny_model(), mode="deep")
     with pytest.raises(InvalidArgument):
         memopro.census.record(mode="turbo")
 

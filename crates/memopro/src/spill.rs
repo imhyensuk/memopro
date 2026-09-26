@@ -136,6 +136,47 @@ fn read_at(file: &File, mut buf: &mut [u8], mut offset: u64) -> std::io::Result<
     Ok(())
 }
 
+/// Create a new spill file readable only by this user. Unix: mode 0600. Windows: the file
+/// inherits the per-user cache folder's ACL (only the user and administrators).
+#[cfg(unix)]
+fn create_private(path: &Path) -> std::io::Result<File> {
+    use std::os::unix::fs::OpenOptionsExt;
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .mode(0o600)
+        .open(path)
+}
+
+#[cfg(windows)]
+fn create_private(path: &Path) -> std::io::Result<File> {
+    std::fs::OpenOptions::new()
+        .write(true)
+        .create_new(true)
+        .open(path)
+}
+
+#[cfg(unix)]
+fn write_at(file: &File, buf: &[u8], offset: u64) -> std::io::Result<()> {
+    use std::os::unix::fs::FileExt;
+    file.write_all_at(buf, offset)
+}
+
+#[cfg(windows)]
+fn write_at(file: &File, mut buf: &[u8], mut offset: u64) -> std::io::Result<()> {
+    use std::os::windows::fs::FileExt;
+    while !buf.is_empty() {
+        match file.seek_write(buf, offset)? {
+            0 => return Err(std::io::ErrorKind::WriteZero.into()),
+            n => {
+                buf = &buf[n..];
+                offset += n as u64;
+            }
+        }
+    }
+    Ok(())
+}
+
 fn read_region(
     file: &File,
     offset: u64,
@@ -202,10 +243,7 @@ impl Engine {
     }
 
     /// Write `src` to a new spill file in `dir` (last resort; the caller checked the policy).
-    #[cfg(unix)]
     pub fn write(&self, src: &[u8], dir: &Path) -> Result<SpillFile> {
-        use std::fs::OpenOptions;
-        use std::os::unix::fs::{FileExt, OpenOptionsExt};
         let name = format!(
             "{}-{}-{}.mpspill",
             std::process::id(),
@@ -215,17 +253,13 @@ impl Engine {
             COUNTER.fetch_add(1, Ordering::Relaxed)
         );
         let path = dir.join(name);
-        let file = OpenOptions::new()
-            .write(true)
-            .create_new(true)
-            .mode(0o600)
-            .open(&path)?;
+        let file = create_private(&path)?;
         let job = || -> std::io::Result<Vec<u128>> {
             file.set_len(src.len() as u64)?;
             src.par_chunks(DIGEST_CHUNK)
                 .enumerate()
                 .map(|(i, chunk)| {
-                    file.write_all_at(chunk, (i * DIGEST_CHUNK) as u64)?;
+                    write_at(&file, chunk, (i * DIGEST_CHUNK) as u64)?;
                     Ok(xxh3_128(chunk))
                 })
                 .collect()
@@ -246,15 +280,6 @@ impl Engine {
                 Err(e.into())
             }
         }
-    }
-
-    /// Write `src` to a new spill file (not implemented on this platform yet).
-    #[cfg(not(unix))]
-    pub fn write(&self, _src: &[u8], _dir: &Path) -> Result<SpillFile> {
-        Err(Error::not_implemented(
-            "spill::Engine::write on this OS",
-            "v0.1.x",
-        ))
     }
 
     /// Restore a spill file into `dst`, verifying its digest.

@@ -17,7 +17,7 @@ _LABELS = {
 def render(result: dict[str, Any]) -> str:
     cats = result["categories"]
     total = sum(c["bytes"] for c in cats.values()) or 1
-    light = result["mode"] == "light"
+    light = result["mode"] in ("light", "deep")
     head = f"{'category':20s} {'bytes':>11s} {'share':>6s} {'stored':>7s} {'entropy':>8s} {'lossless':>9s}"
     if light:
         head += f" {'needed':>7s}"
@@ -53,6 +53,27 @@ def render(result: dict[str, Any]) -> str:
             "needed bits: smallest of 8/4/2 whose worst sampled tensor stays within "
             f"{result['criteria']['tolerance']:g} relative error ({result['criteria']['needed_bits_basis']})"
         )
+    deep = result.get("deep")
+    if deep:
+        tol = deep["tolerance"]
+        lines += [
+            "",
+            (
+                "Deep mode: bits the training step needs (loss change <= "
+                f"{tol['loss']:g}, cosine >= {tol['cosine']:g})"
+            ),
+            f"{'category':20s} {'stored':>7s} {'needed':>7s} {'waste':>6s} {'saveable':>11s}",
+        ]
+        for name in ("parameters", "gradients", "optimizer_state", "saved_activations"):
+            e = deep.get(name)
+            if not e:
+                continue
+            needed = e.get("needed_bits")
+            shown = f"{needed}b" if needed else ">16b"
+            stored = f"{e['stored_bits']:.0f}b" if e.get("stored_bits") else "-"
+            waste = f"{e['waste_bits']:.0f}b" if "waste_bits" in e else "-"
+            save = format_size(e["saveable_bytes"]) if "saveable_bytes" in e else "-"
+            lines.append(f"{_LABELS[name]:20s} {stored:>7s} {shown:>7s} {waste:>6s} {save:>11s}")
     if result["advice"]:
         lines += ["", "Advice"] + [f"  - {a}" for a in result["advice"]]
     return "\n".join(lines)

@@ -35,6 +35,7 @@ def clean(monkeypatch, tmp_path):
 # ---------- measured values against independent sources ----------
 
 
+@pytest.mark.skipif(not hasattr(os, "sysconf"), reason="sysconf is POSIX only")
 def test_total_memory_matches_sysconf():
     expected = os.sysconf("SC_PAGE_SIZE") * os.sysconf("SC_PHYS_PAGES")
     assert _core.hwinfo_memory()["total_bytes"] == expected

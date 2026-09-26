@@ -1,6 +1,7 @@
 """The designed public API exists; unbuilt parts say so with a plan instead of doing nothing."""
 
 import pytest
+import torch
 
 import memopro
 import memopro.integrations.hf
@@ -26,19 +27,32 @@ def test_not_yet_implemented_is_a_not_implemented_error():
     assert "planned: v0.1" in str(e)
 
 
+def test_no_designed_feature_is_left_as_a_stub():
+    """Everything in the v0.1-v0.3 design is built (0052); NotYetImplemented stays for later."""
+    import pathlib
+
+    root = pathlib.Path(memopro.__file__).parent
+    raising = [
+        str(p.relative_to(root))
+        for p in root.rglob("*.py")
+        if "raise NotYetImplemented(" in p.read_text()
+    ]
+    assert raising == []
+
+
 @pytest.mark.parametrize(
-    ("call", "planned"),
+    "call",
     [
-        (lambda: memopro.load("gpt2"), "v0.2"),
-        (lambda: memopro.optimize(object()), "v0.2"),
-        (lambda: memopro.train_session(object(), object()), "v0.2"),
-        (lambda: memopro.check("gpt2"), "v0.2"),
-        (lambda: memopro.census.record(mode="deep"), "v0.2"),
-        (lambda: memopro.elastic.enable(), "v0.3"),
+        lambda: memopro.optimize(object()),
+        lambda: memopro.optimize(torch.nn.Linear(2, 2), goal="serve"),
+        lambda: memopro.check("app.py"),
+        lambda: memopro.load("x", device_map="auto"),
+        lambda: memopro.census.record(mode="deep"),
+        lambda: memopro.train_session(torch.nn.Linear(2, 2), None, micro_batch_size=0),
     ],
 )
-def test_skeleton_features_name_their_plan(call, planned):
-    with pytest.raises(NotYetImplemented, match=f"planned: {planned}"):
+def test_access_layer_rejects_bad_arguments_before_doing_anything(call):
+    with pytest.raises(memopro.InvalidArgument):
         call()
 
 

@@ -34,8 +34,8 @@ def advise(result: dict[str, Any]) -> list[str]:
         )
         out.append(
             f"optimizer state is {opt['bytes'] / total:.0%} of recorded memory: 8-bit optimizer "
-            f"states would save about {format_size(saving)} (changes numerics){evidence} "
-            "[memopro.train_session, v0.2]"
+            f"states would save about {format_size(saving)} (changes numerics){evidence}; "
+            "switching the optimizer is your choice (memopro.train_session only suggests it)"
         )
 
     act = cats["saved_activations"]
@@ -43,7 +43,8 @@ def advise(result: dict[str, Any]) -> list[str]:
         out.append(
             f"saved activations are {act['bytes'] / total:.0%} of recorded memory "
             f"({format_size(act['bytes'])}): activation checkpointing trades recomputation for "
-            "most of this (exact results) [memopro.train_session, v0.2]"
+            "most of this (exact results) [memopro.train_session applies it when memory runs "
+            "out, memopro.optimize(model, goal='train') turns it on]"
         )
 
     f32 = sum(cats[c].get("dtypes", {}).get("float32", 0) for c in ("parameters", "gradients"))

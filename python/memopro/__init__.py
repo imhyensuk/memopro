@@ -19,6 +19,7 @@ from typing import Any
 from memopro._core import __version__ as _cargo_version
 from memopro._core import core_version
 from memopro._errors import (
+    BudgetExceeded,
     ConfigError,
     IntegrityError,
     InvalidArgument,
@@ -60,6 +61,7 @@ _LAZY: dict[str, tuple[str, str | None]] = {
     "doctor": ("memopro._doctor", "doctor"),
     "configure": ("memopro.config", "configure"),
     "get_config": ("memopro.config", "get_config"),
+    "access": ("memopro.access", None),
     "census": ("memopro.census", None),
     "config": ("memopro.config", None),
     "elastic": ("memopro.elastic", None),
@@ -94,6 +96,7 @@ def load_ipython_extension(shell: Any) -> None:
 
 __all__ = [
     "Availability",
+    "BudgetExceeded",
     "ConfigError",
     "Fidelity",
     "IntegrityError",
