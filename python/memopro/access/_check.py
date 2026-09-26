@@ -132,6 +132,18 @@ def _loss(out: Any) -> Any:
     return first.float().mean()
 
 
+def _real_implementation(device: str) -> dict[str, bool]:
+    """The optimizer implementation torch picks for real tensors on ``device``.
+
+    torch only picks the foreach implementation for plain tensors, so a FakeTensor trace would
+    use the single-tensor one, which lacks foreach's parameter-sized temporaries; on CUDA that
+    underestimated small-batch training (Colab run 4, 0054).
+    """
+    from torch.utils._foreach_utils import _get_foreach_kernels_supported_devices
+
+    return {"foreach": device in _get_foreach_kernels_supported_devices()}
+
+
 def _trace(
     build: Any, example: Any, *, train: bool, optimizer: str, checkpointing: bool, device: str
 ) -> Trace:
@@ -146,7 +158,7 @@ def _trace(
         opt = None
         if train and optimizer != "none":
             opt = (torch.optim.SGD if optimizer == "sgd" else torch.optim.AdamW)(
-                model.parameters(), lr=1e-4
+                model.parameters(), lr=1e-4, **_real_implementation(device)
             )
         inputs = example(model) if callable(example) else example
         tracker = MemTracker()

@@ -429,3 +429,10 @@ def test_memory_of_a_failed_load_is_freed_before_the_next_configuration(model_di
     monkeypatch.setattr(cls, "from_pretrained", classmethod(flaky))
     memopro.load(model_dir, device="cpu")
     assert alive == [[], [False]]
+
+
+def test_check_traces_the_optimizer_implementation_torch_picks_on_the_device():
+    from memopro.access._check import _real_implementation
+
+    assert _real_implementation("cuda") == {"foreach": True}  # torch's default for real tensors
+    assert _real_implementation("cpu") == {"foreach": False}

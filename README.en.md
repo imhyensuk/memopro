@@ -107,7 +107,8 @@ precision and the model would not fit as stored; explicit choices are never chan
   (`reduction="mean"` or `"sum"`); padded samples of different lengths averaged per token, and
   BatchNorm, make them approximate, as with any gradient accumulation.
 - `check` and the `train_session` plan use torch's `MemTracker` and `FakeTensorMode`; without
-  them only weights are predicted. The ±15% accuracy target is not yet checked on CUDA.
+  them only weights are predicted. On a T4, inference was within 5% but small-batch
+  training was underestimated by up to 22% (0054); a fix is being re-checked.
 - γ thresholds and budget factors are initial values; on an 8 GB Mac the "warning" level can be
   permanent, so they need calibration. `memopro run` only changes Hugging Face `from_pretrained`.
 - "Bit-exact" refers to tensor values. On CPU, weights memory-mapped from safetensors may be
