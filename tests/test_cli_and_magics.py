@@ -27,12 +27,6 @@ def test_version_via_module_entry_point():
     assert out.stdout.strip() == f"memopro {memopro.__version__}"
 
 
-@pytest.mark.parametrize("argv", [["check", "gpt2"]])
-def test_unbuilt_commands_exit_with_not_yet(argv, capsys):
-    assert main(argv) == EXIT_NOT_YET
-    assert "not implemented yet" in capsys.readouterr().err
-
-
 def test_run_validates_options_first(capsys):
     assert main(["run", "--modes", "source,bf16", "app.py"]) == EXIT_ERROR
     assert "bf16" in capsys.readouterr().err
