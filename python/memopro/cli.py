@@ -16,8 +16,8 @@ EXIT_OK, EXIT_ERROR, EXIT_USAGE, EXIT_NOT_YET = 0, 1, 2, 3
 
 
 _BUDGET_HELP = (
-    "auto; a cap such as 6GB; 50%%; -2GB (leave 2GB free); 2GB..6GB (stop below 2GB); 6GB! "
-    "(exactly, even above what is measured); per pool: device=80%%,host=-2GB,disk=20GB"
+    "auto; a cap such as 6GB; 50%%; --budget=-2GB (leave 2GB free); 2GB..6GB (stop below 2GB); "
+    "6GB! (exactly, even above what is measured); per pool: device=80%%,host=-2GB,disk=20GB"
 )
 _BASIS_HELP = "what the host budget starts from: conservative (default), os, or total"
 

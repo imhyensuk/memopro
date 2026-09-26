@@ -282,8 +282,7 @@ def test_doctor_and_cli_show_the_setting_basis_and_notes():
             "memopro",
             "doctor",
             "--no-devices",
-            "--budget",
-            "-1GB",
+            "--budget=-1GB",  # "=": argparse before 3.12 reads "-1GB" as an option
             "--budget-basis",
             "total",
         ],
