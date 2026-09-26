@@ -506,13 +506,12 @@ def suggest(namespace: dict[str, Any] | None = None, min_bytes: int = MIN_OBJECT
 def enable(auto: bool = False, idle_cells: int | None = None, idle_seconds: float | None = None):
     """Notebook tracking: suggestions after cells, and optionally automatic hibernation.
 
+    An object is idle after ``idle_cells`` cells or ``idle_seconds`` seconds without use.
     Automatic hibernation only uses write-free methods unless ``disk_writes="allow"``.
     """
     from memopro.hibernate import _tracker
 
-    if idle_seconds is not None:
-        raise InvalidArgument("idle_seconds is not supported yet; use idle_cells")
-    _tracker.enable(auto=auto, idle_cells=idle_cells)
+    _tracker.enable(auto=auto, idle_cells=idle_cells, idle_seconds=idle_seconds)
 
 
 def status() -> dict[str, Any]:

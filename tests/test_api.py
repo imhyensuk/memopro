@@ -1,6 +1,7 @@
 """The designed public API exists; unbuilt parts say so with a plan instead of doing nothing."""
 
 import pytest
+import torch
 
 import memopro
 import memopro.integrations.hf
@@ -29,16 +30,27 @@ def test_not_yet_implemented_is_a_not_implemented_error():
 @pytest.mark.parametrize(
     ("call", "planned"),
     [
-        (lambda: memopro.load("gpt2"), "v0.2"),
-        (lambda: memopro.optimize(object()), "v0.2"),
-        (lambda: memopro.train_session(object(), object()), "v0.2"),
-        (lambda: memopro.check("gpt2"), "v0.2"),
-        (lambda: memopro.census.record(mode="deep"), "v0.2"),
         (lambda: memopro.elastic.enable(), "v0.3"),
     ],
 )
 def test_skeleton_features_name_their_plan(call, planned):
     with pytest.raises(NotYetImplemented, match=f"planned: {planned}"):
+        call()
+
+
+@pytest.mark.parametrize(
+    "call",
+    [
+        lambda: memopro.optimize(object()),
+        lambda: memopro.optimize(torch.nn.Linear(2, 2), goal="serve"),
+        lambda: memopro.check("app.py"),
+        lambda: memopro.load("x", device_map="auto"),
+        lambda: memopro.census.record(mode="deep"),
+        lambda: memopro.train_session(torch.nn.Linear(2, 2), None, micro_batch_size=0),
+    ],
+)
+def test_access_layer_rejects_bad_arguments_before_doing_anything(call):
+    with pytest.raises(memopro.InvalidArgument):
         call()
 
 

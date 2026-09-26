@@ -21,8 +21,9 @@ from typing import Any
 from memopro._errors import ConfigError, InvalidArgument
 from memopro._units import parse_size
 
-QUALITIES = ("lossless", "balanced")
-PREFERENCES = ("quality", "speed", "memory")
+# Most loss that may be applied automatically (0052 E3): exact only < half precision < int8 < int4
+QUALITIES = ("lossless", "high", "balanced", "low")
+PREFERENCES = ("speed", "quality", "memory")
 DISK_WRITES = ("ask", "never", "allow")
 # Write-free hibernation methods that `mode="auto"` may pick, in order (0032 H1). `bf16` is lossy
 # and only ever explicit; `spill` writes to disk and is governed by `disk_writes` instead.
@@ -30,17 +31,27 @@ AUTO_MODES = ("source", "host", "compress")
 
 
 @dataclass(frozen=True)
+class PoolBudget:
+    """Explicit caps per pool (0052 E3); None leaves that pool to the measured budget."""
+
+    device: int | None = None
+    host: int | None = None
+
+
+@dataclass(frozen=True)
 class Config:
-    budget: str | int = "auto"  # "auto" or a byte count
+    # "auto"; bytes (caps device and host); a fraction of the measured budget; or per pool
+    budget: str | int | float | PoolBudget = "auto"
     headroom: float = 0.10  # fraction of usable memory never budgeted (U3 prevention, 0035)
     quality: str = "balanced"
-    prefer: str = "quality"
+    prefer: str = "speed"
     hibernate_modes: tuple[str, ...] = AUTO_MODES
     disk_writes: str = "ask"
     daily_write_limit: int | None = None  # None: derived from the disk size (decided in A1b)
     min_free_disk_fraction: float = 0.20  # 0032 H4
     spill_dir: str | None = None
     idle_cells: int = 3
+    idle_seconds: float | None = None  # also suggest objects unused this long (0052 E8)
 
 
 _FIELDS = {f.name for f in dataclasses.fields(Config)}
@@ -67,12 +78,43 @@ def _modes(value: Any) -> tuple[str, ...]:
     return modes
 
 
+def _budget(value: Any) -> str | int | float | PoolBudget:
+    """Parse a budget: "auto", a size ("6GB", bytes), a fraction of the measured budget (0.5,
+    "50%") or caps per pool ({"device": "4GB", "host": "6GB"} or "device=4GB,host=6GB")."""
+    if value == "auto":
+        return "auto"
+    if isinstance(value, PoolBudget):
+        return value
+    if isinstance(value, str) and "=" in value:
+        value = dict(item.split("=", 1) for item in value.split(",") if item.strip())
+    if isinstance(value, Mapping):
+        unknown = set(value) - {"device", "host"}
+        if unknown:
+            raise InvalidArgument(f"budget pools are device and host; got {sorted(unknown)}")
+        caps = {
+            k.strip(): parse_size(v.strip() if isinstance(v, str) else v) for k, v in value.items()
+        }
+        return PoolBudget(device=caps.get("device"), host=caps.get("host"))
+    fraction = None
+    if isinstance(value, float):
+        fraction = value
+    elif isinstance(value, str) and value.strip().endswith("%"):
+        fraction = float(value.strip()[:-1]) / 100
+    elif isinstance(value, str) and "." in value and value.strip().replace(".", "", 1).isdigit():
+        fraction = float(value)
+    if fraction is not None:
+        if not 0.0 < fraction <= 1.0:
+            raise InvalidArgument(f"a budget fraction must be in (0, 1]; got {value!r}")
+        return fraction
+    return parse_size(value)
+
+
 def _validate(key: str, value: Any) -> Any:
     if key not in _FIELDS:
         raise InvalidArgument(f"unknown setting {key!r}; known: {', '.join(sorted(_FIELDS))}")
     match key:
         case "budget":
-            return "auto" if value == "auto" else parse_size(value)
+            return _budget(value)
         case "quality":
             return _choice(key, value, QUALITIES)
         case "prefer":
@@ -100,6 +142,13 @@ def _validate(key: str, value: Any) -> Any:
             if cells < 1:
                 raise InvalidArgument(f"idle_cells must be >= 1; got {value!r}")
             return cells
+        case "idle_seconds":
+            if value in (None, "", "none"):
+                return None
+            seconds = float(value)
+            if seconds <= 0:
+                raise InvalidArgument(f"idle_seconds must be > 0; got {value!r}")
+            return seconds
     raise AssertionError(key)
 
 

@@ -28,8 +28,17 @@ def _parser() -> argparse.ArgumentParser:
         "--no-devices", action="store_true", help="skip GPU detection (does not import torch)"
     )
 
-    check = sub.add_parser("check", help="does a model or script fit my budget? (v0.2)")
-    check.add_argument("target", help="model id or script path")
+    check = sub.add_parser(
+        "check", help="does a model fit my budget, and how? (inference, training)"
+    )
+    check.add_argument("target", help="Hugging Face model id or local model directory")
+    check.add_argument("--goal", choices=("both", "infer", "train"), default="both")
+    check.add_argument("--batch-size", type=int, default=1)
+    check.add_argument("--seq-len", type=int, default=None)
+    check.add_argument("--optimizer", choices=("adamw", "sgd", "none"), default="adamw")
+    check.add_argument("--budget", default=None, help='"auto", a size such as 6GB, or 50%%')
+    check.add_argument("--quality", choices=("lossless", "high", "balanced", "low"), default=None)
+    check.add_argument("--json", action="store_true", help="machine-readable output")
 
     run = sub.add_parser("run", help="run a script with memopro's process-level features (v0.3)")
     run.add_argument("--budget", default=None, help='"auto" or a size such as 6GB')
@@ -50,9 +59,20 @@ def _doctor(args: argparse.Namespace) -> None:
 
 
 def _check(args: argparse.Namespace) -> None:
+    import json
+
     from memopro.access import check
 
-    check(args.target)
+    result = check(
+        args.target,
+        goal=args.goal,
+        batch_size=args.batch_size,
+        seq_len=args.seq_len,
+        optimizer=args.optimizer,
+        budget=args.budget,
+        quality=args.quality,
+    )
+    print(json.dumps(result.to_json(), indent=2, default=str) if args.json else result.summary())
 
 
 def _run(args: argparse.Namespace) -> None:
