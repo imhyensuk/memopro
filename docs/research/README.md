@@ -87,6 +87,9 @@
 | [0058](0058-e011-preregistration.md) | 2026-09-26 | experiment (사전 등록) | E011 β 대 macOS 스왑·압축기. 파일럿에서 발견: 조사가 가드를 건드려 모델을 깨움(수정), CPU fp32 가중치는 mmap, macOS libmalloc이 해제한 메모리를 캐시에 붙잡음(`MallocLargeCache=0`이면 반환). 조건 cpu/mmap·cpu/anon·mps, 방법 os·source·compress·reload(+진단 source_nocache), 기준 D0~D5 | 확정 |
 | [0059](0059-budget-forms-extension.md) | 2026-09-26 | decision+design | 예산 형식 확장: 남기기 `-2GB`, 범위 `2GB..6GB`(최소 미달 시 멈춤), 강제 `6GB!`, 풀별 모든 형식과 디스크 풀, `{use,min,max}`, `budget_basis`(conservative·os·total), 크기 여유분, `memopro.using()`. 측정값을 넘는 것은 `!`와 basis뿐(0035·0052 E3을 명시적 선택에 한해 완화) | 확정 |
 | [0060](0060-e011-results.md) | 2026-09-26 | experiment | E011 결과: D0 비트 동일 73/73 ✅, D3 복귀 지연 OS 대비 0.33×(CPU)·0.45×(MPS) ✅, D2 다른 작업 반응성 이득 없음 ❌, D1 즉시 반환 실패(−0.34·−0.62) ❌ → 결함 F-E011-1(libmalloc 캐시·대조 버퍼), 해결 선택지 F1~F5 사용자 결정 대기. 페이지 LZ4는 파라미터에 1.00, memopro 0.84. 잠자기 중단 8개 시행은 사전 규칙으로 재실행 | 확정 |
+| [0061](0061-f1-f4-malloc-cache-fix.md) | 2026-09-27 | decision+milestone | F-E011-1 대응: F1 `source` 원본 대조를 32MiB 조각 단위로(청크 해시 결합, Rust `digest_parts/combine`), F4 macOS `MallocLargeCache` 안내(doctor, 보고서 1회)와 `memopro run` 재시작(`--keep-malloc-cache`). 테스트 10개 | 확정 |
+| [0062](0062-e014-preregistration.md) | 2026-09-27 | experiment (사전 등록) | E014 "적은 메모리에서 쓸 만한가": 추론(1.5B·3B × naive·memopro 4방법), 학습, 모델 번갈아 쓰기, F1·F4 확인. 쾌적 = 5 tok/s·불러오기 120s·스왑 1GiB·탐침 p95 ≤ 유휴 2배. 파일럿: MPS는 그래픽 드라이버가 해제된 메모리를 붙잡음, 기본 설정은 1.5B를 거부 | 확정 |
+| [0063](0063-e014-results.md) | 2026-09-27 | experiment | E014 결과: 학습 일반 루프 OOM 3/3 → `train_session` 완주 3/3 ✅. 번갈아 쓰기 둘 다 올려 두면 중단, β는 다시 불러오기의 0.90배(C5 ❌). 쾌적한 추론 없음 ❌. **기본 설정은 1.5B·3B 모두 `BudgetExceeded`** → 기본값 결정 대기(D-a~D-d). F4로 CPU 반환 0.965 ✅, 대가 1.05 ✅. 같은 bf16에서 memopro 불러오기는 스왑·탐침 1/3 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

@@ -1,0 +1,3663 @@
+{
+  "parts": [
+    "reclaim",
+    "f4cost",
+    "infer",
+    "train",
+    "alternate"
+  ],
+  "idle_probe": [
+    {
+      "part": "reclaim",
+      "n": 39,
+      "p50_ms": 2.9942499240860343,
+      "p95_ms": 39.23133295029402,
+      "max_ms": 43.087958940304816
+    },
+    {
+      "part": "f4cost",
+      "n": 39,
+      "p50_ms": 0.4894590238109231,
+      "p95_ms": 12.06133293453604,
+      "max_ms": 12.350333039648831
+    },
+    {
+      "part": "infer",
+      "n": 39,
+      "p50_ms": 0.4806669894605875,
+      "p95_ms": 0.5217919824644923,
+      "max_ms": 0.7271249778568745
+    },
+    {
+      "part": "train",
+      "n": 39,
+      "p50_ms": 0.5274169379845262,
+      "p95_ms": 14.403000008314848,
+      "max_ms": 16.419459017924964
+    },
+    {
+      "part": "alternate",
+      "n": 39,
+      "p50_ms": 0.34620799124240875,
+      "p95_ms": 3.061499912291765,
+      "max_ms": 16.965084010735154
+    }
+  ],
+  "cases": [
+    {
+      "label": "cpu/on",
+      "args": [
+        "reclaim",
+        "--device",
+        "cpu"
+      ],
+      "env": {},
+      "wall_s": 8.468935457989573,
+      "clock": [
+        1790439328.943082,
+        1790439337.4121118
+      ],
+      "returncode": 0,
+      "peak_footprint": 885952768,
+      "swap_growth": 0,
+      "probe": {
+        "n": 33,
+        "p50_ms": 3.677792032249272,
+        "p95_ms": 50.707750022411346,
+        "max_ms": 50.96545803826302
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": -0.12794426683782734,
+        "sleep_s": 1.3116688749287277,
+        "wake_s": 0.08244783396366984,
+        "malloc_cache_off": false
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 0
+    },
+    {
+      "label": "cpu/off",
+      "args": [
+        "reclaim",
+        "--device",
+        "cpu"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 7.423760375007987,
+      "clock": [
+        1790439347.4411101,
+        1790439354.864962
+      ],
+      "returncode": 0,
+      "peak_footprint": 863588224,
+      "swap_growth": 0,
+      "probe": {
+        "n": 28,
+        "p50_ms": 0.30499999411404133,
+        "p95_ms": 8.908917079679668,
+        "max_ms": 10.06000000052154
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": 0.9651825885170122,
+        "sleep_s": 1.171597250038758,
+        "wake_s": 0.18007070804014802,
+        "malloc_cache_off": true
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 0
+    },
+    {
+      "label": "mps/on",
+      "args": [
+        "reclaim",
+        "--device",
+        "mps"
+      ],
+      "env": {},
+      "wall_s": 7.363874666043557,
+      "clock": [
+        1790439364.89853,
+        1790439372.262495
+      ],
+      "returncode": 0,
+      "peak_footprint": 1709821376,
+      "swap_growth": 392429568,
+      "probe": {
+        "n": 29,
+        "p50_ms": 1.8743749242275953,
+        "p95_ms": 18.32308294251561,
+        "max_ms": 82.84925005864352
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": -0.26240374784249104,
+        "sleep_s": 1.072029749979265,
+        "wake_s": 0.28236295795068145,
+        "malloc_cache_off": false
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 0
+    },
+    {
+      "label": "mps/off",
+      "args": [
+        "reclaim",
+        "--device",
+        "mps"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 7.393672375008464,
+      "clock": [
+        1790439382.2893891,
+        1790439389.683152
+      ],
+      "returncode": 0,
+      "peak_footprint": 1458654144,
+      "swap_growth": 0,
+      "probe": {
+        "n": 29,
+        "p50_ms": 0.2869999734684825,
+        "p95_ms": 35.12329200748354,
+        "max_ms": 118.21629095356911
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": -0.014549427784395167,
+        "sleep_s": 1.0053516250336543,
+        "wake_s": 0.32078595797065645,
+        "malloc_cache_off": true
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 0
+    },
+    {
+      "label": "cpu/off",
+      "args": [
+        "reclaim",
+        "--device",
+        "cpu"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 7.890370874898508,
+      "clock": [
+        1790439399.702733,
+        1790439407.5932002
+      ],
+      "returncode": 0,
+      "peak_footprint": 864030656,
+      "swap_growth": 62715330,
+      "probe": {
+        "n": 31,
+        "p50_ms": 0.4069580463692546,
+        "p95_ms": 29.85158294904977,
+        "max_ms": 31.708542024716735
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": 0.9646559403241767,
+        "sleep_s": 1.4178126660408452,
+        "wake_s": 0.14722595806233585,
+        "malloc_cache_off": true
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 1
+    },
+    {
+      "label": "mps/on",
+      "args": [
+        "reclaim",
+        "--device",
+        "mps"
+      ],
+      "env": {},
+      "wall_s": 7.5262409169226885,
+      "clock": [
+        1790439417.619741,
+        1790439425.146074
+      ],
+      "returncode": 0,
+      "peak_footprint": 1710034432,
+      "swap_growth": 39908803,
+      "probe": {
+        "n": 29,
+        "p50_ms": 1.972583937458694,
+        "p95_ms": 14.977667015045881,
+        "max_ms": 25.818875059485435
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": -0.2893944677253118,
+        "sleep_s": 1.2226449170848355,
+        "wake_s": 0.33990191703196615,
+        "malloc_cache_off": false
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 1
+    },
+    {
+      "label": "mps/off",
+      "args": [
+        "reclaim",
+        "--device",
+        "mps"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 7.404010375030339,
+      "clock": [
+        1790439435.17209,
+        1790439442.576191
+      ],
+      "returncode": 0,
+      "peak_footprint": 1415629568,
+      "swap_growth": 50079989,
+      "probe": {
+        "n": 29,
+        "p50_ms": 0.4444170044735074,
+        "p95_ms": 46.86091700568795,
+        "max_ms": 176.51670798659325
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": -0.014417508583748377,
+        "sleep_s": 1.0715852080611512,
+        "wake_s": 0.364552375045605,
+        "malloc_cache_off": true
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 1
+    },
+    {
+      "label": "cpu/on",
+      "args": [
+        "reclaim",
+        "--device",
+        "cpu"
+      ],
+      "env": {},
+      "wall_s": 7.2054214590461925,
+      "clock": [
+        1790439452.609617,
+        1790439459.8151271
+      ],
+      "returncode": 0,
+      "peak_footprint": 894177408,
+      "swap_growth": 0,
+      "probe": {
+        "n": 28,
+        "p50_ms": 0.34191703889518976,
+        "p95_ms": 6.636000005528331,
+        "max_ms": 8.080041967332363
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": -0.14512603555286746,
+        "sleep_s": 1.0795860000653192,
+        "wake_s": 0.08507704199291766,
+        "malloc_cache_off": false
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 1
+    },
+    {
+      "label": "mps/on",
+      "args": [
+        "reclaim",
+        "--device",
+        "mps"
+      ],
+      "env": {},
+      "wall_s": 7.786292791948654,
+      "clock": [
+        1790439469.846642,
+        1790439477.63303
+      ],
+      "returncode": 0,
+      "peak_footprint": 1710312768,
+      "swap_growth": 262395659,
+      "probe": {
+        "n": 31,
+        "p50_ms": 2.4528750218451023,
+        "p95_ms": 84.10270896274596,
+        "max_ms": 156.09908301848918
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": -0.28926254852466504,
+        "sleep_s": 1.2467712090583518,
+        "wake_s": 0.5269476249814034,
+        "malloc_cache_off": false
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 2
+    },
+    {
+      "label": "mps/off",
+      "args": [
+        "reclaim",
+        "--device",
+        "mps"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 7.4165644579334185,
+      "clock": [
+        1790439487.664174,
+        1790439495.080829
+      ],
+      "returncode": 0,
+      "peak_footprint": 1418103488,
+      "swap_growth": 37685821,
+      "probe": {
+        "n": 28,
+        "p50_ms": 0.306583009660244,
+        "p95_ms": 42.418249999172986,
+        "max_ms": 43.03450009319931
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": -0.014384593071696157,
+        "sleep_s": 1.310420708032325,
+        "wake_s": 0.3193168749567121,
+        "malloc_cache_off": true
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 2
+    },
+    {
+      "label": "cpu/on",
+      "args": [
+        "reclaim",
+        "--device",
+        "cpu"
+      ],
+      "env": {},
+      "wall_s": 6.801723334006965,
+      "clock": [
+        1790439505.109353,
+        1790439511.91116
+      ],
+      "returncode": 0,
+      "peak_footprint": 893833280,
+      "swap_growth": 0,
+      "probe": {
+        "n": 26,
+        "p50_ms": 0.9871250949800014,
+        "p95_ms": 5.942166084423661,
+        "max_ms": 11.773000005632639
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": -0.14532365720139973,
+        "sleep_s": 0.8837025830289349,
+        "wake_s": 0.08782029198482633,
+        "malloc_cache_off": false
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 2
+    },
+    {
+      "label": "cpu/off",
+      "args": [
+        "reclaim",
+        "--device",
+        "cpu"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 7.348581917001866,
+      "clock": [
+        1790439521.95582,
+        1790439529.304491
+      ],
+      "returncode": 0,
+      "peak_footprint": 863932416,
+      "swap_growth": 0,
+      "probe": {
+        "n": 29,
+        "p50_ms": 0.4094160394743085,
+        "p95_ms": 8.728708024136722,
+        "max_ms": 9.040792006999254
+      },
+      "result": {
+        "ok": true,
+        "model_bytes": 497759232,
+        "reclaimed_frac": 0.9647545582841144,
+        "sleep_s": 1.010572166997008,
+        "wake_s": 0.17298299993854016,
+        "malloc_cache_off": true
+      },
+      "stderr_tail": "",
+      "part": "reclaim",
+      "repeat": 2
+    },
+    {
+      "label": "on",
+      "args": [
+        "train",
+        "--arm",
+        "naive",
+        "--device",
+        "cpu",
+        "--batch",
+        "4",
+        "--seq",
+        "256"
+      ],
+      "env": {},
+      "wall_s": 35.959832999971695,
+      "clock": [
+        1790439549.343562,
+        1790439585.303838
+      ],
+      "returncode": 0,
+      "peak_footprint": 4748177024,
+      "swap_growth": 2922905600,
+      "probe": {
+        "n": 140,
+        "p50_ms": 3.9098330307751894,
+        "p95_ms": 85.28320805635303,
+        "max_ms": 232.5688749551773
+      },
+      "result": {
+        "ok": true,
+        "step_s": [
+          6.919926457921974,
+          5.705233332933858,
+          4.034210041980259,
+          4.891421334003098,
+          3.6705395000753924,
+          4.8335873750038445
+        ],
+        "steady_step_s": 4.8335873750038445,
+        "losses": [
+          12.499072074890137,
+          11.657721519470215,
+          11.401318550109863,
+          11.260522842407227,
+          11.134051322937012,
+          11.119479179382324
+        ]
+      },
+      "stderr_tail": "",
+      "part": "f4cost",
+      "repeat": 0
+    },
+    {
+      "label": "off",
+      "args": [
+        "train",
+        "--arm",
+        "naive",
+        "--device",
+        "cpu",
+        "--batch",
+        "4",
+        "--seq",
+        "256"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 30.31776316696778,
+      "clock": [
+        1790439595.342059,
+        1790439625.660195
+      ],
+      "returncode": 0,
+      "peak_footprint": 3883510080,
+      "swap_growth": 829360701,
+      "probe": {
+        "n": 118,
+        "p50_ms": 0.32287498470395803,
+        "p95_ms": 48.631667043082416,
+        "max_ms": 223.14020805060863
+      },
+      "result": {
+        "ok": true,
+        "step_s": [
+          5.58177320798859,
+          4.076179041992873,
+          3.9438489170279354,
+          3.8820132920518517,
+          3.6263289169874042,
+          3.652902791975066
+        ],
+        "steady_step_s": 3.8820132920518517,
+        "losses": [
+          12.499072074890137,
+          11.657721519470215,
+          11.401318550109863,
+          11.260522842407227,
+          11.134051322937012,
+          11.119479179382324
+        ]
+      },
+      "stderr_tail": "",
+      "part": "f4cost",
+      "repeat": 0
+    },
+    {
+      "label": "off",
+      "args": [
+        "train",
+        "--arm",
+        "naive",
+        "--device",
+        "cpu",
+        "--batch",
+        "4",
+        "--seq",
+        "256"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 32.30203416699078,
+      "clock": [
+        1790439635.687374,
+        1790439667.9898062
+      ],
+      "returncode": 0,
+      "peak_footprint": 3987138880,
+      "swap_growth": 1058726216,
+      "probe": {
+        "n": 125,
+        "p50_ms": 0.39895903319120407,
+        "p95_ms": 51.75195797346532,
+        "max_ms": 255.10616600513458
+      },
+      "result": {
+        "ok": true,
+        "step_s": [
+          5.512513583060354,
+          4.997495000017807,
+          3.978155000018887,
+          4.475263874977827,
+          4.4023415830451995,
+          3.5414525840897113
+        ],
+        "steady_step_s": 4.4023415830451995,
+        "losses": [
+          12.499072074890137,
+          11.657721519470215,
+          11.401318550109863,
+          11.260522842407227,
+          11.134051322937012,
+          11.119479179382324
+        ]
+      },
+      "stderr_tail": "",
+      "part": "f4cost",
+      "repeat": 1
+    },
+    {
+      "label": "on",
+      "args": [
+        "train",
+        "--arm",
+        "naive",
+        "--device",
+        "cpu",
+        "--batch",
+        "4",
+        "--seq",
+        "256"
+      ],
+      "env": {},
+      "wall_s": 29.205575542058796,
+      "clock": [
+        1790439678.021725,
+        1790439707.22766
+      ],
+      "returncode": 0,
+      "peak_footprint": 4747112128,
+      "swap_growth": 1008079994,
+      "probe": {
+        "n": 113,
+        "p50_ms": 0.36362488754093647,
+        "p95_ms": 142.68362510483712,
+        "max_ms": 320.71037497371435
+      },
+      "result": {
+        "ok": true,
+        "step_s": [
+          4.482751458999701,
+          3.6540530420606956,
+          3.704405708005652,
+          3.892433000029996,
+          3.9963881250005215,
+          3.974119459046051
+        ],
+        "steady_step_s": 3.892433000029996,
+        "losses": [
+          12.499072074890137,
+          11.657721519470215,
+          11.401318550109863,
+          11.260522842407227,
+          11.134051322937012,
+          11.119479179382324
+        ]
+      },
+      "stderr_tail": "",
+      "part": "f4cost",
+      "repeat": 1
+    },
+    {
+      "label": "on",
+      "args": [
+        "train",
+        "--arm",
+        "naive",
+        "--device",
+        "cpu",
+        "--batch",
+        "4",
+        "--seq",
+        "256"
+      ],
+      "env": {},
+      "wall_s": 29.54140945803374,
+      "clock": [
+        1790439717.2603562,
+        1790439746.8021288
+      ],
+      "returncode": 0,
+      "peak_footprint": 4593315200,
+      "swap_growth": 717089669,
+      "probe": {
+        "n": 115,
+        "p50_ms": 0.39900001138448715,
+        "p95_ms": 118.75245801638812,
+        "max_ms": 204.44562495686114
+      },
+      "result": {
+        "ok": true,
+        "step_s": [
+          4.323354916996323,
+          4.301989291911013,
+          3.722895582905039,
+          4.250268957926892,
+          3.4843240410555154,
+          3.974322249996476
+        ],
+        "steady_step_s": 3.974322249996476,
+        "losses": [
+          12.499072074890137,
+          11.657721519470215,
+          11.401318550109863,
+          11.260522842407227,
+          11.134051322937012,
+          11.119479179382324
+        ]
+      },
+      "stderr_tail": "",
+      "part": "f4cost",
+      "repeat": 2
+    },
+    {
+      "label": "off",
+      "args": [
+        "train",
+        "--arm",
+        "naive",
+        "--device",
+        "cpu",
+        "--batch",
+        "4",
+        "--seq",
+        "256"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 33.754127166001126,
+      "clock": [
+        1790439756.836,
+        1790439790.590543
+      ],
+      "returncode": 0,
+      "peak_footprint": 3995199808,
+      "swap_growth": 1216809534,
+      "probe": {
+        "n": 131,
+        "p50_ms": 0.544792041182518,
+        "p95_ms": 105.94379098620266,
+        "max_ms": 188.88383405283093
+      },
+      "result": {
+        "ok": true,
+        "step_s": [
+          6.807200332987122,
+          4.668030833010562,
+          4.159852292039432,
+          4.187787416973151,
+          4.001974957995117,
+          3.9337362910155207
+        ],
+        "steady_step_s": 4.159852292039432,
+        "losses": [
+          12.499072074890137,
+          11.657721519470215,
+          11.401318550109863,
+          11.260522842407227,
+          11.134051322937012,
+          11.119479179382324
+        ]
+      },
+      "stderr_tail": "",
+      "part": "f4cost",
+      "repeat": 2
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/naive",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "naive"
+      ],
+      "env": {},
+      "wall_s": 24.78030041605234,
+      "clock": [
+        1790439810.639004,
+        1790439835.419609
+      ],
+      "returncode": 0,
+      "peak_footprint": 3804696064,
+      "swap_growth": 2733176258,
+      "probe": {
+        "n": 93,
+        "p50_ms": 3.7533330032601953,
+        "p95_ms": 185.17449998762459,
+        "max_ms": 700.1167500857264
+      },
+      "result": {
+        "ok": true,
+        "load_s": 9.62676987494342,
+        "ttft_s": 0.18382608296815306,
+        "gen_s": 5.902746625011787,
+        "tokens_per_s": 10.84241016356893,
+        "device": "mps",
+        "dtype": "torch.bfloat16",
+        "chosen": null,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849,
+          36137,
+          13,
+          1096,
+          13666,
+          979,
+          1052,
+          374,
+          38313,
+          2500,
+          4938,
+          389,
+          279,
+          22670,
+          594,
+          4938,
+          28922,
+          11,
+          1741,
+          438,
+          19168,
+          1402,
+          11,
+          6094,
+          4938,
+          11,
+          476,
+          24740,
+          13,
+          22406,
+          11,
+          421,
+          279
+        ],
+        "text": "A GPU can run out of memory if it is unable to allocate enough resources for all the tasks that need to be executed simultaneously, leading to performance degradation or system crashes. This occurs when there is insufficient available memory on the GPU's memory hierarchy, such as VRAM, shared memory, or registers. Additionally, if the"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 0
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro"
+      ],
+      "env": {},
+      "wall_s": 5.83947150001768,
+      "clock": [
+        1790439845.4543538,
+        1790439851.293897
+      ],
+      "returncode": 0,
+      "peak_footprint": 378604608,
+      "swap_growth": 0,
+      "probe": {
+        "n": 23,
+        "p50_ms": 0.26320805773139,
+        "p95_ms": 4.414208000525832,
+        "max_ms": 5.087625002488494
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.55 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.55 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.55 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.55 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 0
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro_os",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro_os"
+      ],
+      "env": {},
+      "wall_s": 4.846363292075694,
+      "clock": [
+        1790439861.322332,
+        1790439866.168755
+      ],
+      "returncode": 0,
+      "peak_footprint": 378768320,
+      "swap_growth": 0,
+      "probe": {
+        "n": 19,
+        "p50_ms": 0.26050000451505184,
+        "p95_ms": 5.110499914735556,
+        "max_ms": 5.110499914735556
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.63 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.63 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.63 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.63 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 0
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro_low",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro_low"
+      ],
+      "env": {},
+      "wall_s": 32.55918258300517,
+      "clock": [
+        1790439876.198288,
+        1790439908.7578702
+      ],
+      "returncode": 0,
+      "peak_footprint": 2072842048,
+      "swap_growth": 154214072,
+      "probe": {
+        "n": 127,
+        "p50_ms": 3.318500006571412,
+        "p95_ms": 75.23129205219448,
+        "max_ms": 136.20495807845145
+      },
+      "result": {
+        "ok": true,
+        "load_s": 10.391290582949296,
+        "ttft_s": 0.24574658297933638,
+        "gen_s": 13.144322959007695,
+        "tokens_per_s": 4.869022177832395,
+        "device": "mps",
+        "dtype": "torch.float16",
+        "chosen": [
+          "load.quant.int4"
+        ],
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          1576,
+          432,
+          702,
+          7199,
+          389,
+          11582,
+          573,
+          4938,
+          323,
+          33644,
+          16916,
+          389,
+          1007,
+          11582,
+          573,
+          5819,
+          369,
+          821,
+          8317,
+          1948,
+          279,
+          13940,
+          323,
+          279,
+          22670,
+          13,
+          1096,
+          3363,
+          429,
+          438,
+          803,
+          821,
+          374,
+          15233,
+          476,
+          9768,
+          389,
+          279,
+          22670,
+          11,
+          1181,
+          2500,
+          4938,
+          3550,
+          42054,
+          11,
+          6388,
+          311,
+          4650,
+          16484,
+          5975,
+          421,
+          537,
+          8975,
+          10277,
+          13,
+          22406
+        ],
+        "text": "A GPU can run out of memory because it has limited on-chip memory and relies heavily on off-chip storage for data transfer between the CPU and the GPU. This means that as more data is processed or stored on the GPU, its available memory space decreases, leading to potential overflow errors if not managed properly. Additionally"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 0
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro_4gb",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro_4gb"
+      ],
+      "env": {},
+      "wall_s": 16.660867500002496,
+      "clock": [
+        1790439918.786203,
+        1790439935.447275
+      ],
+      "returncode": 0,
+      "peak_footprint": 3670451264,
+      "swap_growth": 1193730376,
+      "probe": {
+        "n": 64,
+        "p50_ms": 2.7519590221345425,
+        "p95_ms": 195.02562494017184,
+        "max_ms": 276.8861659569666
+      },
+      "result": {
+        "ok": true,
+        "load_s": 4.381888583069667,
+        "ttft_s": 0.1783925419440493,
+        "gen_s": 5.963661957997829,
+        "tokens_per_s": 10.731661259600742,
+        "device": "mps",
+        "dtype": "torch.bfloat16",
+        "chosen": [
+          "load.stored"
+        ],
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849,
+          36137,
+          13,
+          1096,
+          13666,
+          979,
+          1052,
+          374,
+          38313,
+          2500,
+          4938,
+          389,
+          279,
+          22670,
+          594,
+          4938,
+          28922,
+          11,
+          1741,
+          438,
+          19168,
+          1402,
+          11,
+          6094,
+          4938,
+          11,
+          476,
+          24740,
+          13,
+          22406,
+          11,
+          421,
+          279
+        ],
+        "text": "A GPU can run out of memory if it is unable to allocate enough resources for all the tasks that need to be executed simultaneously, leading to performance degradation or system crashes. This occurs when there is insufficient available memory on the GPU's memory hierarchy, such as VRAM, shared memory, or registers. Additionally, if the"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 0
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/naive",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "naive"
+      ],
+      "env": {},
+      "wall_s": 680.9055497499648,
+      "clock": [
+        1790439945.478155,
+        1790440626.53394
+      ],
+      "returncode": -9,
+      "peak_footprint": 7654198592,
+      "swap_growth": 8544185221,
+      "probe": {
+        "n": 2625,
+        "p50_ms": 3.6985420156270266,
+        "p95_ms": 60.11145806405693,
+        "max_ms": 1978.4583750879392
+      },
+      "result": {
+        "ok": false,
+        "error": "timeout after 600 s"
+      },
+      "stderr_tail": "W0927 01:25:49.248000 20067 .venv/lib/python3.14/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.\nW0927 01:25:49.280000 20067 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\nW0927 01:25:49.322000 20067 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\n\nLoading weights:   0%|          | 0/434 [00:00<?, ?it/s]\nLoading weights:  65%|██████▍   | 281/434 [00:00<00:00, 2795.15it/s]\nLoading weights: 100%|██████████| 434/434 [00:00<00:00, 3442.28it/s]\n/opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/resource_tracker.py:297: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/mp-4eg8q2ch'}\n  warnings.warn(\n",
+      "part": "infer",
+      "repeat": 0
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro"
+      ],
+      "env": {},
+      "wall_s": 6.552978208987042,
+      "clock": [
+        1790440636.59485,
+        1790440643.148025
+      ],
+      "returncode": 0,
+      "peak_footprint": 378850368,
+      "swap_growth": 0,
+      "probe": {
+        "n": 25,
+        "p50_ms": 0.27837499510496855,
+        "p95_ms": 8.685374981723726,
+        "max_ms": 12.855249922722578
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.59 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.59 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.59 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.59 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 0
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro_os",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro_os"
+      ],
+      "env": {},
+      "wall_s": 4.997360125067644,
+      "clock": [
+        1790440653.174012,
+        1790440658.171521
+      ],
+      "returncode": 0,
+      "peak_footprint": 378833920,
+      "swap_growth": 0,
+      "probe": {
+        "n": 20,
+        "p50_ms": 0.3234579926356673,
+        "p95_ms": 45.43595900759101,
+        "max_ms": 45.43595900759101
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.76 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.76 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.76 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.76 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 0
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro_low",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro_low"
+      ],
+      "env": {},
+      "wall_s": 6.832640541018918,
+      "clock": [
+        1790440668.197896,
+        1790440675.030741
+      ],
+      "returncode": 0,
+      "peak_footprint": 432426112,
+      "swap_growth": 0,
+      "probe": {
+        "n": 27,
+        "p50_ms": 0.29341597110033035,
+        "p95_ms": 8.637542021460831,
+        "max_ms": 9.002874954603612
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'low':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.78 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.78 GiB\n  quant.int4       2.68 GiB  needs 2.68 GiB, device budget 1.78 GiB\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'low':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.78 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.78 GiB\n  quant.int4       2.68 GiB  needs 2.68 GiB, device budget 1.78 GiB\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 0
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro_4gb",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro_4gb"
+      ],
+      "env": {},
+      "wall_s": 5.161292499979027,
+      "clock": [
+        1790440685.0572622,
+        1790440690.218709
+      ],
+      "returncode": 0,
+      "peak_footprint": 378981376,
+      "swap_growth": 0,
+      "probe": {
+        "n": 20,
+        "p50_ms": 0.2727919491007924,
+        "p95_ms": 8.652791962958872,
+        "max_ms": 8.652791962958872
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 3.73 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 3.73 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 3.73 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 3.73 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 0
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro"
+      ],
+      "env": {},
+      "wall_s": 4.895809374982491,
+      "clock": [
+        1790440700.245148,
+        1790440705.1411042
+      ],
+      "returncode": 0,
+      "peak_footprint": 378588096,
+      "swap_growth": 0,
+      "probe": {
+        "n": 19,
+        "p50_ms": 0.27312501333653927,
+        "p95_ms": 8.789416984654963,
+        "max_ms": 8.789416984654963
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.44 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.44 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.44 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.44 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 1
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro_os",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro_os"
+      ],
+      "env": {},
+      "wall_s": 4.769561041961424,
+      "clock": [
+        1790440715.176233,
+        1790440719.945934
+      ],
+      "returncode": 0,
+      "peak_footprint": 378702784,
+      "swap_growth": 0,
+      "probe": {
+        "n": 18,
+        "p50_ms": 0.2716250019147992,
+        "p95_ms": 12.788749998435378,
+        "max_ms": 12.788749998435378
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.44 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.44 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.44 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.44 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 1
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro_low",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro_low"
+      ],
+      "env": {},
+      "wall_s": 27.618866458069533,
+      "clock": [
+        1790440729.973829,
+        1790440757.593523
+      ],
+      "returncode": 0,
+      "peak_footprint": 2030308992,
+      "swap_growth": 567415930,
+      "probe": {
+        "n": 108,
+        "p50_ms": 3.050207975320518,
+        "p95_ms": 78.23266694322228,
+        "max_ms": 185.9523750608787
+      },
+      "result": {
+        "ok": true,
+        "load_s": 8.490250250091776,
+        "ttft_s": 0.23475820908788592,
+        "gen_s": 12.824038916965947,
+        "tokens_per_s": 4.990627400181177,
+        "device": "mps",
+        "dtype": "torch.float16",
+        "chosen": [
+          "load.quant.int4"
+        ],
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          1576,
+          432,
+          702,
+          7199,
+          389,
+          11582,
+          573,
+          4938,
+          323,
+          33644,
+          16916,
+          389,
+          1007,
+          11582,
+          573,
+          5819,
+          369,
+          821,
+          8317,
+          1948,
+          279,
+          13940,
+          323,
+          279,
+          22670,
+          13,
+          1096,
+          3363,
+          429,
+          438,
+          803,
+          821,
+          374,
+          15233,
+          476,
+          9768,
+          389,
+          279,
+          22670,
+          11,
+          1181,
+          2500,
+          4938,
+          3550,
+          42054,
+          11,
+          6388,
+          311,
+          4650,
+          16484,
+          5975,
+          421,
+          537,
+          8975,
+          10277,
+          13,
+          22406
+        ],
+        "text": "A GPU can run out of memory because it has limited on-chip memory and relies heavily on off-chip storage for data transfer between the CPU and the GPU. This means that as more data is processed or stored on the GPU, its available memory space decreases, leading to potential overflow errors if not managed properly. Additionally"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 1
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro_4gb",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro_4gb"
+      ],
+      "env": {},
+      "wall_s": 15.455801540985703,
+      "clock": [
+        1790440767.6223419,
+        1790440783.078607
+      ],
+      "returncode": 0,
+      "peak_footprint": 3688096768,
+      "swap_growth": 983753032,
+      "probe": {
+        "n": 60,
+        "p50_ms": 1.9780000438913703,
+        "p95_ms": 61.39683397486806,
+        "max_ms": 77.51504192128778
+      },
+      "result": {
+        "ok": true,
+        "load_s": 4.098512084106915,
+        "ttft_s": 0.17998445802368224,
+        "gen_s": 5.545685249962844,
+        "tokens_per_s": 11.540503493311093,
+        "device": "mps",
+        "dtype": "torch.bfloat16",
+        "chosen": [
+          "load.stored"
+        ],
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849,
+          36137,
+          13,
+          1096,
+          13666,
+          979,
+          1052,
+          374,
+          38313,
+          2500,
+          4938,
+          389,
+          279,
+          22670,
+          594,
+          4938,
+          28922,
+          11,
+          1741,
+          438,
+          19168,
+          1402,
+          11,
+          6094,
+          4938,
+          11,
+          476,
+          24740,
+          13,
+          22406,
+          11,
+          421,
+          279
+        ],
+        "text": "A GPU can run out of memory if it is unable to allocate enough resources for all the tasks that need to be executed simultaneously, leading to performance degradation or system crashes. This occurs when there is insufficient available memory on the GPU's memory hierarchy, such as VRAM, shared memory, or registers. Additionally, if the"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 1
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/naive",
+      "skipped": "timed out in an earlier repeat",
+      "part": "infer",
+      "repeat": 1
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro"
+      ],
+      "env": {},
+      "wall_s": 5.437880875077099,
+      "clock": [
+        1790440803.112457,
+        1790440808.550501
+      ],
+      "returncode": 0,
+      "peak_footprint": 378489792,
+      "swap_growth": 0,
+      "probe": {
+        "n": 21,
+        "p50_ms": 0.2872080076485872,
+        "p95_ms": 4.783499985933304,
+        "max_ms": 4.966457956470549
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.19 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.19 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.19 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.19 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 1
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro_os",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro_os"
+      ],
+      "env": {},
+      "wall_s": 4.976083292043768,
+      "clock": [
+        1790440818.5808609,
+        1790440823.5570939
+      ],
+      "returncode": 0,
+      "peak_footprint": 378588096,
+      "swap_growth": 0,
+      "probe": {
+        "n": 19,
+        "p50_ms": 0.9670000290498137,
+        "p95_ms": 3.7866670172661543,
+        "max_ms": 3.7866670172661543
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.28 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.28 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.28 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.28 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 1
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro_low",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro_low"
+      ],
+      "env": {},
+      "wall_s": 6.61209195794072,
+      "clock": [
+        1790440833.58201,
+        1790440840.194301
+      ],
+      "returncode": 0,
+      "peak_footprint": 432802880,
+      "swap_growth": 0,
+      "probe": {
+        "n": 26,
+        "p50_ms": 0.2716250019147992,
+        "p95_ms": 4.070790950208902,
+        "max_ms": 8.820999995805323
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'low':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.27 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.27 GiB\n  quant.int4       2.68 GiB  needs 2.68 GiB, device budget 1.27 GiB\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'low':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.27 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.27 GiB\n  quant.int4       2.68 GiB  needs 2.68 GiB, device budget 1.27 GiB\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 1
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro_4gb",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro_4gb"
+      ],
+      "env": {},
+      "wall_s": 4.9307989159133285,
+      "clock": [
+        1790440850.220469,
+        1790440855.151416
+      ],
+      "returncode": 0,
+      "peak_footprint": 378751936,
+      "swap_growth": 0,
+      "probe": {
+        "n": 19,
+        "p50_ms": 0.28070900589227676,
+        "p95_ms": 6.984416977502406,
+        "max_ms": 6.984416977502406
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 3.73 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 3.73 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 3.73 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 3.73 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 1
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/naive",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "naive"
+      ],
+      "env": {},
+      "wall_s": 24.005473042023368,
+      "clock": [
+        1790440865.183352,
+        1790440889.189545
+      ],
+      "returncode": 0,
+      "peak_footprint": 3803827584,
+      "swap_growth": 3324636037,
+      "probe": {
+        "n": 88,
+        "p50_ms": 2.2724580485373735,
+        "p95_ms": 201.99108310043812,
+        "max_ms": 1530.642458004877
+      },
+      "result": {
+        "ok": true,
+        "load_s": 10.130976457963698,
+        "ttft_s": 0.19314433296676725,
+        "gen_s": 5.794836457935162,
+        "tokens_per_s": 11.044315135479202,
+        "device": "mps",
+        "dtype": "torch.bfloat16",
+        "chosen": null,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849,
+          36137,
+          13,
+          1096,
+          13666,
+          979,
+          1052,
+          374,
+          38313,
+          2500,
+          4938,
+          389,
+          279,
+          22670,
+          594,
+          4938,
+          28922,
+          11,
+          1741,
+          438,
+          19168,
+          1402,
+          11,
+          6094,
+          4938,
+          11,
+          476,
+          24740,
+          13,
+          22406,
+          11,
+          421,
+          279
+        ],
+        "text": "A GPU can run out of memory if it is unable to allocate enough resources for all the tasks that need to be executed simultaneously, leading to performance degradation or system crashes. This occurs when there is insufficient available memory on the GPU's memory hierarchy, such as VRAM, shared memory, or registers. Additionally, if the"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 1
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro_os",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro_os"
+      ],
+      "env": {},
+      "wall_s": 5.070760416099802,
+      "clock": [
+        1790440899.216983,
+        1790440904.287895
+      ],
+      "returncode": 0,
+      "peak_footprint": 379046848,
+      "swap_growth": 0,
+      "probe": {
+        "n": 19,
+        "p50_ms": 0.25633396580815315,
+        "p95_ms": 0.3174999728798866,
+        "max_ms": 0.3174999728798866
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.43 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.43 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.43 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.43 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 2
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro_low",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro_low"
+      ],
+      "env": {},
+      "wall_s": 6.26981166691985,
+      "clock": [
+        1790440914.313163,
+        1790440920.583162
+      ],
+      "returncode": 0,
+      "peak_footprint": 432770048,
+      "swap_growth": 0,
+      "probe": {
+        "n": 25,
+        "p50_ms": 0.2723749494180083,
+        "p95_ms": 4.974583047442138,
+        "max_ms": 7.144125062040985
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'low':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.40 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.40 GiB\n  quant.int4       1.46 GiB  needs 1.46 GiB, device budget 1.40 GiB\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'low':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.40 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.40 GiB\n  quant.int4       1.46 GiB  needs 1.46 GiB, device budget 1.40 GiB\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 2
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro_4gb",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro_4gb"
+      ],
+      "env": {},
+      "wall_s": 14.544561333023012,
+      "clock": [
+        1790440930.612434,
+        1790440945.1574311
+      ],
+      "returncode": 0,
+      "peak_footprint": 3690620032,
+      "swap_growth": 628495482,
+      "probe": {
+        "n": 56,
+        "p50_ms": 3.9515409152954817,
+        "p95_ms": 44.51429191976786,
+        "max_ms": 124.86654194071889
+      },
+      "result": {
+        "ok": true,
+        "load_s": 3.519486792036332,
+        "ttft_s": 0.1827141250250861,
+        "gen_s": 5.4839460420189425,
+        "tokens_per_s": 11.670428466950794,
+        "device": "mps",
+        "dtype": "torch.bfloat16",
+        "chosen": [
+          "load.stored"
+        ],
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849,
+          36137,
+          13,
+          1096,
+          13666,
+          979,
+          1052,
+          374,
+          38313,
+          2500,
+          4938,
+          389,
+          279,
+          22670,
+          594,
+          4938,
+          28922,
+          11,
+          1741,
+          438,
+          19168,
+          1402,
+          11,
+          6094,
+          4938,
+          11,
+          476,
+          24740,
+          13,
+          22406,
+          11,
+          421,
+          279
+        ],
+        "text": "A GPU can run out of memory if it is unable to allocate enough resources for all the tasks that need to be executed simultaneously, leading to performance degradation or system crashes. This occurs when there is insufficient available memory on the GPU's memory hierarchy, such as VRAM, shared memory, or registers. Additionally, if the"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 2
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/naive",
+      "skipped": "timed out in an earlier repeat",
+      "part": "infer",
+      "repeat": 2
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro"
+      ],
+      "env": {},
+      "wall_s": 5.121351915993728,
+      "clock": [
+        1790440965.2040262,
+        1790440970.325532
+      ],
+      "returncode": 0,
+      "peak_footprint": 378768384,
+      "swap_growth": 0,
+      "probe": {
+        "n": 20,
+        "p50_ms": 0.26904104743152857,
+        "p95_ms": 16.904833959415555,
+        "max_ms": 16.904833959415555
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 2.89 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 2.89 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 2.89 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 2.89 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 2
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro_os",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro_os"
+      ],
+      "env": {},
+      "wall_s": 4.906828250037506,
+      "clock": [
+        1790440980.352205,
+        1790440985.25918
+      ],
+      "returncode": 0,
+      "peak_footprint": 378162112,
+      "swap_growth": 0,
+      "probe": {
+        "n": 19,
+        "p50_ms": 0.26833300944417715,
+        "p95_ms": 6.459541968069971,
+        "max_ms": 6.459541968069971
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.44 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.44 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.44 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.44 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 2
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro_low",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro_low"
+      ],
+      "env": {},
+      "wall_s": 6.646608166047372,
+      "clock": [
+        1790440995.281735,
+        1790441001.928542
+      ],
+      "returncode": 0,
+      "peak_footprint": 432360576,
+      "swap_growth": 0,
+      "probe": {
+        "n": 26,
+        "p50_ms": 0.2809170400723815,
+        "p95_ms": 6.4215000020340085,
+        "max_ms": 11.750124976970255
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'low':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.45 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.45 GiB\n  quant.int4       2.68 GiB  needs 2.68 GiB, device budget 1.45 GiB\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'low':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.45 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 1.45 GiB\n  quant.int4       2.68 GiB  needs 2.68 GiB, device budget 1.45 GiB\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 2
+    },
+    {
+      "label": "Qwen/Qwen2.5-3B-Instruct/memopro_4gb",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-3B-Instruct",
+        "--arm",
+        "memopro_4gb"
+      ],
+      "env": {},
+      "wall_s": 4.954329833970405,
+      "clock": [
+        1790441011.955683,
+        1790441016.9101608
+      ],
+      "returncode": 0,
+      "peak_footprint": 378637248,
+      "swap_growth": 0,
+      "probe": {
+        "n": 19,
+        "p50_ms": 0.28170901350677013,
+        "p95_ms": 7.920125033706427,
+        "max_ms": 7.920125033706427
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 3.73 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 3.73 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 3.73 GiB\n  quant.int8       3.81 GiB  needs 3.81 GiB, device budget 3.73 GiB\n  quant.int4       2.68 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      6.39 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     6.39 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 2
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/naive",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "naive"
+      ],
+      "env": {},
+      "wall_s": 46.68383212503977,
+      "clock": [
+        1790441026.933165,
+        1790441073.618398
+      ],
+      "returncode": 0,
+      "peak_footprint": 3801697664,
+      "swap_growth": 3794796544,
+      "probe": {
+        "n": 175,
+        "p50_ms": 7.029791013337672,
+        "p95_ms": 248.68666706606746,
+        "max_ms": 1370.6513750366867
+      },
+      "result": {
+        "ok": true,
+        "load_s": 12.19640483299736,
+        "ttft_s": 0.24476745806168765,
+        "gen_s": 5.82567733398173,
+        "tokens_per_s": 10.985847023603919,
+        "device": "mps",
+        "dtype": "torch.bfloat16",
+        "chosen": null,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849,
+          36137,
+          13,
+          1096,
+          13666,
+          979,
+          1052,
+          374,
+          38313,
+          2500,
+          4938,
+          389,
+          279,
+          22670,
+          594,
+          4938,
+          28922,
+          11,
+          1741,
+          438,
+          19168,
+          1402,
+          11,
+          6094,
+          4938,
+          11,
+          476,
+          24740,
+          13,
+          22406,
+          11,
+          421,
+          279
+        ],
+        "text": "A GPU can run out of memory if it is unable to allocate enough resources for all the tasks that need to be executed simultaneously, leading to performance degradation or system crashes. This occurs when there is insufficient available memory on the GPU's memory hierarchy, such as VRAM, shared memory, or registers. Additionally, if the"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 2
+    },
+    {
+      "label": "Qwen/Qwen2.5-1.5B-Instruct/memopro",
+      "args": [
+        "infer",
+        "--model",
+        "Qwen/Qwen2.5-1.5B-Instruct",
+        "--arm",
+        "memopro"
+      ],
+      "env": {},
+      "wall_s": 5.8566344999708235,
+      "clock": [
+        1790441083.661819,
+        1790441089.518629
+      ],
+      "returncode": 0,
+      "peak_footprint": 378719168,
+      "swap_growth": 0,
+      "probe": {
+        "n": 23,
+        "p50_ms": 0.2775000175461173,
+        "p95_ms": 4.366416018456221,
+        "max_ms": 9.109499980695546
+      },
+      "result": {
+        "ok": false,
+        "error": "BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.41 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.41 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 82, in infer\n    model, tok = memopro.load(args.model, tokenizer=True, **opts)\n                 ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/__init__.py\", line 19, in load\n    return _load(model_id, **options)\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/access/_load.py\", line 166, in load\n    raise BudgetExceeded(\n    ...<4 lines>...\n    )\nmemopro._errors.BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1.41 GiB\n  quant.int8       2.00 GiB  needs 2.00 GiB, device budget 1.41 GiB\n  quant.int4       1.46 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu      3.22 GiB  unified memory or CPU: host RAM is the same pool\n  offload.disk     3.22 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nTry a lower quality (quality='low'), allow disk offload (disk_writes='allow') or a larger budget.\n"
+      },
+      "stderr_tail": "",
+      "part": "infer",
+      "repeat": 2
+    },
+    {
+      "label": "naive",
+      "args": [
+        "train",
+        "--arm",
+        "naive",
+        "--device",
+        "mps"
+      ],
+      "env": {},
+      "wall_s": 18.90733945905231,
+      "clock": [
+        1790441109.555598,
+        1790441128.4635048
+      ],
+      "returncode": 0,
+      "peak_footprint": 9317092352,
+      "swap_growth": 5139721093,
+      "probe": {
+        "n": 51,
+        "p50_ms": 0.5767500260844827,
+        "p95_ms": 912.4506249791011,
+        "max_ms": 1434.3594999518245
+      },
+      "result": {
+        "ok": false,
+        "error": "RuntimeError: MPS backend out of memory (MPS allocated: 8.35 GiB, other allocations: 384.00 KiB, max allowed: 9.07 GiB). Tried to allocate 800.00 MiB on shared pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 130, in train\n    loss = model(input_ids=x, labels=x).loss\n           ~~~~~^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/transformers/utils/generic.py\", line 939, in wrapper\n    output = func(self, *args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/transformers/models/gpt2/modeling_gpt2.py\", line 697, in forward\n    logits = self.lm_head(hidden_states[:, slice_indices, :])\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/linear.py\", line 134, in forward\n    return F.linear(input, self.weight, self.bias)\n           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: MPS backend out of memory (MPS allocated: 8.35 GiB, other allocations: 384.00 KiB, max allowed: 9.07 GiB). Tried to allocate 800.00 MiB on shared pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).\n"
+      },
+      "stderr_tail": "W0927 01:45:12.839000 25220 .venv/lib/python3.14/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.\nW0927 01:45:12.868000 25220 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\nW0927 01:45:12.902000 25220 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\n\nLoading weights:   0%|          | 0/148 [00:00<?, ?it/s]\nLoading weights: 100%|██████████| 148/148 [00:00<00:00, 6871.87it/s]\n",
+      "part": "train",
+      "repeat": 0
+    },
+    {
+      "label": "session",
+      "args": [
+        "train",
+        "--arm",
+        "session",
+        "--device",
+        "mps"
+      ],
+      "env": {},
+      "wall_s": 47.915119000012055,
+      "clock": [
+        1790441138.5040908,
+        1790441186.420651
+      ],
+      "returncode": 0,
+      "peak_footprint": 5117775232,
+      "swap_growth": 669840835,
+      "probe": {
+        "n": 181,
+        "p50_ms": 181.14662496373057,
+        "p95_ms": 271.6548329917714,
+        "max_ms": 1266.985291033052
+      },
+      "result": {
+        "ok": true,
+        "step_s": [
+          6.9237508330261335,
+          6.6386814169818535,
+          6.403693125001155,
+          6.3424004999687895,
+          6.414972624974325,
+          6.84630933299195
+        ],
+        "steady_step_s": 6.414972624974325,
+        "losses": [
+          12.241837978363037,
+          11.565220475196838,
+          11.272392511367798,
+          11.1664479970932,
+          11.115930795669556,
+          11.081959962844849
+        ],
+        "micro_batch": 1,
+        "report": [
+          [
+            "train_session.plan",
+            "applied"
+          ]
+        ]
+      },
+      "stderr_tail": "",
+      "part": "train",
+      "repeat": 0
+    },
+    {
+      "label": "session",
+      "args": [
+        "train",
+        "--arm",
+        "session",
+        "--device",
+        "mps"
+      ],
+      "env": {},
+      "wall_s": 48.25346404197626,
+      "clock": [
+        1790441196.4731798,
+        1790441244.728092
+      ],
+      "returncode": 0,
+      "peak_footprint": 5118807360,
+      "swap_growth": 2032790406,
+      "probe": {
+        "n": 163,
+        "p50_ms": 66.92745897453278,
+        "p95_ms": 321.71220798045397,
+        "max_ms": 2338.843374978751
+      },
+      "result": {
+        "ok": true,
+        "step_s": [
+          6.933113249950111,
+          6.876340333954431,
+          6.142117457929999,
+          6.179031416890211,
+          6.142191332997754,
+          6.471008500084281
+        ],
+        "steady_step_s": 6.179031416890211,
+        "losses": [
+          12.241837978363037,
+          11.565220475196838,
+          11.272392511367798,
+          11.1664479970932,
+          11.115930795669556,
+          11.081959962844849
+        ],
+        "micro_batch": 1,
+        "report": [
+          [
+            "train_session.plan",
+            "applied"
+          ]
+        ]
+      },
+      "stderr_tail": "",
+      "part": "train",
+      "repeat": 1
+    },
+    {
+      "label": "naive",
+      "args": [
+        "train",
+        "--arm",
+        "naive",
+        "--device",
+        "mps"
+      ],
+      "env": {},
+      "wall_s": 16.364129542023875,
+      "clock": [
+        1790441254.778846,
+        1790441271.14149
+      ],
+      "returncode": 0,
+      "peak_footprint": 9314978880,
+      "swap_growth": 3652253123,
+      "probe": {
+        "n": 50,
+        "p50_ms": 0.3410420613363385,
+        "p95_ms": 791.3407079176977,
+        "max_ms": 1084.2586249345914
+      },
+      "result": {
+        "ok": false,
+        "error": "RuntimeError: MPS backend out of memory (MPS allocated: 8.35 GiB, other allocations: 384.00 KiB, max allowed: 9.07 GiB). Tried to allocate 800.00 MiB on shared pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 130, in train\n    loss = model(input_ids=x, labels=x).loss\n           ~~~~~^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/transformers/utils/generic.py\", line 939, in wrapper\n    output = func(self, *args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/transformers/models/gpt2/modeling_gpt2.py\", line 697, in forward\n    logits = self.lm_head(hidden_states[:, slice_indices, :])\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/linear.py\", line 134, in forward\n    return F.linear(input, self.weight, self.bias)\n           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: MPS backend out of memory (MPS allocated: 8.35 GiB, other allocations: 384.00 KiB, max allowed: 9.07 GiB). Tried to allocate 800.00 MiB on shared pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).\n"
+      },
+      "stderr_tail": "W0927 01:47:38.610000 25837 .venv/lib/python3.14/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.\nW0927 01:47:38.638000 25837 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\nW0927 01:47:38.671000 25837 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\n\nLoading weights:   0%|          | 0/148 [00:00<?, ?it/s]\nLoading weights: 100%|██████████| 148/148 [00:00<00:00, 7273.33it/s]\n",
+      "part": "train",
+      "repeat": 1
+    },
+    {
+      "label": "naive",
+      "args": [
+        "train",
+        "--arm",
+        "naive",
+        "--device",
+        "mps"
+      ],
+      "env": {},
+      "wall_s": 19.763627541949973,
+      "clock": [
+        1790441281.21779,
+        1790441300.981568
+      ],
+      "returncode": 0,
+      "peak_footprint": 9312783360,
+      "swap_growth": 4331017339,
+      "probe": {
+        "n": 34,
+        "p50_ms": 0.34975004382431507,
+        "p95_ms": 1254.5578749850392,
+        "max_ms": 8349.300457979552
+      },
+      "result": {
+        "ok": false,
+        "error": "RuntimeError: MPS backend out of memory (MPS allocated: 8.35 GiB, other allocations: 384.00 KiB, max allowed: 9.07 GiB). Tried to allocate 800.00 MiB on shared pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).",
+        "trace": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 236, in main\n    result = {\"ok\": True, **globals()[args.kind](args)}\n                            ~~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e014_usable/workers.py\", line 130, in train\n    loss = model(input_ids=x, labels=x).loss\n           ~~~~~^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/transformers/utils/generic.py\", line 939, in wrapper\n    output = func(self, *args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/transformers/models/gpt2/modeling_gpt2.py\", line 697, in forward\n    logits = self.lm_head(hidden_states[:, slice_indices, :])\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1783, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/module.py\", line 1794, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/Users/imhyeonseok/Desktop/memopro/.venv/lib/python3.14/site-packages/torch/nn/modules/linear.py\", line 134, in forward\n    return F.linear(input, self.weight, self.bias)\n           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: MPS backend out of memory (MPS allocated: 8.35 GiB, other allocations: 384.00 KiB, max allowed: 9.07 GiB). Tried to allocate 800.00 MiB on shared pool. Use PYTORCH_MPS_HIGH_WATERMARK_RATIO=0.0 to disable upper limit for memory allocations (may cause system failure).\n"
+      },
+      "stderr_tail": "W0927 01:48:05.078000 25920 .venv/lib/python3.14/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.\nW0927 01:48:05.105000 25920 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\nW0927 01:48:05.137000 25920 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\n\nLoading weights:   0%|          | 0/148 [00:00<?, ?it/s]\nLoading weights: 100%|██████████| 148/148 [00:00<00:00, 6036.91it/s]\n",
+      "part": "train",
+      "repeat": 2
+    },
+    {
+      "label": "session",
+      "args": [
+        "train",
+        "--arm",
+        "session",
+        "--device",
+        "mps"
+      ],
+      "env": {},
+      "wall_s": 48.13830687489826,
+      "clock": [
+        1790441311.019982,
+        1790441359.1595259
+      ],
+      "returncode": 0,
+      "peak_footprint": 5117939200,
+      "swap_growth": 1696071680,
+      "probe": {
+        "n": 187,
+        "p50_ms": 96.8275839695707,
+        "p95_ms": 210.26504202745855,
+        "max_ms": 638.6884999228641
+      },
+      "result": {
+        "ok": true,
+        "step_s": [
+          6.819234083057381,
+          6.925532958004624,
+          6.7972780000418425,
+          7.147592999972403,
+          6.071086167008616,
+          6.1474918340099975
+        ],
+        "steady_step_s": 6.7972780000418425,
+        "losses": [
+          12.241837978363037,
+          11.565220475196838,
+          11.272392511367798,
+          11.1664479970932,
+          11.115930795669556,
+          11.081959962844849
+        ],
+        "micro_batch": 1,
+        "report": [
+          [
+            "train_session.plan",
+            "applied"
+          ]
+        ]
+      },
+      "stderr_tail": "",
+      "part": "train",
+      "repeat": 2
+    },
+    {
+      "label": "resident",
+      "args": [
+        "alternate",
+        "--arm",
+        "resident"
+      ],
+      "env": {},
+      "wall_s": 632.7069340420421,
+      "clock": [
+        1790441379.214457,
+        1790442011.938634
+      ],
+      "returncode": -9,
+      "peak_footprint": 7087508864,
+      "swap_growth": 7193692734,
+      "probe": {
+        "n": 2443,
+        "p50_ms": 3.2971249893307686,
+        "p95_ms": 50.4517910303548,
+        "max_ms": 1834.542333963327
+      },
+      "result": {
+        "ok": false,
+        "error": "timeout after 600 s"
+      },
+      "stderr_tail": "W0927 01:49:43.618000 26252 .venv/lib/python3.14/site-packages/torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.\nW0927 01:49:43.650000 26252 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\nW0927 01:49:43.686000 26252 .venv/lib/python3.14/site-packages/torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.\n\nLoading weights:   0%|          | 0/338 [00:00<?, ?it/s]\nLoading weights: 100%|██████████| 338/338 [00:00<00:00, 4339.44it/s]\n\nLoading weights:   0%|          | 0/338 [00:00<?, ?it/s]\nLoading weights: 100%|██████████| 338/338 [00:00<00:00, 3916.52it/s]\n/opt/homebrew/Cellar/python@3.14/3.14.0_1/Frameworks/Python.framework/Versions/3.14/lib/python3.14/multiprocessing/resource_tracker.py:297: UserWarning: resource_tracker: There appear to be 1 leaked semaphore objects to clean up at shutdown: {'/mp-7n_b3pys'}\n  warnings.warn(\n",
+      "part": "alternate",
+      "repeat": 0
+    },
+    {
+      "label": "reload",
+      "args": [
+        "alternate",
+        "--arm",
+        "reload"
+      ],
+      "env": {},
+      "wall_s": 122.32915054203477,
+      "clock": [
+        1790442022.0108411,
+        1790442144.3433259
+      ],
+      "returncode": 0,
+      "peak_footprint": 3780464000,
+      "swap_growth": 4705484800,
+      "probe": {
+        "n": 460,
+        "p50_ms": 12.199167045764625,
+        "p95_ms": 254.75912494584918,
+        "max_ms": 1780.4107089759782
+      },
+      "result": {
+        "ok": true,
+        "total_s": 115.15495224995539,
+        "turns_after_loading_s": 88.1978475850774,
+        "uses": [
+          {
+            "use": 0,
+            "model": "A",
+            "s": 15.340485916938633,
+            "footprint": 3780431232
+          },
+          {
+            "use": 1,
+            "model": "B",
+            "s": 11.556467917049304,
+            "footprint": 3779054976
+          },
+          {
+            "use": 2,
+            "model": "A",
+            "s": 13.582521209027618,
+            "footprint": 3779448192
+          },
+          {
+            "use": 3,
+            "model": "B",
+            "s": 14.855442291940562,
+            "footprint": 3779087744
+          },
+          {
+            "use": 4,
+            "model": "A",
+            "s": 12.480249125044793,
+            "footprint": 3779431808
+          },
+          {
+            "use": 5,
+            "model": "B",
+            "s": 17.809712292044424,
+            "footprint": 3779333504
+          },
+          {
+            "use": 6,
+            "model": "A",
+            "s": 17.463987500057556,
+            "footprint": 3779267968
+          },
+          {
+            "use": 7,
+            "model": "B",
+            "s": 12.005935166962445,
+            "footprint": 3779104128
+          }
+        ],
+        "outputs_equal": true,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849
+        ]
+      },
+      "stderr_tail": "",
+      "part": "alternate",
+      "repeat": 0
+    },
+    {
+      "label": "beta",
+      "args": [
+        "alternate",
+        "--arm",
+        "beta"
+      ],
+      "env": {},
+      "wall_s": 104.33646020805463,
+      "clock": [
+        1790442154.398241,
+        1790442258.740968
+      ],
+      "returncode": 0,
+      "peak_footprint": 4370207296,
+      "swap_growth": 3479238083,
+      "probe": {
+        "n": 399,
+        "p50_ms": 7.916249916888773,
+        "p95_ms": 164.04762503225356,
+        "max_ms": 1863.6064999736845
+      },
+      "result": {
+        "ok": true,
+        "total_s": 97.97220974997617,
+        "turns_after_loading_s": 66.04420725000091,
+        "uses": [
+          {
+            "use": 0,
+            "model": "A",
+            "s": 15.240511290961877,
+            "footprint": 3780971968
+          },
+          {
+            "use": 1,
+            "model": "B",
+            "s": 16.635964957997203,
+            "footprint": 3789262272
+          },
+          {
+            "use": 2,
+            "model": "A",
+            "s": 11.941694500041194,
+            "footprint": 3795947008
+          },
+          {
+            "use": 3,
+            "model": "B",
+            "s": 11.152814583969302,
+            "footprint": 3812298304
+          },
+          {
+            "use": 4,
+            "model": "A",
+            "s": 11.524248290923424,
+            "footprint": 3796717056
+          },
+          {
+            "use": 5,
+            "model": "B",
+            "s": 9.794672708027065,
+            "footprint": 3913518784
+          },
+          {
+            "use": 6,
+            "model": "A",
+            "s": 10.516938999993727,
+            "footprint": 3913780928
+          },
+          {
+            "use": 7,
+            "model": "B",
+            "s": 11.113838167046197,
+            "footprint": 3914878656
+          }
+        ],
+        "outputs_equal": true,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849
+        ]
+      },
+      "stderr_tail": "",
+      "part": "alternate",
+      "repeat": 0
+    },
+    {
+      "label": "beta_cache_off",
+      "args": [
+        "alternate",
+        "--arm",
+        "beta"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 100.7661487919977,
+      "clock": [
+        1790442268.788743,
+        1790442369.5578911
+      ],
+      "returncode": 0,
+      "peak_footprint": 3825733056,
+      "swap_growth": 3828277576,
+      "probe": {
+        "n": 391,
+        "p50_ms": 10.280166985467076,
+        "p95_ms": 217.28666708804667,
+        "max_ms": 491.9814160093665
+      },
+      "result": {
+        "ok": true,
+        "total_s": 93.7947446659673,
+        "turns_after_loading_s": 65.68496883194894,
+        "uses": [
+          {
+            "use": 0,
+            "model": "A",
+            "s": 12.456039999960922,
+            "footprint": 3768880384
+          },
+          {
+            "use": 1,
+            "model": "B",
+            "s": 15.605209499946795,
+            "footprint": 3777694976
+          },
+          {
+            "use": 2,
+            "model": "A",
+            "s": 9.846634540939704,
+            "footprint": 3784969472
+          },
+          {
+            "use": 3,
+            "model": "B",
+            "s": 10.090052291983739,
+            "footprint": 3785772288
+          },
+          {
+            "use": 4,
+            "model": "A",
+            "s": 11.52915049996227,
+            "footprint": 3785690368
+          },
+          {
+            "use": 5,
+            "model": "B",
+            "s": 11.286664332961664,
+            "footprint": 3785690368
+          },
+          {
+            "use": 6,
+            "model": "A",
+            "s": 9.794513458036818,
+            "footprint": 3785919744
+          },
+          {
+            "use": 7,
+            "model": "B",
+            "s": 13.137953708064742,
+            "footprint": 3785936128
+          }
+        ],
+        "outputs_equal": true,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849
+        ]
+      },
+      "stderr_tail": "",
+      "part": "alternate",
+      "repeat": 0
+    },
+    {
+      "label": "reload",
+      "args": [
+        "alternate",
+        "--arm",
+        "reload"
+      ],
+      "env": {},
+      "wall_s": 113.81845741695724,
+      "clock": [
+        1790442379.605859,
+        1790442493.4276009
+      ],
+      "returncode": 0,
+      "peak_footprint": 3780713024,
+      "swap_growth": 2764109250,
+      "probe": {
+        "n": 432,
+        "p50_ms": 12.700083083473146,
+        "p95_ms": 264.90787509828806,
+        "max_ms": 577.9800420859829
+      },
+      "result": {
+        "ok": true,
+        "total_s": 107.3528002500534,
+        "turns_after_loading_s": 76.54948545782827,
+        "uses": [
+          {
+            "use": 0,
+            "model": "A",
+            "s": 16.507397625013255,
+            "footprint": 3780234688
+          },
+          {
+            "use": 1,
+            "model": "B",
+            "s": 14.262538542039692,
+            "footprint": 3779530176
+          },
+          {
+            "use": 2,
+            "model": "A",
+            "s": 17.1210332919145,
+            "footprint": 3779497408
+          },
+          {
+            "use": 3,
+            "model": "B",
+            "s": 11.06979004200548,
+            "footprint": 3779644864
+          },
+          {
+            "use": 4,
+            "model": "A",
+            "s": 10.39676429098472,
+            "footprint": 3779562944
+          },
+          {
+            "use": 5,
+            "model": "B",
+            "s": 11.130098874913529,
+            "footprint": 3779431872
+          },
+          {
+            "use": 6,
+            "model": "A",
+            "s": 13.424684833036736,
+            "footprint": 3779644864
+          },
+          {
+            "use": 7,
+            "model": "B",
+            "s": 13.407114124973305,
+            "footprint": 3779612096
+          }
+        ],
+        "outputs_equal": true,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849
+        ]
+      },
+      "stderr_tail": "",
+      "part": "alternate",
+      "repeat": 1
+    },
+    {
+      "label": "beta",
+      "args": [
+        "alternate",
+        "--arm",
+        "beta"
+      ],
+      "env": {},
+      "wall_s": 105.99373766698409,
+      "clock": [
+        1790442503.476016,
+        1790442609.4728131
+      ],
+      "returncode": 0,
+      "peak_footprint": 4398781120,
+      "swap_growth": 3318617211,
+      "probe": {
+        "n": 405,
+        "p50_ms": 7.212999975308776,
+        "p95_ms": 164.5599170587957,
+        "max_ms": 1067.911333986558
+      },
+      "result": {
+        "ok": true,
+        "total_s": 99.2106910829898,
+        "turns_after_loading_s": 65.56727987492923,
+        "uses": [
+          {
+            "use": 0,
+            "model": "A",
+            "s": 14.551379916025326,
+            "footprint": 3780709824
+          },
+          {
+            "use": 1,
+            "model": "B",
+            "s": 19.022647958016023,
+            "footprint": 3789344192
+          },
+          {
+            "use": 2,
+            "model": "A",
+            "s": 10.7555208329577,
+            "footprint": 3795881472
+          },
+          {
+            "use": 3,
+            "model": "B",
+            "s": 10.49207012495026,
+            "footprint": 3912978112
+          },
+          {
+            "use": 4,
+            "model": "A",
+            "s": 11.222675584023818,
+            "footprint": 3914534592
+          },
+          {
+            "use": 5,
+            "model": "B",
+            "s": 12.057837666012347,
+            "footprint": 3796700672
+          },
+          {
+            "use": 6,
+            "model": "A",
+            "s": 10.43336891697254,
+            "footprint": 3830615680
+          },
+          {
+            "use": 7,
+            "model": "B",
+            "s": 10.605806750012562,
+            "footprint": 3796848128
+          }
+        ],
+        "outputs_equal": true,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849
+        ]
+      },
+      "stderr_tail": "",
+      "part": "alternate",
+      "repeat": 1
+    },
+    {
+      "label": "beta_cache_off",
+      "args": [
+        "alternate",
+        "--arm",
+        "beta"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 96.70162724994589,
+      "clock": [
+        1790442619.517129,
+        1790442716.2215471
+      ],
+      "returncode": 0,
+      "peak_footprint": 3825225088,
+      "swap_growth": 3884061819,
+      "probe": {
+        "n": 374,
+        "p50_ms": 8.214666042476892,
+        "p95_ms": 161.05933394283056,
+        "max_ms": 485.7108750147745
+      },
+      "result": {
+        "ok": true,
+        "total_s": 90.24285674991552,
+        "turns_after_loading_s": 60.6819567498751,
+        "uses": [
+          {
+            "use": 0,
+            "model": "A",
+            "s": 11.719897666946054,
+            "footprint": 3768536256
+          },
+          {
+            "use": 1,
+            "model": "B",
+            "s": 17.786391000030562,
+            "footprint": 3777285312
+          },
+          {
+            "use": 2,
+            "model": "A",
+            "s": 9.54495875001885,
+            "footprint": 3784510656
+          },
+          {
+            "use": 3,
+            "model": "B",
+            "s": 9.630628166953102,
+            "footprint": 3785116864
+          },
+          {
+            "use": 4,
+            "model": "A",
+            "s": 10.198368499986827,
+            "footprint": 3785264320
+          },
+          {
+            "use": 5,
+            "model": "B",
+            "s": 10.863738875021227,
+            "footprint": 3785264320
+          },
+          {
+            "use": 6,
+            "model": "A",
+            "s": 9.773796082939953,
+            "footprint": 3785477312
+          },
+          {
+            "use": 7,
+            "model": "B",
+            "s": 10.67046637495514,
+            "footprint": 3785411776
+          }
+        ],
+        "outputs_equal": true,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849
+        ]
+      },
+      "stderr_tail": "",
+      "part": "alternate",
+      "repeat": 1
+    },
+    {
+      "label": "resident",
+      "skipped": "timed out in an earlier repeat",
+      "part": "alternate",
+      "repeat": 1
+    },
+    {
+      "label": "beta",
+      "args": [
+        "alternate",
+        "--arm",
+        "beta"
+      ],
+      "env": {},
+      "wall_s": 105.8309882079484,
+      "clock": [
+        1790442736.280632,
+        1790442842.114676
+      ],
+      "returncode": 0,
+      "peak_footprint": 4408840832,
+      "swap_growth": 2857694659,
+      "probe": {
+        "n": 406,
+        "p50_ms": 9.277750039473176,
+        "p95_ms": 230.76037492137402,
+        "max_ms": 745.9133750526235
+      },
+      "result": {
+        "ok": true,
+        "total_s": 99.08943766599987,
+        "turns_after_loading_s": 67.45906445686705,
+        "uses": [
+          {
+            "use": 0,
+            "model": "A",
+            "s": 13.36326687503606,
+            "footprint": 3780890048
+          },
+          {
+            "use": 1,
+            "model": "B",
+            "s": 18.214390750043094,
+            "footprint": 3789376960
+          },
+          {
+            "use": 2,
+            "model": "A",
+            "s": 10.728874541004188,
+            "footprint": 3828846144
+          },
+          {
+            "use": 3,
+            "model": "B",
+            "s": 11.144182957941666,
+            "footprint": 3906244352
+          },
+          {
+            "use": 4,
+            "model": "A",
+            "s": 11.3455386669375,
+            "footprint": 3829501568
+          },
+          {
+            "use": 5,
+            "model": "B",
+            "s": 11.238030832959339,
+            "footprint": 3796536832
+          },
+          {
+            "use": 6,
+            "model": "A",
+            "s": 10.248447541031055,
+            "footprint": 3913256640
+          },
+          {
+            "use": 7,
+            "model": "B",
+            "s": 12.753989916993305,
+            "footprint": 3829042752
+          }
+        ],
+        "outputs_equal": true,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849
+        ]
+      },
+      "stderr_tail": "",
+      "part": "alternate",
+      "repeat": 2
+    },
+    {
+      "label": "beta_cache_off",
+      "args": [
+        "alternate",
+        "--arm",
+        "beta"
+      ],
+      "env": {
+        "MallocLargeCache": "0"
+      },
+      "wall_s": 99.61945058300626,
+      "clock": [
+        1790442852.166798,
+        1790442951.789124
+      ],
+      "returncode": 0,
+      "peak_footprint": 3825208704,
+      "swap_growth": 2682718781,
+      "probe": {
+        "n": 383,
+        "p50_ms": 12.401040992699564,
+        "p95_ms": 233.49783301819116,
+        "max_ms": 707.2086660191417
+      },
+      "result": {
+        "ok": true,
+        "total_s": 93.44252499996219,
+        "turns_after_loading_s": 62.93345099897124,
+        "uses": [
+          {
+            "use": 0,
+            "model": "A",
+            "s": 12.512476917007007,
+            "footprint": 3768339648
+          },
+          {
+            "use": 1,
+            "model": "B",
+            "s": 17.950347957899794,
+            "footprint": 3777187008
+          },
+          {
+            "use": 2,
+            "model": "A",
+            "s": 10.1651401250856,
+            "footprint": 3784592576
+          },
+          {
+            "use": 3,
+            "model": "B",
+            "s": 10.05954187491443,
+            "footprint": 3785247936
+          },
+          {
+            "use": 4,
+            "model": "A",
+            "s": 10.544222165946849,
+            "footprint": 3785280704
+          },
+          {
+            "use": 5,
+            "model": "B",
+            "s": 11.13772295799572,
+            "footprint": 3785362624
+          },
+          {
+            "use": 6,
+            "model": "A",
+            "s": 10.193425875040703,
+            "footprint": 3785231552
+          },
+          {
+            "use": 7,
+            "model": "B",
+            "s": 10.833397999987938,
+            "footprint": 3785411776
+          }
+        ],
+        "outputs_equal": true,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849
+        ]
+      },
+      "stderr_tail": "",
+      "part": "alternate",
+      "repeat": 2
+    },
+    {
+      "label": "resident",
+      "skipped": "timed out in an earlier repeat",
+      "part": "alternate",
+      "repeat": 2
+    },
+    {
+      "label": "reload",
+      "args": [
+        "alternate",
+        "--arm",
+        "reload"
+      ],
+      "env": {},
+      "wall_s": 116.61193187499885,
+      "clock": [
+        1790442971.852009,
+        1790443088.467308
+      ],
+      "returncode": 0,
+      "peak_footprint": 3780746944,
+      "swap_growth": 4227072000,
+      "probe": {
+        "n": 437,
+        "p50_ms": 7.616749964654446,
+        "p95_ms": 203.22762499563396,
+        "max_ms": 1384.996333043091
+      },
+      "result": {
+        "ok": true,
+        "total_s": 109.54193062509876,
+        "turns_after_loading_s": 85.76003645884339,
+        "uses": [
+          {
+            "use": 0,
+            "model": "A",
+            "s": 14.150308207958005,
+            "footprint": 3780529536
+          },
+          {
+            "use": 1,
+            "model": "B",
+            "s": 9.588308749953285,
+            "footprint": 3779431808
+          },
+          {
+            "use": 2,
+            "model": "A",
+            "s": 15.057355541037396,
+            "footprint": 3779366208
+          },
+          {
+            "use": 3,
+            "model": "B",
+            "s": 19.521725874976255,
+            "footprint": 3779382656
+          },
+          {
+            "use": 4,
+            "model": "A",
+            "s": 13.415863833972253,
+            "footprint": 3779562880
+          },
+          {
+            "use": 5,
+            "model": "B",
+            "s": 13.495257041999139,
+            "footprint": 3779202432
+          },
+          {
+            "use": 6,
+            "model": "A",
+            "s": 12.52921195793897,
+            "footprint": 3779808640
+          },
+          {
+            "use": 7,
+            "model": "B",
+            "s": 11.740622208919376,
+            "footprint": 3779775872
+          }
+        ],
+        "outputs_equal": true,
+        "tokens": [
+          32,
+          22670,
+          646,
+          1598,
+          700,
+          315,
+          4938,
+          421,
+          432,
+          374,
+          11889,
+          311,
+          22089,
+          3322,
+          4963,
+          369,
+          678,
+          279,
+          9079,
+          429,
+          1184,
+          311,
+          387,
+          15695,
+          24303,
+          11,
+          6388,
+          311,
+          5068,
+          52468,
+          476,
+          1849
+        ]
+      },
+      "stderr_tail": "",
+      "part": "alternate",
+      "repeat": 2
+    }
+  ]
+}
