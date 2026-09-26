@@ -20,6 +20,14 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 - Budget as a fraction (`0.5`, `"50%"`) or per pool; `idle_seconds`; `device=`; `BudgetExceeded`.
 - Spill writes on Windows; a Windows CI job on main pushes and manual runs.
 
+### Fixed (0054-0056, found on a Colab T4)
+- A failed `load` attempt kept its partly loaded model alive (through the exception kept for the
+  report) while the next configuration loaded; `train_session` released caches before the failed
+  attempt's tensors were gone.
+- `check` underestimated small-batch training by up to 22%: it traced the first step (before any
+  optimizer state), kept the model output alive through backward, and fake tensors could not pick
+  the foreach optimizer. It now traces a steady-state step and matches real tracking.
+
 ### Added: v0.3 (0051, 0052, 0053)
 - Memory-pressure signal in the Rust core (macOS level, Linux PSI; `Unsupported` elsewhere).
 - `memopro.elastic` (γ): watches pressure, acts only at safe points (notebook cells, training

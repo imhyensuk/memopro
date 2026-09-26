@@ -10,7 +10,7 @@ agent or conversation memory.
 > **Status: alpha (0.1.0a1, not published).** Everything in the v0.1-v0.3 design is built.
 > The 0.1 features are tested on Linux (CI, including a memory-limited container), macOS (CPU
 > and Apple MPS) and a real NVIDIA GPU (Colab T4). The v0.2/v0.3 features are tested on CPU and
-> MPS; their CUDA check is pending. Install with `pip install --pre "memopro[torch]"` once
+> MPS and on a Colab T4 (7B int8 load, exact capped training, `check` within 1.2% for training). Install with `pip install --pre "memopro[torch]"` once
 > published; APIs may still change. `import memopro` has no side effects and does not import
 > torch.
 
@@ -107,9 +107,9 @@ precision and the model would not fit as stored; explicit choices are never chan
   (`reduction="mean"` or `"sum"`); padded samples of different lengths averaged per token, and
   BatchNorm, make them approximate, as with any gradient accumulation.
 - `check` and the `train_session` plan use torch's `MemTracker` and `FakeTensorMode`; without
-  them only weights are predicted. On a T4, inference was within 5% but small-batch
-  training was underestimated by up to 22% (0054); three causes are fixed and match real tracking
-  on CPU, the CUDA re-check is pending (0055).
+  them only weights are predicted. On a T4 with GPT-2 models, training peaks are
+  predicted within 0.2-1.2% and inference within +5% (0056), assuming an ordinary training step
+  (`model(**batch).loss.backward()`, default AdamW/SGD); other architectures are untested.
 - γ thresholds and budget factors are initial values; on an 8 GB Mac the "warning" level can be
   permanent, so they need calibration. `memopro run` only changes Hugging Face `from_pretrained`.
 - "Bit-exact" refers to tensor values. On CPU, weights memory-mapped from safetensors may be
