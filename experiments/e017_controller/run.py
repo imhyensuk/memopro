@@ -148,6 +148,12 @@ def main() -> None:
     parser.add_argument("--models", default=",".join(MODELS))
     parser.add_argument("--arms", default=",".join(ARMS))
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument(
+        "--skip",
+        action="append",
+        default=[],
+        help="MODEL=ARM not to run (recorded as skipped), e.g. an amendment",
+    )
     args = parser.parse_args()
     if args.prep:
         prep(args.cache_dir)
@@ -209,6 +215,17 @@ def run_all(args: argparse.Namespace, data: dict, probe: Probe, done: set) -> No
             k = (rep + m_i) % len(arms)
             for arm in arms[k:] + arms[:k]:
                 if (rep, model, arm) in done:
+                    continue
+                if f"{model}={arm}" in args.skip:
+                    data["cases"].append(
+                        {
+                            "model": model,
+                            "arm": arm,
+                            "repeat": rep,
+                            "skipped": "excluded by amendment (amendment_resume.md)",
+                        }
+                    )
+                    save_json(data, OUT / f"{args.name}.json")
                     continue
                 if shutil.disk_usage("/").free < (5 << 30):
                     rec = {"model": model, "arm": arm, "skipped": "free disk"}
