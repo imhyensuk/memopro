@@ -23,6 +23,7 @@ from memopro.orchestrator.candidates import (
     from_pretrained_kwargs,
     infer_candidates,
     post_load,
+    quality_note,
 )
 from memopro.report import report
 from memopro.techniques.integrations.loading import LoadContext
@@ -209,6 +210,8 @@ def load(
                 f"({cfg.quality.name.lower()}), estimated {format_size(need)}, weights "
                 f"{format_size(_footprint(model))} on {ctx.device}"
             )
+            if note := quality_note(cfg):
+                detail += f"; {note}"
             if cfg is fallback:
                 detail += "; " + _fallback_note(plan, cfg)
                 import warnings
@@ -270,6 +273,8 @@ def _load_file_backed(
         f"{info.source}: {cfg.describe()}{f' via {backend}' if backend else ''} "
         f"({cfg.quality.name.lower()}), estimated {format_size(need)} on {ctx.device}; {line}"
     )
+    if note := quality_note(cfg):
+        detail += f"; {note}"
     if cfg is fallback:
         detail += "; " + _fallback_note(plan, cfg)
     _suggest_mps_heap_setting()  # before "applied", as hibernate's note (the last entry is the load)

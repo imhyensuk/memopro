@@ -134,7 +134,7 @@ def infer_candidates(
             (tech,),
             grade,
             tech.speed,
-            _needs_on_one_pool(ctx, info.weight_bytes(bits=bits)),
+            _needs_on_one_pool(ctx, info.weight_bytes(bits=bits, group=_int4_group(ctx, bits))),
             {"device_map": _device_map(ctx), "dtype": ctx.half_dtype, "_quant_bits": bits},
             Fidelity.NUMERICS,
         )
@@ -247,6 +247,26 @@ def _order(prefer: str):
 def select(candidates: list[Configuration]) -> Configuration | None:
     """The first usable candidate (already in preference order)."""
     return next((c for c in candidates if c.usable), None)
+
+
+def _int4_group(ctx: LoadContext, bits: int) -> int:
+    """Scale block size of the int4 back end used here (sizes from metadata, 0052 E3)."""
+    if bits != 4 or loading.quantization_backend(ctx.device, bits)[0] != "torch-int4pack":
+        return 64
+    from memopro.techniques.integrations.int4pack import GROUP
+
+    return GROUP
+
+
+INT4_QUALITY_NOTE = (
+    "quality cost: int4 raised WikiText-2 perplexity by 5.7-7.6% for Qwen2.5-1.5B/3B with torch "
+    "int4pack group 32 (E020, 0084); other models and back ends differ"
+)
+
+
+def quality_note(cfg: Configuration) -> str:
+    """What the report says about a lossy configuration's measured cost (0084 Q-a)."""
+    return INT4_QUALITY_NOTE if cfg.kwargs.get("_quant_bits") == 4 else ""
 
 
 def backend_of(cfg: Configuration, ctx: LoadContext) -> str:
