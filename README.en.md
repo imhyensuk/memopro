@@ -91,6 +91,11 @@ The same forms work in `configure()`, `with memopro.using(...)`, per call (`budg
 (the OS estimate; may compress or swap) or `"total"`. `headroom` is a fraction or a size
 (`"1GB"`).
 
+When nothing fits, `BudgetExceeded` lists the settings that would really load the model: each one
+is checked by planning again from metadata, and comes with how much would go beyond free memory.
+`fallback="stored"` loads as stored anyway, straight to the device, with a warning (off by
+default).
+
 ## 0.3 features: memory pressure and no code changes
 
 ```bash

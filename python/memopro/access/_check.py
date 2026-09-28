@@ -75,8 +75,22 @@ class CheckResult:
                     f"  memopro.load   {chosen['name']} ({chosen['quality']}), "
                     f"peak {format_size(chosen['peak'])}"
                 )
+            elif inf.get("fallback"):
+                fb = inf["fallback"]
+                over = (
+                    f", about {format_size(fb['over_free'])} over free" if fb["over_free"] else ""
+                )
+                lines.append(
+                    f"  memopro.load   nothing fits; fallback='stored' loads as stored{over}"
+                )
             else:
                 lines.append("  memopro.load   nothing fits: " + inf.get("reason", ""))
+            for sg in inf.get("suggestions", []):
+                call = ", ".join(f"{k}={v!r}" for k, v in sg["settings"].items())
+                risk = (
+                    f"about {format_size(sg['over_free'])} over free" if sg["over_free"] else "fits"
+                )
+                lines.append(f"    try {call:<34} -> {sg['config']} ({sg['quality']}), {risk}")
         tr = self.training
         if tr:
             lines.append("")
@@ -242,12 +256,28 @@ def check(
     quality: str | None = None,
     prefer: str | None = None,
     device: str | None = None,
+    budget_basis: str | None = None,
+    disk_writes: str | None = None,
+    fallback: str | None = None,
 ) -> CheckResult:
     """Predict inference and training memory for ``target`` and what memopro would choose.
 
     ``seq_len`` defaults to the model's context length capped at 1024. ``example`` gives the
     inputs for an ``nn.Module``: a dict of tensors, or a callable ``model -> inputs``.
+    ``budget_basis``, ``disk_writes`` and ``fallback`` override those settings for this call.
     """
+    from memopro.config import using
+
+    scoped = {"budget_basis": budget_basis, "disk_writes": disk_writes, "fallback": fallback}
+    with using(**{k: v for k, v in scoped.items() if v is not None}):
+        return _check(
+            target, goal, batch_size, seq_len, optimizer, example, budget, quality, prefer, device
+        )
+
+
+def _check(
+    target, goal, batch_size, seq_len, optimizer, example, budget, quality, prefer, device
+) -> CheckResult:
     import torch
 
     from memopro.access._common import setup
@@ -338,7 +368,23 @@ def check(
                     "peak": weights + act,
                 }
             else:
+                from memopro.access._load import _fallback
+                from memopro.access._suggest import over_free, suggest_for_load
+
                 inf["reason"] = "; ".join(f"{c.name}: {c.why}" for c in plan.candidates)
+                inf["suggestions"] = [
+                    {
+                        "settings": sg.settings,
+                        "config": sg.config,
+                        "quality": sg.quality,
+                        "needs": sg.needs,
+                        "over_free": sg.over_free,
+                    }
+                    for sg in suggest_for_load(plan)
+                ]
+                fb = _fallback(plan)
+                if fb is not None:
+                    inf["fallback"] = {"config": fb.name, "over_free": over_free(plan, fb)}
             inf["candidates"] = [
                 {
                     "name": c.name,
