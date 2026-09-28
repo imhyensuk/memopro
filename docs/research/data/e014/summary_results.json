@@ -1,0 +1,401 @@
+{
+  "idle_probe_p95_ms": 12.06133293453604,
+  "table": {
+    "reclaim": {
+      "cpu/on": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 852.4258422851562,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 6.636000005528331,
+        "probe_max_ms": 11.773000005632639,
+        "wall_s": 7.2054214590461925,
+        "reclaimed_frac": -0.14512603555286746,
+        "sleep_s": 1.0795860000653192,
+        "wake_s": 0.08507704199291766
+      },
+      "cpu/off": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 823.91015625,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 8.908917079679668,
+        "probe_max_ms": 10.06000000052154,
+        "wall_s": 7.423760375007987,
+        "reclaimed_frac": 0.9647545582841144,
+        "sleep_s": 1.171597250038758,
+        "wake_s": 0.17298299993854016
+      },
+      "mps/on": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 1630.81591796875,
+        "swap_growth_mib": 250.24000072479248,
+        "probe_p95_ms": 18.32308294251561,
+        "probe_max_ms": 82.84925005864352,
+        "wall_s": 7.5262409169226885,
+        "reclaimed_frac": -0.28926254852466504,
+        "sleep_s": 1.2226449170848355,
+        "wake_s": 0.33990191703196615
+      },
+      "mps/off": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 1352.4088745117188,
+        "swap_growth_mib": 35.9399995803833,
+        "probe_p95_ms": 42.418249999172986,
+        "probe_max_ms": 118.21629095356911,
+        "wall_s": 7.404010375030339,
+        "reclaimed_frac": -0.014417508583748377,
+        "sleep_s": 1.0715852080611512,
+        "wake_s": 0.32078595797065645
+      }
+    },
+    "f4cost": {
+      "on": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 4527.198913574219,
+        "swap_growth_mib": 961.3799991607666,
+        "probe_p95_ms": 118.75245801638812,
+        "probe_max_ms": 232.5688749551773,
+        "wall_s": 29.54140945803374,
+        "steady_step_s": 3.974322249996476
+      },
+      "off": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 3802.4319458007812,
+        "swap_growth_mib": 1009.6800003051758,
+        "probe_p95_ms": 51.75195797346532,
+        "probe_max_ms": 223.14020805060863,
+        "wall_s": 32.30203416699078,
+        "steady_step_s": 4.159852292039432
+      }
+    },
+    "infer": {
+      "Qwen/Qwen2.5-1.5B-Instruct/naive": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 3627.6126708984375,
+        "swap_growth_mib": 3170.619999885559,
+        "probe_p95_ms": 201.99108310043812,
+        "probe_max_ms": 1370.6513750366867,
+        "wall_s": 24.78030041605234,
+        "load_s": 10.130976457963698,
+        "ttft_s": 0.19314433296676725,
+        "tokens_per_s": 10.985847023603919
+      },
+      "Qwen/Qwen2.5-1.5B-Instruct/memopro": {
+        "n": 3,
+        "ok": 0,
+        "errors": [
+          "BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budg"
+        ],
+        "peak_footprint_mib": 361.06549072265625,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 4.414208000525832,
+        "probe_max_ms": 8.789416984654963,
+        "wall_s": 5.83947150001768
+      },
+      "Qwen/Qwen2.5-1.5B-Instruct/memopro_os": {
+        "n": 3,
+        "ok": 0,
+        "errors": [
+          "BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'balanced':\n  stored           3.22 GiB  needs 3.22 GiB, device budg"
+        ],
+        "peak_footprint_mib": 361.22161865234375,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 5.110499914735556,
+        "probe_max_ms": 5.110499914735556,
+        "wall_s": 4.846363292075694
+      },
+      "Qwen/Qwen2.5-1.5B-Instruct/memopro_low": {
+        "n": 3,
+        "ok": 2,
+        "errors": [
+          "BudgetExceeded: no configuration of Qwen/Qwen2.5-1.5B-Instruct fits the budget with quality 'low':\n  stored           3.22 GiB  needs 3.22 GiB, device budget 1."
+        ],
+        "peak_footprint_mib": 1936.2535400390625,
+        "swap_growth_mib": 147.06999969482422,
+        "probe_p95_ms": 75.23129205219448,
+        "probe_max_ms": 136.20495807845145,
+        "wall_s": 27.618866458069533,
+        "load_s": 9.440770416520536,
+        "ttft_s": 0.24025239603361115,
+        "tokens_per_s": 4.929824789006786,
+        "chosen": [
+          [
+            "load.quant.int4"
+          ]
+        ]
+      },
+      "Qwen/Qwen2.5-1.5B-Instruct/memopro_4gb": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 3517.2431640625,
+        "swap_growth_mib": 938.1800003051758,
+        "probe_p95_ms": 61.39683397486806,
+        "probe_max_ms": 124.86654194071889,
+        "wall_s": 15.455801540985703,
+        "load_s": 4.098512084106915,
+        "ttft_s": 0.17998445802368224,
+        "tokens_per_s": 11.540503493311093,
+        "chosen": [
+          [
+            "load.stored"
+          ]
+        ]
+      },
+      "Qwen/Qwen2.5-3B-Instruct/naive": {
+        "n": 1,
+        "ok": 0,
+        "errors": [
+          "timeout after 600 s"
+        ],
+        "peak_footprint_mib": 7299.612609863281,
+        "swap_growth_mib": 8148.369999885559,
+        "probe_p95_ms": 60.11145806405693,
+        "probe_max_ms": 1978.4583750879392,
+        "wall_s": 680.9055497499648
+      },
+      "Qwen/Qwen2.5-3B-Instruct/memopro": {
+        "n": 3,
+        "ok": 0,
+        "errors": [
+          "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget"
+        ],
+        "peak_footprint_mib": 361.2216796875,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 8.685374981723726,
+        "probe_max_ms": 12.855249922722578,
+        "wall_s": 5.437880875077099
+      },
+      "Qwen/Qwen2.5-3B-Instruct/memopro_os": {
+        "n": 3,
+        "ok": 0,
+        "errors": [
+          "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget"
+        ],
+        "peak_footprint_mib": 361.04974365234375,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 6.459541968069971,
+        "probe_max_ms": 6.459541968069971,
+        "wall_s": 4.976083292043768
+      },
+      "Qwen/Qwen2.5-3B-Instruct/memopro_low": {
+        "n": 3,
+        "ok": 0,
+        "errors": [
+          "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'low':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.27",
+          "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'low':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.45",
+          "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'low':\n  stored           6.39 GiB  needs 6.39 GiB, device budget 1.78"
+        ],
+        "peak_footprint_mib": 412.3936767578125,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 6.4215000020340085,
+        "probe_max_ms": 9.002874954603612,
+        "wall_s": 6.646608166047372
+      },
+      "Qwen/Qwen2.5-3B-Instruct/memopro_4gb": {
+        "n": 3,
+        "ok": 0,
+        "errors": [
+          "BudgetExceeded: no configuration of Qwen/Qwen2.5-3B-Instruct fits the budget with quality 'balanced':\n  stored           6.39 GiB  needs 6.39 GiB, device budget"
+        ],
+        "peak_footprint_mib": 361.20599365234375,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 7.920125033706427,
+        "probe_max_ms": 7.920125033706427,
+        "wall_s": 4.954329833970405
+      }
+    },
+    "train": {
+      "naive": {
+        "n": 3,
+        "ok": 0,
+        "errors": [
+          "RuntimeError: MPS backend out of memory (MPS allocated: 8.35 GiB, other allocations: 384.00 KiB, max allowed: 9.07 GiB). Tried to allocate 800.00 MiB on shared "
+        ],
+        "peak_footprint_mib": 8883.456115722656,
+        "swap_growth_mib": 4130.380000114441,
+        "probe_p95_ms": 912.4506249791011,
+        "probe_max_ms": 1434.3594999518245,
+        "wall_s": 18.90733945905231
+      },
+      "session": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 4880.84716796875,
+        "swap_growth_mib": 1617.5,
+        "probe_p95_ms": 271.6548329917714,
+        "probe_max_ms": 1266.985291033052,
+        "wall_s": 48.13830687489826,
+        "steady_step_s": 6.414972624974325
+      }
+    },
+    "alternate": {
+      "resident": {
+        "n": 1,
+        "ok": 0,
+        "errors": [
+          "timeout after 600 s"
+        ],
+        "peak_footprint_mib": 6759.1751708984375,
+        "swap_growth_mib": 6860.440000534058,
+        "probe_p95_ms": 50.4517910303548,
+        "probe_max_ms": 1834.542333963327,
+        "wall_s": 632.7069340420421,
+        "outputs_equal": null
+      },
+      "reload": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 3605.5689086914062,
+        "swap_growth_mib": 4031.25,
+        "probe_p95_ms": 254.75912494584918,
+        "probe_max_ms": 1384.996333043091,
+        "wall_s": 116.61193187499885,
+        "total_s": 109.54193062509876,
+        "turns_after_loading_s": 85.76003645884339,
+        "outputs_equal": true
+      },
+      "beta": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 4195.004577636719,
+        "swap_growth_mib": 3164.880000114441,
+        "probe_p95_ms": 164.5599170587957,
+        "probe_max_ms": 1067.911333986558,
+        "wall_s": 105.8309882079484,
+        "total_s": 99.08943766599987,
+        "turns_after_loading_s": 66.04420725000091,
+        "outputs_equal": true
+      },
+      "beta_cache_off": {
+        "n": 3,
+        "ok": 3,
+        "errors": [],
+        "peak_footprint_mib": 3648.0189208984375,
+        "swap_growth_mib": 3650.930000305176,
+        "probe_p95_ms": 217.28666708804667,
+        "probe_max_ms": 491.9814160093665,
+        "wall_s": 99.61945058300626,
+        "total_s": 93.44252499996219,
+        "turns_after_loading_s": 62.93345099897124,
+        "outputs_equal": true
+      }
+    }
+  },
+  "criteria": {
+    "C1_C2_infer": {
+      "Qwen/Qwen2.5-1.5B-Instruct/naive": {
+        "loads": true,
+        "comfortable": false,
+        "tokens_per_s": 10.985847023603919,
+        "swap_growth_mib": 3170.619999885559,
+        "probe_p95_ms": 201.99108310043812
+      },
+      "Qwen/Qwen2.5-1.5B-Instruct/memopro": {
+        "loads": false,
+        "comfortable": false,
+        "tokens_per_s": null,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 4.414208000525832
+      },
+      "Qwen/Qwen2.5-1.5B-Instruct/memopro_os": {
+        "loads": false,
+        "comfortable": false,
+        "tokens_per_s": null,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 5.110499914735556
+      },
+      "Qwen/Qwen2.5-1.5B-Instruct/memopro_low": {
+        "loads": false,
+        "comfortable": false,
+        "tokens_per_s": 4.929824789006786,
+        "swap_growth_mib": 147.06999969482422,
+        "probe_p95_ms": 75.23129205219448
+      },
+      "Qwen/Qwen2.5-1.5B-Instruct/memopro_4gb": {
+        "loads": true,
+        "comfortable": false,
+        "tokens_per_s": 11.540503493311093,
+        "swap_growth_mib": 938.1800003051758,
+        "probe_p95_ms": 61.39683397486806
+      },
+      "Qwen/Qwen2.5-3B-Instruct/naive": {
+        "loads": false,
+        "comfortable": false,
+        "tokens_per_s": null,
+        "swap_growth_mib": 8148.369999885559,
+        "probe_p95_ms": 60.11145806405693
+      },
+      "Qwen/Qwen2.5-3B-Instruct/memopro": {
+        "loads": false,
+        "comfortable": false,
+        "tokens_per_s": null,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 8.685374981723726
+      },
+      "Qwen/Qwen2.5-3B-Instruct/memopro_os": {
+        "loads": false,
+        "comfortable": false,
+        "tokens_per_s": null,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 6.459541968069971
+      },
+      "Qwen/Qwen2.5-3B-Instruct/memopro_low": {
+        "loads": false,
+        "comfortable": false,
+        "tokens_per_s": null,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 6.4215000020340085
+      },
+      "Qwen/Qwen2.5-3B-Instruct/memopro_4gb": {
+        "loads": false,
+        "comfortable": false,
+        "tokens_per_s": null,
+        "swap_growth_mib": 0.0,
+        "probe_p95_ms": 7.920125033706427
+      }
+    },
+    "C4_train": {
+      "naive_completes": false,
+      "session_completes": true,
+      "overhead": null
+    },
+    "C5_alternate": {
+      "beta": {
+        "total_s": 99.08943766599987,
+        "vs_resident": null,
+        "vs_reload": 0.9045799823003671,
+        "outputs_equal": true
+      },
+      "beta_cache_off": {
+        "total_s": 93.44252499996219,
+        "vs_resident": null,
+        "vs_reload": 0.8530297436491612,
+        "outputs_equal": true
+      }
+    },
+    "C6_reclaim": {
+      "cpu/on": -0.14512603555286746,
+      "cpu/off": 0.9647545582841144,
+      "mps/on": -0.28926254852466504,
+      "mps/off": -0.014417508583748377
+    },
+    "C7_f4_cost": 1.046682183872513
+  }
+}
