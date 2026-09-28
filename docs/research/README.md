@@ -116,6 +116,8 @@
 | [0087](0087-e013a-preregistration.md) | 2026-09-29 | experiment (사전 등록) | E013a: γ의 macOS 압박 수준 신호 보정. 1초마다 수준·스왑·가용량·반응성 탐침, 평온과 압박 1~4GiB ×2회. 기준 사실 = 탐침 > 24.1ms. 후보 L(현재 신호)·S(스왑 64MB/1초)·A·K·S∨L, 쓸 만함 = 민감도 ≥ 0.8·특이도 ≥ 0.9 | 확정 |
 | [0088](0088-e013a-results.md) | 2026-09-29 | experiment | E013a 결과: macOS 압박 수준은 압박 중 87% 켜지고 평온·해제 뒤 0%(0053의 "평온해도 경고"는 오늘 재현 안 됨), 그러나 끊김(탐침 > 24.1ms)은 870초 중 5초뿐이라 특이도 0.54. 스왑 신호 민감도 0.40. **쓸 만한 신호 없음(규칙 3)** → G1(γ 실험 기능, macOS `run` 기본 끔)·G2(경고엔 손실 없는 조치만) 사용자 결정 대기. SSD 쓰기 15분 9.2GB | 확정 |
 | [0089](0089-gamma-g1.md) | 2026-09-29 | implementation | 사용자 결정 G1: γ는 실험 기능, macOS의 `memopro run`은 γ를 기본으로 켜지 않음(`--elastic`으로 켬, 기본으로 꺼지면 이유를 보고). `enable()` 직접 사용과 γ 동작은 그대로. 시험 5개 추가 | 확정 |
+| [0090](0090-status-evaluation.md) | 2026-09-29 | assessment | 완성도 평가: 기능 약 90%, 기술 검증 약 75%, 실사용 가치 입증 약 35%, 사용성 약 60%, 출시 준비 약 45%(연구자 판단). 강점(숫자로 입증된 개선, 정직한 기본값), 약점(E010 없음, 7B·학습 쾌적함 미입증, MPS 편중, 마지막 CUDA 검증이 0056), 출시까지의 순서 | 확정 |
+| [0091](0091-colab-run7-preregistration.md) | 2026-09-29 | experiment (사전 등록) + tool | E021(Colab 7차) 준비: 독립 셀 3개 노트북(`examples/colab_t4_heavy.ipynb`) — 학습(GPT-2·0.5B·1.5B 전체 미세조정, 일반·AMP·ckpt·accelerate 대 memopro, 작은 GPU 흉내, check, 7B QLoRA), 로컬 AI(1.5B~14B, HF fp16·bnb8·bnb4 대 memopro), 여러 모델(동면 대 다시 불러오기, `memopro run`, 회귀 7종). Drive 캐시·결과·이어하기, 경우마다 새 프로세스. 로컬 MPS로 끝까지 확인(MPS `.to("cpu", float64)`가 틀린 값을 내는 문제 발견). 기준 R1·T1~T4·I1·I2·M1~M3 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
