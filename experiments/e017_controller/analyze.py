@@ -48,6 +48,8 @@ def row(cases: list[dict]) -> dict:
             for c in ok
         ],
         "A_tokens": [c["A"]["tokens"] for c in ok],
+        "start": [c["A"].get("start") for c in ok],
+        "A_active_end": [c["A"]["active_end"] for c in ok],
     }
 
 
@@ -97,6 +99,34 @@ def verdicts(rows: dict) -> dict:
     return out
 
 
+def verdicts_b(rows: dict) -> dict:
+    """E017b (0075): the fixed controller. 1.5B bf16 vs bf16_ctl (K0-K4), 3B bf16_ctl (S)."""
+    out = {}
+    for model, r in rows.items():
+        get = lambda arm, key, r=r: (r.get(arm) or {}).get(key)
+        if "3B" in model:
+            starts = get("bf16_ctl", "start") or []
+            out[model] = {
+                "S": {
+                    "starts on int4 in >= 2 of 3": sum(s == "int4" for s in starts) >= 2,
+                    "A tok/s >= 3 x 0.27 (E017 bf16)": _ge(get("bf16_ctl", "A_tok_s"), 3 * 0.27),
+                }
+            }
+            continue
+        base = verdicts({model: r})[model]
+        idle = [n == 0 for n in get("bf16_ctl", "A_actions") or []]
+        ends = get("bf16_ctl", "A_active_end") or []
+        k0 = {
+            "no A action and A ends on bf16 in >= 2 of 3": sum(
+                i and e == "bf16" for i, e in zip(idle, ends, strict=False)
+            )
+            >= 2
+        }
+        k4 = {k: v for k, v in base["K4"].items() if k.startswith("bf16_ctl")}
+        out[model] = {"K0": k0, "K1": base["K1"], "K2": base["K2"], "K3": base["K3"], "K4": k4}
+    return out
+
+
 def _le(a, b):
     return None if a is None or b is None else a <= b
 
@@ -113,8 +143,9 @@ def main() -> None:
         if "skipped" not in c:
             table.setdefault(c["model"], {}).setdefault(c["arm"], []).append(c)
     rows = {m: {a: row(cs) for a, cs in arms.items()} for m, arms in table.items()}
-    summary = {"idle_probe": d["idle_probe"], "rows": rows, "verdicts": verdicts(rows)}
-    (OUT / f"summary_{path.stem}.json").write_text(json.dumps(summary, indent=2) + "\n")
+    judge = verdicts_b if path.parent.name == "e017b" else verdicts
+    summary = {"idle_probe": d["idle_probe"], "rows": rows, "verdicts": judge(rows)}
+    (path.parent / f"summary_{path.stem}.json").write_text(json.dumps(summary, indent=2) + "\n")
     for model, arms in rows.items():
         print(f"\n== {model}")
         for arm, r in arms.items():

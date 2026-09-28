@@ -101,6 +101,8 @@
 | [0072](0072-fclass-feature.md) | 2026-09-28 | decision+milestone | RCR F 등급 기능화: `residency="file"`(구성 선택은 그대로, 가중치를 깨끗한 파일 페이지로). stored는 원본 safetensors 매핑(정렬 안 되면 정렬 캐시), half·int4는 F 캐시(만들 때 `disk_writes="allow"`·디스크 예산, 0600, 원본 변경 시 무효). Rust `FileMap`(mmap·mincore·pread·Metal 무복사, 새 크레이트 없음). 1.5B bf16 매핑 0.73s, int4 캐시 재사용 0.13s. 테스트 Rust 3·Python 7 | 확정 |
 | [0073](0073-e017-preregistration.md) | 2026-09-28 | experiment (사전 등록) | E017 쾌적 제어기: bf16·int4 F 매핑을 함께 쥐고 공유 KV로 토큰 사이 전환, 신호 = 시스템 스왑 속도(이웃 피해)·자기 재읽기(붕괴), 조치 = 정밀도 내리기·속도 조절·복귀. 파일럿: OS는 활발한 우리 파일 페이지를 지키고 이웃을 스왑으로 밀어냄, 압박 비용은 대부분 재정착 구간. 기준 K1~K4 | 확정 |
 | [0074](0074-e017-results.md) | 2026-09-28 | experiment | E017 결과(사용자 요청 중단·재개, 3B bf16 기준점 1회): **K2 ✅** 3B bf16 0.24 → 10.5 tok/s(40배), 1.5B 압박 중 6.6 → 11.7. 1.5B bf16 복귀 2/3. **결함: 예열 때 첫 읽기를 붕괴로 오판해 A 전에 int4로 내려감** → K3·K4 일부 실패, 기능화 보류, 수정 후 E017b 제안. 정상 상태 이웃 피해는 작고 비일관적. `load(residency="file")` footprint 1.5GB 조사 필요 | 확정 |
+| [0075](0075-e017b-preregistration.md) | 2026-09-28 | experiment (사전 등록) | E017b: 제어기 수정(시작 정밀도를 여유로 정함, 예열 동안 판단 안 함, 전환 직후 한 창은 page-in 무시) 후 1.5B bf16 대 bf16_ctl, 3B bf16_ctl 재측정. 기준 K0(수정 작동)~K4, S(3B는 int4로 시작) | 확정 |
+| [0076](0076-e017b-results.md) | 2026-09-28 | experiment | E017b 결과: 첫 읽기 오판은 고쳐짐(3B는 int4로 시작, S ✅), 압박 중 1.5B 6.9 → 15.2 tok/s, 재정착 탐침 1.9초 → 0.14초. **K0 ❌**: 쉴 때도 0.16초 창의 시스템 스왑 속도 신호가 켜져 2/3에서 bf16을 떠남(제어기 없는 bf16도 쉴 때 스왑 0.33~0.82GB 증가), 시작·복귀가 낙관적인 `kernel_available`을 씀. 수정안 Q1~Q3 사용자 결정 대기 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
