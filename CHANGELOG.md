@@ -4,6 +4,16 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Added: PyTorch's 1 GiB MPS heaps (0080, 0081)
+- On Apple silicon, PyTorch's MPS allocator reserves a whole 1 GiB heap for any 10-512 MiB
+  allocation (a long prompt, full logits) while it sees no memory pressure. Setting
+  `PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1` before torch first uses MPS makes it allocate exact sizes
+  once MPS memory in use exceeds 10% of the recommended maximum: Qwen2.5-1.5B/3B int4 on an 8 GB
+  M1 use about 0.5 GB instead of 1.5 GB, at the same speed and with the same output.
+- `memopro run` restarts with that ratio (together with `MallocLargeCache=0`, one restart) unless
+  the user set the variable (kept) or passed `--keep-mps-heap`.
+- `doctor` and a file-backed `load` (once per process) explain it when the variable is not set.
+
 ### Added: file-backed weights on Apple GPUs (0072)
 - `residency="file"` (setting or `load(..., residency="file")`) keeps weights as clean
   file-backed pages seen by torch as MPS tensors without copying: nothing added to the process

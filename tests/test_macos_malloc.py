@@ -71,7 +71,9 @@ def test_hibernating_cpu_memory_suggests_the_variable(monkeypatch):
 
 
 def _args(**kw):
-    return argparse.Namespace(**{"keep_malloc_cache": False, "dry_run": False, **kw})
+    return argparse.Namespace(
+        **{"keep_malloc_cache": False, "keep_mps_heap": True, "dry_run": False, **kw}
+    )
 
 
 def test_run_restarts_once_with_the_cache_off(monkeypatch):
@@ -79,15 +81,15 @@ def test_run_restarts_once_with_the_cache_off(monkeypatch):
     monkeypatch.setattr(os, "execve", lambda exe, argv, env: calls.append((exe, argv, env)))
     monkeypatch.setattr(sys, "argv", ["memopro", "run", "app.py", "--x"])
     pretend_macos(monkeypatch, cache=True)
-    cli._restart_without_malloc_cache(_args())
+    cli._restart_for_macos(_args())
     ((_exe, argv, env),) = calls
     assert argv == [sys.executable, "-m", "memopro", "run", "app.py", "--x"]
     assert env["MallocLargeCache"] == "0"
     calls.clear()
     for skip in (_args(keep_malloc_cache=True), _args(dry_run=True)):
-        cli._restart_without_malloc_cache(skip)
+        cli._restart_for_macos(skip)
     monkeypatch.setenv("MallocLargeCache", "0")  # already restarted
-    cli._restart_without_malloc_cache(_args())
+    cli._restart_for_macos(_args())
     assert calls == []
 
 

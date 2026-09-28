@@ -76,6 +76,12 @@ def _parser() -> argparse.ArgumentParser:
         help="macOS: do not restart with MallocLargeCache=0 (freed memory then stays in the "
         "allocator cache until memory pressure)",
     )
+    run.add_argument(
+        "--keep-mps-heap",
+        action="store_true",
+        help="Apple silicon: do not restart with PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1 (PyTorch's "
+        "MPS allocator may then hold an extra 1 GiB heap)",
+    )
     run.add_argument("script")
     run.add_argument("script_args", nargs=argparse.REMAINDER)
     return parser
@@ -139,30 +145,52 @@ def _run(args: argparse.Namespace) -> None:
     )
 
 
-def _restart_without_malloc_cache(args: argparse.Namespace) -> None:
-    """``memopro run`` on macOS: restart once with MallocLargeCache=0 (0061 F4), so memory that
-    hibernate, γ or the script frees goes back to the OS instead of the allocator cache."""
+def _restart_for_macos(args: argparse.Namespace) -> None:
+    """``memopro run`` on macOS: restart once with the process settings that give memory back.
+
+    - MallocLargeCache=0 (0061 F4): memory that hibernate, γ or the script frees goes back to the
+      OS instead of the allocator cache;
+    - PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1 on Apple silicon (0080 W1): PyTorch's MPS allocator
+      allocates exact sizes instead of reserving 1 GiB heaps. It must be set before torch first
+      uses MPS, hence the restart. A value the user already set is kept.
+    """
     import os
 
-    from memopro.env import macos_malloc_cache_on
+    from memopro.env import (
+        MPS_LOW_WATERMARK,
+        MPS_LOW_WATERMARK_VAR,
+        macos_malloc_cache_on,
+        mps_heap_reserve_on,
+    )
 
-    if args.keep_malloc_cache or args.dry_run or not macos_malloc_cache_on():
+    if args.dry_run:
         return
+    changes = {}
+    if not args.keep_malloc_cache and macos_malloc_cache_on():
+        changes["MallocLargeCache"] = "0"
+    if not args.keep_mps_heap and mps_heap_reserve_on():
+        changes[MPS_LOW_WATERMARK_VAR] = MPS_LOW_WATERMARK
+    if not changes:
+        return
+    skips = {"MallocLargeCache": "--keep-malloc-cache", MPS_LOW_WATERMARK_VAR: "--keep-mps-heap"}
     print(
-        "memopro: restarting with MallocLargeCache=0 so that freed memory returns to macOS "
-        "(--keep-malloc-cache to skip)",
+        "memopro: restarting with "
+        + ", ".join(f"{k}={v}" for k, v in changes.items())
+        + " so that freed memory returns to macOS ("
+        + " / ".join(f"{skips[k]} to skip" for k in changes)
+        + ")",
         file=sys.stderr,
         flush=True,
     )
     sys.stdout.flush()
-    env = {**os.environ, "MallocLargeCache": "0"}
+    env = {**os.environ, **changes}
     os.execve(sys.executable, [sys.executable, "-m", "memopro", *sys.argv[1:]], env)
 
 
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "run" and argv is None:  # a real command line, not a call from Python
-        _restart_without_malloc_cache(args)
+        _restart_for_macos(args)
     handler = {"doctor": _doctor, "check": _check, "run": _run}[args.command]
     try:
         handler(args)
