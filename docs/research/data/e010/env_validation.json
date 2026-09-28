@@ -1,0 +1,57 @@
+{
+  "timestamp_utc": "2026-09-28T16:16:36+00:00",
+  "os": {
+    "system": "Darwin",
+    "release": "25.6.0",
+    "mac_ver": "26.6.2"
+  },
+  "hardware": {
+    "machine": "arm64",
+    "page_size": 16384,
+    "cpu": "Apple M1",
+    "ram_bytes": 8589934592,
+    "model": "MacBookAir10,1",
+    "logical_cpus": 8
+  },
+  "python": {
+    "version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
+    "implementation": "CPython",
+    "gil_enabled": true
+  },
+  "packages": {
+    "memopro": "0.1.0a1",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "datasets": "5.0.1",
+    "tokenizers": "0.23.2",
+    "safetensors": "0.8.0",
+    "numpy": "2.5.3",
+    "zstandard": "0.25.0",
+    "lz4": "4.4.5",
+    "matplotlib": "3.11.2",
+    "ipython": "9.17.1"
+  },
+  "torch": {
+    "available": true,
+    "num_threads": 4,
+    "cuda": false,
+    "mps": true,
+    "mps_recommended_max_memory": 5726633984
+  },
+  "git": {
+    "commit": "63bdba79cf6851d56ca8a1f71b2204b3cdd4557e",
+    "branch": "main",
+    "dirty": true
+  },
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "script": {
+    "path": "experiments/e010_demand/validate.py",
+    "sha256": "747d29548fc99f6aca809cff30e78dd0f2beb7545b2d8a1f332dbce71a2a76e7"
+  },
+  "modules_sha256": {
+    "experiments/_harness/env.py": "c92732b420e676362a2685b3b18103e250d14c0d77600075739023fb9da8cbe6",
+    "experiments/e010_demand/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "experiments/e010_demand/memopro_e010_probe.py": "cb054a2382845a5885a95244f9d3a5377610f53fcfd9e04a00773cc062452e61",
+    "experiments/e010_demand/validate.py": "747d29548fc99f6aca809cff30e78dd0f2beb7545b2d8a1f332dbce71a2a76e7"
+  }
+}
