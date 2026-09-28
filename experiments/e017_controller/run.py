@@ -8,6 +8,7 @@ Each case is a fresh worker (workers.py) with three phases, measured from outsid
 
 Usage: caffeinate -is .venv/bin/python -m experiments.e017_controller.run --cache-dir DIR
        [--prep]    build the int4 file caches once (disk writes allowed, into DIR)
+       [--data e017b]  write into docs/research/data/<data> (default e017)
        [--resume]  continue an interrupted run: keep results.json, its pressure size and idle
                    probe, and run only the (repeat, model, arm) cases not recorded yet
 """
@@ -148,6 +149,7 @@ def main() -> None:
     parser.add_argument("--models", default=",".join(MODELS))
     parser.add_argument("--arms", default=",".join(ARMS))
     parser.add_argument("--resume", action="store_true")
+    parser.add_argument("--data", default="e017")
     parser.add_argument(
         "--skip",
         action="append",
@@ -155,6 +157,9 @@ def main() -> None:
         help="MODEL=ARM not to run (recorded as skipped), e.g. an amendment",
     )
     args = parser.parse_args()
+    global OUT
+    OUT = OUT.parent / args.data
+    OUT.mkdir(parents=True, exist_ok=True)
     if args.prep:
         prep(args.cache_dir)
         return

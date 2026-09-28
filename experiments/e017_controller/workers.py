@@ -79,11 +79,11 @@ def main() -> None:
         ctl = None
         if args.arm.endswith("_ctl"):
             ctl = Controller(models, maps, sizes, Policy(switch=args.arm == "bf16_ctl", pace=True))
-        model = models[kinds[0]]
-        generate(ctl, model, ids, 4)  # warm-up
+        start = ctl.start() if ctl is not None else kinds[0]
+        model = models[start]
+        generate(None, model, ids, 4)  # warm-up: every weight of the start precision read once
         if ctl is not None:
-            ctl.log.clear()
-            ctl.reset()
+            ctl.arm()
     except Exception as e:  # noqa: BLE001 - a failure is a result
         print(
             "A "
@@ -119,6 +119,7 @@ def main() -> None:
             }
             if phase == "A":
                 rec["load_s"] = load_s
+                rec["start"] = start
             print(f"{phase} " + json.dumps(rec), flush=True)
         except Exception as e:  # noqa: BLE001
             print(

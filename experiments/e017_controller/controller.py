@@ -15,6 +15,14 @@ Actions at token boundaries only (the safe points of 0052 E6), in the order of 0
      between the two (same architecture).
   2. pace: when already on int4 and still paging in, cap our reread rate so neighbours are not
      pushed to swap faster than the cap.
+
+E017b fix (0075): E017 (0074) stepped down during warm-up because the first cold read of the bf16
+weights looked like rereading. Now:
+  - `start()` picks the first precision from room before anything is read (bf16 only when the OS
+    has room for it, the same rule as stepping up), so a model that cannot fit never cold-reads;
+  - no decisions until `arm()` (after load and warm-up, when every weight was read once);
+  - after a switch the next window ignores our page-ins: the first pass over the other mapping
+    is a first read, not a sign that our pages are dropped.
 """
 
 from __future__ import annotations
@@ -76,11 +84,25 @@ class Controller:
     _pageins: int = 0
     _swap: int = 0
     _t: float = 0.0
+    armed: bool = False
+    _first_read: bool = False  # the current window holds a first pass over a mapping
 
     def __post_init__(self) -> None:
         self.active = self.active or ("bf16" if "bf16" in self.models else "int4")
         self.reset()
         self._calm_since = self._t
+
+    def start(self) -> str:
+        """Choose the first precision from room, before any weight is read."""
+        if self.policy.switch and "bf16" in self.models and "int4" in self.models:
+            self.active = "bf16" if self._room_for("bf16") else "int4"
+        return self.active
+
+    def arm(self) -> None:
+        """Start deciding (after load and warm-up); drops anything logged before."""
+        self.armed = True
+        self.log.clear()
+        self.reset()
 
     def reset(self) -> None:
         """Start a fresh measurement window (after warm-up or between phases). The calm clock
@@ -91,14 +113,15 @@ class Controller:
 
     def step(self, token: int) -> None:
         """Called after each token; decides every `check_every` tokens."""
-        if token % self.policy.check_every:
+        if not self.armed or token % self.policy.check_every:
             return
         now = time.perf_counter()
         window = max(now - self._t, 1e-6)
         paged_mb = (rusage(os.getpid())["pageins"] - self._pageins) * PAGE / 1e6
         swap_mb = (swap_used() - self._swap) / 1e6
         crowding = swap_mb / window > self.policy.swap_mb_s
-        thrashing = paged_mb > self.policy.pagein_mb
+        first_read, self._first_read = self._first_read, False
+        thrashing = paged_mb > self.policy.pagein_mb and not first_read
         if crowding or thrashing:
             self._calm_since = now
         action = ""
@@ -109,6 +132,7 @@ class Controller:
             and (crowding or thrashing)
         ):
             self.active, action = "int4", "down"
+            self._first_read = True
         elif (
             self.policy.switch
             and self.active == "int4"
@@ -117,6 +141,7 @@ class Controller:
             and self._room_for("bf16")
         ):
             self.active, action = "bf16", "up"
+            self._first_read = True
         elif self.policy.pace and thrashing and paged_mb / window > self.policy.pace_mb_s:
             pause = min(paged_mb / self.policy.pace_mb_s - window, 2.0)
             if pause > 0:
@@ -131,6 +156,7 @@ class Controller:
                 "swap_mb": swap_mb,
                 "window_s": window,
                 "action": action,
+                "first_read": first_read,
             }
         )
         self._pageins = rusage(os.getpid())["pageins"]
