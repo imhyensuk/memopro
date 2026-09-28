@@ -1,0 +1,36 @@
+{
+ "model": "Qwen/Qwen2.5-3B-Instruct",
+ "variant": "int4deq-g64",
+ "rows": [
+  {
+   "tokens": 1,
+   "seconds": 5.225729583995417,
+   "tokens_per_s": 0.19136083946300061
+  },
+  {
+   "tokens": 16,
+   "seconds": 5.337111999993795,
+   "tokens_per_s": 2.997876004854049
+  },
+  {
+   "tokens": 64,
+   "seconds": 5.538549666998733,
+   "tokens_per_s": 11.555371685360502
+  },
+  {
+   "tokens": 256,
+   "seconds": 6.59891187500034,
+   "tokens_per_s": 38.79427470002194
+  },
+  {
+   "tokens": 1024,
+   "seconds": 11.012337667001702,
+   "tokens_per_s": 92.98661473743218
+  },
+  {
+   "tokens": 2048,
+   "seconds": 17.201067875001172,
+   "tokens_per_s": 119.06237536428885
+  }
+ ]
+}
