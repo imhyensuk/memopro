@@ -96,7 +96,7 @@ class _LoadingPolicy:
 
     def load(self, klass: Any, name: Any, args: tuple, kwargs: dict[str, Any]) -> Any:
         from memopro.access._load import RESERVED, plan_load
-        from memopro.orchestrator.candidates import from_pretrained_kwargs
+        from memopro.orchestrator.candidates import from_pretrained_kwargs, post_load
 
         original = self.original.__func__
         explicit = sorted(set(kwargs) & set(RESERVED))
@@ -115,8 +115,11 @@ class _LoadingPolicy:
                 _suggest(plan)
             return original(klass, name, **kwargs)
         extra = from_pretrained_kwargs(chosen, plan.ctx)
+        post = post_load(chosen, plan.ctx)
         try:
             model = original(klass, name, **kwargs, **extra)
+            if post is not None:
+                model = post(model)
         except Exception as e:  # noqa: BLE001 - fail-open: load as the script asked
             report().add("run.from_pretrained", "failed", f"{name}: {type(e).__name__}: {e}"[:200])
             return original(klass, name, **kwargs)

@@ -19,8 +19,10 @@ from memopro.access._info import ModelInfo, model_info
 from memopro.orchestrator.apply import fail_open
 from memopro.orchestrator.candidates import (
     Configuration,
+    backend_of,
     from_pretrained_kwargs,
     infer_candidates,
+    post_load,
 )
 from memopro.report import report
 from memopro.techniques.integrations.loading import LoadContext
@@ -189,14 +191,16 @@ def load(
     for cfg in usable:
         kwargs = from_pretrained_kwargs(cfg, ctx) | from_pretrained
         outcome = fail_open(
-            f"load.{cfg.name}", cls.from_pretrained, model_id, revision=revision, **kwargs
+            f"load.{cfg.name}", _attempt, cls, model_id, revision, kwargs, post_load(cfg, ctx)
         )
         if outcome.ok:
             model = outcome.value
             need = cfg.needs.device + cfg.needs.host + cfg.needs.disk
+            backend = backend_of(cfg, ctx)
             detail = (
-                f"{info.source}: {cfg.describe()} ({cfg.quality.name.lower()}), estimated "
-                f"{format_size(need)}, weights {format_size(_footprint(model))} on {ctx.device}"
+                f"{info.source}: {cfg.describe()}{f' via {backend}' if backend else ''} "
+                f"({cfg.quality.name.lower()}), estimated {format_size(need)}, weights "
+                f"{format_size(_footprint(model))} on {ctx.device}"
             )
             if cfg is fallback:
                 detail += "; " + _fallback_note(plan, cfg)
@@ -216,6 +220,11 @@ def load(
     raise _nothing_fits(
         plan, f"every configuration that fits failed to load {info.source}; see memopro.report()"
     )
+
+
+def _attempt(cls: Any, model_id: Any, revision: Any, kwargs: dict[str, Any], post: Any) -> Any:
+    model = cls.from_pretrained(model_id, revision=revision, **kwargs)
+    return post(model) if post is not None else model
 
 
 def _nothing_fits(plan: LoadPlan, headline: str) -> BudgetExceeded:
