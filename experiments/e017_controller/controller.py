@@ -23,6 +23,12 @@ weights looked like rereading. Now:
   - no decisions until `arm()` (after load and warm-up, when every weight was read once);
   - after a switch the next window ignores our page-ins: the first pass over the other mapping
     is a first read, not a sign that our pages are dropped.
+
+E017c changes (0077, the user's choice after 0076):
+  - Q1: the neighbour signal is the swap growth over the last >= `swap_span_s` seconds (at least
+    `swap_mb`), not a rate over one 2-token window (0.16 s), which fired on a few MB while calm;
+  - Q2/Q3: `mode="comfort"` (default) judges room for bf16 by memopro's conservative available
+    memory (0035); `mode="quality"` keeps the OS estimate (`kernel_available_bytes`, E017/E017b).
 """
 
 from __future__ import annotations
@@ -31,6 +37,7 @@ import ctypes
 import ctypes.util
 import os
 import time
+from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
 
@@ -63,7 +70,9 @@ def swap_used() -> int:
 @dataclass
 class Policy:
     check_every: int = 2  # tokens between decisions
-    swap_mb_s: float = 20.0  # neighbours swapping faster than this: we take too much room
+    swap_mb: float = 64.0  # neighbours' swap grew this much over the last span: too much room
+    swap_span_s: float = 1.0  # the span for swap growth (Q1)
+    mode: str = "comfort"  # room for bf16: "comfort" conservative (0035), "quality" OS estimate
     pagein_mb: float = 64.0  # we paged in more than this in a window: our pages are dropped
     up_after_s: float = 10.0  # calm this long before stepping back up
     up_headroom: float = 1.2  # OS-estimated available must be this x the bf16 weights
@@ -86,6 +95,7 @@ class Controller:
     _t: float = 0.0
     armed: bool = False
     _first_read: bool = False  # the current window holds a first pass over a mapping
+    _swaps: deque = field(default_factory=deque)  # (time, swap used) samples for Q1
 
     def __post_init__(self) -> None:
         self.active = self.active or ("bf16" if "bf16" in self.models else "int4")
@@ -110,6 +120,8 @@ class Controller:
         self._pageins = rusage(os.getpid())["pageins"]
         self._swap = swap_used()
         self._t = time.perf_counter()
+        self._swaps.clear()
+        self._swaps.append((self._t, self._swap))
 
     def step(self, token: int) -> None:
         """Called after each token; decides every `check_every` tokens."""
@@ -118,8 +130,15 @@ class Controller:
         now = time.perf_counter()
         window = max(now - self._t, 1e-6)
         paged_mb = (rusage(os.getpid())["pageins"] - self._pageins) * PAGE / 1e6
-        swap_mb = (swap_used() - self._swap) / 1e6
-        crowding = swap_mb / window > self.policy.swap_mb_s
+        swap_now = swap_used()
+        swap_mb = (swap_now - self._swap) / 1e6
+        self._swaps.append((now, swap_now))
+        while len(self._swaps) > 1 and now - self._swaps[1][0] >= self.policy.swap_span_s:
+            self._swaps.popleft()
+        t0, s0 = self._swaps[0]
+        span = now - t0
+        span_mb = (swap_now - s0) / 1e6
+        crowding = span >= self.policy.swap_span_s and span_mb >= self.policy.swap_mb
         first_read, self._first_read = self._first_read, False
         thrashing = paged_mb > self.policy.pagein_mb and not first_read
         if crowding or thrashing:
@@ -155,6 +174,8 @@ class Controller:
                 "paged_mb": paged_mb,
                 "swap_mb": swap_mb,
                 "window_s": window,
+                "span_s": span,
+                "span_swap_mb": span_mb,
                 "action": action,
                 "first_read": first_read,
             }
@@ -167,7 +188,8 @@ class Controller:
         import memopro
 
         host = memopro.doctor(devices=False).env.host
-        return host.kernel_available_bytes >= self.policy.up_headroom * self.weight_bytes[key]
+        room = host.available_bytes if self.policy.mode == "comfort" else host.kernel_available_bytes
+        return room >= self.policy.up_headroom * self.weight_bytes[key]
 
 
 def generate(

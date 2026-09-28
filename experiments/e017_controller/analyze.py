@@ -30,6 +30,7 @@ def row(cases: list[dict]) -> dict:
         "B_tok_s": g(lambda c: c["B"]["tokens_per_s"]),
         "C_tok_s": g(lambda c: c["C"]["tokens_per_s"]),
         "A_load_s": g(lambda c: c["A"]["load_s"]),
+        "A_swap_mib": g(lambda c: c["A_mem"]["swap_growth"] / MiB),
         "A_peak_mib": g(lambda c: c["A_mem"]["peak_footprint"] / MiB),
         "B_initial_swap_mib": g(lambda c: c["B_swap"]["initial"] / MiB),
         "B_steady_swap_mib": g(lambda c: c["B_swap"]["steady"] / MiB),
@@ -127,6 +128,44 @@ def verdicts_b(rows: dict) -> dict:
     return out
 
 
+def verdicts_c(rows: dict) -> dict:
+    """E017c (0077): comfort mode with Q1. C0 stable, C1 comfortable when calm, K2, K4, S."""
+    out = {}
+    for model, r in rows.items():
+        get = lambda arm, key, r=r: (r.get(arm) or {}).get(key)
+        starts = get("bf16_ctl", "start") or []
+        start = max(set(starts), key=starts.count) if starts else None
+        acts = get("bf16_ctl", "A_actions") or []
+        v = {
+            "C0": {"no A action in >= 2 of 3": sum(n == 0 for n in acts) >= 2},
+            "C1": {
+                "A tok/s >= 5": _ge(get("bf16_ctl", "A_tok_s"), 5.0),
+                "A swap growth <= 1 GiB": _le(get("bf16_ctl", "A_swap_mib"), 1024),
+                "A probe p95 <= 24.1 ms": _le(get("bf16_ctl", "A_probe_p95"), E014_PROBE_MS),
+            },
+        }
+        if start and get(start, "A_tokens"):
+            base = get(start, "A_tokens")[0]
+            idle = [i for i, n in enumerate(acts) if n == 0]
+            v["K4"] = {
+                f"== {start} when idle": bool(idle)
+                and all(get("bf16_ctl", "A_tokens")[i] == base for i in idle),
+                f"A tok/s >= 0.9 x {start}": _ge(
+                    get("bf16_ctl", "A_tok_s"), 0.9 * (get(start, "A_tok_s") or 0)
+                ),
+            }
+        if "1.5B" in model:
+            v["C1"]["A swap growth <= bf16"] = _le(
+                get("bf16_ctl", "A_swap_mib"), get("bf16", "A_swap_mib")
+            )
+            v["K2"] = {"B tok/s >= bf16": _ge(get("bf16_ctl", "B_tok_s"), get("bf16", "B_tok_s"))}
+        else:
+            v["K2"] = {"B tok/s >= 3 x 0.24 (E016/E017 bf16)": _ge(get("bf16_ctl", "B_tok_s"), 0.72)}
+            v["S"] = {"starts on int4 in >= 2 of 3": sum(x == "int4" for x in starts) >= 2}
+        out[model] = v
+    return out
+
+
 def _le(a, b):
     return None if a is None or b is None else a <= b
 
@@ -143,7 +182,7 @@ def main() -> None:
         if "skipped" not in c:
             table.setdefault(c["model"], {}).setdefault(c["arm"], []).append(c)
     rows = {m: {a: row(cs) for a, cs in arms.items()} for m, arms in table.items()}
-    judge = verdicts_b if path.parent.name == "e017b" else verdicts
+    judge = {"e017b": verdicts_b, "e017c": verdicts_c}.get(path.parent.name, verdicts)
     summary = {"idle_probe": d["idle_probe"], "rows": rows, "verdicts": judge(rows)}
     (path.parent / f"summary_{path.stem}.json").write_text(json.dumps(summary, indent=2) + "\n")
     for model, arms in rows.items():
