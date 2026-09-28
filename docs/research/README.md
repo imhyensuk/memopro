@@ -96,6 +96,8 @@
 | [0067](0067-e015-preregistration.md) | 2026-09-28 | experiment (사전 등록) | E015 RCR 기초 측정: Q1 재읽기 비용(5방법), Q2 purgeable(G-P), Q3 무복사 MPS 텐서(G-F, Objective-C 도우미 + DLPack), Q4 MPS 저비트 커널. 파일럿: 무복사 텐서 비트 동일, bnb nf4는 bf16보다 느림 | 확정 |
 | [0068](0068-e015-results.md) | 2026-09-28 | experiment | E015 결과: **G-F ✅**(파일 매핑 MPS 텐서 비트 동일·int4 비트 동일, footprint 증가 없음, 압박 시 OS가 48~68% 회수, 재계산 비트 동일), **G-P ✅**(purgeable이 익명 대부분이 밀리기 1~2초 전 쓰기 없이 비워짐), Q1 폴트 재읽기 0.28GB/s·데우기 0.74GB/s·원시 2.49GB/s(선읽기 필요), **Q4 torch int4pack이 bf16의 1.63배, bnb nf4는 0.35배** → int4 백엔드 교체 결정 대기, RS6 해제 불필요 | 확정 |
 | [0069](0069-int4-backend-torch-int4pack.md) | 2026-09-28 | decision+milestone | MPS int4 백엔드를 torch `_weight_int4pack_mm`(+torchao group-wise 양자화, 그룹 64)로 교체: CPU에 mmap으로 불러와 층별 변환, 헤드·임베딩은 bf16. 1.5B int4 **4.9 → 14.7 tok/s**(bf16 11.0), 장치 가중치 1.16GiB. MPS 드라이버의 0.67GB 잔여는 남음 | 확정 |
+| [0070](0070-e016-preregistration.md) | 2026-09-28 | experiment (사전 등록) | E016 RCR 추론 시제품: F 등급 bf16(원본 safetensors를 그대로 무복사 매핑)·int4(한 번 변환한 정렬 F 파일)·선읽기, 방법 5개 × 1.5B·3B, A(평소)·B(4GiB 압박) 단계, 기준 E1·C2·H1~H3. 탐침 기준 max(유휴×2, 24.1ms)는 파일럿 후 결정 | 확정 |
+| [0071](0071-e016-results.md) | 2026-09-28 | experiment | E016 결과: **rcr_int4 1.5B 18.0·3B 10.6 tok/s, footprint 0.53GB, 스왑 0, 불러오기 0.4s, C2 ✅(두 모델)**, 압박에서 속도 83%·58% 유지(memopro_int4 41%·39%). memopro_int4(0069)도 C2 ✅. rcr_bf16은 1.5B ✅, 3B는 0.24 tok/s로 붕괴(여유 초과). 관찰: 압박 중 RCR은 이웃 프로세스를 스왑으로 밀어냄 → 제어기(E017) 필요. F 등급 기능화 결정 대기 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
