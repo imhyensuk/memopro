@@ -11,7 +11,14 @@ from typing import Any
 
 from memopro._units import format_size
 from memopro.config import Config, get_config
-from memopro.env import MALLOC_CACHE_NOTE, Env, detect, macos_malloc_cache_on
+from memopro.env import (
+    MALLOC_CACHE_NOTE,
+    MPS_HEAP_NOTE,
+    Env,
+    detect,
+    macos_malloc_cache_on,
+    mps_heap_reserve_on,
+)
 from memopro.orchestrator.budget import Budget, compute_budget, describe_setting
 
 __all__ = ["DoctorReport", "doctor"]
@@ -49,6 +56,8 @@ class DoctorReport:
             out.append(f"budget capped by the budget setting ({describe_setting(cfg.budget)})")
         if macos_malloc_cache_on():
             out.append(MALLOC_CACHE_NOTE)
+        if mps_heap_reserve_on():
+            out.append(MPS_HEAP_NOTE)
         return out + list(budget.notes) + list(env.notes)
 
     def to_json(self) -> dict[str, Any]:
