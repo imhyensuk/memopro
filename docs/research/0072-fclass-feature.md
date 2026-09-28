@@ -36,6 +36,37 @@ E016은 실험 코드(`experiments/e016_rcr/fclass.py`)였다. Objective-C 도�
 5. **β와의 관계**: F 등급 텐서는 큰 저장공간의 보기다. β는 이를 공유 저장공간으로 보고 동면하지 않는다(0041 규칙). 이미 OS가 쓰기 없이 회수하는 등급이므로 동면할 이유도 없다.
 6. **선읽기**: E016에서 효과가 엇갈렸다(여유가 있을 때는 없음, 압박 중에는 속도와 반응성을 맞바꿈). 그래서 기본으로 켜지 않고, E017의 쾌적 제어기가 다룬다.
 
+## 구현과 검증
+
+| 파일 | 내용 |
+|---|---|
+| `crates/memopro/src/residency.rs` | `FileMap`(mmap·mincore·pread 선읽기), macOS `metal_buffer()`(objc 런타임). Unix 전용 모듈(Windows는 빌드 제외) |
+| `crates/memopro-py/src/lib.rs` | `_core.FileMap` 바인딩 |
+| `python/memopro/residency.py` | DLPack으로 매핑을 uint8 MPS 텐서로, 골격(`init_empty_weights`, 생성 설정), 키 해석(접두사 보정·모델에 없는 키 건너뜀), 원본 매핑, 정렬 검사, F 캐시(작성 0600·목록·유효성·재사용), `load_file_backed` |
+| `config.py`, `access/_load.py` | `residency` 설정과 `load(..., residency=)`. 명시 선택이므로 실패는 `ModeUnavailable` |
+
+- **구현 중 확인한 것**
+  - GPT-2 원본 safetensors는 텐서 위치가 4바이트 정렬이 아니라서 fp32 보기를 만들 수 없다.
+  - 그래서 정렬이 안 된 원본은 `stored`도 **정렬된 F 캐시**(원래 형식 그대로의 사본)로 쓴다. 디스크 동의가 필요하다.
+  - Qwen2.5 파일은 정렬돼 있어 원본을 그대로 매핑한다.
+- **실제 모델** (M1, MPS)
+
+  | 모델 | 경로 | 결과 |
+  |---|---|---|
+  | GPT-2 | 정렬 캐시 | 동의 없이는 거부. 동의하면 476MiB 캐시를 2.1초에 만들고, 재사용은 0.07초 |
+  | Qwen2.5-1.5B bf16 | 원본 2.88GiB 매핑 | 0.73초 |
+  | Qwen2.5-1.5B int4 | 캐시 1.12GiB | 만들기 9.4초, 재사용 0.13초 |
+
+  모두 출력이 정상이었다.
+- **테스트**
+  - Rust 28개(`FileMap` 3개 추가; Metal은 장치가 없으면 Unsupported를 허용).
+  - `tests/test_residency.py` 7개
+    - 바인딩, 설정 검증, MPS가 아닐 때 거부, 정렬 검사.
+    - MPS에서: 원본 매핑이 메모리 로드와 로짓 비트 동일, 가중치는 파일 전체 저장공간의 일부.
+    - int4 캐시: 동의 없이 거부 → 만들기 → 재사용(동의 불필요), 로짓 비트 동일, 파일 권한 0600.
+    - 원본이 바뀌면 캐시 무효.
+  - 전체 Python 231개 통과.
+
 ## 논문 매핑
 
 - **논문 C System**: RCR F 등급의 구현(Rust `FileMap` + Metal 무복사 + DLPack 보기), F 캐시의 유효성 규칙, 정책(디스크 동의·예산)과의 결합.

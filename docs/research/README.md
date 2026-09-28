@@ -98,6 +98,7 @@
 | [0069](0069-int4-backend-torch-int4pack.md) | 2026-09-28 | decision+milestone | MPS int4 백엔드를 torch `_weight_int4pack_mm`(+torchao group-wise 양자화, 그룹 64)로 교체: CPU에 mmap으로 불러와 층별 변환, 헤드·임베딩은 bf16. 1.5B int4 **4.9 → 14.7 tok/s**(bf16 11.0), 장치 가중치 1.16GiB. MPS 드라이버의 0.67GB 잔여는 남음 | 확정 |
 | [0070](0070-e016-preregistration.md) | 2026-09-28 | experiment (사전 등록) | E016 RCR 추론 시제품: F 등급 bf16(원본 safetensors를 그대로 무복사 매핑)·int4(한 번 변환한 정렬 F 파일)·선읽기, 방법 5개 × 1.5B·3B, A(평소)·B(4GiB 압박) 단계, 기준 E1·C2·H1~H3. 탐침 기준 max(유휴×2, 24.1ms)는 파일럿 후 결정 | 확정 |
 | [0071](0071-e016-results.md) | 2026-09-28 | experiment | E016 결과: **rcr_int4 1.5B 18.0·3B 10.6 tok/s, footprint 0.53GB, 스왑 0, 불러오기 0.4s, C2 ✅(두 모델)**, 압박에서 속도 83%·58% 유지(memopro_int4 41%·39%). memopro_int4(0069)도 C2 ✅. rcr_bf16은 1.5B ✅, 3B는 0.24 tok/s로 붕괴(여유 초과). 관찰: 압박 중 RCR은 이웃 프로세스를 스왑으로 밀어냄 → 제어기(E017) 필요. F 등급 기능화 결정 대기 | 확정 |
+| [0072](0072-fclass-feature.md) | 2026-09-28 | decision+milestone | RCR F 등급 기능화: `residency="file"`(구성 선택은 그대로, 가중치를 깨끗한 파일 페이지로). stored는 원본 safetensors 매핑(정렬 안 되면 정렬 캐시), half·int4는 F 캐시(만들 때 `disk_writes="allow"`·디스크 예산, 0600, 원본 변경 시 무효). Rust `FileMap`(mmap·mincore·pread·Metal 무복사, 새 크레이트 없음). 1.5B bf16 매핑 0.73s, int4 캐시 재사용 0.13s. 테스트 Rust 3·Python 7 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
