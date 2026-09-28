@@ -229,6 +229,20 @@ def load(
     )
 
 
+_mps_heap_note_shown = False
+
+
+def _suggest_mps_heap_setting() -> None:
+    """0080 W2: after a file-backed load, say once per process that the MPS allocator may hold a
+    1 GiB heap on top of the (file-backed) weights, and how to avoid it."""
+    global _mps_heap_note_shown
+    from memopro.env import MPS_HEAP_NOTE, mps_heap_reserve_on
+
+    if not _mps_heap_note_shown and mps_heap_reserve_on():
+        _mps_heap_note_shown = True
+        report().add("load", "suggested", MPS_HEAP_NOTE)
+
+
 def _load_file_backed(
     plan: LoadPlan,
     cfg: Configuration,
@@ -258,6 +272,7 @@ def _load_file_backed(
     )
     if cfg is fallback:
         detail += "; " + _fallback_note(plan, cfg)
+    _suggest_mps_heap_setting()  # before "applied", as hibernate's note (the last entry is the load)
     report().add(f"load.{cfg.name}", "applied", detail)
     if tokenizer:
         from transformers import AutoTokenizer
