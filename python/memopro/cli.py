@@ -67,6 +67,12 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--no-elastic", action="store_true", help="do not watch memory pressure")
     run.add_argument("--census", action="store_true", help="census of the whole run")
     run.add_argument("--dry-run", action="store_true", help="show what would be done; do not run")
+    run.add_argument(
+        "--keep-malloc-cache",
+        action="store_true",
+        help="macOS: do not restart with MallocLargeCache=0 (freed memory then stays in the "
+        "allocator cache until memory pressure)",
+    )
     run.add_argument("script")
     run.add_argument("script_args", nargs=argparse.REMAINDER)
     return parser
@@ -128,8 +134,30 @@ def _run(args: argparse.Namespace) -> None:
     )
 
 
+def _restart_without_malloc_cache(args: argparse.Namespace) -> None:
+    """``memopro run`` on macOS: restart once with MallocLargeCache=0 (0061 F4), so memory that
+    hibernate, γ or the script frees goes back to the OS instead of the allocator cache."""
+    import os
+
+    from memopro.env import macos_malloc_cache_on
+
+    if args.keep_malloc_cache or args.dry_run or not macos_malloc_cache_on():
+        return
+    print(
+        "memopro: restarting with MallocLargeCache=0 so that freed memory returns to macOS "
+        "(--keep-malloc-cache to skip)",
+        file=sys.stderr,
+        flush=True,
+    )
+    sys.stdout.flush()
+    env = {**os.environ, "MallocLargeCache": "0"}
+    os.execve(sys.executable, [sys.executable, "-m", "memopro", *sys.argv[1:]], env)
+
+
 def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
+    if args.command == "run" and argv is None:  # a real command line, not a call from Python
+        _restart_without_malloc_cache(args)
     handler = {"doctor": _doctor, "check": _check, "run": _run}[args.command]
     try:
         handler(args)

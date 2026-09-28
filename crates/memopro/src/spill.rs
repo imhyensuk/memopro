@@ -60,8 +60,19 @@ fn combine(len: usize, parts: &[u128]) -> Digest {
 
 /// Digest of `data`, computed in parallel.
 pub fn digest(data: &[u8]) -> Digest {
-    let parts: Vec<u128> = data.par_chunks(DIGEST_CHUNK).map(xxh3_128).collect();
-    combine(data.len(), &parts)
+    combine(data.len(), &digest_parts(data))
+}
+
+/// Per-[`DIGEST_CHUNK`] hashes of `data`. Hashing consecutive pieces whose lengths are multiples
+/// of `DIGEST_CHUNK` and combining all parts with [`digest_combine`] gives [`digest`] of the whole,
+/// so callers can verify large data piece by piece with bounded buffers (0061 F1).
+pub fn digest_parts(data: &[u8]) -> Vec<u128> {
+    data.par_chunks(DIGEST_CHUNK).map(xxh3_128).collect()
+}
+
+/// The digest of data of length `len` whose chunk hashes are `parts` (see [`digest_parts`]).
+pub fn digest_combine(len: usize, parts: &[u128]) -> Digest {
+    combine(len, parts)
 }
 
 #[cfg(target_os = "macos")]
@@ -323,6 +334,15 @@ mod tests {
         b[DIGEST_CHUNK + 3] ^= 1;
         assert_ne!(d1, digest(&b));
         assert_ne!(digest(&a[..10]), digest(&a[..11]));
+    }
+
+    #[test]
+    fn digest_parts_of_pieces_combine_to_the_whole() {
+        let a = data(DIGEST_CHUNK * 5 + 77);
+        let mut parts = digest_parts(&a[..DIGEST_CHUNK * 2]);
+        parts.extend(digest_parts(&a[DIGEST_CHUNK * 2..DIGEST_CHUNK * 4]));
+        parts.extend(digest_parts(&a[DIGEST_CHUNK * 4..]));
+        assert_eq!(digest_combine(a.len(), &parts), digest(&a));
     }
 
     #[test]

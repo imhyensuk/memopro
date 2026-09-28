@@ -292,8 +292,27 @@ def _now(obj: Any, mode: str, allow_spill: bool, name: str | None) -> Handle:
         f"{pool} {'freed' if v >= 0 else 'added'} {abs(v)}" for pool, v in handle.reclaimed.items()
     )
     freed = max(handle.reclaimed.values(), default=0)
+    global _malloc_note_shown
+    if not _malloc_note_shown and _cpu_side_freed(handle):
+        from memopro.env import MALLOC_CACHE_NOTE
+
+        _malloc_note_shown = True  # once per process
+        report().add("hibernate", "suggested", MALLOC_CACHE_NOTE)
     report().add("hibernate", "applied", detail, reclaimed_bytes=max(freed, 0))
     return handle
+
+
+_malloc_note_shown = False
+
+
+def _cpu_side_freed(handle: Handle) -> bool:
+    """Whether macOS' allocator cache keeps what this handle released (0061 F4): CPU tensors and,
+    for their host-side copies, MPS tensors, unless MallocLargeCache=0 is set."""
+    from memopro.env import macos_malloc_cache_on
+
+    if not macos_malloc_cache_on():
+        return False
+    return any(r.slot.device.type in ("cpu", "mps") for r in handle.records)
 
 
 def _roll_back(handle: Handle) -> None:
