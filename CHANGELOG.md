@@ -4,6 +4,12 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Changed: int4 on Apple GPUs (0069)
+- On MPS, `load` quantizes to int4 with torch's own `_weight_int4pack_mm` kernel (torchao's
+  group-wise quantization, group 64) instead of bitsandbytes: Qwen2.5-1.5B generates at 14.7
+  tokens/s instead of 4.9 (bf16: 11.0). The model is loaded on the CPU (memory-mapped) and
+  converted layer by layer, so the half-precision model never sits on the device.
+
 ### Added: when nothing fits (0064)
 - `BudgetExceeded` from `load` lists settings checked to load the model (lower quality, the OS
   estimate as basis, disk offload, the exact forced budget), with the expected swapping, and

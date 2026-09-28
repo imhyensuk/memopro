@@ -18,7 +18,15 @@ from memopro.techniques.base import Fidelity, QualityGrade
 from memopro.techniques.integrations import loading
 from memopro.techniques.integrations.loading import LoadContext, Needs
 
-__all__ = ["QUALITY_LIMIT", "Configuration", "infer_candidates", "select"]
+__all__ = [
+    "QUALITY_LIMIT",
+    "Configuration",
+    "backend_of",
+    "from_pretrained_kwargs",
+    "infer_candidates",
+    "post_load",
+    "select",
+]
 
 QUALITY_LIMIT = {
     "lossless": QualityGrade.LOSSLESS,
@@ -241,10 +249,33 @@ def select(candidates: list[Configuration]) -> Configuration | None:
     return next((c for c in candidates if c.usable), None)
 
 
+def backend_of(cfg: Configuration, ctx: LoadContext) -> str:
+    """The quantization back end a quantized configuration uses here ("" if not quantized)."""
+    bits = cfg.kwargs.get("_quant_bits")
+    return loading.quantization_backend(ctx.device, bits)[0] if bits else ""
+
+
 def from_pretrained_kwargs(cfg: Configuration, ctx: LoadContext) -> dict[str, Any]:
     """Keyword arguments for ``from_pretrained`` (quantization configs built only now)."""
     kwargs = {k: v for k, v in cfg.kwargs.items() if not k.startswith("_") and v is not None}
     bits = cfg.kwargs.get("_quant_bits")
-    if bits:
+    if bits and backend_of(cfg, ctx) == "torch-int4pack":
+        # load on the CPU as stored (memory-mapped safetensors), convert layer by layer after
+        kwargs["device_map"] = {"": "cpu"}
+        kwargs["dtype"] = "auto"
+    elif bits:
         kwargs["quantization_config"] = _quant_config(bits, ctx)
     return kwargs
+
+
+def post_load(cfg: Configuration, ctx: LoadContext) -> Any:
+    """What to apply to the model ``from_pretrained`` returned, or None (0069)."""
+    if backend_of(cfg, ctx) != "torch-int4pack":
+        return None
+    from memopro.techniques.integrations import int4pack
+
+    def apply(model: Any) -> Any:
+        int4pack.convert(model, ctx.device)
+        return model
+
+    return apply
