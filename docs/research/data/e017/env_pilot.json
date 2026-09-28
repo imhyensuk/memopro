@@ -1,0 +1,74 @@
+{
+  "timestamp_utc": "2026-09-28T04:11:48+00:00",
+  "os": {
+    "system": "Darwin",
+    "release": "25.6.0",
+    "mac_ver": "26.6.2"
+  },
+  "hardware": {
+    "machine": "arm64",
+    "page_size": 16384,
+    "cpu": "Apple M1",
+    "ram_bytes": 8589934592,
+    "model": "MacBookAir10,1",
+    "logical_cpus": 8
+  },
+  "python": {
+    "version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
+    "implementation": "CPython",
+    "gil_enabled": true
+  },
+  "packages": {
+    "memopro": "0.1.0a1",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "datasets": "5.0.1",
+    "tokenizers": "0.23.2",
+    "safetensors": "0.8.0",
+    "numpy": "2.5.3",
+    "zstandard": "0.25.0",
+    "lz4": "4.4.5",
+    "matplotlib": "3.11.2",
+    "ipython": "9.17.1"
+  },
+  "torch": {
+    "available": true,
+    "num_threads": 4,
+    "cuda": false,
+    "mps": true,
+    "mps_recommended_max_memory": 5726633984
+  },
+  "git": {
+    "commit": "9963f13b19ed2876147e393bed724df4e9ff369a",
+    "branch": "fclass-e017",
+    "dirty": true
+  },
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "script": {
+    "path": "experiments/e017_controller/run.py",
+    "sha256": "7b4c927e683c342eeb90d8e1e440125968a5484567f392615f9ece216694889f"
+  },
+  "modules_sha256": {
+    "experiments/_harness/env.py": "c92732b420e676362a2685b3b18103e250d14c0d77600075739023fb9da8cbe6",
+    "experiments/e017_controller/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "experiments/e017_controller/controller.py": "8ace6ff8199a3bf43c7021fe6e012f0824b8fa89d49665928e1a46632afe9154",
+    "experiments/e017_controller/run.py": "7b4c927e683c342eeb90d8e1e440125968a5484567f392615f9ece216694889f",
+    "experiments/e017_controller/workers.py": "42638377d22b837cfc0daad7b59a3ed01230d90149062224c0fdd7821cabf09c"
+  },
+  "extra": {
+    "argv": [
+      "/Users/imhyeonseok/Desktop/memopro/experiments/e017_controller/run.py",
+      "--cache-dir",
+      "/private/tmp/claude-501/-Users-imhyeonseok-Desktop-memopro/5426a832-cfa6-49a0-ad8a-367a8c0bbc98/scratchpad/e017cache",
+      "--repeats",
+      "1",
+      "--rest",
+      "3",
+      "--name",
+      "pilot"
+    ],
+    "pressure_bytes": 4294967296,
+    "available": 4547215360,
+    "kernel_available": 5979062272
+  }
+}

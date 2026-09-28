@@ -1,0 +1,71 @@
+{
+  "timestamp_utc": "2026-09-28T05:36:38+00:00",
+  "os": {
+    "system": "Darwin",
+    "release": "25.6.0",
+    "mac_ver": "26.6.2"
+  },
+  "hardware": {
+    "machine": "arm64",
+    "page_size": 16384,
+    "cpu": "Apple M1",
+    "ram_bytes": 8589934592,
+    "model": "MacBookAir10,1",
+    "logical_cpus": 8
+  },
+  "python": {
+    "version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
+    "implementation": "CPython",
+    "gil_enabled": true
+  },
+  "packages": {
+    "memopro": "0.1.0a1",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "datasets": "5.0.1",
+    "tokenizers": "0.23.2",
+    "safetensors": "0.8.0",
+    "numpy": "2.5.3",
+    "zstandard": "0.25.0",
+    "lz4": "4.4.5",
+    "matplotlib": "3.11.2",
+    "ipython": "9.17.1"
+  },
+  "torch": {
+    "available": true,
+    "num_threads": 4,
+    "cuda": false,
+    "mps": true,
+    "mps_recommended_max_memory": 5726633984
+  },
+  "git": {
+    "commit": "bd439a7b6de9175295b10e0a13fc0ce0c24bc032",
+    "branch": "fclass-e017",
+    "dirty": true
+  },
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "script": {
+    "path": "experiments/e017_controller/run.py",
+    "sha256": "70046b0688ad9beb129796f7df0dfea80bfb3f20f99b1f1f670ecd4c48101c22"
+  },
+  "modules_sha256": {
+    "experiments/_harness/env.py": "c92732b420e676362a2685b3b18103e250d14c0d77600075739023fb9da8cbe6",
+    "experiments/e017_controller/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "experiments/e017_controller/analyze.py": "d2b3f9d187b866839a9b786822f93fb30c7b1a40be903be70ea669f511b516d3",
+    "experiments/e017_controller/controller.py": "971d6fd744e1a6a2f15246e4d0af95212cb338f07ae704704ce20b77edd2c581",
+    "experiments/e017_controller/run.py": "70046b0688ad9beb129796f7df0dfea80bfb3f20f99b1f1f670ecd4c48101c22",
+    "experiments/e017_controller/workers.py": "05e810a7b883dd026582eef8fcf176edc1a4f893da97d7c281ece8e990a02c95"
+  },
+  "extra": {
+    "argv": [
+      "/Users/imhyeonseok/Desktop/memopro/experiments/e017_controller/run.py",
+      "--cache-dir",
+      "/private/tmp/claude-501/-Users-imhyeonseok-Desktop-memopro/5426a832-cfa6-49a0-ad8a-367a8c0bbc98/scratchpad/e017cache",
+      "--resume",
+      "--skip",
+      "Qwen/Qwen2.5-3B-Instruct=bf16"
+    ],
+    "resume": 1,
+    "pressure_bytes": 4294967296
+  }
+}

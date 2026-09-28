@@ -148,6 +148,7 @@ def load(
     budget_basis: str | None = None,
     disk_writes: str | None = None,
     fallback: str | None = None,
+    residency: str | None = None,
     **from_pretrained: Any,
 ) -> Any:
     """Load ``model_id`` so it fits the budget; returns the model, or ``(model, tokenizer)``.
@@ -157,6 +158,7 @@ def load(
     (``dtype.half``, ``quant.int8``, ``quant.int4``, ``offload.cpu``, ``offload.disk``).
     ``budget_basis``, ``disk_writes`` and ``fallback`` override those settings for this call
     (every setting a `BudgetExceeded` suggestion names can be passed here, 0064).
+    ``residency="file"`` keeps the weights as clean file-backed pages on MPS (0072).
     Other keyword arguments go to ``from_pretrained`` unchanged.
     """
     reserved = sorted(set(from_pretrained) & set(RESERVED))
@@ -177,6 +179,7 @@ def load(
         budget_basis=budget_basis,
         disk_writes=disk_writes,
         fallback=fallback,
+        residency=residency,
     )
     info, ctx, candidates = plan.info, plan.ctx, plan.candidates
     usable = [c for c in candidates if c.usable]
@@ -188,6 +191,10 @@ def load(
         usable = [fallback]
     cls = _model_class(info, task)
     rep = report()
+    if plan.setup.config.residency == "file":
+        return _load_file_backed(
+            plan, usable[0], fallback, cls, model_id, revision, from_pretrained, tokenizer
+        )
     for cfg in usable:
         kwargs = from_pretrained_kwargs(cfg, ctx) | from_pretrained
         outcome = fail_open(
@@ -220,6 +227,43 @@ def load(
     raise _nothing_fits(
         plan, f"every configuration that fits failed to load {info.source}; see memopro.report()"
     )
+
+
+def _load_file_backed(
+    plan: LoadPlan,
+    cfg: Configuration,
+    fallback: Any,
+    cls: Any,
+    model_id: Any,
+    revision: Any,
+    from_pretrained: dict[str, Any],
+    tokenizer: bool,
+) -> Any:
+    """``residency="file"`` (0072): an explicit choice, so failures raise instead of falling
+    back to anonymous memory."""
+    from memopro.residency import load_file_backed
+
+    ctx, info = plan.ctx, plan.info
+
+    def build() -> Any:
+        kwargs = from_pretrained_kwargs(cfg, ctx) | from_pretrained
+        return _attempt(cls, model_id, revision, kwargs, post_load(cfg, ctx))
+
+    model, line = load_file_backed(plan, cfg, cls, model_id, revision, build)
+    backend = backend_of(cfg, ctx)
+    need = cfg.needs.device + cfg.needs.host + cfg.needs.disk
+    detail = (
+        f"{info.source}: {cfg.describe()}{f' via {backend}' if backend else ''} "
+        f"({cfg.quality.name.lower()}), estimated {format_size(need)} on {ctx.device}; {line}"
+    )
+    if cfg is fallback:
+        detail += "; " + _fallback_note(plan, cfg)
+    report().add(f"load.{cfg.name}", "applied", detail)
+    if tokenizer:
+        from transformers import AutoTokenizer
+
+        return model, AutoTokenizer.from_pretrained(model_id, revision=revision)
+    return model
 
 
 def _attempt(cls: Any, model_id: Any, revision: Any, kwargs: dict[str, Any], post: Any) -> Any:
