@@ -93,6 +93,27 @@ MALLOC_CACHE_NOTE = (
 )
 
 
+MPS_LOW_WATERMARK_VAR = "PYTORCH_MPS_LOW_WATERMARK_RATIO"
+MPS_LOW_WATERMARK = "0.1"
+MPS_HEAP_NOTE = (
+    "PyTorch's MPS allocator reserves a whole 1 GiB heap for any 10-512 MiB allocation (a long "
+    "prompt, full logits) while it sees no memory pressure (0080); set "
+    f"{MPS_LOW_WATERMARK_VAR}={MPS_LOW_WATERMARK} before torch first uses MPS to allocate exact "
+    "sizes once MPS memory in use exceeds 10% of the recommended maximum (about 1 GiB less for "
+    "Qwen2.5-1.5B/3B int4 on an 8 GB M1, same speed and output; `memopro run` does this for you)"
+)
+
+
+def mps_heap_reserve_on() -> bool:
+    """True on Apple silicon unless this process set PyTorch's MPS low watermark ratio itself
+    (0080 W2). Reads the environment only: no torch import."""
+    return (
+        sys.platform == "darwin"
+        and platform.machine() == "arm64"
+        and MPS_LOW_WATERMARK_VAR not in os.environ
+    )
+
+
 def macos_malloc_cache_on() -> bool:
     """True on macOS unless this process started with ``MallocLargeCache=0`` (0061 F4)."""
     return sys.platform == "darwin" and os.environ.get("MallocLargeCache") != "0"
