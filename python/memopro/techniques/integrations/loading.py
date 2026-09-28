@@ -97,10 +97,31 @@ def _torchao_works(device: str, bits: int) -> str:
         return f"torchao int{bits} does not run on {device}: {type(e).__name__}: {e}"[:200]
 
 
+@functools.cache
+def _int4pack_works(device: str, bits: int) -> str:
+    """Empty if torch's own int4 kernel runs on ``device`` (MPS; 0069)."""
+    if bits != 4:
+        return "torch int4pack is an int4 back end"
+    try:
+        from memopro.techniques.integrations import int4pack
+    except ImportError as e:  # torchao (for the packing) missing
+        return f"torch int4pack needs torchao: {e}"
+    return int4pack.works(device)
+
+
 def quantization_backend(device: str, bits: int) -> tuple[str, str]:
-    """(back end, "") for the first working back end, or ("", reasons)."""
+    """(back end, "") for the first working back end, or ("", reasons).
+
+    On MPS torch's own int4 kernel comes first: 1.63x bf16, where bitsandbytes nf4 ran at 0.35x
+    (E015 Q4, 0069).
+    """
     reasons = []
-    for backend, works in (("bitsandbytes", _bnb_works), ("torchao", _torchao_works)):
+    order = (
+        ("torch-int4pack", _int4pack_works),
+        ("bitsandbytes", _bnb_works),
+        ("torchao", _torchao_works),
+    )
+    for backend, works in order:
         reason = works(device, bits)
         if not reason:
             return backend, ""
