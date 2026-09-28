@@ -67,7 +67,18 @@ def _parser() -> argparse.ArgumentParser:
     run.add_argument("--fallback", choices=("none", "stored"), default=None, help=_FALLBACK_HELP)
     run.add_argument("--disk-writes", choices=("ask", "never", "allow"), default=None)
     run.add_argument("--modes", default=None, help="write-free hibernate modes, e.g. source,host")
-    run.add_argument("--no-elastic", action="store_true", help="do not watch memory pressure")
+    gamma = run.add_mutually_exclusive_group()
+    gamma.add_argument(
+        "--elastic",
+        dest="elastic",
+        action="store_const",
+        const=True,
+        default=None,
+        help="watch memory pressure (γ, experimental; off by default on macOS, 0088)",
+    )
+    gamma.add_argument(
+        "--no-elastic", dest="elastic", action="store_const", const=False, help="do not watch it"
+    )
     run.add_argument("--census", action="store_true", help="census of the whole run")
     run.add_argument("--dry-run", action="store_true", help="show what would be done; do not run")
     run.add_argument(
@@ -139,7 +150,7 @@ def _run(args: argparse.Namespace) -> None:
     run(
         args.script,
         args.script_args,
-        elastic=not args.no_elastic,
+        elastic=args.elastic,
         census=args.census,
         dry_run=args.dry_run,
     )
