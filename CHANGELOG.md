@@ -4,6 +4,13 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Added: file-backed weights on Apple GPUs (0072)
+- `residency="file"` (setting or `load(..., residency="file")`) keeps weights as clean
+  file-backed pages seen by torch as MPS tensors without copying: nothing added to the process
+  footprint, no swap writes, and the OS drops and rereads them under pressure. Models stored in
+  their original format map the safetensors files directly; half precision and int4 use a file
+  cache written once (`disk_writes="allow"`), reused afterwards.
+
 ### Changed: int4 on Apple GPUs (0069)
 - On MPS, `load` quantizes to int4 with torch's own `_weight_int4pack_mm` kernel (torchao's
   group-wise quantization, group 64) instead of bitsandbytes: Qwen2.5-1.5B generates at 14.7
