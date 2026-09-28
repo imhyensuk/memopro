@@ -29,6 +29,13 @@ E017c changes (0077, the user's choice after 0076):
     `swap_mb`), not a rate over one 2-token window (0.16 s), which fired on a few MB while calm;
   - Q2/Q3: `mode="comfort"` (default) judges room for bf16 by memopro's conservative available
     memory (0035); `mode="quality"` keeps the OS estimate (`kernel_available_bytes`, E017/E017b).
+
+P1 + P3 (0079, the user's choice after 0078, where the start precision followed free memory and
+outputs changed between runs):
+  - P3: `mode="comfort"` always starts on the lowest precision (int4) and never steps up; only
+    `mode="quality"` uses room to start on or return to bf16;
+  - P1: the chosen precision and why are always reported (`choice`, and a warning when it depends
+    on free memory); `precision="int4"`/`"bf16"` pins it (no switching, pacing still allowed).
 """
 
 from __future__ import annotations
@@ -37,6 +44,7 @@ import ctypes
 import ctypes.util
 import os
 import time
+import warnings
 from collections import deque
 from dataclasses import dataclass, field
 from typing import Any
@@ -72,7 +80,8 @@ class Policy:
     check_every: int = 2  # tokens between decisions
     swap_mb: float = 64.0  # neighbours' swap grew this much over the last span: too much room
     swap_span_s: float = 1.0  # the span for swap growth (Q1)
-    mode: str = "comfort"  # room for bf16: "comfort" conservative (0035), "quality" OS estimate
+    mode: str = "comfort"  # "comfort": int4 only (P3); "quality": bf16 when the OS has room
+    precision: str | None = None  # pin "int4" or "bf16" (P1): no switching
     pagein_mb: float = 64.0  # we paged in more than this in a window: our pages are dropped
     up_after_s: float = 10.0  # calm this long before stepping back up
     up_headroom: float = 1.2  # OS-estimated available must be this x the bf16 weights
@@ -96,6 +105,7 @@ class Controller:
     armed: bool = False
     _first_read: bool = False  # the current window holds a first pass over a mapping
     _swaps: deque = field(default_factory=deque)  # (time, swap used) samples for Q1
+    choice: dict = field(default_factory=dict)  # the start precision and why (P1)
 
     def __post_init__(self) -> None:
         self.active = self.active or ("bf16" if "bf16" in self.models else "int4")
@@ -103,10 +113,31 @@ class Controller:
         self._calm_since = self._t
 
     def start(self) -> str:
-        """Choose the first precision from room, before any weight is read."""
-        if self.policy.switch and "bf16" in self.models and "int4" in self.models:
-            self.active = "bf16" if self._room_for("bf16") else "int4"
+        """Choose the first precision before any weight is read, and report why (P1)."""
+        both = "bf16" in self.models and "int4" in self.models
+        if self.policy.precision is not None:
+            if self.policy.precision not in self.models:
+                raise ValueError(f"precision {self.policy.precision!r} is not loaded")
+            self.active, why = self.policy.precision, "pinned"
+        elif not (self.policy.switch and both):
+            why = "only one precision loaded"
+        elif self.policy.mode == "comfort":
+            self.active, why = "int4", "comfort mode starts on int4"
+        else:
+            room = self._room_for("bf16")
+            self.active = "bf16" if room else "int4"
+            why = "quality mode: room for bf16" if room else "quality mode: no room for bf16"
+            warnings.warn(
+                f"precision {self.active} chosen from free memory ({why}); outputs can differ "
+                "between runs, pin precision= to reproduce",
+                stacklevel=2,
+            )
+        self.choice = {"precision": self.active, "why": why, "mode": self.policy.mode}
         return self.active
+
+    @property
+    def _switching(self) -> bool:
+        return self.policy.switch and self.policy.precision is None
 
     def arm(self) -> None:
         """Start deciding (after load and warm-up); drops anything logged before."""
@@ -145,7 +176,7 @@ class Controller:
             self._calm_since = now
         action = ""
         if (
-            self.policy.switch
+            self._switching
             and self.active == "bf16"
             and "int4" in self.models
             and (crowding or thrashing)
@@ -153,7 +184,8 @@ class Controller:
             self.active, action = "int4", "down"
             self._first_read = True
         elif (
-            self.policy.switch
+            self._switching
+            and self.policy.mode == "quality"
             and self.active == "int4"
             and "bf16" in self.models
             and now - self._calm_since >= self.policy.up_after_s
@@ -188,8 +220,7 @@ class Controller:
         import memopro
 
         host = memopro.doctor(devices=False).env.host
-        room = host.available_bytes if self.policy.mode == "comfort" else host.kernel_available_bytes
-        return room >= self.policy.up_headroom * self.weight_bytes[key]
+        return host.kernel_available_bytes >= self.policy.up_headroom * self.weight_bytes[key]
 
 
 def generate(
