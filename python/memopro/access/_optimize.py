@@ -34,13 +34,22 @@ def optimize(
     quality: str | None = None,
     prefer: str | None = None,
     example: Any = None,
+    budget_basis: str | None = None,
+    fallback: str | None = None,
 ) -> Any:
     """Fit ``model`` to the budget in place and return it (see module docstring)."""
     if goal not in ("infer", "train"):
         raise InvalidArgument(f"goal must be 'infer' or 'train'; got {goal!r}")
     if not hasattr(model, "named_parameters"):
         raise InvalidArgument(f"optimize takes an nn.Module; got {type(model).__name__}")
-    s = setup(budget=budget, quality=quality, prefer=prefer, device=_where(model))
+    s = setup(
+        budget=budget,
+        quality=quality,
+        prefer=prefer,
+        device=_where(model),
+        budget_basis=budget_basis,
+        fallback=fallback,
+    )
     if goal == "infer":
         return _infer(model, s)
     return _train(model, s, example)
@@ -68,10 +77,21 @@ def _infer(model: Any, s: Any) -> Any:
         steps.append(("offload.cpu", 0))
     needed = next((i for i, (_, size) in enumerate(steps) if size + runtime <= budget), None)
     if needed is None:
+        if s.config.fallback == "stored":
+            detail = (
+                f"{info.source}: no allowed step fits {format_size(budget)}; fallback='stored': "
+                f"left as it is ({format_size(steps[0][1] + runtime)})"
+            )
+            import warnings
+
+            warnings.warn(f"memopro.optimize: {detail}", UserWarning, stacklevel=3)
+            report().add("optimize", "skipped", detail)
+            return model
         raise BudgetExceeded(
             f"{info.source}: no allowed step fits {format_size(budget)} (quality "
             f"{s.config.quality!r}): "
             + ", ".join(f"{n} {format_size(b + runtime)}" for n, b in steps)
+            + _optimize_suggestions(info, device, runtime, budget, s)
         )
     model.eval()
     rep = report()
@@ -92,6 +112,32 @@ def _infer(model: Any, s: Any) -> Any:
     if needed == 0:
         rep.add("optimize", "skipped", f"{info.source} already fits {format_size(budget)}")
     return model
+
+
+def _optimize_suggestions(info: Any, device: str, runtime: int, budget: int, s: Any) -> str:
+    """Settings under which a step would fit (0064 D-a), from the same step sizes."""
+    from memopro.config import QUALITIES
+
+    grades = [("stored", info.weight_bytes(), "lossless")]
+    if info.stored_dtype == "float32":
+        grades.append(("dtype.half", info.weight_bytes(half=True), "high"))
+    if not loading._torchao_works(device, 8):
+        grades.append(("quant.int8", info.weight_bytes(bits=8), "balanced"))
+    current = QUALITIES.index(s.config.quality)
+    lines = []
+    for name, size, quality in grades:
+        need = size + runtime
+        change = {}
+        if QUALITIES.index(quality) > current:
+            change["quality"] = quality
+        if need > budget:
+            change["budget"] = f"{-(-need // 10**8) / 10:.1f}GB!"
+        if change:
+            call = ", ".join(f"{k}={v!r}" for k, v in change.items())
+            lines.append(f"  {call:<34} -> {name}, {format_size(need)}")
+    if s.config.fallback == "none":
+        lines.append("  fallback='stored'                  -> warn and leave the model as it is")
+    return "\nSettings that would fit:\n" + "\n".join(lines) if lines else ""
 
 
 def _train(model: Any, s: Any, example: Any) -> Any:

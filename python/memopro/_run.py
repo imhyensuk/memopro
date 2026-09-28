@@ -111,6 +111,8 @@ class _LoadingPolicy:
         if chosen is None or chosen.name == "stored":
             why = "fits as stored" if chosen is not None else "nothing memopro may use fits"
             report().add("run.from_pretrained", "skipped", f"{name}: {why}; loaded as written")
+            if chosen is None:
+                _suggest(plan)
             return original(klass, name, **kwargs)
         extra = from_pretrained_kwargs(chosen, plan.ctx)
         try:
@@ -126,6 +128,19 @@ class _LoadingPolicy:
             f"({chosen.quality.name.lower()})",
         )
         return model
+
+
+def _suggest(plan: Any) -> None:
+    """Nothing fits: say which settings would (0064 D-a); the script's own call still runs."""
+    from memopro.access._suggest import suggest_for_load
+
+    try:
+        suggestions = suggest_for_load(plan)
+    except Exception:  # noqa: BLE001 - advice only; never break the script
+        return
+    if suggestions:
+        advice = "; ".join(f"{s.call()} -> {s.describe}" for s in suggestions)
+        report().add("run.from_pretrained", "suggested", f"{plan.info.source}: {advice}")
 
 
 def plan_text(script: str, *, elastic: bool, census: bool) -> str:

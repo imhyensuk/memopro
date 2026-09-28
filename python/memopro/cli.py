@@ -19,6 +19,7 @@ _BUDGET_HELP = (
     "auto; a cap such as 6GB; 50%%; --budget=-2GB (leave 2GB free); 2GB..6GB (stop below 2GB); "
     "6GB! (exactly, even above what is measured); per pool: device=80%%,host=-2GB,disk=20GB"
 )
+_FALLBACK_HELP = "when nothing fits: stop (none, default) or warn and load as stored (stored)"
 _BASIS_HELP = "what the host budget starts from: conservative (default), os, or total"
 
 
@@ -52,6 +53,7 @@ def _parser() -> argparse.ArgumentParser:
         "--budget-basis", choices=("conservative", "os", "total"), default=None, help=_BASIS_HELP
     )
     check.add_argument("--quality", choices=("lossless", "high", "balanced", "low"), default=None)
+    check.add_argument("--fallback", choices=("none", "stored"), default=None, help=_FALLBACK_HELP)
     check.add_argument("--json", action="store_true", help="machine-readable output")
 
     run = sub.add_parser(
@@ -62,6 +64,7 @@ def _parser() -> argparse.ArgumentParser:
         "--budget-basis", choices=("conservative", "os", "total"), default=None, help=_BASIS_HELP
     )
     run.add_argument("--quality", choices=("lossless", "high", "balanced", "low"), default=None)
+    run.add_argument("--fallback", choices=("none", "stored"), default=None, help=_FALLBACK_HELP)
     run.add_argument("--disk-writes", choices=("ask", "never", "allow"), default=None)
     run.add_argument("--modes", default=None, help="write-free hibernate modes, e.g. source,host")
     run.add_argument("--no-elastic", action="store_true", help="do not watch memory pressure")
@@ -96,7 +99,8 @@ def _check(args: argparse.Namespace) -> None:
     from memopro.access import check
     from memopro.config import using
 
-    with using(**({"budget_basis": args.budget_basis} if args.budget_basis else {})):
+    scoped = {"budget_basis": args.budget_basis, "fallback": args.fallback}
+    with using(**{k: v for k, v in scoped.items() if v is not None}):
         result = check(
             args.target,
             goal=args.goal,
@@ -119,6 +123,7 @@ def _run(args: argparse.Namespace) -> None:
             ("budget", args.budget),
             ("budget_basis", args.budget_basis),
             ("quality", args.quality),
+            ("fallback", args.fallback),
             ("disk_writes", args.disk_writes),
             ("hibernate_modes", args.modes),
         )

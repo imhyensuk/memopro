@@ -4,6 +4,19 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Added: when nothing fits (0064)
+- `BudgetExceeded` from `load` lists settings checked to load the model (lower quality, the OS
+  estimate as basis, disk offload, the exact forced budget), with the expected swapping, and
+  carries them as `.suggestions`; `check`, `optimize` and `memopro run` show them too.
+- `fallback="stored"` (setting, per-call option, `--fallback`): warn and load as stored straight
+  to the device instead of refusing; `optimize` then leaves the model as it is.
+- `load` and `check` take `budget_basis`, `disk_writes` and `fallback` per call.
+
+### Fixed (0061, 0063)
+- `source` hibernation no longer allocates a full copy to verify against the file (piecewise).
+- macOS: `doctor` and the hibernate report explain the allocator cache; `memopro run` restarts
+  with `MallocLargeCache=0` (`--keep-malloc-cache` to skip).
+
 ### Added: budget forms (0059)
 - Per pool (device, host and now disk): `"-2GB"` leaves memory free, `"2GB..6GB"` caps and stops
   with `BudgetExceeded` below the minimum, `"6GB!"` forces an exact size above what is measured,
