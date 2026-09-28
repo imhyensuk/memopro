@@ -1,0 +1,146 @@
+{
+  "experiment": "E010 probe validation",
+  "checks": {
+    "one_file_one_session_record": true,
+    "snapshots_equal_cells": true,
+    "e006_tracked_exact_at_cell_9": true,
+    "e006_idle_exact_at_cell_9": true,
+    "view_not_double_counted": true,
+    "magic_usage_detected": true,
+    "names_hashed": true,
+    "no_cell_text_recorded": true,
+    "model_source_known": true,
+    "tensors_not_source_known": true,
+    "idle_source_bytes_counts_the_idle_model": true,
+    "oom_flag_only_on_the_oom_cell": true,
+    "os_memory_fields": true
+  },
+  "pass": true,
+  "cell_9": {
+    "tracked_bytes": 120004004,
+    "idle_bytes": 104004004
+  },
+  "expected_cell_9": {
+    "tracked_bytes": 120004004,
+    "idle_bytes": 104004004
+  },
+  "model_bytes": 241408,
+  "last_snapshot": {
+    "kind": "cell",
+    "cell": 15,
+    "elapsed_s": 0.65,
+    "tracked_bytes": 132245412,
+    "idle_bytes": 116245412,
+    "idle_source_bytes": 241408,
+    "peak_rss_bytes": 532135936,
+    "total_bytes": 8589934592,
+    "os_available_bytes": 2546483200,
+    "swap_used_bytes": 3170631680,
+    "mps_allocated_bytes": 0,
+    "mps_driver_bytes": 393216,
+    "variables": [
+      {
+        "name": "e9a5a73d1e27",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 100000000
+        },
+        "idle_cells": 9,
+        "source_known": false
+      },
+      {
+        "name": "1216e1e62f38",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4000000
+        },
+        "idle_cells": 0,
+        "source_known": false
+      },
+      {
+        "name": "b12d3d7fc876",
+        "type": "Linear",
+        "bytes": {
+          "cpu": 4004000
+        },
+        "idle_cells": 11,
+        "source_known": false
+      },
+      {
+        "name": "a4f6e9a65d32",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4
+        },
+        "idle_cells": 10,
+        "source_known": false
+      },
+      {
+        "name": "bd47aee46f0e",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4000000
+        },
+        "idle_cells": 8,
+        "source_known": false
+      },
+      {
+        "name": "40b8063a0653",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4000000
+        },
+        "idle_cells": 7,
+        "source_known": false
+      },
+      {
+        "name": "b59c2c2d050d",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4000000
+        },
+        "idle_cells": 6,
+        "source_known": false
+      },
+      {
+        "name": "d8c380ca4021",
+        "type": "GPT2LMHeadModel",
+        "bytes": {
+          "cpu": 241408
+        },
+        "idle_cells": 5,
+        "source_known": true
+      },
+      {
+        "name": "55c43eec1f08",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4000000
+        },
+        "idle_cells": 2,
+        "source_known": false
+      },
+      {
+        "name": "e2534ee9b13c",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4000000
+        },
+        "idle_cells": 1,
+        "source_known": false
+      },
+      {
+        "name": "4e78d0ffeb04",
+        "type": "Tensor",
+        "bytes": {
+          "cpu": 4000000
+        },
+        "idle_cells": 0,
+        "source_known": false
+      }
+    ],
+    "swap_growth_bytes": 0,
+    "oom": false
+  },
+  "runtime_s": 4.8
+}
