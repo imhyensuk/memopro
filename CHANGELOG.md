@@ -4,6 +4,15 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Changed: int4 on Apple GPUs, quality and long prompts (0084, 0085)
+- Group size 32 instead of 64: WikiText-2 perplexity rises 5.7% (Qwen2.5-1.5B) and 7.6% (3B)
+  over bf16 instead of 9.2% and 21.1%, for 7-8% more weight bytes and 2-4% slower decoding.
+  Existing int4 file caches are not reused (a new one is built with `disk_writes="allow"`).
+- Long inputs: from 160 rows on, an int4 layer dequantizes its weight to bf16 for that call and
+  uses a plain matmul (torch's int4 kernel is linear in the number of rows). A 1024-token prompt
+  on Qwen2.5-1.5B takes 8.7 s instead of 29.2 s, with the same output.
+- `load` reports int4's measured quality cost next to the configuration it applied.
+
 ### Added: PyTorch's 1 GiB MPS heaps (0080, 0081)
 - On Apple silicon, PyTorch's MPS allocator reserves a whole 1 GiB heap for any 10-512 MiB
   allocation (a long prompt, full logits) while it sees no memory pressure. Setting

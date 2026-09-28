@@ -99,11 +99,11 @@ class ModelInfo:
                 totals[t.dtype] = totals.get(t.dtype, 0) + t.nbytes
         return max(totals, key=totals.__getitem__) if totals else "float32"
 
-    def weight_bytes(self, *, half: bool = False, bits: int | None = None) -> int:
+    def weight_bytes(self, *, half: bool = False, bits: int | None = None, group: int = 64) -> int:
         """Bytes of the weights as stored, in half precision, or with linear weights at ``bits``.
 
         Quantized weights also carry scales: about 4 bytes per output row for int8 and per
-        64-element block for int4, as in bitsandbytes and torchao.
+        ``group``-element block for int4 (64 in bitsandbytes, 32 in memopro's torch int4pack).
         """
         total = 0
         for t in self.tensors:
@@ -112,7 +112,7 @@ class ModelInfo:
                 continue
             size = min(t.itemsize, 2) if (half or bits) else t.itemsize
             if bits and t.quantizable:
-                scales = t.shape[0] * 4 if bits >= 8 else math.ceil(t.numel / 64) * 4
+                scales = t.shape[0] * 4 if bits >= 8 else math.ceil(t.numel / group) * 4
                 total += math.ceil(t.numel * bits / 8) + scales
             else:
                 total += t.numel * size
