@@ -90,6 +90,16 @@ memopro.report()   # 무엇을 왜 골랐고, 무엇이 실패했고, 무엇을 
 | `{"device": "80%", "host": "-2GB", "disk": "20GB"}` | 풀마다 따로. 디스크 상한은 오프로드·`spill`에 적용 |
 | `{"use": "-2GB", "min": "1GB"}` | 형식과 범위를 함께 |
 
+들어갈 구성이 없으면 `BudgetExceeded`가 **실제로 불러와지는 설정**을 계산해 보여 준다([0064](docs/research/0064-defaults-da-dd.md)). 가중치는 읽지 않고 계획만 다시 세워 확인하며, 스왑 예상량을 함께 적는다. `fallback="stored"`를 주면 거부하지 않고 경고와 함께 원래 형식으로 장치에 바로 불러온다(기본은 끔).
+
+```text
+Settings that would load Qwen/Qwen2.5-1.5B-Instruct (checked against the plan, nothing loaded):
+  quality='low'        -> quant.int4 (moderate_loss), 1.46 GiB, fits in free memory
+  budget_basis='os'    -> quant.int8 (small_loss), 2.00 GiB, about 365 MiB over what is free
+  budget='3.5GB!'      -> as stored (lossless), 3.22 GiB, about 1.65 GiB over what is free
+  fallback='stored'    -> warn and load as stored anyway
+```
+
 ```python
 memopro.configure(budget_basis="os")   # 기준: "conservative"(기본) | "os"(OS 추정, 스왑 가능) | "total"
 memopro.configure(headroom="1GB")      # 여유분: 비율(0.1) 또는 크기
