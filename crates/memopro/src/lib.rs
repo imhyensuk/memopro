@@ -17,6 +17,8 @@ pub mod error;
 pub mod hwinfo;
 pub mod ledger;
 pub mod pressure;
+#[cfg(unix)]
+pub mod residency;
 pub mod spill;
 
 pub use error::{Error, Result};
