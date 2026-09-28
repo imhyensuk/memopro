@@ -54,6 +54,7 @@ def main() -> None:
     parser.add_argument("--arm", required=True)
     parser.add_argument("--cache-dir", required=True)
     parser.add_argument("--mode", default="comfort", choices=["comfort", "quality"])
+    parser.add_argument("--precision", default=None, choices=["int4", "bf16"])
     args = parser.parse_args()
     import memopro
 
@@ -79,7 +80,7 @@ def main() -> None:
         load_s = time.perf_counter() - t0
         ctl = None
         if args.arm.endswith("_ctl"):
-            ctl = Controller(models, maps, sizes, Policy(switch=args.arm == "bf16_ctl", pace=True, mode=args.mode))
+            ctl = Controller(models, maps, sizes, Policy(switch=args.arm == "bf16_ctl", pace=True, mode=args.mode, precision=args.precision))
         start = ctl.start() if ctl is not None else kinds[0]
         model = models[start]
         generate(None, model, ids, 4)  # warm-up: every weight of the start precision read once
@@ -121,6 +122,7 @@ def main() -> None:
             if phase == "A":
                 rec["load_s"] = load_s
                 rec["start"] = start
+                rec["choice"] = ctl.choice if ctl is not None else {}
             print(f"{phase} " + json.dumps(rec), flush=True)
         except Exception as e:  # noqa: BLE001
             print(
