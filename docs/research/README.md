@@ -90,6 +90,7 @@
 | [0061](0061-f1-f4-malloc-cache-fix.md) | 2026-09-27 | decision+milestone | F-E011-1 대응: F1 `source` 원본 대조를 32MiB 조각 단위로(청크 해시 결합, Rust `digest_parts/combine`), F4 macOS `MallocLargeCache` 안내(doctor, 보고서 1회)와 `memopro run` 재시작(`--keep-malloc-cache`). 테스트 10개 | 확정 |
 | [0062](0062-e014-preregistration.md) | 2026-09-27 | experiment (사전 등록) | E014 "적은 메모리에서 쓸 만한가": 추론(1.5B·3B × naive·memopro 4방법), 학습, 모델 번갈아 쓰기, F1·F4 확인. 쾌적 = 5 tok/s·불러오기 120s·스왑 1GiB·탐침 p95 ≤ 유휴 2배. 파일럿: MPS는 그래픽 드라이버가 해제된 메모리를 붙잡음, 기본 설정은 1.5B를 거부 | 확정 |
 | [0063](0063-e014-results.md) | 2026-09-27 | experiment | E014 결과: 학습 일반 루프 OOM 3/3 → `train_session` 완주 3/3 ✅. 번갈아 쓰기 둘 다 올려 두면 중단, β는 다시 불러오기의 0.90배(C5 ❌). 쾌적한 추론 없음 ❌. **기본 설정은 1.5B·3B 모두 `BudgetExceeded`** → 기본값 결정 대기(D-a~D-d). F4로 CPU 반환 0.965 ✅, 대가 1.05 ✅. 같은 bf16에서 memopro 불러오기는 스왑·탐침 1/3 | 확정 |
+| [0064](0064-defaults-da-dd.md) | 2026-09-28 | decision+milestone | 기본값 문제 대응(사용자 결정): D-a(필수) 들어갈 구성이 없으면 계획을 다시 세워 **실제로 불러와지는 설정만** 안내(스왑 예상량, 빈 메모리 우선 → 스왑 적은 순), `BudgetExceeded.suggestions`, `check`·`optimize`·`run`에도. D-d(선택) `fallback="stored"`: 경고하고 원래 형식으로 장치에 바로 불러옴(`optimize`는 그대로 둠). 제안 설정이 `load` 인자로 안 먹던 결함 수정. 테스트 12개 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

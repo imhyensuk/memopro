@@ -31,6 +31,8 @@ DISK_WRITES = ("ask", "never", "allow")
 # What the measured host budget starts from (0059 D3); only "conservative" never needs swap
 BUDGET_BASES = ("conservative", "os", "total")
 POOLS = ("device", "host", "disk")
+# What load/optimize do when nothing fits the budget (0064 D-d): stop, or load as stored anyway
+FALLBACKS = ("none", "stored")
 # Write-free hibernation methods that `mode="auto"` may pick, in order (0032 H1). `bf16` is lossy
 # and only ever explicit; `spill` writes to disk and is governed by `disk_writes` instead.
 AUTO_MODES = ("source", "host", "compress")
@@ -75,6 +77,7 @@ class Config:
     headroom: float = 0.10
     quality: str = "balanced"
     prefer: str = "speed"
+    fallback: str = "none"
     hibernate_modes: tuple[str, ...] = AUTO_MODES
     disk_writes: str = "ask"
     daily_write_limit: int | None = None  # None: derived from the disk size (decided in A1b)
@@ -231,6 +234,8 @@ def _validate(key: str, value: Any) -> Any:
             return _choice(key, value, QUALITIES)
         case "prefer":
             return _choice(key, value, PREFERENCES)
+        case "fallback":
+            return _choice(key, value, FALLBACKS)
         case "hibernate_modes":
             return _modes(value)
         case "disk_writes":
