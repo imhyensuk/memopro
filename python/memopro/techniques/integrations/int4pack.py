@@ -8,6 +8,14 @@ scheme of its own (0010).
 Loading converts one layer at a time from weights loaded on the CPU (safetensors are memory
 mapped, so the bf16 original stays clean file-backed memory), so the full half-precision model
 never sits on the device.
+
+E020 (0084) changed two things:
+- group 32 instead of 64 (Q-b): WikiText-2 perplexity +5.7%/+7.6% instead of +9.2%/+21.1% for
+  Qwen2.5-1.5B/3B, for 7-8% more weight bytes;
+- long inputs (Q-c): the kernel's time grows linearly with the number of input rows (a 2048-token
+  prompt took 38 s on 1.5B, bf16 6.3 s), so from `LONG_INPUT` rows on, a layer dequantizes its
+  int4 weight to half precision for that call and uses a plain matmul, then drops it. Only torch
+  operations; the packed layout on MPS is the [out, in] codes, eight per int32, low nibble first.
 """
 
 from __future__ import annotations
@@ -18,8 +26,11 @@ import torch
 
 __all__ = ["GROUP", "Int4PackedLinear", "convert", "quantize_linear", "works"]
 
-GROUP = 64
+GROUP = 32  # 0084 Q-b (was 64)
 INNER_K_TILES = 8
+LONG_INPUT = (
+    160  # rows from which a call dequantizes instead of the kernel (0085: 1.5B ~180, 3B ~150)
+)
 # weights that stay in half precision (embeddings, the output head, norms), as in `_info`
 _SKIP = ("embed", "wte", "wpe", "lm_head", "shared", "position", "norm", "ln_")
 
@@ -44,14 +55,25 @@ class Int4PackedLinear(torch.nn.Module):
         self.in_features, self.out_features = in_features, out_features
         self.group, self.compute_dtype = group, dtype
 
+    def dequantized(self) -> torch.Tensor:
+        """The weight in ``compute_dtype``, [out, in], from the packed codes (a temporary)."""
+        n, k, g = self.out_features, self.in_features, self.group
+        words = self.packed.reshape(n, k // 8)
+        shifts = torch.arange(0, 32, 4, device=words.device, dtype=words.dtype)
+        codes = ((words.unsqueeze(-1) >> shifts) & 15).reshape(n, k // g, g)
+        scales = self.scales_and_zeros[..., 0].t().unsqueeze(-1).float()
+        zeros = self.scales_and_zeros[..., 1].t().unsqueeze(-1).float()
+        # torchao's tinygemm convention: w = (q - 8) * scale + zero
+        return ((codes.float() - 8) * scales + zeros).reshape(n, k).to(self.compute_dtype)
+
     def forward(self, x: torch.Tensor) -> torch.Tensor:
         shape = x.shape
-        y = torch._weight_int4pack_mm(
-            x.reshape(-1, shape[-1]).to(self.compute_dtype),
-            self.packed,
-            self.group,
-            self.scales_and_zeros,
-        ).reshape(*shape[:-1], self.out_features)
+        rows = x.reshape(-1, shape[-1]).to(self.compute_dtype)
+        if rows.shape[0] >= LONG_INPUT:
+            y = torch.nn.functional.linear(rows, self.dequantized())
+        else:
+            y = torch._weight_int4pack_mm(rows, self.packed, self.group, self.scales_and_zeros)
+        y = y.reshape(*shape[:-1], self.out_features)
         if self.bias is not None:
             y = y + self.bias
         return y.to(x.dtype)
