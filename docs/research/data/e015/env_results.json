@@ -1,0 +1,71 @@
+{
+  "timestamp_utc": "2026-09-28T02:02:43+00:00",
+  "os": {
+    "system": "Darwin",
+    "release": "25.6.0",
+    "mac_ver": "26.6.2"
+  },
+  "hardware": {
+    "machine": "arm64",
+    "page_size": 16384,
+    "cpu": "Apple M1",
+    "ram_bytes": 8589934592,
+    "model": "MacBookAir10,1",
+    "logical_cpus": 8
+  },
+  "python": {
+    "version": "3.14.0 (main, Oct  7 2025, 09:34:52) [Clang 17.0.0 (clang-1700.0.13.3)]",
+    "implementation": "CPython",
+    "gil_enabled": true
+  },
+  "packages": {
+    "memopro": "0.1.0a1",
+    "torch": "2.14.0",
+    "transformers": "5.17.0",
+    "datasets": "5.0.1",
+    "tokenizers": "0.23.2",
+    "safetensors": "0.8.0",
+    "numpy": "2.5.3",
+    "zstandard": "0.25.0",
+    "lz4": "4.4.5",
+    "matplotlib": "3.11.2",
+    "ipython": "9.17.1"
+  },
+  "torch": {
+    "available": true,
+    "num_threads": 4,
+    "cuda": false,
+    "mps": true,
+    "mps_recommended_max_memory": 5726633984
+  },
+  "git": {
+    "commit": "27749b52a8dd0dc2e7ed81925fa670113279c0e9",
+    "branch": "e015-foundations",
+    "dirty": false
+  },
+  "rustc": "rustc 1.98.1 (48a229cea 2026-09-01)",
+  "script": {
+    "path": "experiments/e015_foundations/run.py",
+    "sha256": "e4457a97de2b5a687d83dea7aa09a2399b96a1f6adf255a792ad67397bb0865f"
+  },
+  "modules_sha256": {
+    "experiments/_harness/env.py": "c92732b420e676362a2685b3b18103e250d14c0d77600075739023fb9da8cbe6",
+    "experiments/e015_foundations/__init__.py": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "experiments/e015_foundations/metal.py": "2e8547fd422916ae9f67b5702e548b82ab9fcf25f7e19401a80d4a9b186733ed",
+    "experiments/e015_foundations/run.py": "e4457a97de2b5a687d83dea7aa09a2399b96a1f6adf255a792ad67397bb0865f",
+    "experiments/e015_foundations/vm.py": "14411ac2f4d07a9aa800f1cd41bd0b09d1b8ed46defa8ba7fc65766abd04080c",
+    "experiments/e015_foundations/workers.py": "2901c319165699a8d41f25066d03a1f23102685f1a873c2b0c503a4e7c56e481"
+  },
+  "extra": {
+    "argv": [
+      "/Users/imhyeonseok/Desktop/memopro/experiments/e015_foundations/run.py",
+      "--data",
+      "/private/tmp/claude-501/-Users-imhyeonseok-Desktop-memopro/5426a832-cfa6-49a0-ad8a-367a8c0bbc98/scratchpad/e015",
+      "--repeats",
+      "3"
+    ],
+    "pressure_bytes": 4294967296,
+    "available": 4408492032,
+    "kernel_available": 6315917312
+  }
+}
