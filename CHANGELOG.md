@@ -4,6 +4,13 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Changed: γ is experimental, off by default in `memopro run` on macOS (0088, 0089)
+- E013a found that the macOS memory pressure level marks pressure (on 87% of the time under
+  pressure, never when calm) but not the stalls a user feels (5 of 870 seconds), so shrinking
+  budgets at "warning" acts far too often. `memopro run` no longer starts γ on macOS unless
+  `--elastic` is given; `--no-elastic` still turns it off anywhere; the report says why.
+  `memopro.elastic.enable()` works as before when called explicitly.
+
 ### Changed: int4 on Apple GPUs, quality and long prompts (0084, 0085)
 - Group size 32 instead of 64: WikiText-2 perplexity rises 5.7% (Qwen2.5-1.5B) and 7.6% (3B)
   over bf16 instead of 9.2% and 21.1%, for 7-8% more weight bytes and 2-4% slower decoding.

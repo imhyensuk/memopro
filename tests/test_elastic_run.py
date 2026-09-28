@@ -292,3 +292,54 @@ def test_run_dry_run_and_errors(tmp_path, capsys):
     assert "from_pretrained" in out and "census" in out
     assert main(["run", str(tmp_path / "missing.py")]) == EXIT_ERROR
     configure(budget="auto")
+
+
+# ---- 0088 G1: γ is experimental and off by default in `memopro run` on macOS
+
+
+@pytest.mark.parametrize(("platform", "expected"), [("darwin", False), ("linux", True)])
+def test_run_default_for_gamma_depends_on_the_platform(monkeypatch, platform, expected):
+    from memopro._run import default_elastic
+
+    monkeypatch.setattr(sys, "platform", platform)
+    assert default_elastic() is expected
+
+
+def test_run_on_macos_leaves_gamma_off_unless_asked(monkeypatch, tmp_path):
+    from memopro._run import ELASTIC_OFF_NOTE, run
+
+    monkeypatch.setattr(sys, "platform", "darwin")
+    started = []
+    monkeypatch.setattr(elastic, "enable", lambda **kw: started.append(kw))
+    monkeypatch.setattr(elastic, "disable", lambda: None)
+    (tmp_path / "app.py").write_text("x = 1\n")
+    run(str(tmp_path / "app.py"))
+    assert started == []
+    notes = [e for e in memopro.report().entries if e.technique == "elastic"]
+    assert notes and notes[0].action == "skipped" and notes[0].detail == ELASTIC_OFF_NOTE
+    memopro.report().clear()
+    run(str(tmp_path / "app.py"), elastic=True)  # explicit: on, no note
+    assert len(started) == 1
+    assert not [e for e in memopro.report().entries if e.technique == "elastic"]
+
+
+def test_cli_elastic_flags(monkeypatch, tmp_path):
+    from memopro import _run, cli
+
+    seen = []
+    monkeypatch.setattr(_run, "run", lambda script, argv, **kw: seen.append(kw["elastic"]))
+    (tmp_path / "app.py").write_text("x = 1\n")
+    for flags, expected in (([], None), (["--elastic"], True), (["--no-elastic"], False)):
+        assert cli.main(["run", *flags, str(tmp_path / "app.py")]) == 0
+        assert seen[-1] is expected
+    with pytest.raises(SystemExit):
+        cli.main(["run", "--elastic", "--no-elastic", str(tmp_path / "app.py")])
+
+
+def test_dry_run_says_gamma_is_off_on_macos(monkeypatch, tmp_path, capsys):
+    from memopro._run import run
+
+    monkeypatch.setattr(sys, "platform", "darwin")
+    (tmp_path / "app.py").write_text("x = 1\n")
+    run(str(tmp_path / "app.py"), dry_run=True)
+    assert "elastic        off (macOS default, 0088; --elastic)" in capsys.readouterr().out
