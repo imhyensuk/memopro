@@ -93,6 +93,8 @@
 | [0064](0064-defaults-da-dd.md) | 2026-09-28 | decision+milestone | 기본값 문제 대응(사용자 결정): D-a(필수) 들어갈 구성이 없으면 계획을 다시 세워 **실제로 불러와지는 설정만** 안내(스왑 예상량, 빈 메모리 우선 → 스왑 적은 순), `BudgetExceeded.suggestions`, `check`·`optimize`·`run`에도. D-d(선택) `fallback="stored"`: 경고하고 원래 형식으로 장치에 바로 불러옴(`optimize`는 그대로 둠). 제안 설정이 `load` 인자로 안 먹던 결함 수정. 테스트 12개 | 확정 |
 | [0065](0065-status-after-e011-e014.md) | 2026-09-28 | survey+milestone | 현재 상태 종합(main `b2a182d`): 완성도 설계 범위 약 92%·v1.0 약 48%·제품 가치 검증 약 15%, CUDA·M1 실측 표, 기능 목록, "가능 대 쾌적" 평가 | 확정 |
 | [0066](0066-comfort-methodology-rcr.md) | 2026-09-28 | survey+design | 8GB 쾌적화 방법론: 실측(메모리 60.3GB/s, SSD 2.45GB/s, 흩어진 page-in ≈0.13GB/s)과 디코딩 모델, 진단 D1~D6, 원칙 R1~R5, 1층(기존 기법 연결), 2층 **RCR**(텐서를 재구성 비용 등급 F·P·C·A로 나눠 OS 메모리 종류에 사상 + 쾌적 제어기, 조합은 조사 범위 내 미발견), 비트플레인 자기 추측(중복 중간~높음), 학습 경로, 검증 계획 E015~E018(관문 G-P·G-F) | 초안(사용자 결정 대기) |
+| [0067](0067-e015-preregistration.md) | 2026-09-28 | experiment (사전 등록) | E015 RCR 기초 측정: Q1 재읽기 비용(5방법), Q2 purgeable(G-P), Q3 무복사 MPS 텐서(G-F, Objective-C 도우미 + DLPack), Q4 MPS 저비트 커널. 파일럿: 무복사 텐서 비트 동일, bnb nf4는 bf16보다 느림 | 확정 |
+| [0068](0068-e015-results.md) | 2026-09-28 | experiment | E015 결과: **G-F ✅**(파일 매핑 MPS 텐서 비트 동일·int4 비트 동일, footprint 증가 없음, 압박 시 OS가 48~68% 회수, 재계산 비트 동일), **G-P ✅**(purgeable이 익명 대부분이 밀리기 1~2초 전 쓰기 없이 비워짐), Q1 폴트 재읽기 0.28GB/s·데우기 0.74GB/s·원시 2.49GB/s(선읽기 필요), **Q4 torch int4pack이 bf16의 1.63배, bnb nf4는 0.35배** → int4 백엔드 교체 결정 대기, RS6 해제 불필요 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

@@ -1,0 +1,220 @@
+{
+  "pressure_bytes": 4294967296,
+  "Q1": {
+    "modes": {
+      "anon": {
+        "seconds_median": 1.3018361249996815,
+        "gbps_missing_median": 0.8243498266728945,
+        "resident_before": [
+          0.0001983642578125,
+          0.0005340576171875,
+          0.00018310546875
+        ],
+        "swap_growth_mib": [
+          -285,
+          -140,
+          -117
+        ]
+      },
+      "mmap_plain": {
+        "seconds_median": 1.971711125001093,
+        "gbps_missing_median": 0.2820668910035148,
+        "resident_before": [
+          0.6080322265625,
+          0.590576171875,
+          0.4737396240234375
+        ],
+        "swap_growth_mib": [
+          437,
+          312,
+          252
+        ]
+      },
+      "mmap_willneed": {
+        "seconds_median": 1.0914435830000002,
+        "gbps_missing_median": 0.49199236474319463,
+        "resident_before": [
+          0.3908233642578125,
+          0.327850341796875,
+          0.7390594482421875
+        ],
+        "swap_growth_mib": [
+          385,
+          477,
+          212
+        ]
+      },
+      "mmap_readwarm": {
+        "seconds_median": 1.0168293339993397,
+        "gbps_missing_median": 0.7400623633075564,
+        "resident_before": [
+          0.287200927734375,
+          0.299163818359375,
+          0.486358642578125
+        ],
+        "swap_growth_mib": [
+          516,
+          465,
+          220
+        ]
+      },
+      "read_nocache": {
+        "seconds_median": 0.4320242909998342,
+        "gbps_missing_median": 2.4853737309886865,
+        "resident_before": [
+          null,
+          null,
+          null
+        ],
+        "swap_growth_mib": [
+          30,
+          0,
+          0
+        ]
+      }
+    },
+    "best_mapping_mode": "mmap_readwarm",
+    "readwarm_vs_plain": 2.6237122714921353,
+    "explicit_warm_needed": true
+  },
+  "G_P": {
+    "cases": [
+      {
+        "t_anon_below_half": 5.518984041000294,
+        "vm": {
+          "Swapouts": 59684,
+          "Swapins": 12220,
+          "Pageins": 2463,
+          "Pageouts": 15,
+          "Pages purged": 98499
+        },
+        "t_mach_empty": 3.5650850830006675,
+        "anon_resident_at_mach_empty": 0.9789225260416666,
+        "mach_ok": true,
+        "t_metal_empty": 3.843215083001269,
+        "anon_resident_at_metal_empty": 0.9789225260416666,
+        "metal_ok": true,
+        "pass": true
+      },
+      {
+        "t_anon_below_half": 5.615330583999821,
+        "vm": {
+          "Swapouts": 78936,
+          "Swapins": 19601,
+          "Pageins": 2459,
+          "Pageouts": 12,
+          "Pages purged": 75207
+        },
+        "t_mach_empty": 3.5163985840008536,
+        "anon_resident_at_mach_empty": 0.7530517578125,
+        "mach_ok": true,
+        "t_metal_empty": 4.1515688340005,
+        "anon_resident_at_metal_empty": 0.7530517578125,
+        "metal_ok": true,
+        "pass": true
+      },
+      {
+        "t_anon_below_half": 4.787417499999719,
+        "vm": {
+          "Swapouts": 92376,
+          "Swapins": 15698,
+          "Pageins": 10997,
+          "Pageouts": 71,
+          "Pages purged": 71175
+        },
+        "t_mach_empty": 3.5671789579992037,
+        "anon_resident_at_mach_empty": 0.7032674153645834,
+        "mach_ok": true,
+        "t_metal_empty": 3.8453053329994873,
+        "anon_resident_at_metal_empty": 0.7032674153645834,
+        "metal_ok": true,
+        "pass": true
+      }
+    ],
+    "G_P_pass": true
+  },
+  "G_F": {
+    "cases": [
+      {
+        "accepted_exact_int4": true,
+        "footprint_delta_mib": -614.390625,
+        "footprint_ok": true,
+        "resident_pressed": 0.3241729736328125,
+        "dropped_ok": true,
+        "recheck_exact": true,
+        "recheck_s": 0.6755502079995495,
+        "recheck_resident_before": 0.317779541015625,
+        "swap_growth_mib": 749,
+        "first_compute_s": 0.07490874999894004,
+        "pass": true
+      },
+      {
+        "accepted_exact_int4": true,
+        "footprint_delta_mib": -632.359375,
+        "footprint_ok": true,
+        "resident_pressed": 0.516326904296875,
+        "dropped_ok": true,
+        "recheck_exact": true,
+        "recheck_s": 1.1590577089991712,
+        "recheck_resident_before": 0.516326904296875,
+        "swap_growth_mib": 1671,
+        "first_compute_s": 0.07837470899903565,
+        "pass": true
+      },
+      {
+        "accepted_exact_int4": true,
+        "footprint_delta_mib": -653.8125,
+        "footprint_ok": true,
+        "resident_pressed": 0.4367218017578125,
+        "dropped_ok": true,
+        "recheck_exact": true,
+        "recheck_s": 0.553420707999976,
+        "recheck_resident_before": 0.4367218017578125,
+        "swap_growth_mib": 775,
+        "first_compute_s": 0.09932629200011434,
+        "pass": true
+      }
+    ],
+    "G_F_pass": true
+  },
+  "Q4": {
+    "table_ms": {
+      "1.5B up (8960x1536)": {
+        "bfloat16": 0.739312500172673,
+        "float16": 0.7719790000919602,
+        "int8pack": 0.5437499999061401,
+        "int4pack_g32": 0.4963334995409241,
+        "int4pack_g128": 0.5080835003354878,
+        "bnb_nf4": 2.176708999741095
+      },
+      "1.5B down (1536x8960)": {
+        "bfloat16": 0.7665005000490055,
+        "float16": 0.7998330002010334,
+        "int8pack": 0.5608329997812689,
+        "int4pack_g32": 0.47481299998253235,
+        "int4pack_g128": 0.5179165004847164,
+        "bnb_nf4": 2.1836665000591893
+      },
+      "3B up (11008x2048)": {
+        "bfloat16": 1.0747914998319175,
+        "float16": 1.0694379998312797,
+        "int8pack": 0.6821665001552901,
+        "int4pack_g32": 0.6092080002417788,
+        "int4pack_g128": 0.6076034997022361,
+        "bnb_nf4": 2.757958000074723
+      },
+      "3B down (2048x11008)": {
+        "bfloat16": 1.0909584998444188,
+        "float16": 1.0952500001621956,
+        "int8pack": 0.7535204999840062,
+        "int4pack_g32": 0.6712295003126201,
+        "int4pack_g128": 0.6588124997506384,
+        "bnb_nf4": 3.230729000279098
+      }
+    },
+    "bf16_sum_ms": 3.671562999898015,
+    "int4_sum_ms": 2.2515840000778553,
+    "speedup": 1.630657794588636,
+    "fast_int4_available": true
+  }
+}
