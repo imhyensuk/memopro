@@ -106,6 +106,7 @@
 | [0077](0077-e017c-preregistration.md) | 2026-09-28 | experiment (사전 등록) + decision | 사용자 결정: Q1(1초 이상 구간 스왑 증가 ≥ 64MB) + Q2(보수적 가용량) 적용, **쾌적 우선 모드 기본**(품질 우선은 선택). E017c: 1.5B bf16·int4·제어기, 3B int4·제어기. 기준 C0(쉴 때 안정)·C1(E014 쾌적)·K2·K4·S | 확정 |
 | [0078](0078-e017c-results.md) | 2026-09-28 | experiment | E017c 결과: 쾌적 우선 모드가 쉴 때 안정(C0 ✅), E014 쾌적 기준 충족(C1 ✅, 스왑 0), 압박 중 1.5B 11.8 tok/s(bf16 6.4), 이웃 반응성 p95 474ms(bf16 2.4초). **K4 ❌**: 시작 정밀도가 불러올 때의 여유에 따라 달라져(1.5B int4 ×2, bf16 ×1) 출력이 바뀜 → 기능화 보류, 선택지 P1~P3. 3B 제어기 방법 footprint 0.49GB 대 int4 단독 1.47GB(재정착 비용도 작음) → footprint 조사 우선 | 확정 |
 | [0079](0079-controller-p1-p3.md) | 2026-09-28 | decision + implementation | 사용자 결정 P1+P3: 쾌적 우선은 항상 int4로 시작하고 올리지 않음(출력 결정적), 여유에 따른 bf16은 품질 우선에서만(경고), 고른 정밀도와 이유를 항상 보고, `precision=` 고정. 시제품에만 적용, 기능화는 짧은 재측정 뒤 | 확정 |
+| [0080](0080-e019-footprint.md) | 2026-09-28 | experiment | E019 footprint 조사: E017 계열의 추가 1GB는 **PyTorch MPS 할당기가 10MiB 이상 할당 때 잡는 1GiB 힙**(`kXLargeHeap`, 압박 아닐 때만). F 등급 탓 아님(`lm_head` 복제해도 같음). bf16 매핑이 드라이버 할당을 저수위선 위로 올려 힙이 안 생겼던 것. `PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1`이면 1.5B·3B 모두 1.5 → 0.49GB, 속도·출력 동일(0.3은 1.5B int4에 효과 없음, 0.01은 약간 느림). 반영 선택지 W1~W4 사용자 결정 대기 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
