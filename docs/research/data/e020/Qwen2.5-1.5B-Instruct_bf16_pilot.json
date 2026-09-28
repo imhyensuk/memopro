@@ -1,0 +1,31 @@
+{
+ "model": "Qwen/Qwen2.5-1.5B-Instruct",
+ "variant": "bf16",
+ "windows": 3,
+ "seq": 2048,
+ "tokens_scored": 6141,
+ "ppl": 10.411514626015999,
+ "nll": 2.342912369258938,
+ "kl_vs_bf16": null,
+ "top1_agree_vs_bf16": null,
+ "weight_bytes": 3087483392,
+ "load_s": 2.250875042002008,
+ "eval_s": 50.909572749998915,
+ "per_window": [
+  {
+   "nll": 1.990435832759259,
+   "kl": 0.0,
+   "agree": 0.0
+  },
+  {
+   "nll": 2.4030597725902236,
+   "kl": 0.0,
+   "agree": 0.0
+  },
+  {
+   "nll": 2.635241502427333,
+   "kl": 0.0,
+   "agree": 0.0
+  }
+ ]
+}
