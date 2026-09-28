@@ -95,6 +95,7 @@
 | [0066](0066-comfort-methodology-rcr.md) | 2026-09-28 | survey+design | 8GB 쾌적화 방법론: 실측(메모리 60.3GB/s, SSD 2.45GB/s, 흩어진 page-in ≈0.13GB/s)과 디코딩 모델, 진단 D1~D6, 원칙 R1~R5, 1층(기존 기법 연결), 2층 **RCR**(텐서를 재구성 비용 등급 F·P·C·A로 나눠 OS 메모리 종류에 사상 + 쾌적 제어기, 조합은 조사 범위 내 미발견), 비트플레인 자기 추측(중복 중간~높음), 학습 경로, 검증 계획 E015~E018(관문 G-P·G-F) | 초안(사용자 결정 대기) |
 | [0067](0067-e015-preregistration.md) | 2026-09-28 | experiment (사전 등록) | E015 RCR 기초 측정: Q1 재읽기 비용(5방법), Q2 purgeable(G-P), Q3 무복사 MPS 텐서(G-F, Objective-C 도우미 + DLPack), Q4 MPS 저비트 커널. 파일럿: 무복사 텐서 비트 동일, bnb nf4는 bf16보다 느림 | 확정 |
 | [0068](0068-e015-results.md) | 2026-09-28 | experiment | E015 결과: **G-F ✅**(파일 매핑 MPS 텐서 비트 동일·int4 비트 동일, footprint 증가 없음, 압박 시 OS가 48~68% 회수, 재계산 비트 동일), **G-P ✅**(purgeable이 익명 대부분이 밀리기 1~2초 전 쓰기 없이 비워짐), Q1 폴트 재읽기 0.28GB/s·데우기 0.74GB/s·원시 2.49GB/s(선읽기 필요), **Q4 torch int4pack이 bf16의 1.63배, bnb nf4는 0.35배** → int4 백엔드 교체 결정 대기, RS6 해제 불필요 | 확정 |
+| [0069](0069-int4-backend-torch-int4pack.md) | 2026-09-28 | decision+milestone | MPS int4 백엔드를 torch `_weight_int4pack_mm`(+torchao group-wise 양자화, 그룹 64)로 교체: CPU에 mmap으로 불러와 층별 변환, 헤드·임베딩은 bf16. 1.5B int4 **4.9 → 14.7 tok/s**(bf16 11.0), 장치 가중치 1.16GiB. MPS 드라이버의 0.67GB 잔여는 남음 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
