@@ -7,7 +7,9 @@ Each case is a fresh worker (workers.py) with three phases, measured from outsid
   C  pressure released (process ended, 10 s rest): 64 tokens
 
 Usage: caffeinate -is .venv/bin/python -m experiments.e017_controller.run --cache-dir DIR
-       [--prep]  build the int4 file caches once (disk writes allowed, into DIR)
+       [--prep]    build the int4 file caches once (disk writes allowed, into DIR)
+       [--resume]  continue an interrupted run: keep results.json, its pressure size and idle
+                   probe, and run only the (repeat, model, arm) cases not recorded yet
 """
 
 from __future__ import annotations
@@ -145,9 +147,14 @@ def main() -> None:
     parser.add_argument("--name", default="results")
     parser.add_argument("--models", default=",".join(MODELS))
     parser.add_argument("--arms", default=",".join(ARMS))
+    parser.add_argument("--resume", action="store_true")
     args = parser.parse_args()
     if args.prep:
         prep(args.cache_dir)
+        return
+    previous = OUT / f"{args.name}.json"
+    if args.resume and previous.exists():
+        resume(args, json.loads(previous.read_text()))
         return
     host = memopro.doctor(devices=False).env.host
     p_bytes = min(4 * GiB, host.kernel_available_bytes + GiB)
@@ -165,43 +172,68 @@ def main() -> None:
     )
     probe = Probe()
     data: dict = {"pressure_bytes": p_bytes, "idle_probe": [], "cases": []}
-    arms = args.arms.split(",")
     try:
         probe.ask("mark")
         time.sleep(10)
         data["idle_probe"].append(probe.ask("report"))
-        for rep in range(args.repeats):
-            for m_i, model in enumerate(args.models.split(",")):
-                k = (rep + m_i) % len(arms)
-                for arm in arms[k:] + arms[:k]:
-                    if shutil.disk_usage("/").free < (5 << 30):
-                        rec = {"model": model, "arm": arm, "skipped": "free disk"}
-                    else:
-                        rec = run_case(model, arm, args.cache_dir, p_bytes, probe)
-                    rec["repeat"] = rep
-                    data["cases"].append(rec)
-                    save_json(data, OUT / f"{args.name}.json")
-                    brief = " | ".join(
-                        f"{ph} {rec.get(ph, {}).get('tokens_per_s', 0):.1f}tok/s "
-                        f"{rec.get(ph, {}).get('active_end', '-')} "
-                        f"swap+{rec.get(f'{ph}_mem', {}).get('swap_growth', 0) >> 20}MiB "
-                        f"p95 {rec.get(f'{ph}_probe', {}).get('p95_ms', 0):.0f}ms"
-                        for ph in ("A", "B", "C")
-                    )
-                    err = next(
-                        (
-                            rec[ph].get("error", "")
-                            for ph in ("A", "B", "C")
-                            if ph in rec and not rec[ph].get("ok")
-                        ),
-                        "",
-                    )
-                    print(
-                        f"{rep} {model.split('/')[-1]:22} {arm:9} {brief} {err[:100]}", flush=True
-                    )
-                    time.sleep(args.rest)
+        run_all(args, data, probe, done=set())
     finally:
         probe.close()
+
+
+def resume(args: argparse.Namespace, data: dict) -> None:
+    """Continue with the same pressure size; cases already recorded are not run again."""
+    done = {(c["repeat"], c["model"], c["arm"]) for c in data["cases"]}
+    n = len(data.setdefault("resumed", [])) + 1
+    data["resumed"].append({"at": time.time(), "cases_before": len(data["cases"])})
+    save_json(data, OUT / f"{args.name}.json")
+    save_json(
+        capture(
+            __file__,
+            extra={"argv": sys.argv, "resume": n, "pressure_bytes": data["pressure_bytes"]},
+        ),
+        OUT / f"env_{args.name}_resume{n}.json",
+    )
+    probe = Probe()
+    try:
+        run_all(args, data, probe, done)
+    finally:
+        probe.close()
+
+
+def run_all(args: argparse.Namespace, data: dict, probe: Probe, done: set) -> None:
+    p_bytes = data["pressure_bytes"]
+    arms = args.arms.split(",")
+    for rep in range(args.repeats):
+        for m_i, model in enumerate(args.models.split(",")):
+            k = (rep + m_i) % len(arms)
+            for arm in arms[k:] + arms[:k]:
+                if (rep, model, arm) in done:
+                    continue
+                if shutil.disk_usage("/").free < (5 << 30):
+                    rec = {"model": model, "arm": arm, "skipped": "free disk"}
+                else:
+                    rec = run_case(model, arm, args.cache_dir, p_bytes, probe)
+                rec["repeat"] = rep
+                data["cases"].append(rec)
+                save_json(data, OUT / f"{args.name}.json")
+                brief = " | ".join(
+                    f"{ph} {rec.get(ph, {}).get('tokens_per_s', 0):.1f}tok/s "
+                    f"{rec.get(ph, {}).get('active_end', '-')} "
+                    f"swap+{rec.get(f'{ph}_mem', {}).get('swap_growth', 0) >> 20}MiB "
+                    f"p95 {rec.get(f'{ph}_probe', {}).get('p95_ms', 0):.0f}ms"
+                    for ph in ("A", "B", "C")
+                )
+                err = next(
+                    (
+                        rec[ph].get("error", "")
+                        for ph in ("A", "B", "C")
+                        if ph in rec and not rec[ph].get("ok")
+                    ),
+                    "",
+                )
+                print(f"{rep} {model.split('/')[-1]:22} {arm:9} {brief} {err[:100]}", flush=True)
+                time.sleep(args.rest)
 
 
 if __name__ == "__main__":
