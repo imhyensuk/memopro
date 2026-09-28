@@ -104,7 +104,7 @@ memopro run --dry-run app.py      # show what would be done
 ```
 
 ```python
-memopro.elastic.enable()          # watch OS memory pressure (macOS level, Linux PSI)
+memopro.elastic.enable()          # experimental: watch OS memory pressure (macOS level, Linux PSI)
 ```
 
 γ reads the OS signal in a background thread but acts only at safe points: between notebook
@@ -134,8 +134,10 @@ precision and the model would not fit as stored; explicit choices are never chan
   them only weights are predicted. On a T4 with GPT-2 models, training peaks are
   predicted within 0.2-1.2% and inference within +5% (0056), assuming an ordinary training step
   (`model(**batch).loss.backward()`, default AdamW/SGD); other architectures are untested.
-- γ thresholds and budget factors are initial values; on an 8 GB Mac the "warning" level can be
-  permanent, so they need calibration. `memopro run` only changes Hugging Face `from_pretrained`.
+- γ is experimental (E013a, 0088): on an 8 GB M1 the macOS pressure level was on for 87% of the
+  time under pressure and never when calm, but stalls a user feels were rare (5 of 870 s), so
+  "warning halves the budget" acts far too often. `memopro run` leaves γ off on macOS unless
+  `--elastic` is given (0089). Linux PSI thresholds and budget factors are initial values. `memopro run` only changes Hugging Face `from_pretrained`.
 - "Bit-exact" refers to tensor values. On CPU, weights memory-mapped from safetensors may be
   unaligned; after any re-allocation (memopro, `.clone()`, `.to()`) the first BLAS results can
   differ in the last digits.

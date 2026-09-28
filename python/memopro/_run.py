@@ -7,8 +7,10 @@ What it does (architecture §4.2, 0052 E7), and all of it is listed in ``report(
    positional model arguments), and only when the model would not fit as stored: then memopro
    loads it the way ``memopro.load`` would. An explicit choice in the script is never changed.
    If memopro's choice fails to load, the script's own call runs as written (fail-open).
-2. **γ**: memory pressure is watched; ``memopro.load``/``train_session`` in the script and the
-   loading policy react to it (``--no-elastic`` turns this off).
+2. **γ** (experimental, 0088): memory pressure is watched; ``memopro.load``/``train_session`` in
+   the script and the loading policy react to it. On by default except on macOS, where E013a
+   found the pressure level marks pressure but not stalls a user feels (``--elastic`` turns it on
+   there, ``--no-elastic`` off everywhere).
 3. **census** (``--census``): saved activations of the whole run, summarised at the end.
 
 This is the only mode where memopro patches another library globally (P4 exception); the patch
@@ -164,27 +166,46 @@ def plan_text(script: str, *, elastic: bool, census: bool) -> str:
         f"  quality        {cfg.quality}, prefer {cfg.prefer}, disk writes {cfg.disk_writes}",
         "  from_pretrained  only when the script chose no placement or precision and the model",
         "                   does not fit as stored: loaded as memopro.load would (P4 exception)",
-        f"  elastic        {'on: memory pressure is watched' if elastic else 'off'}",
+        f"  elastic        {'on: memory pressure is watched (experimental)' if elastic else 'off'}"
+        + ("" if elastic or sys.platform != "darwin" else " (macOS default, 0088; --elastic)"),
         f"  census         {'on: saved activations of the whole run' if census else 'off'}",
     ]
     return "\n".join(lines)
+
+
+ELASTIC_OFF_NOTE = (
+    "γ is off by default on macOS (experimental, E013a/0088: the pressure level marks pressure, "
+    "not the stalls a user feels, so budgets would shrink needlessly); --elastic turns it on"
+)
+
+
+def default_elastic() -> bool:
+    """γ's default in ``memopro run`` (0088 G1): off on macOS, on elsewhere."""
+    return sys.platform != "darwin"
 
 
 def run(
     script: str,
     argv: Sequence[str] = (),
     *,
-    elastic: bool = True,
+    elastic: bool | None = None,
     census: bool = False,
     dry_run: bool = False,
 ) -> None:
-    """Run ``script`` with memopro's process-level features (settings come from `configure`)."""
+    """Run ``script`` with memopro's process-level features (settings come from `configure`).
+
+    ``elastic=None`` takes the platform default (`default_elastic`)."""
+    default = elastic is None
+    if default:
+        elastic = default_elastic()
     path = Path(script)
     if not path.is_file():
         raise InvalidArgument(f"no such script: {script}")
     if dry_run:
         print(plan_text(script, elastic=elastic, census=census))
         return
+    if default and not elastic:
+        report().add("elastic", "skipped", ELASTIC_OFF_NOTE)
     policy = _LoadingPolicy()
     hook = _PatchOnImport(policy.install)
     if TARGET in sys.modules:

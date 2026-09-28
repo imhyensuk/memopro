@@ -109,11 +109,11 @@ with memopro.using(budget="3GB", quality="high"):   # 이 블록에서만
 
 **v0.3: 압박 대응과 코드 수정 없는 실행 (동작함, 미배포)**
 ```bash
-memopro run app.py --budget 6GB     # 스크립트 수정 없이: 들어가지 않는 from_pretrained만 예산에 맞춰, γ 감시
+memopro run app.py --budget 6GB     # 스크립트 수정 없이: 들어가지 않는 from_pretrained만 예산에 맞춰 (γ는 macOS에서 기본 끔, --elastic)
 memopro run --dry-run app.py        # 무엇을 할지만 보기
 ```
 ```python
-memopro.elastic.enable()   # OS 메모리 압박(macOS 수준, Linux PSI)을 감시. 셀 경계·학습 스텝 경계에서만 조치
+memopro.elastic.enable()   # (실험 기능) OS 메모리 압박(macOS 수준, Linux PSI)을 감시. 셀 경계·학습 스텝 경계에서만 조치
 ```
 (α 잔차 고정점 체크포인팅은 X1 실험에서 기각 — 0018)
 
@@ -201,7 +201,7 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 - **int4의 품질과 긴 프롬프트(E020, [0084](docs/research/0084-e020-results.md)·[0085](docs/research/0085-int4-qa-qb-qc.md))**: WikiText-2에서 MPS int4(그룹 64)는 bf16 대비 perplexity를 1.5B +9.2%, 3B +21.1% 올렸다. 그룹 32로 바꿔 +5.7%, +7.6%가 됐다(가중치 +7~8%, 디코딩 −2~4%). int4 커널은 긴 입력에서 느려서(1024토큰 프롬프트 29초), 160토큰 이상이면 가중치를 풀어 bf16으로 계산해 8.7초가 됐다. `load`는 int4를 고르면 이 품질 비용을 보고에 적는다.
 - `train_session`의 마이크로배치는 모든 표본이 손실에서 같은 무게일 때 정확하다(`reduction="mean"` 또는 `"sum"`). 길이가 다른 패딩 표본의 토큰 평균과 BatchNorm은 근사가 된다(일반 그래디언트 누적과 같음). CPU·통합 메모리에서는 메모리 부족이 예외가 아니라 스왑으로 나타날 수 있어, 첫 표본을 측정해 미리 계획한다.
 - `check`·`train_session` 계획은 torch 내부 도구(`MemTracker`, `FakeTensorMode`)를 쓴다. 없으면 가중치만 예측하고 재시도로만 대응한다. `check`의 정확도는 T4·GPT-2 계열에서 확인했다(학습 −0.2~−1.2%, 추론 +5%, 0056). 다른 모델 구조는 시험하지 않았고, "보통의 학습 스텝"(`model(**batch).loss.backward()`, 기본 AdamW/SGD)을 가정한다.
-- γ의 수준 기준(PSI 문턱값, 예산 계수 경고 ×0.5·위험 ×0.25)은 초기값이다. 8GB Mac에서는 "경고"가 상시일 수 있어 보정이 필요하다(E013). `memopro run`의 로딩 정책은 transformers `from_pretrained`에만 적용한다.
+- **γ는 실험 기능이다**(E013a, [0088](docs/research/0088-e013a-results.md)). M1 8GB에서 macOS 압박 수준은 압박이 있을 때 87% 켜지고 평온할 때는 꺼졌지만, 사용자가 느끼는 끊김은 870초 중 5초뿐이어서 "경고 = 예산 절반"은 과했다. 그래서 macOS의 `memopro run`은 γ를 기본으로 켜지 않는다(`--elastic`으로 켬, [0089](docs/research/0089-gamma-g1.md)). Linux PSI 문턱값과 예산 계수는 초기값 그대로다. `memopro run`의 로딩 정책은 transformers `from_pretrained`에만 적용한다.
 - 만들지 않은 연동: KV 캐시 양자화, Diffusers·TRL. Windows는 CI에서만 확인한다.
 
 ## 6. 원칙 (요약)
