@@ -108,6 +108,8 @@
 | [0079](0079-controller-p1-p3.md) | 2026-09-28 | decision + implementation | 사용자 결정 P1+P3: 쾌적 우선은 항상 int4로 시작하고 올리지 않음(출력 결정적), 여유에 따른 bf16은 품질 우선에서만(경고), 고른 정밀도와 이유를 항상 보고, `precision=` 고정. 시제품에만 적용, 기능화는 짧은 재측정 뒤 | 확정 |
 | [0080](0080-e019-footprint.md) | 2026-09-28 | experiment | E019 footprint 조사: E017 계열의 추가 1GB는 **PyTorch MPS 할당기가 10MiB 이상 할당 때 잡는 1GiB 힙**(`kXLargeHeap`, 압박 아닐 때만). F 등급 탓 아님(`lm_head` 복제해도 같음). bf16 매핑이 드라이버 할당을 저수위선 위로 올려 힙이 안 생겼던 것. `PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1`이면 1.5B·3B 모두 1.5 → 0.49GB, 속도·출력 동일(0.3은 1.5B int4에 효과 없음, 0.01은 약간 느림). 반영 선택지 W1~W4 사용자 결정 대기 | 확정 |
 | [0081](0081-mps-heap-w1-w2.md) | 2026-09-28 | implementation | 사용자 결정 W1+W2: `memopro run`이 Apple silicon에서 `PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1`로 다시 실행(`MallocLargeCache=0`과 한 번에, 사용자 값 유지, `--keep-mps-heap`), doctor·파일 기반 load 안내(한 번). 비율은 MPS 사용량이 권장 최대치의 10%를 넘어야 효과. 끝에서 끝까지 1.5B int4 1,470 → 461MiB. Python 238·Rust 28 통과 | 확정 |
+| [0082](0082-controller-not-a-feature.md) | 2026-09-28 | decision | 쾌적 제어기는 라이브러리 기능으로 만들지 않고 연구 결과로 남김(쾌적 우선에서는 거의 조치 없음, 쾌적함은 정적 선택·파일 상주·할당기 설정에서 나옴, 동적 전환은 재현성 비용). W3 취소 | 확정 |
+| [0083](0083-e020-preregistration.md) | 2026-09-28 | experiment (사전 등록) | E020 int4 품질: WikiText-2 앞 32×2048토큰, bf16 대비 PPL·KL·1순위 일치, 그룹 32/64/128, 긴 입력 속도. 파일럿: 파일 캐시 = 즉석 g64(완전히 같음), 풀어서 계산 ≈ 커널(PPL 0.06% 차이), **int4 커널은 2048토큰 입력에서 bf16보다 5.6배 느림**. 기준 G1(등급)·G2(그룹)·R2(혼합 방식) | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
