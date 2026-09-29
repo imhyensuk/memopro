@@ -1,0 +1,39 @@
+[06:02:09] {"memopro": "0.1.0a1", "torch": "2.11.0+cu128", "transformers": "5.16.1", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true}}
+[06:02:11] model Qwen/Qwen2.5-0.5B-Instruct on Drive (2s)
+[06:02:35] staged Qwen/Qwen2.5-0.5B-Instruct to local disk (0.9 GiB, 24s)
+[06:02:35] run regress
+[06:03:08]   -> ok (32.4s)
+[06:03:09] model Qwen/Qwen2.5-1.5B-Instruct on Drive (1s)
+[06:04:12] staged Qwen/Qwen2.5-1.5B-Instruct to local disk (2.9 GiB, 63s)
+[06:04:12] run infer__Qwen2.5-1.5B-Instruct__hf_fp16_auto
+[06:05:02]   -> ok (49.1s)
+[06:05:02] run infer__Qwen2.5-1.5B-Instruct__memopro
+[06:05:42]   -> ok (40.8s)
+[06:05:44] model Qwen/Qwen2.5-3B-Instruct on Drive (2s)
+[06:09:26] staged Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 221s)
+[06:09:26] run infer__Qwen2.5-3B-Instruct__hf_fp16_auto
+[06:10:28]   -> ok (62.0s)
+[06:10:28] run infer__Qwen2.5-3B-Instruct__memopro
+[06:11:38]   -> ok (70.1s)
+[06:11:40] model Qwen/Qwen2.5-7B-Instruct on Drive (1s)
+[06:16:53] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 313s)
+[06:16:53] run infer__Qwen2.5-7B-Instruct__hf_bnb4
+[06:18:47]   -> ok (113.7s)
+[06:18:47] run infer__Qwen2.5-7B-Instruct__hf_bnb8
+[06:21:59]   -> ok (191.3s)
+[06:21:59] run infer__Qwen2.5-7B-Instruct__memopro
+[06:24:39]   -> ok (160.2s)
+[06:24:39] run infer__Qwen2.5-7B-Instruct__memopro_low
+[06:26:34]   -> ok (115.2s)
+[06:26:36] model Qwen/Qwen2.5-7B-Instruct on Drive (1s)
+[06:32:21] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 345s)
+[06:32:21] run train__Qwen2.5-7B-Instruct__qlora_hf
+[06:36:57]   -> ok (275.0s)
+[06:36:57] run train__Qwen2.5-7B-Instruct__qlora_memopro
+[06:42:00]   -> ok (303.7s)
+[06:42:02] model Qwen/Qwen2.5-1.5B-Instruct on Drive (1s)
+[06:43:06] staged Qwen/Qwen2.5-1.5B-Instruct to local disk (2.9 GiB, 64s)
+[06:43:35]   app__Qwen2.5-1.5B-Instruct__memopro_run -> ok (28.7s)
+[06:43:36] model Qwen/Qwen2.5-7B-Instruct on Drive (1s)
+[06:47:54] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 259s)
+[06:49:34]   app__Qwen2.5-7B-Instruct__memopro_run -> ok (99.5s)
