@@ -4,6 +4,21 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Added: `memopro.rt` phase 2: prefetching, re-computation, prediction, PyTorch (0115)
+- A background thread learns the order buffers are used in and brings the next ones back while
+  you compute (`prefetch=True` by default, `lookahead`); it never evicts anything needed sooner.
+- `Runtime.derive(fn, *inputs, dtype=, shape=)`: a buffer computed from others and re-computed
+  instead of stored when memory is short, checked against its first result (`IntegrityError`
+  if the function is not deterministic).
+- `Runtime.predict()`: bytes to re-read and seconds per cycle of a repeating workload under this
+  budget, from one recorded cycle.
+- `memopro.rt.torch.stream_model(name, budget=)`: a Hugging Face model whose weights stay in
+  their safetensors files and are streamed through the runtime on the CPU (no copy, no
+  quantization); results equal loading the model normally with aligned weights.
+  `saved_weights(model)` lets frozen streamed weights train adapters (LoRA) within the budget.
+- Throughput estimates weigh transfers by size (the per-transfer average swung with small
+  weights).
+
 ### Added: `memopro.rt`, a runtime that keeps large buffers under a hard memory budget (0112)
 - Register large arrays from files (`add_file`, `load_npy`) or make them in memory (`alloc`,
   `array`) and use them through zero-copy NumPy views (`Buffer.view()`, `Buffer.apply()`). When
