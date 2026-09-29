@@ -1,0 +1,7 @@
+{
+ "case": "Qwen2.5-14B-Instruct__hf_fp16_auto",
+ "model": "Qwen/Qwen2.5-14B-Instruct",
+ "variant": "hf_fp16_auto",
+ "status": "skipped",
+ "reason": "fp16 28 GB > GPU 15 GB + host 12.7 GB"
+}

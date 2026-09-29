@@ -1,0 +1,140 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "--model",
+  "Qwen/Qwen2.5-7B-Instruct",
+  "--scenario",
+  "qlora_memopro",
+  "--batch",
+  "4",
+  "--seq",
+  "512",
+  "--steps",
+  "20",
+  "--lr",
+  "2e-4"
+ ],
+ "model": "Qwen/Qwen2.5-7B-Instruct",
+ "scenario": "qlora_memopro",
+ "batch": 4,
+ "seq": 512,
+ "steps": 20,
+ "cap": 0.0,
+ "optimizer": "adamw",
+ "load_s": 74.5,
+ "layers": [
+  "Linear",
+  "Linear8bitLt"
+ ],
+ "trainable_params": 40370176,
+ "memory_after_first_step": {
+  "host_peak_rss_bytes": 6197559296,
+  "allocated_bytes": 11399300096,
+  "reserved_bytes": 14656995328,
+  "peak_allocated_bytes": 14688383488,
+  "peak_reserved_bytes": 15474884608,
+  "device_used_bytes": 14813102080,
+  "peak_device_used_bytes": 15576465408
+ },
+ "losses": [
+  2.8220205307006836,
+  2.771050214767456,
+  2.3222309350967407,
+  2.3926661014556885,
+  2.232717514038086,
+  2.5487698316574097,
+  1.878779113292694,
+  1.8699020743370056,
+  2.059231996536255,
+  1.9921929240226746,
+  2.408428907394409,
+  2.119404911994934,
+  1.9035573601722717,
+  2.03724068403244,
+  2.2461732625961304,
+  1.9253728985786438,
+  1.9442517161369324,
+  1.7774287462234497,
+  2.149538278579712,
+  2.1387252807617188
+ ],
+ "step_s": [
+  15.7,
+  19.0611,
+  16.1935,
+  15.8888,
+  15.5486,
+  15.4912,
+  15.4415,
+  15.8095,
+  15.6402,
+  15.5532,
+  15.6186,
+  15.5678,
+  15.5793,
+  15.6473,
+  15.7286,
+  15.6005,
+  15.6961,
+  15.7688,
+  15.7466,
+  15.6333
+ ],
+ "steps_done": 20,
+ "median_step_s": 15.636756777763367,
+ "tokens_per_s": 130.9734511514823,
+ "final_loss": 2.1387252807617188,
+ "session": {
+  "micro": 2,
+  "active": [
+   "micro-batch 2"
+  ],
+  "retries": 1
+ },
+ "memory": {
+  "host_peak_rss_bytes": 6197559296,
+  "allocated_bytes": 11399184896,
+  "reserved_bytes": 14661189632,
+  "peak_allocated_bytes": 14688383488,
+  "peak_reserved_bytes": 15474884608,
+  "device_used_bytes": 14817296384,
+  "peak_device_used_bytes": 15576465408
+ },
+ "worker_s": 412.1,
+ "memory_end": {
+  "host_peak_rss_bytes": 6197559296,
+  "allocated_bytes": 17040384,
+  "reserved_bytes": 8707375104,
+  "peak_allocated_bytes": 14688383488,
+  "peak_reserved_bytes": 15474884608,
+  "device_used_bytes": 8863481856,
+  "peak_device_used_bytes": 15576465408
+ },
+ "memopro_report": [
+  {
+   "technique": "load.quant.int8",
+   "action": "applied",
+   "detail": "/content/models/Qwen--Qwen2.5-7B-Instruct: quant.int8 via bitsandbytes (small_loss), estimated 9.64 GiB, weights 8.11 GiB on cuda"
+  },
+  {
+   "technique": "train_session.plan",
+   "action": "skipped",
+   "detail": "RuntimeError: cannot register a hook on a tensor that doesn't require gradient"
+  },
+  {
+   "technique": "train_session.micro_batch",
+   "action": "applied",
+   "detail": "out of memory: micro-batch 2"
+  },
+  {
+   "technique": "train_session",
+   "action": "reverted",
+   "detail": "20 steps, micro-batch 2, retries 1; techniques used: micro-batch 2"
+  }
+ ],
+ "case": "Qwen2.5-7B-Instruct__cap0__qlora_memopro",
+ "wall_s": 419.4,
+ "timeline_peak_gpu_used_bytes": 15576596480,
+ "timeline_peak_host_used_bytes": 4328316928
+}

@@ -1,0 +1,64 @@
+{
+ "status": "oom",
+ "device": "cuda",
+ "argv": [
+  "--model",
+  "Qwen/Qwen2.5-0.5B",
+  "--scenario",
+  "hf_ckpt",
+  "--batch",
+  "8",
+  "--seq",
+  "512",
+  "--steps",
+  "30",
+  "--cap",
+  "0.0"
+ ],
+ "model": "Qwen/Qwen2.5-0.5B",
+ "scenario": "hf_ckpt",
+ "batch": 8,
+ "seq": 512,
+ "steps": 30,
+ "cap": 0.0,
+ "optimizer": "adamw",
+ "load_s": 1.8,
+ "n_params": 494032768,
+ "memory_after_first_step": {
+  "host_peak_rss_bytes": 3958743040,
+  "allocated_bytes": 5951201280,
+  "reserved_bytes": 10468982784,
+  "peak_allocated_bytes": 9908411392,
+  "peak_reserved_bytes": 10468982784,
+  "device_used_bytes": 10614603776,
+  "peak_device_used_bytes": 10614603776
+ },
+ "oom_at_step": 1,
+ "losses": [
+  3.315218925476074
+ ],
+ "step_s": [
+  5.0893
+ ],
+ "steps_done": 1,
+ "median_step_s": 5.0893378257751465,
+ "tokens_per_s": 804.819829262591,
+ "final_loss": 3.315218925476074,
+ "error": "OutOfMemoryError: CUDA out of memory. Tried to allocate 2.32 GiB. GPU 0 has a total capacity of 14.56 GiB of which 159.81 MiB is free. Including non-PyTorch memory, this process has 14.40 GiB memory in use. Of the allocated memory 10.55 GiB is allocated by PyTorch, and 3.72 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)",
+ "trace": "Traceback (most recent call last):\n  File \"/content/memopro_colab/worker_common.py\", line 117, in guarded\n    main()\n    ~~~~^^\n  File \"/content/memopro_colab/worker_train.py\", line 299, in main\n    scenario_plain(ckpt=True)\n    ~~~~~~~~~~~~~~^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_train.py\", line 167, in scenario_plain\n    loop(model, step, data)\n    ~~~~^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_train.py\", line 89, in loop\n    loss = step_fn(data[i].to(DEVICE))\n  File \"/content/memopro_colab/worker_train.py\", line 162, in step\n    loss.backward()\n    ~~~~~~~~~~~~~^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/_tensor.py\", line 631, in backward\n    torch.autograd.backward(\n    ~~~~~~~~~~~~~~~~~~~~~~~^\n        self, gradient, retain_graph, create_graph, inputs=inputs\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/autograd/__init__.py\", line 381, in backward\n    _engine_run_backward(\n    ~~~~~~~~~~~~~~~~~~~~^\n        tensors,\n        ^^^^^^^^\n    ...<5 lines>...\n        accumulate_grad=True,\n        ^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/autograd/graph.py\", line 869, in _engine_run_backward\n    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        t_outputs, *args, **kwargs\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )  # Calls into the C++ engine to run the backward pass\n    ^\ntorch.OutOfMemoryError: CUDA out of memory. Tried to allocate 2.32 GiB. GPU 0 has a total capacity of 14.56 GiB of which 159.81 MiB is free. Including non-PyTorch memory, this process has 14.40 GiB memory in use. Of the allocated memory 10.55 GiB is allocated by PyTorch, and 3.72 GiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\n",
+ "worker_s": 24.2,
+ "memory_end": {
+  "host_peak_rss_bytes": 3958743040,
+  "allocated_bytes": 8837198848,
+  "reserved_bytes": 15323889664,
+  "peak_allocated_bytes": 11326584320,
+  "peak_reserved_bytes": 15447621632,
+  "device_used_bytes": 15469510656,
+  "peak_device_used_bytes": 15593242624
+ },
+ "memopro_report": [],
+ "case": "Qwen2.5-0.5B__cap0__hf_ckpt",
+ "wall_s": 27.1,
+ "timeline_peak_gpu_used_bytes": 15593373696,
+ "timeline_peak_host_used_bytes": 4532027392
+}

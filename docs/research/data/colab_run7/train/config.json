@@ -1,0 +1,61 @@
+{
+ "TRAIN_MODELS": [
+  {
+   "model": "openai-community/gpt2",
+   "batch": 16,
+   "seq": 512,
+   "steps": 30,
+   "caps": [
+    0.0,
+    0.3
+   ]
+  },
+  {
+   "model": "Qwen/Qwen2.5-0.5B",
+   "batch": 8,
+   "seq": 512,
+   "steps": 30,
+   "caps": [
+    0.0,
+    0.5
+   ]
+  },
+  {
+   "model": "Qwen/Qwen2.5-1.5B",
+   "batch": 4,
+   "seq": 512,
+   "steps": 10,
+   "caps": [
+    0.0
+   ]
+  }
+ ],
+ "SCENARIOS": [
+  "check",
+  "plain",
+  "plain_amp",
+  "hf_ckpt",
+  "accel_find_batch",
+  "memopro",
+  "memopro_lossless"
+ ],
+ "CAPPED_SCENARIOS": [
+  "check",
+  "plain",
+  "hf_ckpt",
+  "accel_find_batch",
+  "memopro"
+ ],
+ "QLORA_MODELS": [
+  {
+   "model": "Qwen/Qwen2.5-7B-Instruct",
+   "batch": 4,
+   "seq": 512,
+   "steps": 20
+  }
+ ],
+ "QLORA_SCENARIOS": [
+  "qlora_hf",
+  "qlora_memopro"
+ ]
+}

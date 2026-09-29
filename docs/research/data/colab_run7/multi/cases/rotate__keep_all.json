@@ -1,0 +1,68 @@
+{
+ "status": "oom",
+ "device": "cuda",
+ "argv": [
+  "--scenario",
+  "rotate",
+  "--strategy",
+  "keep_all",
+  "--rounds",
+  "2",
+  "--models",
+  "/content/models/Qwen--Qwen2.5-3B-Instruct,/content/models/microsoft--Phi-3.5-mini-instruct,/content/models/Qwen--Qwen2.5-1.5B-Instruct",
+  "--labels",
+  "Qwen2.5-3B-Instruct,Phi-3.5-mini-instruct,Qwen2.5-1.5B-Instruct",
+  "--spill-dir",
+  "/content/memopro_colab/spill"
+ ],
+ "scenario": "rotate",
+ "strategy": "keep_all",
+ "turns": [
+  {
+   "round": 0,
+   "model": "Qwen2.5-3B-Instruct",
+   "ready_s": 40.74,
+   "answer_s": 3.49,
+   "memory": {
+    "host_peak_rss_bytes": 8050753536,
+    "allocated_bytes": 6295217152,
+    "reserved_bytes": 6465519616,
+    "peak_allocated_bytes": 6301050880,
+    "peak_reserved_bytes": 6465519616,
+    "device_used_bytes": 6604849152,
+    "peak_device_used_bytes": 6604849152
+   }
+  },
+  {
+   "round": 0,
+   "model": "Phi-3.5-mini-instruct",
+   "ready_s": 34.51,
+   "answer_s": 1.46,
+   "memory": {
+    "host_peak_rss_bytes": 10056183808,
+    "allocated_bytes": 13937638912,
+    "reserved_bytes": 14124318720,
+    "peak_allocated_bytes": 13956482048,
+    "peak_reserved_bytes": 14124318720,
+    "device_used_bytes": 14265745408,
+    "peak_device_used_bytes": 14265745408
+   }
+  }
+ ],
+ "error": "OutOfMemoryError: CUDA out of memory. Tried to allocate 28.00 MiB. GPU 0 has a total capacity of 14.56 GiB of which 7.81 MiB is free. Including non-PyTorch memory, this process has 14.55 GiB memory in use. Of the allocated memory 14.21 GiB is allocated by PyTorch, and 218.19 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)",
+ "worker_s": 94.3,
+ "memory_end": {
+  "host_peak_rss_bytes": 10056183808,
+  "allocated_bytes": 15258678784,
+  "reserved_bytes": 15487467520,
+  "peak_allocated_bytes": 15258678784,
+  "peak_reserved_bytes": 15489564672,
+  "device_used_bytes": 15628894208,
+  "peak_device_used_bytes": 15628894208
+ },
+ "memopro_report": [],
+ "case": "rotate__keep_all",
+ "wall_s": 105.9,
+ "timeline_peak_gpu_used_bytes": 15629025280,
+ "timeline_peak_host_used_bytes": 11360559104
+}

@@ -1,0 +1,9 @@
+{"t": 1790656749.5730217, "case": "doctor", "status": "ok", "seconds": 5.1}
+{"t": 1790656802.9592125, "case": "regress", "status": "ok", "seconds": 39.1}
+{"t": 1790657219.7301714, "case": "rotate__keep_all", "status": "oom", "seconds": 105.9}
+{"t": 1790657405.9700394, "case": "rotate__reload", "status": "ok", "seconds": 186.0}
+{"t": 1790657792.7436287, "case": "rotate__hibernate", "status": "ok", "seconds": 386.7}
+{"t": 1790657848.1395593, "case": "app__Qwen2.5-1.5B-Instruct__python", "status": "ok", "seconds": 33.4}
+{"t": 1790657864.8844173, "case": "app__Qwen2.5-1.5B-Instruct__memopro_run", "status": "ok", "seconds": 16.7}
+{"t": 1790658126.6430361, "case": "app__Qwen2.5-7B-Instruct__python", "status": "skipped", "seconds": null}
+{"t": 1790658203.971988, "case": "app__Qwen2.5-7B-Instruct__memopro_run", "status": "ok", "seconds": 77.1}
