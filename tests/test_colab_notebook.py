@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-NOTEBOOKS = ("train", "infer", "multi", "remeasure", "remeasure2")
+NOTEBOOKS = ("train", "infer", "multi", "remeasure", "remeasure2", "qlora")
 
 
 def test_notebook_builds_and_every_cell_compiles(tmp_path):

@@ -130,6 +130,7 @@
 | [0101](0101-e023-remeasure2-preregistration.md) | 2026-09-29 | experiment (사전 등록) + tool | E023: 통합 셀 노트북 `colab_t4_remeasure2.ipynb` — 회귀+D9, GPT-2 고른 분할·정확(T1), 30% 상한 OOM 재시도 없음(T2), 0.5B micro ≥ 2·정확(T3), 7B QLoRA micro ≥ 2·표준의 0.95배 이상(T4), 7B 기본 int8 유지와 int4 안내(O1). 약 45~60분, 새 sdist 필요 | 확정 |
 | [0102](0102-e023-remeasure2-results.md) | 2026-09-29 | experiment | E023 결과: 판정 8/8 pass, 예측한 계획 크기와 모두 일치 — GPT-2 8+8(HF ckpt 대비 손실 1.7e-7, 1.15배 빠름), 30% 상한 OOM 재시도 없이 2, 0.5B micro 2로 1.09배, 7B QLoRA micro 4로 표준 방식과 같은 227 tok/s(E022 대비 1.17배), int4 안내·bnb 품질 문구 확인, 보유 메모리 7.63GiB = torch 할당 7.64GiB. **관찰**: 예약 기준 활성값 배수 1.27~1.29로 여유 계수 1.25가 빠듯(F1, 제안 1.3), 시작 때 캐시 1.99GiB 중 1.67GiB가 재사용되지 않아 QLoRA 최대 예약이 예산을 0.15GiB 넘음(F2, 제안: 시작 때 캐시 비우고 실측) | 확정 |
 | [0103](0103-pa-pb-margin-and-cache.md) | 2026-09-29 | implementation | 사용자 결정 P-a·P-b: 여유 계수 1.25 → 1.3(E023 예약 배수 1.27~1.29), `train_session`은 CUDA 모델이면 예산 측정 전에 캐시를 비우고(`release_cuda_cache`, 보고에 돌려준 양) 가용량에는 통째로 빈 세그먼트만 셈(`releasable_cache` = reserved − active − inactive_split, 조각은 제외). 워커는 세션 진입 뒤 상태(`session_measured`) 기록. 시험 280개 통과, CUDA 재측정 전 | 확정 |
+| [0104](0104-e024-qlora-preregistration.md) | 2026-09-29 | experiment (사전 등록) + tool | E024: 7B QLoRA만 재는 통합 셀 노트북 `colab_t4_qlora.ipynb` — Q1 OOM 재시도 없이 완주, Q2 최대 예약 ≤ memopro 예산(E023 13.90 > 13.75GiB), Q3 표준 방식의 0.9배 이상·손실 ≤ 5e-3. 캐시 반환 전후 상태를 요약에 싣는다. 약 20~25분, 새 sdist 필요 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
