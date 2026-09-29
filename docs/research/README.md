@@ -132,6 +132,7 @@
 | [0103](0103-pa-pb-margin-and-cache.md) | 2026-09-29 | implementation | 사용자 결정 P-a·P-b: 여유 계수 1.25 → 1.3(E023 예약 배수 1.27~1.29), `train_session`은 CUDA 모델이면 예산 측정 전에 캐시를 비우고(`release_cuda_cache`, 보고에 돌려준 양) 가용량에는 통째로 빈 세그먼트만 셈(`releasable_cache` = reserved − active − inactive_split, 조각은 제외). 워커는 세션 진입 뒤 상태(`session_measured`) 기록. 시험 280개 통과, CUDA 재측정 전 | 확정 |
 | [0104](0104-e024-qlora-preregistration.md) | 2026-09-29 | experiment (사전 등록) + tool | E024: 7B QLoRA만 재는 통합 셀 노트북 `colab_t4_qlora.ipynb` — Q1 OOM 재시도 없이 완주, Q2 최대 예약 ≤ memopro 예산(E023 13.90 > 13.75GiB), Q3 표준 방식의 0.9배 이상·손실 ≤ 5e-3. 캐시 반환 전후 상태를 요약에 싣는다. 약 20~25분, 새 sdist 필요 | 확정 |
 | [0105](0105-e024-qlora-results.md) | 2026-09-29 | experiment | E024 결과: 판정 3/3 pass — 7B QLoRA가 micro 2(2+2)로 OOM 재시도 없이, 최대 예약 11.00GiB ≤ 예산 11.96GiB(E023은 초과), 표준 방식의 0.97배(229 대 235 tok/s), 손실 1.2e-3, GPU 사용은 표준보다 2.2GiB 적음. 시작 때 캐시 1.99GiB 중 비울 수 있던 것은 4MiB — 거의 전부 조각(E023 F2 확인, 0103의 측정 방식이 맞음) | 확정 |
+| [0106](0106-objective-evaluation-2.md) | 2026-09-29 | assessment | 객관 평가 2(E022~E024 반영): 추론 65%(T4 fp16·int4 결함 해소, 2배 초과 미입증), 학습 62%(QLoRA 0.97배·예산 준수, 파라미터 초과 학습은 범위 밖), 개발 편의 72%, 연구 코어 25%(변화 없음), 제품 준비 50%, 가중 약 58%(0095의 53%). 오른 이유는 결함 수정의 실측 확인. 다음: 2배 초과 시험, E010, D6, 배포 준비 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
