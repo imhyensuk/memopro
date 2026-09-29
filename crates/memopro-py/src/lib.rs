@@ -6,10 +6,16 @@
 //! does by holding the object.
 
 use pyo3::buffer::PyBuffer;
-use pyo3::exceptions::{PyNotImplementedError, PyOSError, PyRuntimeError, PyValueError};
+use pyo3::exceptions::{
+    PyBufferError, PyNotImplementedError, PyOSError, PyRuntimeError, PyValueError,
+};
+use pyo3::ffi;
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyDict};
+use pyo3::types::{PyBytes, PyDict, PyType};
+use std::os::raw::{c_char, c_int, c_void};
 use std::path::PathBuf;
+use std::sync::Mutex;
+use std::sync::atomic::{AtomicBool, AtomicUsize, Ordering};
 
 fn to_py_err(e: memopro::Error) -> PyErr {
     match e {
@@ -17,7 +23,33 @@ fn to_py_err(e: memopro::Error) -> PyErr {
         memopro::Error::InvalidArgument(_) => PyValueError::new_err(e.to_string()),
         memopro::Error::Integrity(_) => PyRuntimeError::new_err(e.to_string()),
         memopro::Error::Unsupported(_) => PyNotImplementedError::new_err(e.to_string()),
+        memopro::Error::Budget(_) => memopro_error("BudgetExceeded", e.to_string()),
         memopro::Error::Io(io) => PyOSError::new_err(io.to_string()),
+    }
+}
+
+/// An exception of the Python package's own hierarchy (`memopro._errors`), or RuntimeError if
+/// that cannot be imported.
+fn memopro_error(name: &str, msg: String) -> PyErr {
+    Python::attach(|py| {
+        match py
+            .import("memopro._errors")
+            .and_then(|m| m.getattr(name))
+            .map(|c| c.cast_into::<PyType>())
+        {
+            Ok(Ok(cls)) => PyErr::from_type(cls, msg),
+            _ => PyRuntimeError::new_err(msg),
+        }
+    })
+}
+
+/// Errors of the runtime (`memopro.rt`) as memopro exceptions.
+fn rt_err(e: memopro::Error) -> PyErr {
+    match e {
+        memopro::Error::Budget(_) => memopro_error("BudgetExceeded", e.to_string()),
+        memopro::Error::Integrity(_) => memopro_error("IntegrityError", e.to_string()),
+        memopro::Error::InvalidArgument(_) => memopro_error("InvalidArgument", e.to_string()),
+        other => to_py_err(other),
     }
 }
 
@@ -331,6 +363,238 @@ fn codec_pack(
     })
 }
 
+// ---------------------------------------------------------------- runtime C-R (0112)
+
+/// The runtime (`memopro.rt.Runtime` wraps it).
+#[pyclass(module = "memopro._core", name = "RtRuntime", frozen)]
+struct RtRuntime {
+    rt: memopro::rt::Runtime,
+}
+
+fn state_name(s: memopro::rt::BufferState) -> &'static str {
+    use memopro::rt::BufferState as S;
+    match s {
+        S::Resident => "resident",
+        S::Compressed => "compressed",
+        S::Dropped => "dropped",
+        S::Unloaded => "unloaded",
+    }
+}
+
+#[pymethods]
+impl RtRuntime {
+    #[new]
+    #[pyo3(signature = (budget, compress_level=1, min_saving=0.15, policy="reuse"))]
+    fn new(budget: u64, compress_level: i32, min_saving: f64, policy: &str) -> PyResult<Self> {
+        let mut config = memopro::rt::Config::new(budget);
+        config.compress_level = compress_level;
+        config.min_saving = min_saving;
+        config.policy = match policy {
+            "reuse" => memopro::rt::Policy::ReuseDistance,
+            "lru" => memopro::rt::Policy::Lru,
+            other => {
+                return Err(memopro_error(
+                    "InvalidArgument",
+                    format!("policy must be 'reuse' or 'lru', not {other:?}"),
+                ));
+            }
+        };
+        Ok(RtRuntime {
+            rt: memopro::rt::Runtime::new(config).map_err(rt_err)?,
+        })
+    }
+
+    /// Bytes buffers may occupy (budget minus the compression headroom).
+    fn limit(&self) -> u64 {
+        self.rt.limit()
+    }
+
+    fn alloc(&self, py: Python<'_>, nbytes: usize, elem: usize) -> PyResult<u64> {
+        let rt = self.rt.clone();
+        py.detach(move || rt.alloc(nbytes, elem)).map_err(rt_err)
+    }
+
+    fn add_file(&self, path: PathBuf, offset: u64, nbytes: usize, elem: usize) -> PyResult<u64> {
+        self.rt
+            .add_file(&path, offset, nbytes, elem)
+            .map_err(rt_err)
+    }
+
+    #[pyo3(signature = (id, write=false))]
+    fn pin(&self, py: Python<'_>, id: u64, write: bool) -> PyResult<RtPin> {
+        let rt = self.rt.clone();
+        // SAFETY: Python reaches the data only through the raw address (buffer protocol),
+        // never through Rust slices, so shared pins cannot alias a Rust reference.
+        let pin = py
+            .detach(move || unsafe { rt.pin_shared(id, write) })
+            .map_err(rt_err)?;
+        Ok(RtPin {
+            ptr: pin.as_ptr() as usize,
+            len: pin.len(),
+            write,
+            pin: Mutex::new(Some(pin)),
+            exports: AtomicUsize::new(0),
+            released: AtomicBool::new(false),
+        })
+    }
+
+    fn free(&self, py: Python<'_>, id: u64) -> PyResult<()> {
+        let rt = self.rt.clone();
+        py.detach(move || rt.free(id)).map_err(rt_err)
+    }
+
+    fn evict(&self, py: Python<'_>, id: u64) -> PyResult<bool> {
+        let rt = self.rt.clone();
+        py.detach(move || rt.evict(id)).map_err(rt_err)
+    }
+
+    fn state(&self, id: u64) -> PyResult<&'static str> {
+        self.rt.state(id).map(state_name).map_err(rt_err)
+    }
+
+    fn nbytes(&self, id: u64) -> PyResult<usize> {
+        self.rt.nbytes(id).map_err(rt_err)
+    }
+
+    fn stats<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let s = self.rt.stats();
+        let d = PyDict::new(py);
+        d.set_item("budget", s.budget)?;
+        d.set_item("reserve", s.reserve)?;
+        d.set_item("used", s.used)?;
+        d.set_item("peak_used", s.peak_used)?;
+        d.set_item("buffers", s.buffers)?;
+        d.set_item("resident_bytes", s.resident_bytes)?;
+        d.set_item("compressed_bytes", s.compressed_bytes)?;
+        d.set_item("pinned_bytes", s.pinned_bytes)?;
+        d.set_item("loads", s.loads)?;
+        d.set_item("load_bytes", s.load_bytes)?;
+        d.set_item("rereads", s.rereads)?;
+        d.set_item("reread_bytes", s.reread_bytes)?;
+        d.set_item("read_seconds", s.read_seconds)?;
+        d.set_item("drops", s.drops)?;
+        d.set_item("drop_bytes", s.drop_bytes)?;
+        d.set_item("compressions", s.compressions)?;
+        d.set_item("compress_in", s.compress_in)?;
+        d.set_item("compress_out", s.compress_out)?;
+        d.set_item("compress_seconds", s.compress_seconds)?;
+        d.set_item("decompressions", s.decompressions)?;
+        d.set_item("decompress_bytes", s.decompress_bytes)?;
+        d.set_item("decompress_seconds", s.decompress_seconds)?;
+        d.set_item("incompressible", s.incompressible)?;
+        d.set_item("evictions", s.evictions)?;
+        d.set_item("refusals", s.refusals)?;
+        d.set_item("restore_seconds", s.restore_seconds)?;
+        d.set_item("written_bytes", s.written_bytes)?;
+        Ok(d)
+    }
+}
+
+/// A pinned buffer. Exposes the buffer protocol (so `numpy.frombuffer(pin, dtype)` views it
+/// without copying); the buffer stays pinned while any such view exists, even after
+/// `release()` (which only stops new views).
+#[pyclass(module = "memopro._core", name = "RtPin", frozen)]
+struct RtPin {
+    pin: Mutex<Option<memopro::rt::Pin>>,
+    ptr: usize,
+    len: usize,
+    write: bool,
+    exports: AtomicUsize,
+    released: AtomicBool,
+}
+
+impl RtPin {
+    fn unpin_if_unused(&self) {
+        if self.released.load(Ordering::SeqCst) && self.exports.load(Ordering::SeqCst) == 0 {
+            self.pin.lock().unwrap_or_else(|e| e.into_inner()).take();
+        }
+    }
+}
+
+#[pymethods]
+impl RtPin {
+    #[getter]
+    fn nbytes(&self) -> usize {
+        self.len
+    }
+
+    #[getter]
+    fn writable(&self) -> bool {
+        self.write
+    }
+
+    /// Views still alive (numpy arrays or memoryviews of this pin).
+    #[getter]
+    fn views(&self) -> usize {
+        self.exports.load(Ordering::SeqCst)
+    }
+
+    /// True once the buffer is unpinned (released and no view left).
+    #[getter]
+    fn unpinned(&self) -> bool {
+        self.pin.lock().unwrap_or_else(|e| e.into_inner()).is_none()
+    }
+
+    /// Stop handing out views; the buffer is unpinned as soon as no view is left.
+    fn release(&self) {
+        self.released.store(true, Ordering::SeqCst);
+        self.unpin_if_unused();
+    }
+
+    unsafe fn __getbuffer__(
+        slf: Bound<'_, Self>,
+        view: *mut ffi::Py_buffer,
+        flags: c_int,
+    ) -> PyResult<()> {
+        let this = slf.get();
+        if view.is_null() {
+            return Err(PyBufferError::new_err("view is null"));
+        }
+        if this.released.load(Ordering::SeqCst) {
+            return Err(PyBufferError::new_err("this pin was released"));
+        }
+        if (flags & ffi::PyBUF_WRITABLE) == ffi::PyBUF_WRITABLE && !this.write {
+            return Err(PyBufferError::new_err(
+                "the buffer is pinned read-only; pin it with write=True",
+            ));
+        }
+        this.exports.fetch_add(1, Ordering::SeqCst);
+        // SAFETY: `view` is a valid Py_buffer to fill; the memory stays valid while this pin
+        // object lives, and `obj` keeps it alive until the view is released.
+        unsafe {
+            (*view).obj = slf.clone().into_any().into_ptr();
+            (*view).buf = this.ptr as *mut c_void;
+            (*view).len = this.len as isize;
+            (*view).readonly = if this.write { 0 } else { 1 };
+            (*view).itemsize = 1;
+            (*view).format = if (flags & ffi::PyBUF_FORMAT) == ffi::PyBUF_FORMAT {
+                c"B".as_ptr() as *mut c_char
+            } else {
+                std::ptr::null_mut()
+            };
+            (*view).ndim = 1;
+            (*view).shape = if (flags & ffi::PyBUF_ND) == ffi::PyBUF_ND {
+                &mut (*view).len
+            } else {
+                std::ptr::null_mut()
+            };
+            (*view).strides = if (flags & ffi::PyBUF_STRIDES) == ffi::PyBUF_STRIDES {
+                &mut (*view).itemsize
+            } else {
+                std::ptr::null_mut()
+            };
+            (*view).suboffsets = std::ptr::null_mut();
+            (*view).internal = std::ptr::null_mut();
+        }
+        Ok(())
+    }
+
+    unsafe fn __releasebuffer__(&self, _view: *mut ffi::Py_buffer) {
+        self.exports.fetch_sub(1, Ordering::SeqCst);
+        self.unpin_if_unused();
+    }
+}
+
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", memopro::VERSION)?;
@@ -350,5 +614,7 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<FileMap>()?;
     m.add_class::<Compressed>()?;
     m.add_function(wrap_pyfunction!(codec_pack, m)?)?;
+    m.add_class::<RtRuntime>()?;
+    m.add_class::<RtPin>()?;
     Ok(())
 }

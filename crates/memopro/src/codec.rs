@@ -124,6 +124,65 @@ fn check_elem(len: usize, elem: usize) -> io::Result<()> {
     Ok(())
 }
 
+/// Run `f` with this thread's decompression context, whatever level its compressor has.
+fn with_decoder<R>(f: impl FnOnce(&mut Worker) -> io::Result<R>) -> io::Result<R> {
+    WORKER.with(|cell| {
+        let mut slot = cell.borrow_mut();
+        if slot.is_none() {
+            *slot = Some(Worker {
+                level: zstd::DEFAULT_COMPRESSION_LEVEL,
+                cctx: zstd::bulk::Compressor::new(zstd::DEFAULT_COMPRESSION_LEVEL)?,
+                dctx: zstd::bulk::Decompressor::new()?,
+                scratch: Vec::new(),
+            });
+        }
+        f(slot.as_mut().expect("worker initialised above"))
+    })
+}
+
+/// Largest output [`pack_chunk`] can produce for `len` input bytes.
+pub fn chunk_bound(len: usize) -> usize {
+    zstd::zstd_safe::compress_bound(len)
+}
+
+/// Shuffle + zstd-compress one piece of at most [`CHUNK`] bytes into `out` (cleared first), on
+/// the calling thread with its reusable context (RS3). The runtime compresses a buffer piece by
+/// piece so it can give each piece's memory back before the next (0112).
+pub fn pack_chunk(src: &[u8], elem: usize, level: i32, out: &mut Vec<u8>) -> io::Result<()> {
+    check_elem(src.len(), elem)?;
+    if src.len() > CHUNK {
+        return Err(io::Error::new(
+            io::ErrorKind::InvalidInput,
+            format!("a piece holds at most {CHUNK} bytes, got {}", src.len()),
+        ));
+    }
+    with_worker(level, |w| {
+        w.scratch.resize(src.len(), 0);
+        shuffle(src, elem, &mut w.scratch);
+        out.clear();
+        out.reserve(chunk_bound(src.len()));
+        w.cctx.compress_to_buffer(&w.scratch[..], out)?;
+        Ok(())
+    })
+}
+
+/// Decompress one piece from [`pack_chunk`] into `dst` (its original length).
+pub fn unpack_chunk(comp: &[u8], elem: usize, dst: &mut [u8]) -> io::Result<()> {
+    check_elem(dst.len(), elem)?;
+    with_decoder(|w| {
+        w.scratch.resize(dst.len(), 0);
+        let n = w.dctx.decompress_to_buffer(comp, &mut w.scratch[..])?;
+        if n != dst.len() {
+            return Err(io::Error::new(
+                io::ErrorKind::InvalidData,
+                "piece length mismatch",
+            ));
+        }
+        unshuffle(&w.scratch, elem, dst);
+        Ok(())
+    })
+}
+
 /// Shuffle + zstd-compress `src` in independent [`CHUNK`]-sized chunks, in parallel.
 pub fn pack(src: &[u8], elem: usize, level: i32) -> io::Result<Vec<Vec<u8>>> {
     check_elem(src.len(), elem)?;

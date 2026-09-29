@@ -17,6 +17,8 @@ pub enum Error {
     Integrity(String),
     /// The operating system does not offer what was asked (e.g. no PSI on this kernel).
     Unsupported(String),
+    /// The runtime's memory budget cannot hold what was asked (admission control, 0109 R2).
+    Budget(String),
     /// An operating-system I/O error.
     Io(io::Error),
 }
@@ -43,6 +45,7 @@ impl fmt::Display for Error {
             Error::InvalidArgument(msg) => write!(f, "invalid argument: {msg}"),
             Error::Integrity(msg) => write!(f, "integrity check failed: {msg}"),
             Error::Unsupported(msg) => write!(f, "not supported here: {msg}"),
+            Error::Budget(msg) => write!(f, "budget exceeded: {msg}"),
             Error::Io(e) => write!(f, "I/O error: {e}"),
         }
     }

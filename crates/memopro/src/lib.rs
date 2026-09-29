@@ -9,6 +9,8 @@
 //! - [`ledger`]: bookkeeping of hibernated buffers and SSD bytes written (v0.1)
 //! - [`codec`]: byte shuffle + zstd for lossless in-RAM compression (v0.1)
 //! - [`pressure`]: OS memory-pressure signal for γ elastic (v0.3)
+//! - [`rt`]: runtime C-R: large buffers under a hard memory budget, dropped and re-read from
+//!   their original files or compressed, never written to disk (0109, 0112)
 //!
 //! Unbuilt functions return [`Error::NotImplemented`] with the planned milestone; nothing panics.
 
@@ -19,6 +21,7 @@ pub mod ledger;
 pub mod pressure;
 #[cfg(unix)]
 pub mod residency;
+pub mod rt;
 pub mod spill;
 
 pub use error::{Error, Result};
