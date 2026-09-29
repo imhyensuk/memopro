@@ -1,0 +1,7 @@
+[09:55:14] {"memopro": "0.1.0a1", "torch": "2.11.0+cu128", "transformers": "5.16.1", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true}}
+[09:55:19] model Qwen/Qwen2.5-7B-Instruct on Drive (5s)
+[10:00:26] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 307s)
+[10:00:27] run Qwen2.5-7B-Instruct__cap0__qlora_hf
+[10:05:01]   -> ok (274.3s)
+[10:05:01] run Qwen2.5-7B-Instruct__cap0__qlora_memopro
+[10:09:36]   -> ok (274.4s)
