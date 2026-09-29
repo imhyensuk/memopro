@@ -164,6 +164,10 @@ def environment(install_info):
 
         env["build_has"]["0089_elastic_default"] = hasattr(R, "default_elastic")
         env["build_has"]["0094_fixes"] = hasattr(C, "SLOW_BF16_NOTE") and not R.default_elastic()
+        import memopro.access._train as T  # noqa: PLC0415
+
+        env["build_has"]["0099_fixes"] = hasattr(C, "speed_hint") and hasattr(T, "even_micro")
+        env["build_has"]["0100_fixes"] = hasattr(T, "optimizer_state_to_come")
     except Exception as e:  # noqa: BLE001
         env["build_has"] = f"unknown: {e}"
     return env
@@ -343,7 +347,7 @@ def fetch_model(repo):
     if not STAGE_TO_LOCAL:
         return path
     size = sum(os.path.getsize(os.path.realpath(p)) for p in glob.glob(os.path.join(path, "*")))
-    local = os.path.join("/content/models", repo.replace("/", "--"))
+    local = os.path.join("/content/models", local_name(repo))
     if os.path.isdir(local):
         return local
     free = shutil.disk_usage("/content").free
@@ -352,9 +356,16 @@ def fetch_model(repo):
              f"{free / 2**30:.1f} GiB free); loading from Drive")
         return path
     t = time.time()
-    shutil.copytree(path, local, symlinks=False)
+    partial = local + ".partial"  # a copy cut short (disconnect) must not look complete (0100)
+    shutil.rmtree(partial, ignore_errors=True)
+    shutil.copytree(path, partial, symlinks=False)
+    os.rename(partial, local)
     _log(f"staged {repo} to local disk ({size / 2**30:.1f} GiB, {time.time() - t:.0f}s)")
     return local
+
+
+def local_name(repo):
+    return repo.replace("/", "--")
 
 
 def free_local_models(keep=()):
