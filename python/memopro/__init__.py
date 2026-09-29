@@ -70,6 +70,7 @@ _LAZY: dict[str, tuple[str, str | None]] = {
     "hibernate": ("memopro.hibernate", None),
     "integrations": ("memopro.integrations", None),
     "orchestrator": ("memopro.orchestrator", None),
+    "rt": ("memopro.rt", None),
 }
 
 
