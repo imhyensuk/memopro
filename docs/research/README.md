@@ -133,6 +133,8 @@
 | [0104](0104-e024-qlora-preregistration.md) | 2026-09-29 | experiment (사전 등록) + tool | E024: 7B QLoRA만 재는 통합 셀 노트북 `colab_t4_qlora.ipynb` — Q1 OOM 재시도 없이 완주, Q2 최대 예약 ≤ memopro 예산(E023 13.90 > 13.75GiB), Q3 표준 방식의 0.9배 이상·손실 ≤ 5e-3. 캐시 반환 전후 상태를 요약에 싣는다. 약 20~25분, 새 sdist 필요 | 확정 |
 | [0105](0105-e024-qlora-results.md) | 2026-09-29 | experiment | E024 결과: 판정 3/3 pass — 7B QLoRA가 micro 2(2+2)로 OOM 재시도 없이, 최대 예약 11.00GiB ≤ 예산 11.96GiB(E023은 초과), 표준 방식의 0.97배(229 대 235 tok/s), 손실 1.2e-3, GPU 사용은 표준보다 2.2GiB 적음. 시작 때 캐시 1.99GiB 중 비울 수 있던 것은 4MiB — 거의 전부 조각(E023 F2 확인, 0103의 측정 방식이 맞음) | 확정 |
 | [0106](0106-objective-evaluation-2.md) | 2026-09-29 | assessment | 객관 평가 2(E022~E024 반영): 추론 65%(T4 fp16·int4 결함 해소, 2배 초과 미입증), 학습 62%(QLoRA 0.97배·예산 준수, 파라미터 초과 학습은 범위 밖), 개발 편의 72%, 연구 코어 25%(변화 없음), 제품 준비 50%, 가중 약 58%(0095의 53%). 오른 이유는 결함 수정의 실측 확인. 다음: 2배 초과 시험, E010, D6, 배포 준비 | 확정 |
+| [0107](0107-direction-goal-redefinition.md) | 2026-09-29 | decision | 사용자 승인 목표 재정의: 궁극 = 32GB가 필요하던 작업(AI·비AI)을 8~16GB에서 구동. G2′ 작업 집합이 메모리 안이면 필요 메모리의 1/2~1/4에서, 무손실 기본·상한 보장·느려짐 예측. G3 주 목표 승격: 버퍼마다 두기·압축·원본 재읽기·재계산·이동을 고르는 새 Rust 런타임. 기존 성과(접근 계층, β, 방출 엔진, F 등급, census, 실험) 계승. 0010·0012·0033 일부 대체 | 확정 |
+| [0108](0108-survey-new-runtime-prior-art.md) | 2026-09-29 | survey | 새 런타임(C-R) 선행 연구 13개 주제: Williams 2025·Cook-Mertz(이론), Capuchin·POET(스왑/페이징+재계산, 가장 가까움), DTR·Checkmate·RevNet, AIFM·Mira·Atlas(원격 메모리), UMap·ExtMEM·Lightswap(사용자 공간 페이징), TMO·SDFM(커널 압축·오프로드), MEMPHIS(계보+메모리 관리, SystemDS), Dask, CLA, Mesh, LLM in a flash·mzCache. 판정: 개별 기법은 모두 있음, 다섯 선택지 통합·분야 무관·개인 기기 계층·상한 보장+느려짐 예측의 결합은 조사 범위에서 발견되지 않음(조합의 새로움). 재계산은 계보가 알려진 버퍼만 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
