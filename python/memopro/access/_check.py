@@ -292,7 +292,9 @@ def _check(
             "check takes a model id, a model directory or an nn.Module, not a script; "
             "use `memopro run --dry-run script.py` to see what memopro would do for a script"
         )
-    s = setup(budget=budget, quality=quality, prefer=prefer, device=device)
+    # a module already in memory counts in the budget of its pool once (E022 D8)
+    holding = (target,) if hasattr(target, "named_parameters") else ()
+    s = setup(budget=budget, quality=quality, prefer=prefer, device=device, holding=holding)
     info = model_info(target)
     seq = seq_len or (min(info.max_positions, 1024) if info.max_positions else None)
     fake_dev = _fake_device(s.device)

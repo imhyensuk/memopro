@@ -9,7 +9,7 @@ from memopro.config import Config, _validate, get_config, spill_location
 from memopro.env import Env, detect
 from memopro.orchestrator.budget import Budget, compute_budget
 
-__all__ = ["Setup", "setup"]
+__all__ = ["Setup", "resident_bytes", "setup"]
 
 
 @dataclasses.dataclass(frozen=True)
@@ -32,8 +32,11 @@ def settings(**options: Any) -> Config:
     return dataclasses.replace(cfg, **changes)
 
 
-def setup(*, device: str | None = None, **options: Any) -> Setup:
-    """Settings, environment and budget; ``device`` ("cuda", "mps", "cpu") overrides detection."""
+def setup(*, device: str | None = None, holding: tuple[Any, ...] = (), **options: Any) -> Setup:
+    """Settings, environment and budget; ``device`` ("cuda", "mps", "cpu") overrides detection.
+
+    ``holding``: the caller's model and optimizer, already in memory. Their tensors count in the
+    budget of the pool they are in (`resident_bytes`, E022 D8)."""
     import torch
 
     from memopro._errors import InvalidArgument
@@ -43,10 +46,16 @@ def setup(*, device: str | None = None, **options: Any) -> Setup:
         raise InvalidArgument(f"device must be 'cuda', 'mps' or 'cpu'; got {device!r}")
     cfg = settings(**options)
     env = detect(config=cfg)
-    budget = compute_budget(env, cfg)
+    kinds = [d.kind for d in env.devices]
+    budgeted = next((k for k in kinds if k in ("cuda", "mps")), None)
+    budget = compute_budget(
+        env,
+        cfg,
+        resident_device=resident_bytes(budgeted, *holding) if budgeted else 0,
+        resident_host=resident_bytes("cpu", *holding),
+    )
     _require_minimums(budget, cfg)
     budget = _under_pressure(budget)
-    kinds = [d.kind for d in env.devices]
     if device == "cpu":
         kinds = []
     elif device is not None and device not in kinds:
@@ -62,6 +71,30 @@ def setup(*, device: str | None = None, **options: Any) -> Setup:
     if device == "cpu":
         budget = dataclasses.replace(budget, device=None, unified=False)
     return Setup(cfg, env, budget, device, half)
+
+
+def resident_bytes(kind: str, *holding: Any) -> int:
+    """Bytes of the parameters, buffers and optimizer state of ``holding`` (modules and
+    optimizers) that live on device type ``kind`` ("cuda", "mps" or "cpu"), each tensor once."""
+    seen: set[int] = set()
+    total = 0
+
+    def add(t: Any) -> None:
+        nonlocal total
+        if hasattr(t, "untyped_storage") and t.device.type == kind and id(t) not in seen:
+            seen.add(id(t))
+            total += t.numel() * t.element_size()
+
+    for obj in holding:
+        if hasattr(obj, "parameters"):
+            for t in obj.parameters():
+                add(t)
+            for t in obj.buffers():
+                add(t)
+        for state in getattr(obj, "state", {}).values() if hasattr(obj, "param_groups") else ():
+            for t in state.values():
+                add(t)
+    return total
 
 
 def _require_minimums(budget: Budget, cfg: Config) -> None:

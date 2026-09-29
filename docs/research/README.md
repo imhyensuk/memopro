@@ -125,6 +125,7 @@
 | [0096](0096-e022-remeasure-preregistration.md) | 2026-09-29 | experiment (사전 등록) + tool | E022: 0094 수정 확인용 통합 셀 노트북(`colab_t4_remeasure.ipynb`) — 회귀 7종, 1.5B·3B fp16 선택과 첫 토큰 시간(D2), 7B low의 int4와 기본 int8(D3), 7B QLoRA 계획(D1), `memopro run` 7B 정책 적용·1.5B 비개입(D4). 요약에 판정 표 자동 계산, 진행 로그 저장. 새 sdist 필요 | 확정 |
 | [0097](0097-decision-open-source.md) | 2026-09-29 | decision | 사용자 결정: 무료 오픈소스로 배포(`MIT OR Apache-2.0` 유지). SaaS·비공개 유료는 택하지 않음(사용자 기기에서 도는 목적과 충돌, 무료 대체재, 가치 미입증). 오픈 코어는 사용자가 생긴 뒤 새 결정으로만. 게시·공개 시점은 여전히 사용자 확인, CLA·기관 규정 확인 권고 | 확정 |
 | [0098](0098-e022-remeasure-results.md) | 2026-09-29 | experiment | E022 결과: 판정 8/8 pass로 D1~D4 닫음 — T4 fp16 선택으로 2048토큰 첫 토큰 HF fp16의 1.04~1.07배(7차 대비 3.6~5.0배 빨라짐, PPL 동일), 7B low는 int4로 15.8 tok/s(HF bnb4 14.0), QLoRA 계획 완주(손실 차이 ≤1.2e-3, 메모리 −23%, 속도 0.88배), `run` 7B 정책 적용·1.5B 비개입. **새 결함** D8 학습 계획이 이미 올라간 가중치를 예산에서 다시 빼 micro-batch를 과소 선택(D5와 함께 수정 필요), D9 CUDA bnb에 MPS 품질 수치 문구. 관찰: 기본 7B int8은 int4의 1/2.9 속도 | 확정 |
+| [0099](0099-e022-fixes-d8-d5-d9-o1.md) | 2026-09-29 | implementation | 사용자 결정 D8+D5, D9, O1: 이미 메모리에 있는 모델·옵티마이저 상태를 측정값에 다시 더한 뒤 예산 설정 적용(크기 상한은 모델 포함 총량, `train_session`·`check`·`optimize`), CUDA 가용량에 torch 캐시 여유 포함, 계획에 할당기 여유 1.25배와 고른 분할(재시도 포함), int4 품질 문구 백엔드별(bnb +7.6~8.4%, int4pack +5.7~7.6%), 기본 품질이 bnb int8을 고르면 `quality='low'`의 int4 속도 안내(선택은 불변). 시험 270개 통과, CUDA 재측정 전 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

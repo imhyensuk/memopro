@@ -98,7 +98,7 @@ class _LoadingPolicy:
 
     def load(self, klass: Any, name: Any, args: tuple, kwargs: dict[str, Any]) -> Any:
         from memopro.access._load import RESERVED, plan_load
-        from memopro.orchestrator.candidates import from_pretrained_kwargs, post_load
+        from memopro.orchestrator.candidates import from_pretrained_kwargs, post_load, speed_hint
 
         original = self.original.__func__
         explicit = sorted(set(kwargs) & set(RESERVED))
@@ -129,6 +129,8 @@ class _LoadingPolicy:
             report().add("run.from_pretrained", "failed", f"{name}: {type(e).__name__}: {e}"[:200])
             return original(klass, name, **kwargs)
         self.decisions.append(f"{name}: {chosen.describe()}")
+        if hint := speed_hint(chosen, plan.candidates, plan.ctx):
+            report().add("run.from_pretrained", "suggested", f"{name}: {hint}")
         report().add(
             "run.from_pretrained",
             "applied",

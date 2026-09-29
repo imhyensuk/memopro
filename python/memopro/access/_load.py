@@ -24,6 +24,7 @@ from memopro.orchestrator.candidates import (
     infer_candidates,
     post_load,
     quality_note,
+    speed_hint,
 )
 from memopro.report import report
 from memopro.techniques.integrations.loading import LoadContext
@@ -210,13 +211,15 @@ def load(
                 f"({cfg.quality.name.lower()}), estimated {format_size(need)}, weights "
                 f"{format_size(_footprint(model))} on {ctx.device}"
             )
-            if note := quality_note(cfg):
+            if note := quality_note(cfg, ctx):
                 detail += f"; {note}"
             if cfg is fallback:
                 detail += "; " + _fallback_note(plan, cfg)
                 import warnings
 
                 warnings.warn(f"memopro.load: {detail}", UserWarning, stacklevel=2)
+            if hint := speed_hint(cfg, candidates, ctx):  # before "applied": the load is last
+                rep.add("load", "suggested", hint)
             rep.add(f"load.{cfg.name}", "applied", detail)
             if tokenizer:
                 from transformers import AutoTokenizer
@@ -273,7 +276,7 @@ def _load_file_backed(
         f"{info.source}: {cfg.describe()}{f' via {backend}' if backend else ''} "
         f"({cfg.quality.name.lower()}), estimated {format_size(need)} on {ctx.device}; {line}"
     )
-    if note := quality_note(cfg):
+    if note := quality_note(cfg, ctx):
         detail += f"; {note}"
     if cfg is fallback:
         detail += "; " + _fallback_note(plan, cfg)
