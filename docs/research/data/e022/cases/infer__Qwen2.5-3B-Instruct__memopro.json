@@ -1,0 +1,338 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "--model",
+  "Qwen/Qwen2.5-3B-Instruct",
+  "--variant",
+  "memopro",
+  "--offload-dir",
+  "/content/memopro_colab/offload",
+  "--prompt-lens",
+  "512,2048",
+  "--new-tokens",
+  "128",
+  "--ppl-windows",
+  "8",
+  "--ppl-seq",
+  "1024"
+ ],
+ "model": "Qwen/Qwen2.5-3B-Instruct",
+ "variant": "memopro",
+ "check_infer": {
+  "source": "/content/models/Qwen--Qwen2.5-3B-Instruct",
+  "n_params": 3085938688,
+  "stored_bytes": 6171877376,
+  "stored_dtype": "bfloat16",
+  "device": "cuda",
+  "device_budget": 13974405120,
+  "host_budget": 9925093785,
+  "batch_size": 1,
+  "seq_len": 2048,
+  "inference": {
+   "peak": 6906945536,
+   "runtime": 735068160,
+   "chosen": {
+    "name": "half",
+    "techniques": [
+     "dtype.half"
+    ],
+    "quality": "near_lossless",
+    "peak": 6906945536
+   },
+   "candidates": [
+    {
+     "name": "half",
+     "usable": true,
+     "why": "",
+     "bytes": 6864562585
+    },
+    {
+     "name": "quant.int4",
+     "usable": false,
+     "why": "quality 'balanced' does not allow moderate_loss (quant.int4)",
+     "bytes": 2876172697
+    },
+    {
+     "name": "stored",
+     "usable": true,
+     "why": "",
+     "bytes": 6864562585
+    },
+    {
+     "name": "quant.int8",
+     "usable": true,
+     "why": "",
+     "bytes": 4094159257
+    },
+    {
+     "name": "offload.cpu",
+     "usable": true,
+     "why": "",
+     "bytes": 6864562585
+    },
+    {
+     "name": "offload.disk",
+     "usable": false,
+     "why": "writes weights to SSD, and disk_writes is 'ask' (not 'allow')",
+     "bytes": 6864562585
+    }
+   ]
+  },
+  "training": {},
+  "notes": []
+ },
+ "plan": [
+  {
+   "name": "half",
+   "device": 6864562585,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "quant.int4",
+   "device": 2876172697,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "stored",
+   "device": 6864562585,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "quant.int8",
+   "device": 4094159257,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "offload.cpu",
+   "device": 6864562585,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "offload.disk",
+   "device": 6864562585,
+   "host": 0,
+   "disk": 0
+  }
+ ],
+ "memopro_choice": "load.half",
+ "memopro_detail": "/content/models/Qwen--Qwen2.5-3B-Instruct: dtype.half (near_lossless), estimated 6.39 GiB, weights 5.75 GiB on cuda; fp16 instead of the stored bf16: this GPU has no bf16 hardware, where bf16 prompts took 3.7-5.4x longer (T4, E021/0093); values beyond fp16's range would overflow (quality='lossless' keeps bf16)",
+ "load_s": 24.2,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 6998183936,
+  "allocated_bytes": 6171879936,
+  "reserved_bytes": 6247415808,
+  "peak_allocated_bytes": 6171879936,
+  "peak_reserved_bytes": 6247415808,
+  "device_used_bytes": 6384648192,
+  "peak_device_used_bytes": 6384648192
+ },
+ "weights_by_device_bytes": {
+  "cuda": 6171877888
+ },
+ "ttft_s": {
+  "512": 0.242,
+  "2048": 1.301
+ },
+ "decode_tok_s": 18.758106951682212,
+ "decode_total_s": 6.84,
+ "generated_new": 128,
+ "ppl": 11.169298931140773,
+ "ppl_tokens": 8184,
+ "answers": [
+  {
+   "ids": [
+    32,
+    22670,
+    646,
+    1598,
+    700,
+    315,
+    4938,
+    2337,
+    4862,
+    15503,
+    1576,
+    279,
+    1614,
+    1660,
+    16176,
+    7460,
+    5089,
+    14713,
+    315,
+    821,
+    323,
+    54480,
+    4963,
+    13,
+    1634,
+    279,
+    4862,
+    67611,
+    11,
+    279,
+    22670,
+    3880,
+    311,
+    3331,
+    8630,
+    28439,
+    3059,
+    1741,
+    438,
+    92495,
+    323,
+    52149,
+    11,
+    892,
+    646,
+    6157,
+    24057,
+    2500
+   ],
+   "text": "A GPU can run out of memory during training primarily because the model being trained requires significant amounts of data and computational resources. As the training progresses, the GPU needs to hold onto intermediate results such as activations and gradients, which can quickly consume available"
+  },
+  {
+   "ids": [
+    95456,
+    0,
+    21193,
+    374,
+    264,
+    4285,
+    13027,
+    729,
+    311,
+    470,
+    279,
+    308,
+    7563,
+    79683,
+    1372,
+    1667,
+    458,
+    86875,
+    5486,
+    1447,
+    73594,
+    12669,
+    198,
+    750,
+    75698,
+    1445,
+    982,
+    262,
+    421,
+    308,
+    2651,
+    220,
+    15,
+    510,
+    286,
+    470,
+    330,
+    2505,
+    1265,
+    387,
+    264,
+    6785,
+    7546,
+    10040,
+    262,
+    4409,
+    308,
+    621
+   ],
+   "text": "Certainly! Below is a simple Python function to return the n-th Fibonacci number using an iterative approach:\n\n```python\ndef fibonacci(n):\n    if n <= 0:\n        return \"Input should be a positive integer.\"\n    elif n =="
+  },
+  {
+   "ids": [
+    19,
+    15257,
+    10272,
+    2022,
+    374,
+    264,
+    14762,
+    1483,
+    311,
+    7949,
+    279,
+    16052,
+    315,
+    1614,
+    14324,
+    323,
+    92495,
+    304,
+    29728,
+    14155,
+    11,
+    892,
+    646,
+    11941,
+    7949,
+    279,
+    4938,
+    42872,
+    323,
+    54480,
+    2783,
+    315,
+    4862,
+    323,
+    44378,
+    13,
+    4354,
+    11,
+    432,
+    1083,
+    38919,
+    6559,
+    63939,
+    429,
+    1184,
+    311,
+    387,
+    6509
+   ],
+   "text": "4-bit quantization is a technique used to reduce the precision of model weights and activations in neural networks, which can significantly reduce the memory footprint and computational cost of training and inference. However, it also introduces trade-offs that need to be considered"
+  }
+ ],
+ "memory": {
+  "host_peak_rss_bytes": 6998183936,
+  "allocated_bytes": 6181460992,
+  "reserved_bytes": 8575254528,
+  "peak_allocated_bytes": 7780284928,
+  "peak_reserved_bytes": 8575254528,
+  "device_used_bytes": 8725069824,
+  "peak_device_used_bytes": 8725069824
+ },
+ "worker_s": 65.6,
+ "memory_end": {
+  "host_peak_rss_bytes": 6998183936,
+  "allocated_bytes": 9569792,
+  "reserved_bytes": 6174015488,
+  "peak_allocated_bytes": 7780284928,
+  "peak_reserved_bytes": 8575254528,
+  "device_used_bytes": 6323830784,
+  "peak_device_used_bytes": 8725069824
+ },
+ "memopro_report": [
+  {
+   "technique": "load.half",
+   "action": "applied",
+   "detail": "/content/models/Qwen--Qwen2.5-3B-Instruct: dtype.half (near_lossless), estimated 6.39 GiB, weights 5.75 GiB on cuda; fp16 instead of the stored bf16: this GPU has no bf16 hardware, where bf16 prompts took 3.7-5.4x longer (T4, E021/0093); values beyond fp16's range would overflow (quality='lossless' keeps bf16)"
+  }
+ ],
+ "case": "infer__Qwen2.5-3B-Instruct__memopro",
+ "wall_s": 70.1,
+ "timeline_peak_gpu_used_bytes": 8725200896,
+ "timeline_peak_host_used_bytes": 3868606464
+}

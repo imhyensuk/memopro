@@ -1,0 +1,338 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "--model",
+  "Qwen/Qwen2.5-7B-Instruct",
+  "--variant",
+  "memopro",
+  "--offload-dir",
+  "/content/memopro_colab/offload",
+  "--prompt-lens",
+  "512,2048",
+  "--new-tokens",
+  "128",
+  "--ppl-windows",
+  "8",
+  "--ppl-seq",
+  "1024"
+ ],
+ "model": "Qwen/Qwen2.5-7B-Instruct",
+ "variant": "memopro",
+ "check_infer": {
+  "source": "/content/models/Qwen--Qwen2.5-7B-Instruct",
+  "n_params": 7615616512,
+  "stored_bytes": 15231233024,
+  "stored_dtype": "bfloat16",
+  "device": "cuda",
+  "device_budget": 13974405120,
+  "host_budget": 9903414067,
+  "batch_size": 1,
+  "seq_len": 2048,
+  "inference": {
+   "peak": 16490589184,
+   "runtime": 1259356160,
+   "chosen": {
+    "name": "quant.int8",
+    "techniques": [
+     "quant.int8"
+    ],
+    "quality": "small_loss",
+    "peak": 9970863104
+   },
+   "candidates": [
+    {
+     "name": "half",
+     "usable": false,
+     "why": "needs 15.71 GiB on the device, budget 13.01 GiB",
+     "bytes": 16871796838
+    },
+    {
+     "name": "quant.int4",
+     "usable": false,
+     "why": "quality 'balanced' does not allow moderate_loss (quant.int4)",
+     "bytes": 7491694694
+    },
+    {
+     "name": "stored",
+     "usable": false,
+     "why": "needs 15.71 GiB on the device, budget 13.01 GiB",
+     "bytes": 16871796838
+    },
+    {
+     "name": "quant.int8",
+     "usable": true,
+     "why": "",
+     "bytes": 10352070758
+    },
+    {
+     "name": "offload.cpu",
+     "usable": true,
+     "why": "",
+     "bytes": 16871796838
+    },
+    {
+     "name": "offload.disk",
+     "usable": false,
+     "why": "writes weights to SSD, and disk_writes is 'ask' (not 'allow')",
+     "bytes": 16871796838
+    }
+   ]
+  },
+  "training": {},
+  "notes": []
+ },
+ "plan": [
+  {
+   "name": "half",
+   "device": 16871796838,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "quant.int4",
+   "device": 7491694694,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "stored",
+   "device": 16871796838,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "quant.int8",
+   "device": 10352070758,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "offload.cpu",
+   "device": 13947981004,
+   "host": 2923815834,
+   "disk": 0
+  },
+  {
+   "name": "offload.disk",
+   "device": 13947981004,
+   "host": 2923815834,
+   "disk": 0
+  }
+ ],
+ "memopro_choice": "load.quant.int8",
+ "memopro_detail": "/content/models/Qwen--Qwen2.5-7B-Instruct: quant.int8 via bitsandbytes (small_loss), estimated 9.64 GiB, weights 8.11 GiB on cuda",
+ "load_s": 76.1,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 6789496832,
+  "allocated_bytes": 8711509504,
+  "reserved_bytes": 9057599488,
+  "peak_allocated_bytes": 8953673216,
+  "peak_reserved_bytes": 9057599488,
+  "device_used_bytes": 9194831872,
+  "peak_device_used_bytes": 9194831872
+ },
+ "weights_by_device_bytes": {
+  "cuda": 8705945088
+ },
+ "ttft_s": {
+  "512": 0.503,
+  "2048": 2.448
+ },
+ "decode_tok_s": 5.51097020395758,
+ "decode_total_s": 23.29,
+ "generated_new": 128,
+ "ppl": 8.472696040094302,
+ "ppl_tokens": 8184,
+ "answers": [
+  {
+   "ids": [
+    32,
+    22670,
+    646,
+    1598,
+    700,
+    315,
+    4938,
+    2337,
+    4862,
+    421,
+    279,
+    7162,
+    1379,
+    374,
+    2238,
+    3460,
+    369,
+    279,
+    22670,
+    594,
+    19168,
+    1402,
+    8654,
+    11,
+    24913,
+    279,
+    4862,
+    1882,
+    311,
+    12488,
+    2500,
+    4938,
+    13,
+    22406,
+    11,
+    6351,
+    4119,
+    448,
+    1657,
+    5029,
+    476,
+    1550,
+    62936,
+    821,
+    646,
+    1373,
+    803,
+    4938
+   ],
+   "text": "A GPU can run out of memory during training if the batch size is too large for the GPU's VRAM capacity, forcing the training process to exceed available memory. Additionally, complex models with many parameters or high-resolution data can require more memory"
+  },
+  {
+   "ids": [
+    95456,
+    0,
+    21193,
+    374,
+    264,
+    13027,
+    729,
+    429,
+    47417,
+    323,
+    4675,
+    279,
+    308,
+    7563,
+    79683,
+    1372,
+    1667,
+    458,
+    86875,
+    5486,
+    1447,
+    73594,
+    12669,
+    198,
+    750,
+    75698,
+    1445,
+    982,
+    262,
+    421,
+    308,
+    2651,
+    220,
+    15,
+    510,
+    286,
+    470,
+    330,
+    2505,
+    1265,
+    387,
+    264,
+    6785,
+    7546,
+    10040,
+    262,
+    4409,
+    308
+   ],
+   "text": "Certainly! Below is a Python function that calculates and returns the n-th Fibonacci number using an iterative approach:\n\n```python\ndef fibonacci(n):\n    if n <= 0:\n        return \"Input should be a positive integer.\"\n    elif n"
+  },
+  {
+   "ids": [
+    19,
+    15257,
+    10272,
+    2022,
+    374,
+    264,
+    14762,
+    1483,
+    311,
+    7949,
+    279,
+    16052,
+    315,
+    14324,
+    304,
+    29728,
+    14155,
+    11,
+    2670,
+    3460,
+    4128,
+    4119,
+    320,
+    4086,
+    21634,
+    701,
+    311,
+    3581,
+    4938,
+    323,
+    4628,
+    705,
+    44378,
+    13,
+    4354,
+    11,
+    1075,
+    894,
+    25262,
+    14762,
+    11,
+    432,
+    4041,
+    448,
+    6559,
+    63939,
+    13,
+    5692
+   ],
+   "text": "4-bit quantization is a technique used to reduce the precision of weights in neural networks, including large language models (LLMs), to save memory and speed up inference. However, like any optimization technique, it comes with trade-offs. Here"
+  }
+ ],
+ "memory": {
+  "host_peak_rss_bytes": 6789496832,
+  "allocated_bytes": 8721163264,
+  "reserved_bytes": 11863588864,
+  "peak_allocated_bytes": 10344975360,
+  "peak_reserved_bytes": 11863588864,
+  "device_used_bytes": 12013404160,
+  "peak_device_used_bytes": 12013404160
+ },
+ "worker_s": 156.6,
+ "memory_end": {
+  "host_peak_rss_bytes": 6789496832,
+  "allocated_bytes": 9569792,
+  "reserved_bytes": 8709472256,
+  "peak_allocated_bytes": 10344975360,
+  "peak_reserved_bytes": 11863588864,
+  "device_used_bytes": 8859287552,
+  "peak_device_used_bytes": 12013404160
+ },
+ "memopro_report": [
+  {
+   "technique": "load.quant.int8",
+   "action": "applied",
+   "detail": "/content/models/Qwen--Qwen2.5-7B-Instruct: quant.int8 via bitsandbytes (small_loss), estimated 9.64 GiB, weights 8.11 GiB on cuda"
+  }
+ ],
+ "case": "infer__Qwen2.5-7B-Instruct__memopro",
+ "wall_s": 160.2,
+ "timeline_peak_gpu_used_bytes": 12013535232,
+ "timeline_peak_host_used_bytes": 4143087616
+}
