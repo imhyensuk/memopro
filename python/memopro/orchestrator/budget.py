@@ -131,18 +131,20 @@ def compute_budget(
     from memopro._units import format_size
 
     usable = measured_host(env.host, config.budget_basis)
-    host = _after_headroom(usable, config.headroom) + resident_host
+    # basis "total" starts from all memory, which already contains what the caller holds
+    held_host = 0 if config.budget_basis == "total" else resident_host
+    host = _after_headroom(usable, config.headroom) + held_host
 
     device = None
     device_name = None
     unified = False
     primary = next((d for d in env.devices if d.kind in _BUDGETED_KINDS), None)
     if primary is not None and primary.available_bytes is not None:
-        free = primary.available_bytes
-        if primary.unified:
-            free = min(free, usable)
+        device = _after_headroom(primary.available_bytes, config.headroom) + resident_device
+        if primary.unified:  # the device limit and host memory both bound it (K5)
+            in_host = 0 if config.budget_basis == "total" else resident_device
+            device = min(device, _after_headroom(usable, config.headroom) + in_host)
             unified = True
-        device = _after_headroom(free, config.headroom) + resident_device
         device_name = primary.name
 
     floor = int(env.disk.total_bytes * config.min_free_disk_fraction)

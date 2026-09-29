@@ -3,6 +3,7 @@
 from __future__ import annotations
 
 import dataclasses
+from collections.abc import Iterator
 from typing import Any
 
 from memopro.config import Config, _validate, get_config, spill_location
@@ -48,14 +49,11 @@ def setup(*, device: str | None = None, holding: tuple[Any, ...] = (), **options
     env = detect(config=cfg)
     kinds = [d.kind for d in env.devices]
     budgeted = next((k for k in kinds if k in ("cuda", "mps")), None)
-    budget = compute_budget(
-        env,
-        cfg,
-        resident_device=resident_bytes(budgeted, *holding) if budgeted else 0,
-        resident_host=resident_bytes("cpu", *holding),
-    )
+    held_device = resident_bytes(budgeted, *holding) if budgeted else 0
+    held_host = resident_bytes("cpu", *holding)
+    budget = compute_budget(env, cfg, resident_device=held_device, resident_host=held_host)
     _require_minimums(budget, cfg)
-    budget = _under_pressure(budget)
+    budget = _under_pressure(budget, held_device, held_host)
     if device == "cpu":
         kinds = []
     elif device is not None and device not in kinds:
@@ -75,26 +73,49 @@ def setup(*, device: str | None = None, holding: tuple[Any, ...] = (), **options
 
 def resident_bytes(kind: str, *holding: Any) -> int:
     """Bytes of the parameters, buffers and optimizer state of ``holding`` (modules and
-    optimizers) that live on device type ``kind`` ("cuda", "mps" or "cpu"), each tensor once."""
+    optimizers) on device type ``kind`` ("cuda" means the first GPU, the one budgets are for;
+    "mps" or "cpu"), each memory block once. Quantized weights count their scales too
+    (bitsandbytes ``quant_state``, int8 ``SCB``)."""
     seen: set[int] = set()
     total = 0
 
     def add(t: Any) -> None:
         nonlocal total
-        if hasattr(t, "untyped_storage") and t.device.type == kind and id(t) not in seen:
-            seen.add(id(t))
+        if not hasattr(t, "untyped_storage") or t.device.type != kind:
+            return
+        if kind == "cuda" and t.device.index not in (None, 0):
+            return
+        ptr = t.data_ptr()
+        if ptr and ptr not in seen:  # tied weights, and int8 CB sharing the weight's memory
+            seen.add(ptr)
             total += t.numel() * t.element_size()
 
     for obj in holding:
         if hasattr(obj, "parameters"):
             for t in obj.parameters():
                 add(t)
+                for extra in _quantization_tensors(t):
+                    add(extra)
             for t in obj.buffers():
                 add(t)
-        for state in getattr(obj, "state", {}).values() if hasattr(obj, "param_groups") else ():
-            for t in state.values():
-                add(t)
+        if hasattr(obj, "param_groups"):
+            for state in getattr(obj, "state", {}).values():
+                for t in state.values():
+                    add(t)
     return total
+
+
+def _quantization_tensors(param: Any) -> Iterator[Any]:
+    """Tensors a quantized parameter keeps beside its data (bitsandbytes)."""
+    state = getattr(param, "quant_state", None)
+    while state is not None:  # nf4/fp4: absmax, code, offset; double quantization nests a state
+        for name in ("absmax", "code", "offset"):
+            if (t := getattr(state, name, None)) is not None:
+                yield t
+        state = getattr(state, "state2", None)
+    for name in ("SCB", "CB"):  # int8 row scales (CB usually is the weight itself)
+        if (t := getattr(param, name, None)) is not None:
+            yield t
 
 
 def _require_minimums(budget: Budget, cfg: Config) -> None:
@@ -116,9 +137,10 @@ def _require_minimums(budget: Budget, cfg: Config) -> None:
     )
 
 
-def _under_pressure(budget: Budget) -> Budget:
+def _under_pressure(budget: Budget, held_device: int = 0, held_host: int = 0) -> Budget:
     """Shrink the budget while the OS reports memory pressure (γ, 0052 E6); forced pools keep
-    the exact size the user asked for (0059 D1)."""
+    the exact size the user asked for (0059 D1). Only what memopro may still take shrinks: the
+    memory the caller's model already holds is not given back by shrinking (E022 D8)."""
     try:
         from memopro.elastic import budget_factor
     except ImportError:
@@ -126,8 +148,13 @@ def _under_pressure(budget: Budget) -> Budget:
     factor = budget_factor()
     if factor >= 1.0:
         return budget
-    host = budget.host if "host" in budget.forced else int(budget.host * factor)
+
+    def shrink(value: int, held: int) -> int:
+        held = min(held, value)
+        return held + int((value - held) * factor)
+
+    host = budget.host if "host" in budget.forced else shrink(budget.host, held_host)
     device = budget.device
     if device is not None and "device" not in budget.forced:
-        device = int(device * factor)
+        device = shrink(device, held_device)
     return dataclasses.replace(budget, host=host, device=device)

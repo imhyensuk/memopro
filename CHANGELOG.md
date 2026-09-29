@@ -4,6 +4,17 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Fixed: review of the budget change (0100)
+- Memory a model already holds is not added to the budget a second time when it is already in
+  the measurement: `budget_basis="total"` (host) and the host bound of unified memory.
+- Under memory pressure (γ) only the part of a budget the model does not hold yet shrinks.
+- Held memory includes bitsandbytes scales (`quant_state`, int8 `SCB`), counts memory shared by
+  two tensors once, and on CUDA only the first GPU (the one budgets are for).
+- `train_session` no longer plans with the host budget when the device budget is 0, and counts
+  the optimizer state still to come for SGD with momentum, RMSprop, Lion, Muon and unknown
+  optimizers (like Adam), not only for Adam.
+- `memopro run` names its own option in the int4 hint (`--quality low`).
+
 ### Fixed: findings of the Colab re-measurement (0098, 0099)
 - Budgets for a model you already have (`train_session`, `check` on a module, `optimize`) count
   that model once: its memory was already missing from the free memory measured, and planning
