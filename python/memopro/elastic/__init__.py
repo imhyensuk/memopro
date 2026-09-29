@@ -2,8 +2,10 @@
 
 **Experimental** (0088): on an 8 GB M1 the macOS pressure level was on in 87% of seconds under
 pressure and never when calm, but the stalls a user feels were rare (5 of 870 s), so acting on
-"warning" shrinks budgets far more often than needed. `memopro run` leaves γ off on macOS unless
-``--elastic`` is given; ``enable()`` still works when called explicitly.
+"warning" shrinks budgets far more often than needed. On Linux (Colab T4, 0093) the I/O of loading
+a 7B model raised PSI full above 1% ("warning"), halving budgets so `memopro run` stood aside.
+`memopro run` leaves γ off everywhere unless ``--elastic`` is given; ``enable()`` still works when
+called explicitly.
 
 A background thread reads the OS signal (``memopro._core.pressure_current``: macOS memory
 pressure level, Linux PSI) and only records it. Nothing is changed from that thread, because
