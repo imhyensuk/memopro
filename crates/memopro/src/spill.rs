@@ -188,7 +188,7 @@ fn write_at(file: &File, mut buf: &[u8], mut offset: u64) -> std::io::Result<()>
     Ok(())
 }
 
-fn read_region(
+pub(crate) fn read_region(
     file: &File,
     offset: u64,
     dst: &mut [u8],

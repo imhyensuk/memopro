@@ -1,0 +1,286 @@
+"""``memopro.rt``: run work that needs more memory than you have, under a hard budget (0109, 0112).
+
+The runtime holds large buffers as a *recipe* plus a *state*. When a buffer is needed and the
+budget is full, it makes room losslessly (0110: nothing is ever written to disk):
+
+- a buffer registered from a file is **dropped** and **re-read** from the file when needed
+  (verified by digest, read without the page cache so the budget covers all memory used);
+- a buffer made in memory is **compressed** in memory (byte shuffle + zstd).
+
+It picks per buffer the cheapest way back, weighted by how soon the buffer is used again, so a
+buffer in a repeating scan stays while the one just finished goes first. Accounted memory never
+goes over the budget; if it cannot hold what is asked, it raises :class:`memopro.BudgetExceeded`
+instead of swapping.
+
+Example::
+
+    import numpy as np
+    import memopro.rt as rt
+
+    r = rt.Runtime(budget="2GB")
+    blocks = [r.add_file("big.bin", offset=o, nbytes=n, dtype="float32") for o, n in parts]
+    for _ in range(3):                      # repeated passes over more data than fits
+        for b in blocks:
+            with b.view() as x:             # a NumPy array, no copy, read-only
+                total += x.sum(dtype=np.float64)
+    print(r.report())
+
+A view is valid inside its ``with`` block; if you keep the array, the buffer stays pinned (and
+counted) until the array is gone. Buffers from files must not change while registered: a changed
+file makes the re-read fail with :class:`memopro.IntegrityError` rather than return other data.
+"""
+
+from __future__ import annotations
+
+import contextlib
+from collections.abc import Iterator
+from pathlib import Path
+from typing import Any
+
+from memopro._errors import InvalidArgument
+from memopro._units import format_size, parse_size
+
+__all__ = ["Buffer", "Runtime", "resolve_budget"]
+
+# element sizes the codec shuffles by; bfloat16 has no NumPy dtype, it is viewed as uint16
+_BFLOAT16 = "bfloat16"
+
+
+def _np_dtype(dtype: str) -> Any:
+    import numpy as np
+
+    return np.dtype(np.uint16) if dtype == _BFLOAT16 else np.dtype(dtype)
+
+
+def _itemsize(dtype: str) -> int:
+    return 2 if dtype == _BFLOAT16 else _np_dtype(dtype).itemsize
+
+
+def resolve_budget(budget: str | float) -> int:
+    """Bytes for a budget: a size (``"2GB"``, bytes), a fraction of the memory available now
+    (``0.5``), or ``"auto"`` = half of the conservatively available host memory (0035)."""
+    if isinstance(budget, str) and budget.strip().lower() == "auto":
+        return _available() // 2
+    if isinstance(budget, float) and 0.0 < budget <= 1.0:
+        return int(_available() * budget)
+    size = parse_size(budget)
+    if size <= 0:
+        raise InvalidArgument(f"budget must be positive: {budget!r}")
+    return size
+
+
+def _available() -> int:
+    from memopro.env import detect
+
+    return detect(devices=False).host.usable_bytes
+
+
+class Runtime:
+    """A runtime whose buffers never occupy more than ``budget`` bytes.
+
+    ``policy``: ``"reuse"`` (default) gives up the buffer whose next use is farthest per cost of
+    getting it back; ``"lru"`` gives up the least recently used (for comparison).
+    """
+
+    def __init__(
+        self,
+        budget: str | float = "auto",
+        *,
+        compress_level: int = 1,
+        min_saving: float = 0.15,
+        policy: str = "reuse",
+    ) -> None:
+        from memopro import _core
+
+        self.budget = resolve_budget(budget)
+        self._rt = _core.RtRuntime(self.budget, compress_level, min_saving, policy)
+
+    @property
+    def limit(self) -> int:
+        """Bytes buffers may occupy: the budget minus one compression piece of headroom."""
+        return self._rt.limit()
+
+    def add_file(
+        self,
+        path: str | Path,
+        offset: int = 0,
+        nbytes: int | None = None,
+        *,
+        dtype: str = "uint8",
+        shape: tuple[int, ...] | None = None,
+    ) -> Buffer:
+        """Register ``nbytes`` of a file from ``offset`` (to the end if omitted). Nothing is read
+        until the buffer is first used."""
+        path = Path(path)
+        if nbytes is None:
+            nbytes = path.stat().st_size - offset
+        nbytes = _check_shape(nbytes, dtype, shape)
+        bid = self._rt.add_file(path, offset, nbytes, _elem(dtype))
+        return Buffer(self, bid, nbytes, dtype, shape)
+
+    def alloc(
+        self,
+        nbytes: int | None = None,
+        *,
+        dtype: str = "uint8",
+        shape: tuple[int, ...] | None = None,
+    ) -> Buffer:
+        """A new zero-filled buffer in memory (it can only be compressed to make room)."""
+        if nbytes is None:
+            if shape is None:
+                raise InvalidArgument("give nbytes or shape")
+            nbytes = _count(shape) * _itemsize(dtype)
+        nbytes = _check_shape(nbytes, dtype, shape)
+        return Buffer(self, self._rt.alloc(nbytes, _elem(dtype)), nbytes, dtype, shape)
+
+    def array(self, shape: tuple[int, ...], dtype: str = "float32") -> Buffer:
+        """A new zero-filled array buffer (shorthand for ``alloc(shape=..., dtype=...)``)."""
+        return self.alloc(shape=tuple(shape), dtype=dtype)
+
+    def load_npy(self, path: str | Path) -> Buffer:
+        """Register a ``.npy`` file's array (C order) without reading it."""
+        import numpy as np
+        from numpy.lib import format as npy
+
+        path = Path(path)
+        with path.open("rb") as f:
+            version = npy.read_magic(f)
+            if version == (1, 0):
+                shape, fortran, dtype = npy.read_array_header_1_0(f)
+            elif version == (2, 0):
+                shape, fortran, dtype = npy.read_array_header_2_0(f)
+            else:
+                raise InvalidArgument(f"{path}: .npy format version {version} is not supported")
+            offset = f.tell()
+        if fortran and len(shape) > 1:
+            raise InvalidArgument(f"{path}: Fortran-order arrays are not supported")
+        if dtype.hasobject:
+            raise InvalidArgument(f"{path}: object arrays hold Python objects, not numbers")
+        return self.add_file(path, offset, dtype=np.dtype(dtype).str, shape=tuple(shape))
+
+    def stats(self) -> dict[str, Any]:
+        """Counters: bytes read, re-read, dropped, compressed; peak accounted memory; …"""
+        return dict(self._rt.stats())
+
+    def report(self) -> str:
+        s = self.stats()
+        lines = [
+            (
+                f"memopro.rt: budget {format_size(s['budget'])}, peak "
+                f"{format_size(s['peak_used'])}, now {format_size(s['used'])} in "
+                f"{s['buffers']} buffers"
+            ),
+            (
+                f"  read {format_size(s['load_bytes'])} once, re-read "
+                f"{format_size(s['reread_bytes'])} ({s['rereads']} times), "
+                f"{s['read_seconds']:.2f} s reading"
+            ),
+            (
+                f"  compressed {format_size(s['compress_in'])} to "
+                f"{format_size(s['compress_out'])} ({s['compressions']} times), decompressed "
+                f"{s['decompressions']} times"
+            ),
+            (
+                f"  waited {s['restore_seconds']:.2f} s for buffers to come back; written to "
+                f"disk: {format_size(s['written_bytes'])}"
+            ),
+        ]
+        if s["refusals"]:
+            lines.append(f"  refused {s['refusals']} requests the budget could not hold")
+        return "\n".join(lines)
+
+
+class Buffer:
+    """A managed buffer. Use it through :meth:`view` (a NumPy array) or :meth:`pin` (raw)."""
+
+    def __init__(
+        self,
+        runtime: Runtime,
+        bid: int,
+        nbytes: int,
+        dtype: str,
+        shape: tuple[int, ...] | None,
+    ) -> None:
+        self.runtime = runtime
+        self.id = bid
+        self.nbytes = nbytes
+        self.dtype = dtype
+        self.shape = shape
+
+    def __repr__(self) -> str:
+        shape = f", shape={self.shape}" if self.shape is not None else ""
+        return (
+            f"<memopro.rt.Buffer {self.id}: {format_size(self.nbytes)} {self.dtype}{shape}, "
+            f"{self.state}>"
+        )
+
+    @property
+    def state(self) -> str:
+        """``resident``, ``compressed``, ``dropped`` (re-read when needed) or ``unloaded``."""
+        return self.runtime._rt.state(self.id)
+
+    @contextlib.contextmanager
+    def pin(self, write: bool = False) -> Iterator[Any]:
+        """Keep the buffer in memory for the block; yields an object with the buffer protocol.
+        A writable pin needs the buffer unpinned and makes a file buffer a memory buffer."""
+        pin = self.runtime._rt.pin(self.id, write)
+        try:
+            yield pin
+        finally:
+            pin.release()
+
+    @contextlib.contextmanager
+    def view(self, write: bool = False) -> Iterator[Any]:
+        """The buffer as a NumPy array (no copy) for the block. Read-only unless ``write``.
+
+        The buffer stays pinned while the array (or any view of it) is alive, also after the
+        block: ``with b.view() as x:`` keeps ``x`` bound afterwards, so ``del x`` or use
+        :meth:`apply` to let the runtime move the buffer again at once."""
+        import numpy as np
+
+        pin = self.runtime._rt.pin(self.id, write)
+        arr = None
+        try:
+            arr = np.frombuffer(pin, dtype=_np_dtype(self.dtype))
+            if self.shape is not None:
+                arr = arr.reshape(self.shape)
+            yield arr
+        finally:
+            del arr
+            pin.release()
+
+    def apply(self, fn: Any, write: bool = False) -> Any:
+        """``fn(array)`` on the buffer's NumPy view; the buffer is unpinned when it returns
+        (unless ``fn`` kept the array)."""
+        with self.view(write) as arr:
+            return fn(arr)
+
+    def evict(self) -> bool:
+        """Give up the memory now if that loses nothing (drop or compress); False if pinned or
+        not possible."""
+        return self.runtime._rt.evict(self.id)
+
+    def free(self) -> None:
+        """Forget the buffer and its memory."""
+        self.runtime._rt.free(self.id)
+
+
+def _elem(dtype: str) -> int:
+    size = _itemsize(dtype)
+    return size if size in (1, 2, 4, 8, 16) else 1
+
+
+def _count(shape: tuple[int, ...]) -> int:
+    n = 1
+    for d in shape:
+        n *= int(d)
+    return n
+
+
+def _check_shape(nbytes: int, dtype: str, shape: tuple[int, ...] | None) -> int:
+    size = _itemsize(dtype)
+    if nbytes <= 0 or nbytes % size:
+        raise InvalidArgument(f"{nbytes} bytes do not hold whole {dtype} elements")
+    if shape is not None and _count(shape) * size != nbytes:
+        raise InvalidArgument(f"shape {shape} of {dtype} is not {nbytes} bytes")
+    return nbytes
