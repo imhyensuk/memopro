@@ -1,0 +1,9 @@
+check,criterion,result,detail
+R1,regression checks all pass,pass,7/7; failed: none
+D9,CUDA int4 load reports the bitsandbytes quality note,pass,"chosen load.quant.int4, note in report: True"
+T1,"GPT-2 batch 16: even micro-batch, no retry, loss within 1e-5 of HF ckpt",pass,"micro 8 of 16, retries 0; loss diff 1.7e-07, params 1.4e-09; 3491 tok/s (E021: 3632, micro 15)"
+T2,"GPT-2 at a 30% cap: finishes with no out-of-memory retry, loss within 1e-5",pass,"status ok, micro 2, retries 0; loss diff 5.2e-06; 3468 tok/s (E021: micro 3 -> OOM -> 2, 3558)"
+T3,"0.5B batch 8: micro >= 2, no retry, loss within 1e-5 of fixed micro 1",pass,"micro 2, retries 0; loss diff 1.0e-06, params 6.0e-09; 960 vs 881 tok/s (1.09x; E021: 889 at micro 1)"
+T4,"7B QLoRA batch 4: micro >= 2, no retry, speed >= 0.95 x standard, loss within 5e-3",pass,"micro 4, retries 0; 227 vs 227 tok/s (1.00x; E022: 194 vs 221 at micro 1); loss diff 1.3e-03"
+O1 load,"7B default: still int8, report names quality='low' -> int4 (2.9x)",pass,chose load.quant.int8; 5.2 tok/s; hint: quality='low' would load int4 (bitsandbytes nf4) instead: Qwen2.5-7B decoded 2.9x faster o
+O1 run,"`memopro run` 7B: policy applied, report names `--quality low`",pass,APP loaded in 84.5s on cuda:0 | APP generated in 7.0s: GPUs run out of memory when the amount of data they need to process exceeds the capacity of their VRAM (v

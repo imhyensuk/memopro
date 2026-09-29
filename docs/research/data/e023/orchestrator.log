@@ -1,0 +1,28 @@
+[07:41:35] {"memopro": "0.1.0a1", "torch": "2.11.0+cu128", "transformers": "5.16.1", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true}}
+[07:41:37] model Qwen/Qwen2.5-0.5B-Instruct on Drive (2s)
+[07:41:56] staged Qwen/Qwen2.5-0.5B-Instruct to local disk (0.9 GiB, 18s)
+[07:41:56] run regress
+[07:42:32]   -> ok (36.7s)
+[07:42:34] model Qwen/Qwen2.5-0.5B on Drive (2s)
+[07:42:50] staged Qwen/Qwen2.5-0.5B to local disk (0.9 GiB, 16s)
+[07:42:50] run Qwen2.5-0.5B__cap0__memopro
+[07:45:29]   -> ok (159.1s)
+[07:45:29] run Qwen2.5-0.5B__cap0__memopro_micro1
+[07:48:15]   -> ok (166.0s)
+[07:48:17] model openai-community/gpt2 on Drive (2s)
+[07:48:31] staged openai-community/gpt2 to local disk (0.5 GiB, 14s)
+[07:48:31] run gpt2__cap0__hf_ckpt
+[07:50:12]   -> ok (100.5s)
+[07:50:12] run gpt2__cap0__memopro
+[07:51:42]   -> ok (90.4s)
+[07:51:42] run gpt2__cap30__memopro
+[07:53:14]   -> ok (92.1s)
+[07:53:16] model Qwen/Qwen2.5-7B-Instruct on Drive (2s)
+[07:58:43] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 327s)
+[07:58:43] run infer__Qwen2.5-7B-Instruct__memopro
+[08:01:33]   -> ok (169.9s)
+[08:03:14]   app__Qwen2.5-7B-Instruct__memopro_run -> ok (101.0s)
+[08:03:14] run Qwen2.5-7B-Instruct__cap0__qlora_hf
+[08:07:54]   -> ok (279.4s)
+[08:07:54] run Qwen2.5-7B-Instruct__cap0__qlora_memopro
+[08:12:31]   -> ok (277.7s)

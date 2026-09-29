@@ -1,0 +1,51 @@
+{
+ "TRAIN": [
+  {
+   "model": "Qwen/Qwen2.5-0.5B",
+   "batch": 8,
+   "seq": 512,
+   "steps": 30,
+   "cases": [
+    [
+     0.0,
+     "memopro"
+    ],
+    [
+     0.0,
+     "memopro_micro1"
+    ]
+   ]
+  },
+  {
+   "model": "openai-community/gpt2",
+   "batch": 16,
+   "seq": 512,
+   "steps": 30,
+   "cases": [
+    [
+     0.0,
+     "hf_ckpt"
+    ],
+    [
+     0.0,
+     "memopro"
+    ],
+    [
+     0.3,
+     "memopro"
+    ]
+   ]
+  }
+ ],
+ "BIG_MODEL": "Qwen/Qwen2.5-7B-Instruct",
+ "QLORA": {
+  "batch": 4,
+  "seq": 512,
+  "steps": 20
+ },
+ "SMALL_MODEL": "Qwen/Qwen2.5-0.5B-Instruct",
+ "PROMPT_LENS": "512,2048",
+ "NEW_TOKENS": 128,
+ "PPL_WINDOWS": 8,
+ "PPL_SEQ": 1024
+}

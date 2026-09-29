@@ -128,6 +128,7 @@
 | [0099](0099-e022-fixes-d8-d5-d9-o1.md) | 2026-09-29 | implementation | 사용자 결정 D8+D5, D9, O1: 이미 메모리에 있는 모델·옵티마이저 상태를 측정값에 다시 더한 뒤 예산 설정 적용(크기 상한은 모델 포함 총량, `train_session`·`check`·`optimize`), CUDA 가용량에 torch 캐시 여유 포함, 계획에 할당기 여유 1.25배와 고른 분할(재시도 포함), int4 품질 문구 백엔드별(bnb +7.6~8.4%, int4pack +5.7~7.6%), 기본 품질이 bnb int8을 고르면 `quality='low'`의 int4 속도 안내(선택은 불변). 시험 270개 통과, CUDA 재측정 전 | 확정 |
 | [0100](0100-code-review-after-0099.md) | 2026-09-29 | implementation | 재측정 전 정밀 검토: 0099 예산 규칙의 빈틈 보완 — `total` 기준·통합 메모리에서 보유 메모리 이중 계산(B1·B2), γ 축소는 보유분 밖만(B3), bnb 양자화 보조 텐서 포함·같은 메모리 한 번(B4), 첫 GPU만(B5), 장치 예산 0을 호스트로 대체하던 `or`(B6), 옵티마이저별 앞으로 생길 상태(B7), `run` 안내는 `--quality low`. 노트북: 같은 모델 한 번만 복사, 끊긴 복사 방지, 빌드 확인 후 중단. 시험 277개 통과 | 확정 |
 | [0101](0101-e023-remeasure2-preregistration.md) | 2026-09-29 | experiment (사전 등록) + tool | E023: 통합 셀 노트북 `colab_t4_remeasure2.ipynb` — 회귀+D9, GPT-2 고른 분할·정확(T1), 30% 상한 OOM 재시도 없음(T2), 0.5B micro ≥ 2·정확(T3), 7B QLoRA micro ≥ 2·표준의 0.95배 이상(T4), 7B 기본 int8 유지와 int4 안내(O1). 약 45~60분, 새 sdist 필요 | 확정 |
+| [0102](0102-e023-remeasure2-results.md) | 2026-09-29 | experiment | E023 결과: 판정 8/8 pass, 예측한 계획 크기와 모두 일치 — GPT-2 8+8(HF ckpt 대비 손실 1.7e-7, 1.15배 빠름), 30% 상한 OOM 재시도 없이 2, 0.5B micro 2로 1.09배, 7B QLoRA micro 4로 표준 방식과 같은 227 tok/s(E022 대비 1.17배), int4 안내·bnb 품질 문구 확인, 보유 메모리 7.63GiB = torch 할당 7.64GiB. **관찰**: 예약 기준 활성값 배수 1.27~1.29로 여유 계수 1.25가 빠듯(F1, 제안 1.3), 시작 때 캐시 1.99GiB 중 1.67GiB가 재사용되지 않아 QLoRA 최대 예약이 예산을 0.15GiB 넘음(F2, 제안: 시작 때 캐시 비우고 실측) | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
