@@ -110,8 +110,7 @@ def scenario_rotate():
             sync()
             turn["ready_s"] = round(time.time() - t, 2)
             t = time.time()
-            model, tok = loaded[i]
-            ids = _answer(model, tok)
+            ids = _answer(*loaded[i])  # no local reference: reload must be able to free it (0093)
             sync()
             turn["answer_s"] = round(time.time() - t, 2)
             if i in first_answer:
@@ -180,7 +179,7 @@ def scenario_regress():
         return {"mps_heap_note": mps_heap_reserve_on(), "malloc_note": macos_malloc_cache_on(),
                 "elastic_default_in_run": default_elastic(),
                 "pass": not mps_heap_reserve_on() and not macos_malloc_cache_on()
-                and default_elastic() is True
+                and default_elastic() is False  # off everywhere since 0094 (E021 D4)
                 and not any("MPS" in n or "MallocLargeCache" in n for n in notes)}
 
     def pressure_signal():
