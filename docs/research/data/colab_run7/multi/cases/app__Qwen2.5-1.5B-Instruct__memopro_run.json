@@ -1,0 +1,16 @@
+{
+ "case": "app__Qwen2.5-1.5B-Instruct__memopro_run",
+ "model": "Qwen/Qwen2.5-1.5B-Instruct",
+ "how": "memopro_run",
+ "exit": 0,
+ "status": "ok",
+ "app_lines": [
+  "APP loaded in 4.6s on cuda:0",
+  "APP generated in 2.2s: GPUs run out of memory due to their limited on-chip VRAM capacity compared to the large amounts of RAM used in CPUs for managing system-wide data and",
+  "APP peak_allocated 3102708736"
+ ],
+ "wall_s": 16.7,
+ "log_tail": "\nLoading weights:   0%|          | 0/338 [00:00<?, ?it/s]\nLoading weights: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 338/338 [00:00<00:00, 3382.74it/s]\nAPP loaded in 4.6s on cuda:0\nAPP generated in 2.2s: GPUs run out of memory due to their limited on-chip VRAM capacity compared to the large amounts of RAM used in CPUs for managing system-wide data and\nAPP peak_allocated 3102708736\nmemopro report:\n  [applied] elastic - memory pressure normal -> warning (PSI some 2.39%, full 2.06% (system))\n  [applied] elastic - watching memory pressure every 1s\n  [reverted] elastic - memory pressure warning -> normal (PSI some 1.07%, full 0.92% (system))\n  [applied] run.from_pretrained - loading policy installed (P4 exception)\n  [skipped] run.from_pretrained - /content/models/Qwen--Qwen2.5-1.5B-Instruct: fits as stored; loaded as written\n",
+ "timeline_peak_gpu_used_bytes": 3457155072,
+ "timeline_peak_host_used_bytes": 3466752000
+}

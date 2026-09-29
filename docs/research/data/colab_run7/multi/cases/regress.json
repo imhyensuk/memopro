@@ -1,0 +1,147 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "--scenario",
+  "regress",
+  "--small-model",
+  "/content/models/Qwen--Qwen2.5-0.5B-Instruct"
+ ],
+ "scenario": "regress",
+ "strategy": "reload",
+ "checks": {
+  "int4_group_on_cuda": {
+   "group": 64,
+   "expect": 64,
+   "pass": true
+  },
+  "int4_quality_note": {
+   "chosen": "load.quant.int4",
+   "note_in_report": true,
+   "layers": [
+    "Linear",
+    "Linear4bit"
+   ],
+   "pass": true
+  },
+  "residency_file_refused": {
+   "refused": true,
+   "reason": "mode \"residency='file'\" is not available: file-backed weights need Apple unified memory (MPS); the device is cuda (other modes to try: memory)",
+   "pass": true
+  },
+  "platform_defaults": {
+   "mps_heap_note": false,
+   "malloc_note": false,
+   "elastic_default_in_run": true,
+   "pass": true
+  },
+  "pressure_signal": {
+   "reading": {
+    "level": "normal",
+    "source": "system",
+    "some_avg10": 0.98,
+    "full_avg10": 0.72,
+    "raw_level": null
+   },
+   "pass": true
+  },
+  "hibernate_bit_exact": {
+   "host": {
+    "bit_exact": true,
+    "allocated_while_asleep": 1976852992
+   },
+   "compress": {
+    "bit_exact": true,
+    "allocated_while_asleep": 1976852992
+   },
+   "pass": true
+  },
+  "check_infer_prediction": {
+   "inference": {
+    "peak": 1313648384,
+    "runtime": 325582848,
+    "chosen": {
+     "name": "stored",
+     "techniques": [],
+     "quality": "lossless",
+     "peak": 1313648384
+    },
+    "candidates": [
+     {
+      "name": "stored",
+      "usable": true,
+      "why": "",
+      "bytes": 1112037913
+     },
+     {
+      "name": "quant.int8",
+      "usable": true,
+      "why": "",
+      "bytes": 755427865
+     },
+     {
+      "name": "quant.int4",
+      "usable": false,
+      "why": "quality 'balanced' does not allow moderate_loss (quant.int4)",
+      "bytes": 597662233
+     },
+     {
+      "name": "offload.cpu",
+      "usable": true,
+      "why": "",
+      "bytes": 1112037913
+     },
+     {
+      "name": "offload.disk",
+      "usable": false,
+      "why": "writes weights to SSD, and disk_writes is 'ask' (not 'allow')",
+      "bytes": 1112037913
+     }
+    ]
+   },
+   "pass": true
+  }
+ },
+ "all_pass": true,
+ "worker_s": 29.3,
+ "memory_end": {
+  "host_peak_rss_bytes": 4272652288,
+  "allocated_bytes": 1024,
+  "reserved_bytes": 2099249152,
+  "peak_allocated_bytes": 4090023424,
+  "peak_reserved_bytes": 4332716032,
+  "device_used_bytes": 2236481536,
+  "peak_device_used_bytes": 4469948416
+ },
+ "memopro_report": [
+  {
+   "technique": "load.quant.int4",
+   "action": "applied",
+   "detail": "/content/models/Qwen--Qwen2.5-0.5B-Instruct: quant.int4 via bitsandbytes (moderate_loss), estimated 569.98 MiB, weights 430.42 MiB on cuda; quality cost: int4 raised WikiText-2 perplexity by 5.7-7.6% for Qwen2.5-1.5B/3B with torch int4pack group 32 (E020, 0084); other models and back ends differ"
+  },
+  {
+   "technique": "hibernate",
+   "action": "applied",
+   "detail": "obj: host 1976131328; measured rss added 1977364480, cuda freed 2092957696"
+  },
+  {
+   "technique": "hibernate",
+   "action": "reverted",
+   "detail": "obj woke up"
+  },
+  {
+   "technique": "hibernate",
+   "action": "applied",
+   "detail": "obj: compress 1976131328; measured rss added 911233024, cuda freed 2092957696"
+  },
+  {
+   "technique": "hibernate",
+   "action": "reverted",
+   "detail": "obj woke up"
+  }
+ ],
+ "case": "regress",
+ "wall_s": 39.1,
+ "timeline_peak_gpu_used_bytes": 4470079488,
+ "timeline_peak_host_used_bytes": 5911228416
+}

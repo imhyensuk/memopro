@@ -1,0 +1,10 @@
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 3382.74it/s]
+APP loaded in 4.6s on cuda:0
+APP generated in 2.2s: GPUs run out of memory due to their limited on-chip VRAM capacity compared to the large amounts of RAM used in CPUs for managing system-wide data and
+APP peak_allocated 3102708736
+memopro report:
+  [applied] elastic - memory pressure normal -> warning (PSI some 2.39%, full 2.06% (system))
+  [applied] elastic - watching memory pressure every 1s
+  [reverted] elastic - memory pressure warning -> normal (PSI some 1.07%, full 0.92% (system))
+  [applied] run.from_pretrained - loading policy installed (P4 exception)
+  [skipped] run.from_pretrained - /content/models/Qwen--Qwen2.5-1.5B-Instruct: fits as stored; loaded as written

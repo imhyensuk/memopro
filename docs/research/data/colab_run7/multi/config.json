@@ -1,0 +1,18 @@
+{
+ "ROTATE_MODELS": [
+  "Qwen/Qwen2.5-3B-Instruct",
+  "microsoft/Phi-3.5-mini-instruct",
+  "Qwen/Qwen2.5-1.5B-Instruct"
+ ],
+ "STRATEGIES": [
+  "keep_all",
+  "reload",
+  "hibernate"
+ ],
+ "ROUNDS": 2,
+ "APP_MODELS": [
+  "Qwen/Qwen2.5-1.5B-Instruct",
+  "Qwen/Qwen2.5-7B-Instruct"
+ ],
+ "SMALL_MODEL": "Qwen/Qwen2.5-0.5B-Instruct"
+}

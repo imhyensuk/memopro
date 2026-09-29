@@ -1,0 +1,22 @@
+{
+ "INFER_MODELS": [
+  "Qwen/Qwen2.5-1.5B-Instruct",
+  "Qwen/Qwen2.5-3B-Instruct",
+  "Qwen/Qwen2.5-7B-Instruct",
+  "Qwen/Qwen2.5-14B-Instruct"
+ ],
+ "VARIANTS": [
+  "hf_fp16_auto",
+  "hf_bnb8",
+  "hf_bnb4",
+  "memopro",
+  "memopro_low"
+ ],
+ "SKIP": {
+  "Qwen/Qwen2.5-14B-Instruct|hf_fp16_auto": "fp16 28 GB > GPU 15 GB + host 12.7 GB"
+ },
+ "PROMPT_LENS": "512,2048",
+ "NEW_TOKENS": 128,
+ "PPL_WINDOWS": 8,
+ "PPL_SEQ": 1024
+}

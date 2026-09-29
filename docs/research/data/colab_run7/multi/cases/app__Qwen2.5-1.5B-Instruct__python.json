@@ -1,0 +1,16 @@
+{
+ "case": "app__Qwen2.5-1.5B-Instruct__python",
+ "model": "Qwen/Qwen2.5-1.5B-Instruct",
+ "how": "python",
+ "exit": 0,
+ "status": "ok",
+ "app_lines": [
+  "APP loaded in 11.4s on cuda:0",
+  "APP generated in 2.3s: GPUs run out of memory due to their limited on-chip VRAM capacity compared to the large amounts of RAM used in CPUs for managing system-wide data and",
+  "APP peak_allocated 3102707712"
+ ],
+ "wall_s": 33.4,
+ "log_tail": "\nLoading weights:   0%|          | 0/338 [00:00<?, ?it/s]\nLoading weights:  49%|\u2588\u2588\u2588\u2588\u258a     | 164/338 [00:00<00:00, 1639.58it/s]\nLoading weights:  97%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258b| 328/338 [00:00<00:00, 1398.73it/s]\nLoading weights: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 338/338 [00:00<00:00, 1466.54it/s]\nAPP loaded in 11.4s on cuda:0\nAPP generated in 2.3s: GPUs run out of memory due to their limited on-chip VRAM capacity compared to the large amounts of RAM used in CPUs for managing system-wide data and\nAPP peak_allocated 3102707712\n",
+ "timeline_peak_gpu_used_bytes": 3448766464,
+ "timeline_peak_host_used_bytes": 3368910848
+}
