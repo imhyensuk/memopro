@@ -1,0 +1,8 @@
+{
+ "MODEL": "Qwen/Qwen2.5-7B-Instruct",
+ "QLORA": {
+  "batch": 4,
+  "seq": 512,
+  "steps": 20
+ }
+}

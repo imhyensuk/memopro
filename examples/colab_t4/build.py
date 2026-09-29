@@ -90,6 +90,20 @@ Colab 7차(0093)에서 드러난 결함이 고쳐졌는지 **통합 셀 하나**
 
 결과 요약(`summary.md`) 맨 위에 판정 표(pass/fail)가 나온다.
 """),
+    "qlora": ("colab_t4_qlora.ipynb", "cell_qlora.py", """# memopro Colab T4 재측정 3: 7B QLoRA만 (docs/research/0104, E024)
+
+0103(여유 계수 1.3, 학습 시작 때 CUDA 캐시를 비우고 실측)이 7B QLoRA에서 어떻게 작동하는지 **통합 셀 하나**로 확인한다. 표준 방식(bnb nf4 + 이중 양자화 + peft)과 memopro(`load(quality="low")` + peft + `train_session`)를 같은 데이터·단계로 비교한다. 7B가 Drive `hf_cache/`에 있으면 다시 받지 않는다(약 20~25분).
+
+| 확인 | 기준(0104) |
+|---|---|
+| Q1 | memopro가 OOM 재시도 없이 20단계 완주 |
+| Q2 | memopro의 최대 예약 메모리 ≤ memopro가 잡은 예산(E023: 13.90 > 13.75GiB) |
+| Q3 | 속도 ≥ 표준 방식의 0.9배, 손실 차이 ≤ 5e-3 |
+
+**반드시 새 sdist를 쓴다**: Drive `memopro_colab/install/`의 `memopro-0.1.0a1.tar.gz`를 이번에 받은 파일로 **바꿔 놓는다**. 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한 뒤 실행한다. 빌드에 0103이 없으면 셀이 측정 전에 멈춘다.
+
+결과 요약(`summary.md`)에 판정 표와, 학습 시작 전후의 캐시 상태(memopro가 돌려준 양)가 나온다.
+"""),
 }
 
 

@@ -168,6 +168,7 @@ def environment(install_info):
 
         env["build_has"]["0099_fixes"] = hasattr(C, "speed_hint") and hasattr(T, "even_micro")
         env["build_has"]["0100_fixes"] = hasattr(T, "optimizer_state_to_come")
+        env["build_has"]["0103_fixes"] = hasattr(T, "release_cuda_cache")
     except Exception as e:  # noqa: BLE001
         env["build_has"] = f"unknown: {e}"
     return env
