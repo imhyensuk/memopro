@@ -1,0 +1,10 @@
+{"t": 1790667752.8952334, "case": "regress", "status": "ok", "seconds": 36.7}
+{"t": 1790667929.8721564, "case": "Qwen2.5-0.5B__cap0__memopro", "status": "ok", "seconds": 159.1}
+{"t": 1790668095.87438, "case": "Qwen2.5-0.5B__cap0__memopro_micro1", "status": "ok", "seconds": 166.0}
+{"t": 1790668212.4011006, "case": "gpt2__cap0__hf_ckpt", "status": "ok", "seconds": 100.5}
+{"t": 1790668302.8425865, "case": "gpt2__cap0__memopro", "status": "ok", "seconds": 90.4}
+{"t": 1790668394.9295778, "case": "gpt2__cap30__memopro", "status": "ok", "seconds": 92.1}
+{"t": 1790668893.3916235, "case": "infer__Qwen2.5-7B-Instruct__memopro", "status": "ok", "seconds": 169.9}
+{"t": 1790668994.6306915, "case": "app__Qwen2.5-7B-Instruct__memopro_run", "status": "ok", "seconds": 101.0}
+{"t": 1790669274.0855625, "case": "Qwen2.5-7B-Instruct__cap0__qlora_hf", "status": "ok", "seconds": 279.4}
+{"t": 1790669551.84804, "case": "Qwen2.5-7B-Instruct__cap0__qlora_memopro", "status": "ok", "seconds": 277.7}
