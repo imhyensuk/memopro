@@ -1,4 +1,4 @@
-"""Assemble one Colab notebook per part (0092): examples/colab_t4_{train,infer,multi}.ipynb,
+"""Assemble one Colab notebook per part (0092): examples/colab_t4_<part>.ipynb,
 each a short guide and one self-contained code cell.
 
 The code cell = its settings + common.py + the worker sources (written to disk at run time) +
@@ -70,6 +70,23 @@ Colab 7차(0093)에서 드러난 결함이 고쳐졌는지 **통합 셀 하나**
 | D4 | 수정하지 않은 스크립트를 `memopro run`으로(1.5B·7B) | 7B는 정책 적용(γ 기록 없음), 1.5B는 개입 안 함 |
 
 **반드시 새 sdist를 쓴다**: Drive `memopro_colab/install/`의 `memopro-0.1.0a1.tar.gz`를 이번에 받은 파일로 **바꿔 놓는다**(0094 수정 포함). 셀 첫 출력의 `build_has`에서 `0094_fixes: true`를 확인한다. 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한 뒤 실행한다.
+
+결과 요약(`summary.md`) 맨 위에 판정 표(pass/fail)가 나온다.
+"""),
+    "remeasure2": ("colab_t4_remeasure2.ipynb", "cell_remeasure2.py", """# memopro Colab T4 재측정 2: 0099·0100 수정 확인 (docs/research/0101, E023)
+
+`train_session`이 이제 메모리가 허락하는 만큼 큰 micro-batch를, 고르게, OOM 없이 고르는지와 `load`·`memopro run`이 int4의 속도·품질 교환을 알려 주는지 **통합 셀 하나**로 확인한다. 앞선 실행에서 받은 모델이 Drive `hf_cache/`에 있으면 다시 받지 않고, 7B는 로컬 디스크에 한 번만 복사한다(약 45~60분).
+
+| 확인 | 경우 | 기준(0101) |
+|---|---|---|
+| R1·D9 | 회귀 검사 7종 | 모두 통과, CUDA int4 품질 문구는 bitsandbytes 수치 |
+| T1 | GPT-2 배치 16, 전체 T4 | 고른 분할(7차: 15+1), 재시도 0, HF checkpointing과 손실 차이 ≤ 1e-5 |
+| T2 | GPT-2, 30% 상한 | OOM 재시도 없이 완주(7차: 3 → OOM → 2), 손실 차이 ≤ 1e-5 |
+| T3 | Qwen2.5-0.5B 배치 8, 전체 T4 | micro ≥ 2(7차: 1), 재시도 0, 고정 micro 1과 손실 차이 ≤ 1e-5 |
+| T4 | 7B QLoRA 배치 4 | micro ≥ 2(E022: 1), 재시도 0, 속도 ≥ 표준의 0.95배, 손실 차이 ≤ 5e-3 |
+| O1 | 7B 기본 품질 `load`, `memopro run` | int8 유지, 보고에 `quality='low'`(run은 `--quality low`) → int4 안내 |
+
+**반드시 새 sdist를 쓴다**: Drive `memopro_colab/install/`의 `memopro-0.1.0a1.tar.gz`를 이번에 받은 파일로 **바꿔 놓는다**. 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한 뒤 실행한다. 빌드에 0099·0100 수정이 없으면 셀이 측정 전에 멈추고 이유를 알려 준다(`build_has`의 `0099_fixes`·`0100_fixes`).
 
 결과 요약(`summary.md`) 맨 위에 판정 표(pass/fail)가 나온다.
 """),

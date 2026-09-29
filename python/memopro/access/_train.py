@@ -41,6 +41,7 @@ __all__ = [
     "checkpoint_blocks",
     "even_micro",
     "is_oom",
+    "optimizer_state_to_come",
     "split_batch",
 ]
 
@@ -57,6 +58,36 @@ def even_micro(n: int, most: int) -> int:
     are even (16 samples at most 15 per piece: 8 + 8, not 15 + 1; E021 D5)."""
     pieces = math.ceil(n / max(1, most))
     return math.ceil(n / pieces)
+
+
+def optimizer_state_to_come(optimizer: Any) -> int:
+    """Bytes of optimizer state the first ``step()`` will allocate (0 once it exists).
+
+    Per trainable element: Adam-type 2 moments (+1 with ``amsgrad``) in the parameter's dtype,
+    8-bit optimizers (bitsandbytes) 2 bytes, SGD 1 with momentum, RMSprop 1 (+1 momentum, +1
+    centered), Adagrad, Lion and Muon 1, Adafactor about 0, Adadelta 2; an optimizer not
+    listed is counted like Adam."""
+    if any(len(s) for s in optimizer.state.values()):
+        return 0
+    name = type(optimizer).__name__.lower()
+    total = 0
+    for group in optimizer.param_groups:
+        params = [p for p in group["params"] if getattr(p, "requires_grad", False)]
+        size = sum(p.numel() * p.element_size() for p in params)
+        numel = sum(p.numel() for p in params)
+        if "8bit" in name:
+            total += 2 * numel
+        elif name == "sgd":
+            total += size if group.get("momentum", 0) else 0
+        elif name == "rmsprop":
+            total += size * (1 + bool(group.get("momentum", 0)) + bool(group.get("centered")))
+        elif name in ("adagrad", "lion", "muon"):
+            total += size
+        elif name == "adafactor":  # factored second moments: a row and a column per matrix
+            continue
+        else:  # Adam, AdamW, NAdam, RAdam, Adamax, Adadelta and anything unknown
+            total += size * (3 if group.get("amsgrad") else 2)
+    return total
 
 
 # ---------------------------------------------------------------- batches
@@ -308,7 +339,7 @@ class TrainSession:
             self._undo.pop()()
             self.checkpointing = False
         elif self.micro is not None and self.batch_size and self.micro < self.batch_size:
-            self.micro = min(self.batch_size, self.micro * 2)
+            self.micro = even_micro(self.batch_size, min(self.batch_size, self.micro * 2))
         else:
             return False
         rep.add("train_session", "reverted", f"memory pressure gone: {', '.join(self.active())}")
@@ -385,11 +416,9 @@ class TrainSession:
         trainable = sum(
             p.numel() * p.element_size() for p in self.model.parameters() if p.requires_grad
         )
-        has_state = any(len(s) for s in self.optimizer.state.values())
-        new_state = 0
-        if not has_state and "adam" in type(self.optimizer).__name__.lower():
-            new_state = 2 * trainable  # two moments per trainable parameter, allocated later
-        budget = self._setup.budget.device or self._setup.budget.host
+        new_state = optimizer_state_to_come(self.optimizer)
+        pool = self._setup.budget
+        budget = pool.device if pool.device is not None else pool.host  # 0 is a budget too
         # The budget counts the model and any optimizer state already in memory (`_held`, E022
         # D8); still to come: gradients of trainable parameters and missing optimizer state.
         room = budget - self._held - (trainable + new_state)

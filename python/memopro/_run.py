@@ -129,7 +129,8 @@ class _LoadingPolicy:
             report().add("run.from_pretrained", "failed", f"{name}: {type(e).__name__}: {e}"[:200])
             return original(klass, name, **kwargs)
         self.decisions.append(f"{name}: {chosen.describe()}")
-        if hint := speed_hint(chosen, plan.candidates, plan.ctx):
+        if hint := speed_hint(chosen, plan.candidates, plan.ctx):  # in run: the CLI option
+            hint = hint.replace("quality='low'", "memopro run --quality low")
             report().add("run.from_pretrained", "suggested", f"{name}: {hint}")
         report().add(
             "run.from_pretrained",

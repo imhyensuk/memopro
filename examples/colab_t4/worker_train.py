@@ -65,6 +65,16 @@ def make_opt(params):
     return torch.optim.AdamW(params, lr=A.lr)
 
 
+def cuda_state():
+    """What memopro's budget sees when a session starts (0099: free + cached, model held)."""
+    if DEVICE != "cuda":
+        return None
+    sync()
+    free, total = torch.cuda.mem_get_info()
+    return {"free_bytes": free, "total_bytes": total, "allocated_bytes": torch.cuda.memory_allocated(),
+            "reserved_bytes": torch.cuda.memory_reserved()}
+
+
 def fingerprint(model):
     """Per-parameter L2 norms: equal fingerprints (to ~1e-6) mean equal training results."""
     return [float(q.detach().cpu().double().norm()) for q in model.parameters()
@@ -202,7 +212,7 @@ def scenario_accel():
     RESULT["memory"] = MON.snapshot()
 
 
-def scenario_memopro(quality=None):
+def scenario_memopro(quality=None, micro=None):
     import memopro
 
     apply_cap()
@@ -215,8 +225,11 @@ def scenario_memopro(quality=None):
         kw["budget"] = int(A.cap * total_device())  # memopro would measure a device this size
     if quality:
         kw["quality"] = quality
+    if micro:
+        kw["micro_batch_size"] = micro  # a fixed split: the exact reference for the planned one
     MON.reset()
     trace = []
+    RESULT["session_start"] = cuda_state()
     with memopro.train_session(model, opt, **kw) as s:
         def step(x):
             loss = s.step({"input_ids": x}, lambda mb: model(input_ids=mb["input_ids"],
@@ -267,13 +280,18 @@ def scenario_qlora(use_memopro):
     data = batches()
     MON.reset()
     if use_memopro:
+        RESULT["session_start"] = cuda_state()
+        trace = []
         with memopro.train_session(model, opt) as s:
             def step(x):
-                return s.step({"input_ids": x}, lambda mb: model(input_ids=mb["input_ids"],
+                loss = s.step({"input_ids": x}, lambda mb: model(input_ids=mb["input_ids"],
                                                                  labels=mb["input_ids"]).loss)
+                trace.append({"micro": s.micro, "active": s.active(), "retries": s.retries})
+                return loss
 
             loop(model, step, data)
             RESULT["session"] = {"micro": s.micro, "active": s.active(), "retries": s.retries}
+        RESULT["session_trace"] = trace
     else:
         def step(x):
             loss = model(input_ids=x, labels=x).loss
@@ -303,6 +321,8 @@ def main():
         scenario_memopro()
     elif s == "memopro_lossless":
         scenario_memopro("lossless")
+    elif s == "memopro_micro1":
+        scenario_memopro(micro=1)
     elif s == "qlora_hf":
         scenario_qlora(False)
     elif s == "qlora_memopro":
