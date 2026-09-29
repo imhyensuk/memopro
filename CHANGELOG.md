@@ -4,6 +4,14 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Changed: training plans measure the CUDA cache instead of assuming it (0103)
+- `train_session` returns torch's unused CUDA cache to the driver before it measures the budget
+  (the report says how much), and available CUDA memory counts only whole unused cache
+  segments: free pieces of segments in use were mostly never reused (1.67 of 1.99 GiB after a
+  4-bit load).
+- Micro-batches are planned with 1.3x the measured activations per sample (was 1.25): reserved
+  memory was 1.27-1.29x on a T4.
+
 ### Fixed: review of the budget change (0100)
 - Memory a model already holds is not added to the budget a second time when it is already in
   the measurement: `budget_basis="total"` (host) and the host bound of unified memory.
