@@ -8,6 +8,8 @@
 - disk:   free space above the ``min_free_disk_fraction`` floor (0032 H4). Whether memopro may
           write there at all is a policy question (``disk_writes``), not part of the budget.
 - headroom is a fraction of the measured memory or a size (0059 D4).
+- memory the caller's model already holds in a pool is added back to that pool's measurement
+  (E022 D8), so budgets for a loaded model count the model once, and a cap bounds the total.
 - the ``budget`` setting then applies per pool (0059 D1/D2, `resolve_pool`): a cap, a fraction,
   memory to leave free, a range whose minimum stops memopro when unmet, or an exact forced size.
   Only a forced size and a non-conservative basis can go above what is measured.
@@ -119,11 +121,17 @@ def _after_headroom(measured: int, headroom: float) -> int:
     return int(measured * (1.0 - headroom))
 
 
-def compute_budget(env: Env, config: Config) -> Budget:
+def compute_budget(
+    env: Env, config: Config, *, resident_device: int = 0, resident_host: int = 0
+) -> Budget:
+    """Budgets per pool. ``resident_*`` are bytes of the caller's model (and optimizer state)
+    already in that pool: the free memory was measured with them in it, so they are added back
+    before the setting applies, and a size or fraction then bounds the total, model included
+    (E022 D8)."""
     from memopro._units import format_size
 
     usable = measured_host(env.host, config.budget_basis)
-    host = _after_headroom(usable, config.headroom)
+    host = _after_headroom(usable, config.headroom) + resident_host
 
     device = None
     device_name = None
@@ -134,7 +142,7 @@ def compute_budget(env: Env, config: Config) -> Budget:
         if primary.unified:
             free = min(free, usable)
             unified = True
-        device = _after_headroom(free, config.headroom)
+        device = _after_headroom(free, config.headroom) + resident_device
         device_name = primary.name
 
     floor = int(env.disk.total_bytes * config.min_free_disk_fraction)
