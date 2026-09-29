@@ -168,3 +168,41 @@ def test_run_hint_names_the_cli_option(monkeypatch):
     assert policy.load(object, "m", (), {}) == "model"
     hints = [e.detail for e in memopro.report().entries if e.action == "suggested"]
     assert hints == ["m: memopro run --quality low would load int4"]
+
+
+# ---------------------------------------------------------------- 0103: P-a, P-b
+def test_allocator_margin_covers_the_reserved_ratio_measured_on_a_t4():
+    from memopro.access._train import ALLOCATOR_MARGIN
+
+    assert ALLOCATOR_MARGIN >= 1.29  # E023 F1: reserved 1.27-1.29 x micro x activations
+
+
+def test_only_whole_unused_segments_count_as_releasable(monkeypatch):
+    from memopro.env import _torch
+
+    stats = {
+        "reserved_bytes.all.current": 10 * GiB,
+        "active_bytes.all.current": 7 * GiB,
+        "inactive_split_bytes.all.current": 2 * GiB,  # pieces of segments in use
+    }
+    monkeypatch.setattr(torch.cuda, "memory_stats", lambda index=0: stats)
+    assert _torch.releasable_cache(0) == GiB
+    monkeypatch.setattr(torch.cuda, "memory_stats", lambda index=0: {})
+    assert _torch.releasable_cache(0) == 0  # unknown: count nothing
+
+
+def test_train_session_returns_the_cuda_cache_before_measuring(monkeypatch):
+    from memopro.access import _train
+
+    reserved = iter([9 * GiB, 7 * GiB])
+    calls = []
+    monkeypatch.setattr(torch.cuda, "synchronize", lambda: None)
+    monkeypatch.setattr(torch.cuda, "memory_reserved", lambda: next(reserved))
+    monkeypatch.setattr(torch.cuda, "empty_cache", lambda: calls.append(1))
+    assert _train.release_cuda_cache() == 2 * GiB and calls == [1]
+
+    def broken():
+        raise RuntimeError("no CUDA")
+
+    monkeypatch.setattr(torch.cuda, "synchronize", broken)
+    assert _train.release_cuda_cache() == 0  # fail-open

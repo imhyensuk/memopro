@@ -125,7 +125,9 @@ def test_d8_plan_does_not_subtract_the_loaded_model_twice(monkeypatch):
     s = _plan(monkeypatch, n=4, samples_that_fit=4)
     assert s.micro == 4  # E022 QLoRA: chose 1 because the weights were subtracted again
     entry = [e for e in memopro.report().entries if e.technique == "train_session.plan"][-1]
-    assert "model and optimizer state" in entry.detail and "x1.25" in entry.detail
+    from memopro.access._train import ALLOCATOR_MARGIN
+
+    assert "model and optimizer state" in entry.detail and f"x{ALLOCATOR_MARGIN}" in entry.detail
 
 
 def test_d5_plan_keeps_an_allocator_margin_and_even_pieces(monkeypatch):

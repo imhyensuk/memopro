@@ -42,15 +42,16 @@ __all__ = [
     "even_micro",
     "is_oom",
     "optimizer_state_to_come",
+    "release_cuda_cache",
     "split_batch",
 ]
 
 
 # Activations of one sample are measured once; a micro-batch of k samples also pays for the
-# caching allocator's rounding and fragmentation. On a T4, reserved memory was 1.07-1.10x the
-# allocated peak (E022), and a plan at 1.17x still ran out of memory (GPT-2 at a 30% cap, E021
-# D5): 1.25 x the measured activations per sample.
-ALLOCATOR_MARGIN = 1.25
+# caching allocator's rounding and fragmentation. A plan at 1.17x ran out of memory (GPT-2 at a
+# 30% cap, E021 D5); on a T4 the reserved peak above weights, gradients and optimizer state was
+# 1.27-1.29 x micro x the measured activations (E023 F1): 1.3 (0103, was 1.25 in 0099).
+ALLOCATOR_MARGIN = 1.3
 
 
 def even_micro(n: int, most: int) -> int:
@@ -221,12 +222,20 @@ class TrainSession:
         self._plan = plan and micro_batch_size is None
         first = next(model.parameters(), None) if hasattr(model, "parameters") else None
         where = first.device.type if first is not None else None
+        released = release_cuda_cache() if where == "cuda" else 0
         self._setup = setup(
             budget=budget, quality=quality, device=where, holding=(model, optimizer)
         )
         # what the model and optimizer already hold in the budgeted pool (E022 D8)
         pool = self._setup.device if self._setup.budget.device is not None else "cpu"
         self._held = resident_bytes(pool, model, optimizer)
+        if released:
+            report().add(
+                "train_session",
+                "applied",
+                f"returned {format_size(released)} of torch's unused CUDA cache before measuring "
+                "(E023 F2: cache left by loading was mostly not reused)",
+            )
         self._allow_half = (
             QUALITY_LIMIT[self._setup.config.quality].value >= QualityGrade.NEAR_LOSSLESS.value
         )
@@ -557,6 +566,20 @@ def _drop_first(batch: Any, n: int) -> Any:
         except Exception:  # noqa: BLE001
             return data
     return type(batch)(_slice(v, 1, n, n) for v in batch)
+
+
+def release_cuda_cache() -> int:
+    """Return the CUDA caching allocator's unused segments to the driver, so the free memory the
+    budget is measured from is real (E023 F2, 0103); bytes returned. Tensors are untouched."""
+    import torch
+
+    try:
+        torch.cuda.synchronize()
+        before = torch.cuda.memory_reserved()
+        torch.cuda.empty_cache()
+        return max(0, before - torch.cuda.memory_reserved())
+    except Exception:  # noqa: BLE001 - measuring without it is still correct, only smaller
+        return 0
 
 
 def _release() -> None:
