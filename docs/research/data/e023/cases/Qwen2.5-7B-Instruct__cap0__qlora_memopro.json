@@ -1,0 +1,246 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "--model",
+  "Qwen/Qwen2.5-7B-Instruct",
+  "--scenario",
+  "qlora_memopro",
+  "--batch",
+  "4",
+  "--seq",
+  "512",
+  "--steps",
+  "20",
+  "--lr",
+  "2e-4"
+ ],
+ "model": "Qwen/Qwen2.5-7B-Instruct",
+ "scenario": "qlora_memopro",
+ "batch": 4,
+ "seq": 512,
+ "steps": 20,
+ "cap": 0.0,
+ "optimizer": "adamw",
+ "load_s": 71.5,
+ "layers": [
+  "Linear",
+  "Linear4bit"
+ ],
+ "trainable_params": 40370176,
+ "session_start": {
+  "free_bytes": 5156700160,
+  "total_bytes": 15637086208,
+  "allocated_bytes": 8202577920,
+  "reserved_bytes": 10343153664
+ },
+ "memory_after_first_step": {
+  "host_peak_rss_bytes": 7631994880,
+  "allocated_bytes": 8546121728,
+  "reserved_bytes": 12436111360,
+  "peak_allocated_bytes": 11831567872,
+  "peak_reserved_bytes": 12436111360,
+  "device_used_bytes": 12592218112,
+  "peak_device_used_bytes": 12592218112
+ },
+ "losses": [
+  2.854519248008728,
+  2.8291845321655273,
+  2.3632194995880127,
+  2.4136404991149902,
+  2.267141103744507,
+  2.592721700668335,
+  1.9093109369277954,
+  1.927952766418457,
+  2.0914764404296875,
+  2.025357723236084,
+  2.434516191482544,
+  2.155320167541504,
+  1.935989499092102,
+  2.0696332454681396,
+  2.2719812393188477,
+  1.9447646141052246,
+  1.9598605632781982,
+  1.7864816188812256,
+  2.178223133087158,
+  2.1812212467193604
+ ],
+ "step_s": [
+  9.713,
+  9.5194,
+  9.6657,
+  9.7551,
+  9.3079,
+  8.9149,
+  8.8149,
+  8.7516,
+  8.7523,
+  8.7525,
+  9.0151,
+  9.1827,
+  9.2462,
+  9.2216,
+  9.1179,
+  8.9936,
+  8.9054,
+  8.8903,
+  8.9018,
+  9.0164
+ ],
+ "steps_done": 20,
+ "median_step_s": 9.004343509674072,
+ "tokens_per_s": 227.4457874468775,
+ "final_loss": 2.1812212467193604,
+ "session": {
+  "micro": 4,
+  "active": [],
+  "retries": 0
+ },
+ "session_trace": [
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  },
+  {
+   "micro": 4,
+   "active": [],
+   "retries": 0
+  }
+ ],
+ "memory": {
+  "host_peak_rss_bytes": 7631994880,
+  "allocated_bytes": 8546121728,
+  "reserved_bytes": 14927527936,
+  "peak_allocated_bytes": 13135244800,
+  "peak_reserved_bytes": 14927527936,
+  "device_used_bytes": 15083634688,
+  "peak_device_used_bytes": 15083634688
+ },
+ "worker_s": 272.9,
+ "memory_end": {
+  "host_peak_rss_bytes": 7631994880,
+  "allocated_bytes": 19137536,
+  "reserved_bytes": 5448400896,
+  "peak_allocated_bytes": 13135244800,
+  "peak_reserved_bytes": 14927527936,
+  "device_used_bytes": 5604507648,
+  "peak_device_used_bytes": 15083634688
+ },
+ "memopro_report": [
+  {
+   "technique": "load.quant.int4",
+   "action": "applied",
+   "detail": "/content/models/Qwen--Qwen2.5-7B-Instruct: quant.int4 via bitsandbytes (moderate_loss), estimated 6.98 GiB, weights 5.07 GiB on cuda; quality cost: bitsandbytes nf4 raised WikiText-2 perplexity by 7.6-8.4% for Qwen2.5-1.5B/3B/7B on a T4 (E021/0093, E022/0098); other models differ"
+  },
+  {
+   "technique": "train_session.plan",
+   "action": "applied",
+   "detail": "MemTracker unavailable here (e.g. frozen parameters): measured one sample instead"
+  },
+  {
+   "technique": "train_session.plan",
+   "action": "applied",
+   "detail": "one sample needs 949.39 MiB of activations (x1.25 for the allocator); budget 13.75 GiB, model and optimizer state 7.63 GiB -> micro-batch 4 of 4"
+  },
+  {
+   "technique": "train_session",
+   "action": "reverted",
+   "detail": "20 steps, micro-batch 4, retries 0; techniques used: none"
+  }
+ ],
+ "case": "Qwen2.5-7B-Instruct__cap0__qlora_memopro",
+ "wall_s": 277.7,
+ "timeline_peak_gpu_used_bytes": 15083765760,
+ "timeline_peak_host_used_bytes": 3875516416
+}
