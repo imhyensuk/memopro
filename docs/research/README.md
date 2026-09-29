@@ -118,6 +118,7 @@
 | [0089](0089-gamma-g1.md) | 2026-09-29 | implementation | 사용자 결정 G1: γ는 실험 기능, macOS의 `memopro run`은 γ를 기본으로 켜지 않음(`--elastic`으로 켬, 기본으로 꺼지면 이유를 보고). `enable()` 직접 사용과 γ 동작은 그대로. 시험 5개 추가 | 확정 |
 | [0090](0090-status-evaluation.md) | 2026-09-29 | assessment | 완성도 평가: 기능 약 90%, 기술 검증 약 75%, 실사용 가치 입증 약 35%, 사용성 약 60%, 출시 준비 약 45%(연구자 판단). 강점(숫자로 입증된 개선, 정직한 기본값), 약점(E010 없음, 7B·학습 쾌적함 미입증, MPS 편중, 마지막 CUDA 검증이 0056), 출시까지의 순서 | 확정 |
 | [0091](0091-colab-run7-preregistration.md) | 2026-09-29 | experiment (사전 등록) + tool | E021(Colab 7차) 준비: 독립 셀 3개 노트북(`examples/colab_t4_heavy.ipynb`) — 학습(GPT-2·0.5B·1.5B 전체 미세조정, 일반·AMP·ckpt·accelerate 대 memopro, 작은 GPU 흉내, check, 7B QLoRA), 로컬 AI(1.5B~14B, HF fp16·bnb8·bnb4 대 memopro), 여러 모델(동면 대 다시 불러오기, `memopro run`, 회귀 7종). Drive 캐시·결과·이어하기, 경우마다 새 프로세스. 로컬 MPS로 끝까지 확인(MPS `.to("cpu", float64)`가 틀린 값을 내는 문제 발견). 기준 R1·T1~T4·I1·I2·M1~M3 | 확정 |
+| [0092](0092-colab-notebooks-split.md) | 2026-09-29 | tool | Colab 7차 노트북을 파트별 3개로 분리: `colab_t4_train.ipynb`(학습·개발), `colab_t4_infer.ipynb`(로컬 AI 모델), `colab_t4_multi.ipynb`(여러 모델·프로세스). 각 파일은 안내 + 통합 셀 1개, 코드는 이전과 같음(사전 등록 0091 그대로) | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
