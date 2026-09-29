@@ -1,0 +1,51 @@
+{
+ "INFER_CASES": [
+  [
+   "Qwen/Qwen2.5-1.5B-Instruct",
+   "hf_fp16_auto"
+  ],
+  [
+   "Qwen/Qwen2.5-1.5B-Instruct",
+   "memopro"
+  ],
+  [
+   "Qwen/Qwen2.5-3B-Instruct",
+   "hf_fp16_auto"
+  ],
+  [
+   "Qwen/Qwen2.5-3B-Instruct",
+   "memopro"
+  ],
+  [
+   "Qwen/Qwen2.5-7B-Instruct",
+   "hf_bnb4"
+  ],
+  [
+   "Qwen/Qwen2.5-7B-Instruct",
+   "hf_bnb8"
+  ],
+  [
+   "Qwen/Qwen2.5-7B-Instruct",
+   "memopro"
+  ],
+  [
+   "Qwen/Qwen2.5-7B-Instruct",
+   "memopro_low"
+  ]
+ ],
+ "QLORA": {
+  "model": "Qwen/Qwen2.5-7B-Instruct",
+  "batch": 4,
+  "seq": 512,
+  "steps": 20
+ },
+ "APP_MODELS": [
+  "Qwen/Qwen2.5-1.5B-Instruct",
+  "Qwen/Qwen2.5-7B-Instruct"
+ ],
+ "SMALL_MODEL": "Qwen/Qwen2.5-0.5B-Instruct",
+ "PROMPT_LENS": "512,2048",
+ "NEW_TOKENS": 128,
+ "PPL_WINDOWS": 8,
+ "PPL_SEQ": 1024
+}
