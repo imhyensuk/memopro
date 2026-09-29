@@ -1,0 +1,2 @@
+{"t": 1790676301.6647053, "case": "Qwen2.5-7B-Instruct__cap0__qlora_hf", "status": "ok", "seconds": 274.3}
+{"t": 1790676576.0992815, "case": "Qwen2.5-7B-Instruct__cap0__qlora_memopro", "status": "ok", "seconds": 274.4}

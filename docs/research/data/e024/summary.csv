@@ -1,0 +1,4 @@
+check,criterion,result,detail
+Q1,memopro finishes all steps with no out-of-memory retry,pass,"status ok, steps 20, micro 2, retries 0"
+Q2,peak reserved memory <= memopro's own budget,pass,"peak reserved 11.00 GiB, budget 11.96 GiB (E023: 13.90 > 13.75 GiB)"
+Q3,"speed >= 0.9 x the standard recipe, loss within 5e-3",pass,229 vs 235 tok/s (0.97x; E023 1.00x at micro 4); loss diff 1.2e-03
