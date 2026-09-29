@@ -139,6 +139,7 @@
 | [0110](0110-decision-no-ssd-writes-rs7-autonomy.md) | 2026-09-29 | decision | 사용자 승인: 런타임은 SSD에 쓰지 않음(방출·파일 캐시 제외, 원본 재읽기는 페이지 캐시 우회), 실험도 스왑·새 파일 없이 실제 RAM 안에서(스왑 전후 기록), RS7 해제(안전 규칙 R4·I2·I6), 1단계 작업 = 큰 숫자 배열 파이프라인, 이름 `memopro.rt`/`memopro::rt`/`mp_`, 끝까지 자율 진행(관문 실패 시 멈추고 보고, 테스트 통과 PR은 직접 병합), 다운로드 없음(로컬 모델만) | 확정 |
 | [0111](0111-e025-preregistration.md) | 2026-09-29 | experiment (사전 등록) | E025 = 관문 G-R1: 로컬 safetensors 데이터 영역(GPT-2 523MiB f32, Qwen 1.5B 2.88GiB·3B 5.75GiB bf16)을 16MiB 블록의 큰 배열로 보고 3회 통계. naive·stream·stream_nc·memmap·memopro(W/2·W/4, 1GiB·512MiB), 파생 float32 512MiB 압축 경우. H1 상한, H2 비트 동일, H3 쓰기 없음, H4 못 돌던 것, H5 수동 스트리밍의 1.1배 이하, H7 순환 훑기 재읽기, H8 압축. 실행 전 수정 2건(H7 블록 보정, 큰 데이터에서 페이지 캐시 방법 제외) | 확정 |
 | [0112](0112-runtime-phase1-build.md) | 2026-09-29 | implementation | 런타임 C-R 1단계: Rust `memopro::rt`(쪽 단위 mmap `Region`, 캐시 우회 `SourceFile`, 입장 제어로 상한 보장, 버림(원본)·압축(조각 단위로 쪽 반환) 두 행동, 실측 비용 × 재사용 주기 점수로 순환 훑기 MRU, 배타 `pin`·공유 `pin_shared`, `Error::Budget`), Python `memopro.rt`(`Runtime`, `add_file`, `load_npy`, `alloc`, 복사 없는 NumPy `view`·`apply`, bfloat16). Rust 16개·Python 10개 시험 추가, 전체 통과 | 확정 |
+| [0113](0113-e025-results.md) | 2026-09-30 | experiment | E025 결과: 관문 G-R1 통과(H1~H5·H7·H8) — Qwen 1.5B 2.88GiB를 1GiB·512MiB, 3B 5.75GiB를 1GiB 예산에서 3회 통계 완주, 스왑 증가 0, 모든 방법 결과 비트 동일, 수동 캐시 우회 스트리밍의 0.95~1.03배 시간, 재사용 주기 정책이 회마다 예산만큼 붙잡아 LRU·스트리밍보다 11~22% 덜 읽음, 파생 512MiB 압축(2.91배) 경우도 256MiB에서 완주. 속도 이득은 없었음(계산 주도, 입출력 미중첩) → 2단계 미리 읽기 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
