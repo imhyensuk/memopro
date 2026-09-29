@@ -116,15 +116,30 @@ def infer_candidates(
             )
         )
 
-    add("stored", (), QualityGrade.LOSSLESS, 0, _needs_on_one_pool(ctx, stored), base_kwargs)
-    if not stored_half:
+    # bf16 weights on a CUDA GPU without bf16 hardware (compute capability < 8, e.g. the T4):
+    # prompts took 3.7-5.4x longer than in fp16 (E021, 0093). Offer fp16 too, and let `prefer`
+    # decide; quality="lossless" still keeps the stored bf16.
+    slow_bf16 = bool(
+        info.stored_dtype == "bfloat16"
+        and ctx.device == "cuda"
+        and str(ctx.half_dtype) == "torch.float16"
+    )
+    add(
+        "stored",
+        (),
+        QualityGrade.LOSSLESS,
+        SLOW_BF16_SPEED if slow_bf16 else 0,
+        _needs_on_one_pool(ctx, stored),
+        base_kwargs,
+    )
+    if not stored_half or slow_bf16:
         add(
             "half",
             (loading.HALF,),
             QualityGrade.NEAR_LOSSLESS,
             0,
             _needs_on_one_pool(ctx, half),
-            half_kwargs,
+            half_kwargs | ({"_note": SLOW_BF16_NOTE} if slow_bf16 else {}),
             Fidelity.NUMERICS,
         )
     for tech, bits in ((loading.INT8, 8), (loading.INT4, 4)):
@@ -133,7 +148,7 @@ def infer_candidates(
             tech.name,
             (tech,),
             grade,
-            tech.speed,
+            _quant_speed(tech, bits, ctx),
             _needs_on_one_pool(ctx, info.weight_bytes(bits=bits, group=_int4_group(ctx, bits))),
             {"device_map": _device_map(ctx), "dtype": ctx.half_dtype, "_quant_bits": bits},
             Fidelity.NUMERICS,
@@ -264,9 +279,27 @@ INT4_QUALITY_NOTE = (
 )
 
 
+SLOW_BF16_SPEED = 2  # between int4 (1) and offload (3): slow prompts, decoding unaffected
+SLOW_BF16_NOTE = (
+    "fp16 instead of the stored bf16: this GPU has no bf16 hardware, where bf16 prompts took "
+    "3.7-5.4x longer (T4, E021/0093); values beyond fp16's range would overflow "
+    "(quality='lossless' keeps bf16)"
+)
+BNB_INT8_SPEED = 2  # bitsandbytes int8 decoded 2.4-3.6x slower than nf4 on a T4 (E021/0093)
+
+
+def _quant_speed(tech: loading.LoadTechnique, bits: int, ctx: LoadContext) -> int:
+    """Speed rank of a quantized configuration with the back end used here (E021 D3)."""
+    if bits == 8 and loading.quantization_backend(ctx.device, bits)[0] == "bitsandbytes":
+        return BNB_INT8_SPEED
+    return tech.speed
+
+
 def quality_note(cfg: Configuration) -> str:
-    """What the report says about a lossy configuration's measured cost (0084 Q-a)."""
-    return INT4_QUALITY_NOTE if cfg.kwargs.get("_quant_bits") == 4 else ""
+    """What the report says about a configuration's measured cost or reason (0084 Q-a, 0093)."""
+    if cfg.kwargs.get("_quant_bits") == 4:
+        return INT4_QUALITY_NOTE
+    return cfg.kwargs.get("_note", "")
 
 
 def backend_of(cfg: Configuration, ctx: LoadContext) -> str:

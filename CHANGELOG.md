@@ -4,6 +4,18 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Fixed: findings of the Colab T4 run (0093, 0094)
+- `train_session` plans micro-batches for models with frozen parameters (LoRA, peft) too: when
+  torch's MemTracker cannot hook them, one sample is measured with the CUDA allocator; gradients
+  and optimizer state are counted for trainable parameters only.
+- On CUDA GPUs without bf16 hardware (compute capability below 8, e.g. the T4), `load` prefers
+  fp16 over stored bf16 weights (prompts were 3.7-5.4x slower in bf16) and says why;
+  `quality="lossless"` keeps bf16. `memopro run` still leaves a model that fits as stored alone.
+- bitsandbytes int8 ranks as slower than int4 (it decoded 2.4-3.6x slower on a T4), so
+  `quality="low"` picks int4; the default quality still prefers int8 to CPU offload.
+- `memopro run` no longer starts γ by default on any platform (on Linux the I/O of loading a
+  model raised memory PSI to "warning" and halved budgets); `--elastic` turns it on.
+
 ### Changed: γ is experimental, off by default in `memopro run` on macOS (0088, 0089)
 - E013a found that the macOS memory pressure level marks pressure (on 87% of the time under
   pressure, never when calm) but not the stalls a user feels (5 of 870 seconds), so shrinking

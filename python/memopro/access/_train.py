@@ -333,6 +333,7 @@ class TrainSession:
             with tracker, self._contexts():
                 loss = loss_fn(first)
             self._backward(loss * self._share(1, n))
+            first_loss = float(loss.detach()) * self._share(1, n)
             peak = tracker.get_tracker_snapshot("peak")
             act = sum(
                 int(v)
@@ -343,13 +344,20 @@ class TrainSession:
         except Exception as e:
             if is_oom(e):
                 raise
-            with self._contexts():
-                loss = loss_fn(first)
-            self._backward(loss * self._share(1, n))
-            report().add("train_session.plan", "skipped", f"{type(e).__name__}: {e}"[:160])
-            self.micro = n
-            return float(loss.detach()) * self._share(1, n)
+            # torch's MemTracker cannot hook frozen parameters (LoRA, peft; E021 D1): on CUDA,
+            # measure the one-sample step instead; elsewhere run it unplanned as before.
+            # Nothing of this step has been accumulated yet (it is the first piece): start clean.
+            self.optimizer.zero_grad(set_to_none=True)
+            measured = self._measure_first(first, loss_fn, n)
+            if measured is None:
+                report().add("train_session.plan", "skipped", f"{type(e).__name__}: {e}"[:160])
+                self.micro = n
+                return self._last_first_loss
+            act, first_loss = measured, self._last_first_loss
         params = sum(p.numel() * p.element_size() for p in self.model.parameters())
+        trainable = sum(
+            p.numel() * p.element_size() for p in self.model.parameters() if p.requires_grad
+        )
         state = sum(
             t.numel() * t.element_size()
             for s in self.optimizer.state.values()
@@ -357,9 +365,10 @@ class TrainSession:
             if hasattr(t, "numel")
         )
         if not state and "adam" in type(self.optimizer).__name__.lower():
-            state = 2 * params
+            state = 2 * trainable
         budget = self._setup.budget.device or self._setup.budget.host
-        room = budget - (2 * params + state)
+        # weights + gradients (of trainable parameters only) + optimizer state
+        room = budget - (params + trainable + state)
         self.micro = max(1, min(n, room // max(1, act))) if room > 0 else 1
         report().add(
             "train_session.plan",
@@ -367,7 +376,40 @@ class TrainSession:
             f"one sample needs {format_size(act)} of activations; budget "
             f"{format_size(budget)} -> micro-batch {self.micro} of {n}",
         )
-        return float(loss.detach()) * self._share(1, n)
+        return first_loss
+
+    def _measure_first(self, first: Any, loss_fn: Callable[[Any], Any], n: int) -> int | None:
+        """One sample's activations measured with the CUDA allocator (peak minus what was
+        allocated before, minus the gradients it created); None where that is not available.
+        The sample's gradient counts, as with MemTracker."""
+        import torch
+
+        if self.device != "cuda":
+            with self._contexts():
+                loss = loss_fn(first)
+            self._backward(loss * self._share(1, n))
+            self._last_first_loss = float(loss.detach()) * self._share(1, n)
+            return None
+        torch.cuda.synchronize()
+        before = torch.cuda.memory_allocated()
+        torch.cuda.reset_peak_memory_stats()
+        with self._contexts():
+            loss = loss_fn(first)
+        self._backward(loss * self._share(1, n))
+        torch.cuda.synchronize()
+        peak = torch.cuda.max_memory_allocated()
+        grads = sum(
+            p.grad.numel() * p.grad.element_size()
+            for p in self.model.parameters()
+            if p.grad is not None
+        )
+        self._last_first_loss = float(loss.detach()) * self._share(1, n)
+        report().add(
+            "train_session.plan",
+            "applied",
+            "MemTracker unavailable here (e.g. frozen parameters): measured one sample instead",
+        )
+        return max(0, peak - before - grads)
 
     # ------------------------------------------------------------ step with retry
     def step(self, batch: Any, loss_fn: Callable[[Any], Any]) -> float:
