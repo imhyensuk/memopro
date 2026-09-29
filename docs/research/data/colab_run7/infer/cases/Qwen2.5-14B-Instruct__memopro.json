@@ -1,0 +1,144 @@
+{
+ "status": "does_not_fit",
+ "device": "cuda",
+ "argv": [
+  "--model",
+  "Qwen/Qwen2.5-14B-Instruct",
+  "--variant",
+  "memopro",
+  "--offload-dir",
+  "/content/memopro_colab/offload",
+  "--prompt-lens",
+  "512,2048",
+  "--new-tokens",
+  "128",
+  "--ppl-windows",
+  "8",
+  "--ppl-seq",
+  "1024"
+ ],
+ "model": "Qwen/Qwen2.5-14B-Instruct",
+ "variant": "memopro",
+ "check_infer": {
+  "source": "/content/drive/MyDrive/memopro_colab/hf_cache/hub/models--Qwen--Qwen2.5-14B-Instruct/snapshots/cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8",
+  "n_params": 14770033664,
+  "stored_bytes": 29540067328,
+  "stored_dtype": "bfloat16",
+  "device": "cuda",
+  "device_budget": 13974405120,
+  "host_budget": 9351117619,
+  "batch_size": 1,
+  "seq_len": 2048,
+  "inference": {
+   "peak": 31571175424,
+   "runtime": 2031108096,
+   "reason": "stored: needs 30.64 GiB on the device, budget 13.01 GiB; quant.int8: needs 18.34 GiB on the device, budget 13.01 GiB; quant.int4: quality 'balanced' does not allow moderate_loss (quant.int4); offload.cpu: needs 17.62 GiB of host RAM, budget 8.52 GiB; offload.disk: writes weights to SSD, and disk_writes is 'ask' (not 'allow')",
+   "suggestions": [
+    {
+     "settings": {
+      "disk_writes": "allow"
+     },
+     "config": "offload.disk",
+     "quality": "lossless",
+     "needs": 32896727244,
+     "over_free": 0
+    },
+    {
+     "settings": {
+      "quality": "low"
+     },
+     "config": "quant.int4",
+     "quality": "moderate_loss",
+     "needs": 13904394444,
+     "over_free": 0
+    }
+   ],
+   "candidates": [
+    {
+     "name": "stored",
+     "usable": false,
+     "why": "needs 30.64 GiB on the device, budget 13.01 GiB",
+     "bytes": 32896727244
+    },
+    {
+     "name": "quant.int8",
+     "usable": false,
+     "why": "needs 18.34 GiB on the device, budget 13.01 GiB",
+     "bytes": 19693320396
+    },
+    {
+     "name": "quant.int4",
+     "usable": false,
+     "why": "quality 'balanced' does not allow moderate_loss (quant.int4)",
+     "bytes": 13904394444
+    },
+    {
+     "name": "offload.cpu",
+     "usable": false,
+     "why": "needs 17.62 GiB of host RAM, budget 8.52 GiB",
+     "bytes": 32896727244
+    },
+    {
+     "name": "offload.disk",
+     "usable": false,
+     "why": "writes weights to SSD, and disk_writes is 'ask' (not 'allow')",
+     "bytes": 32896727244
+    }
+   ]
+  },
+  "training": {},
+  "notes": []
+ },
+ "plan": [
+  {
+   "name": "stored",
+   "device": 32896727244,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "quant.int8",
+   "device": 19693320396,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "quant.int4",
+   "device": 13904394444,
+   "host": 0,
+   "disk": 0
+  },
+  {
+   "name": "offload.cpu",
+   "device": 13947981004,
+   "host": 18948746240,
+   "disk": 0
+  },
+  {
+   "name": "offload.disk",
+   "device": 13947981004,
+   "host": 8945746329,
+   "disk": 10002999911
+  }
+ ],
+ "suggestions": [
+  "Suggestion(settings={'disk_writes': 'allow'}, config='offload.disk', describe='offload.disk', quality='lossless', needs=32896727244, over_free=0, speed=4)",
+  "Suggestion(settings={'quality': 'low'}, config='quant.int4', describe='quant.int4', quality='moderate_loss', needs=13904394444, over_free=0, speed=1)"
+ ],
+ "error": "no configuration of /content/drive/MyDrive/memopro_colab/hf_cache/hub/models--Qwen--Qwen2.5-14B-Instruct/snapshots/cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8 fits the budget with quality 'balanced':\n  stored          30.64 GiB  needs 30.64 GiB on the device, budget 12.99 GiB\n  quant.int8      18.34 GiB  needs 18.34 GiB on the device, budget 12.99 GiB\n  quant.int4      12.95 GiB  quality 'balanced' does not allow moderate_loss (quant.int4)\n  offload.cpu     30.64 GiB  needs 17.65 GiB of host RAM, budget 8.33 GiB\n  offload.disk    30.64 GiB  writes weights to SSD, and disk_writes is 'ask' (not 'allow')\nSettings that would load /content/drive/MyDrive/memopro_colab/hf_cache/hub/models--Qwen--Qwen2.5-14B-Instruct/snapshots/cf98f3b3bbb457ad9e2bb7baf9a0125b6b88caa8 (checked against the plan, nothing loaded):\n  disk_writes='allow'                    -> offload.disk (lossless), 30.64 GiB, fits in free memory\n  quality='low'                          -> quant.int4 (moderate_loss), 12.95 GiB, fits in free memory\n  fallback='stored'  -> warn and load as stored anyway (30.64 GiB, about 16.20 GiB over what is free)",
+ "worker_s": 38.2,
+ "memory_end": {
+  "host_peak_rss_bytes": 7263576064,
+  "allocated_bytes": 1536,
+  "reserved_bytes": 2097152,
+  "peak_allocated_bytes": 1536,
+  "peak_reserved_bytes": 2097152,
+  "device_used_bytes": 139329536,
+  "peak_device_used_bytes": 139329536
+ },
+ "memopro_report": [],
+ "case": "Qwen2.5-14B-Instruct__memopro",
+ "wall_s": 42.6,
+ "timeline_peak_gpu_used_bytes": 139460608,
+ "timeline_peak_host_used_bytes": 3639967744
+}

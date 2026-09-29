@@ -1,0 +1,70 @@
+{
+ "status": "error",
+ "device": "cuda",
+ "argv": [
+  "--model",
+  "Qwen/Qwen2.5-1.5B",
+  "--scenario",
+  "memopro",
+  "--batch",
+  "4",
+  "--seq",
+  "512",
+  "--steps",
+  "10",
+  "--cap",
+  "0.0"
+ ],
+ "model": "Qwen/Qwen2.5-1.5B",
+ "scenario": "memopro",
+ "batch": 4,
+ "seq": 512,
+ "steps": 10,
+ "cap": 0.0,
+ "optimizer": "adamw",
+ "load_s": 6.1,
+ "n_params": 1543714304,
+ "error": "BudgetExceeded: training does not fit even with micro-batch 1, checkpointing and activation offload: consider an 8-bit optimizer (numerics change) or LoRA (changes what is trained); memopro suggests them but does not switch them for you",
+ "trace": "Traceback (most recent call last):\n  File \"/content/memopro_colab/worker_common.py\", line 117, in guarded\n    main()\n    ~~~~^^\n  File \"/content/memopro_colab/worker_train.py\", line 303, in main\n    scenario_memopro()\n    ~~~~~~~~~~~~~~~~^^\n  File \"/content/memopro_colab/worker_train.py\", line 227, in scenario_memopro\n    loop(model, step, data)\n    ~~~~^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_train.py\", line 89, in loop\n    loss = step_fn(data[i].to(DEVICE))\n  File \"/content/memopro_colab/worker_train.py\", line 222, in step\n    loss = s.step({\"input_ids\": x}, lambda mb: model(input_ids=mb[\"input_ids\"],\n                                                     labels=mb[\"input_ids\"]).loss)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/access/_train.py\", line 394, in step\n    raise BudgetExceeded(\n    ...<4 lines>...\n    ) from None\nmemopro._errors.BudgetExceeded: training does not fit even with micro-batch 1, checkpointing and activation offload: consider an 8-bit optimizer (numerics change) or LoRA (changes what is trained); memopro suggests them but does not switch them for you\n",
+ "worker_s": 40.2,
+ "memory_end": {
+  "host_peak_rss_bytes": 9851301888,
+  "allocated_bytes": 9074810880,
+  "reserved_bytes": 10414456832,
+  "peak_allocated_bytes": 15323468800,
+  "peak_reserved_bytes": 15470690304,
+  "device_used_bytes": 10566369280,
+  "peak_device_used_bytes": 15620505600
+ },
+ "memopro_report": [
+  {
+   "technique": "train_session.plan",
+   "action": "applied",
+   "detail": "one sample needs 3.65 GiB of activations; budget 7.75 GiB -> micro-batch 1 of 4"
+  },
+  {
+   "technique": "train_session.checkpointing",
+   "action": "applied",
+   "detail": "out of memory"
+  },
+  {
+   "technique": "train_session.activation_offload",
+   "action": "applied",
+   "detail": "out of memory"
+  },
+  {
+   "technique": "train_session.autocast",
+   "action": "applied",
+   "detail": "out of memory: mixed precision (numerics change, allowed by quality 'balanced')"
+  },
+  {
+   "technique": "train_session",
+   "action": "reverted",
+   "detail": "0 steps, micro-batch 1, retries 4; techniques used: micro-batch 1, checkpointing, activation_offload, autocast"
+  }
+ ],
+ "case": "Qwen2.5-1.5B__cap0__memopro",
+ "wall_s": 44.8,
+ "timeline_peak_gpu_used_bytes": 15620636672,
+ "timeline_peak_host_used_bytes": 8606482432
+}
