@@ -74,7 +74,7 @@ def _parser() -> argparse.ArgumentParser:
         action="store_const",
         const=True,
         default=None,
-        help="watch memory pressure (γ, experimental; off by default on macOS, 0088)",
+        help="watch memory pressure (γ, experimental; off by default, 0088/0093)",
     )
     gamma.add_argument(
         "--no-elastic", dest="elastic", action="store_const", const=False, help="do not watch it"

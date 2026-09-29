@@ -297,12 +297,13 @@ def test_run_dry_run_and_errors(tmp_path, capsys):
 # ---- 0088 G1: γ is experimental and off by default in `memopro run` on macOS
 
 
-@pytest.mark.parametrize(("platform", "expected"), [("darwin", False), ("linux", True)])
-def test_run_default_for_gamma_depends_on_the_platform(monkeypatch, platform, expected):
+@pytest.mark.parametrize("platform", ["darwin", "linux", "win32"])
+def test_run_leaves_gamma_off_by_default_everywhere(monkeypatch, platform):
+    """0088 G1 on macOS, E021 D4 (0093) on Linux: γ is off unless --elastic."""
     from memopro._run import default_elastic
 
     monkeypatch.setattr(sys, "platform", platform)
-    assert default_elastic() is expected
+    assert default_elastic() is False
 
 
 def test_run_on_macos_leaves_gamma_off_unless_asked(monkeypatch, tmp_path):
@@ -342,4 +343,4 @@ def test_dry_run_says_gamma_is_off_on_macos(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(sys, "platform", "darwin")
     (tmp_path / "app.py").write_text("x = 1\n")
     run(str(tmp_path / "app.py"), dry_run=True)
-    assert "elastic        off (macOS default, 0088; --elastic)" in capsys.readouterr().out
+    assert "elastic        off (default, 0088/0093; --elastic)" in capsys.readouterr().out
