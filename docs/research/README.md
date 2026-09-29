@@ -135,6 +135,7 @@
 | [0106](0106-objective-evaluation-2.md) | 2026-09-29 | assessment | 객관 평가 2(E022~E024 반영): 추론 65%(T4 fp16·int4 결함 해소, 2배 초과 미입증), 학습 62%(QLoRA 0.97배·예산 준수, 파라미터 초과 학습은 범위 밖), 개발 편의 72%, 연구 코어 25%(변화 없음), 제품 준비 50%, 가중 약 58%(0095의 53%). 오른 이유는 결함 수정의 실측 확인. 다음: 2배 초과 시험, E010, D6, 배포 준비 | 확정 |
 | [0107](0107-direction-goal-redefinition.md) | 2026-09-29 | decision | 사용자 승인 목표 재정의: 궁극 = 32GB가 필요하던 작업(AI·비AI)을 8~16GB에서 구동. G2′ 작업 집합이 메모리 안이면 필요 메모리의 1/2~1/4에서, 무손실 기본·상한 보장·느려짐 예측. G3 주 목표 승격: 버퍼마다 두기·압축·원본 재읽기·재계산·이동을 고르는 새 Rust 런타임. 기존 성과(접근 계층, β, 방출 엔진, F 등급, census, 실험) 계승. 0010·0012·0033 일부 대체 | 확정 |
 | [0108](0108-survey-new-runtime-prior-art.md) | 2026-09-29 | survey | 새 런타임(C-R) 선행 연구 13개 주제: Williams 2025·Cook-Mertz(이론), Capuchin·POET(스왑/페이징+재계산, 가장 가까움), DTR·Checkmate·RevNet, AIFM·Mira·Atlas(원격 메모리), UMap·ExtMEM·Lightswap(사용자 공간 페이징), TMO·SDFM(커널 압축·오프로드), MEMPHIS(계보+메모리 관리, SystemDS), Dask, CLA, Mesh, LLM in a flash·mzCache. 판정: 개별 기법은 모두 있음, 다섯 선택지 통합·분야 무관·개인 기기 계층·상한 보장+느려짐 예측의 결합은 조사 범위에서 발견되지 않음(조합의 새로움). 재계산은 계보가 알려진 버퍼만 | 확정 |
+| [0109](0109-runtime-design-draft.md) | 2026-09-29 | design (초안) | 런타임 C-R 설계 초안 v0.1([runtime.md](../design/runtime.md)): 다섯 무손실 행동(두기·압축·원본 재읽기·재계산·방출)과 상태 기계, recipe(Source·Lineage·Seed), 입장 제어로 상한 보장, 실측 비용 점수, 전용 아레나, 소유권 기반 스레드 안전, 원칙 R1~R8·불변식 I1~I7, Rust·C ABI·Python(`memopro.rt`) 인터페이스, 기존 spill·codec·ledger·residency·β 재사용, 3단계 관문(E025 G-R1 비AI 1/2, G-R2 AI 1/4, G-R3 Linux 투명). 결정 대기: RS7 해제, 대표 비AI 작업, 이름 | 초안 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
