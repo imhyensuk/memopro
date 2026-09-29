@@ -38,10 +38,11 @@ def test_notebook_builds_and_every_cell_compiles(tmp_path):
 
 
 def test_committed_notebook_matches_the_sources(tmp_path):
-    before = (ROOT / "examples/colab_t4_heavy.ipynb").read_text()
+    files = [ROOT / f"examples/colab_t4_{part}.ipynb" for part in NOTEBOOKS]
+    before = "".join(f.read_text() for f in files)
     subprocess.run(
         [sys.executable, str(ROOT / "examples/colab_t4/build.py")], check=True, capture_output=True
     )
-    after = (ROOT / "examples/colab_t4_heavy.ipynb").read_text()
+    after = "".join(f.read_text() for f in files)
     strip = lambda t: "\n".join(l for l in t.splitlines() if "EXPECTED_COMMIT =" not in l)
     assert strip(before) == strip(after), "run examples/colab_t4/build.py and commit the notebook"
