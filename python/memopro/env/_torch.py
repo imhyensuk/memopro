@@ -1,6 +1,7 @@
 """Accelerator facts from torch (imported here only, never at ``import memopro``).
 
-CUDA: ``mem_get_info`` (free, total) per device; note that this creates a CUDA context.
+CUDA: ``mem_get_info`` (free, total) per device, plus what torch's allocator caches unused in
+this process; note that this creates a CUDA context.
 MPS: the recommended working-set limit is the device ceiling on unified memory (K5).
 ROCm and XPU are detected and listed, but budgets for them are not supported yet (fail-open).
 """
@@ -52,12 +53,15 @@ def probe() -> tuple[tuple[Device, ...], tuple[str, ...]]:
         kind = "rocm" if getattr(torch.version, "hip", None) else "cuda"
         for i in range(torch.cuda.device_count()):
             free, total = torch.cuda.mem_get_info(i)
+            # memory torch's caching allocator holds but does not use is free for this
+            # process too; the driver counts it as used (E022 D8)
+            cached = torch.cuda.memory_reserved(i) - torch.cuda.memory_allocated(i)
             devices.append(
                 Device(
                     kind=kind,
                     name=f"{kind}:{i} {torch.cuda.get_device_name(i)}",
                     total_bytes=int(total),
-                    available_bytes=int(free),
+                    available_bytes=int(free + max(0, cached)),
                     limit_bytes=None,
                     allocated_bytes=int(torch.cuda.memory_reserved(i)),
                     unified=False,

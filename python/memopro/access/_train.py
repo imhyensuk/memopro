@@ -34,7 +34,29 @@ from memopro._errors import BudgetExceeded, InvalidArgument
 from memopro._units import format_size
 from memopro.report import report
 
-__all__ = ["TrainSession", "batch_size_of", "checkpoint_blocks", "is_oom", "split_batch"]
+__all__ = [
+    "ALLOCATOR_MARGIN",
+    "TrainSession",
+    "batch_size_of",
+    "checkpoint_blocks",
+    "even_micro",
+    "is_oom",
+    "split_batch",
+]
+
+
+# Activations of one sample are measured once; a micro-batch of k samples also pays for the
+# caching allocator's rounding and fragmentation. On a T4, reserved memory was 1.07-1.10x the
+# allocated peak (E022), and a plan at 1.17x still ran out of memory (GPT-2 at a 30% cap, E021
+# D5): 1.25 x the measured activations per sample.
+ALLOCATOR_MARGIN = 1.25
+
+
+def even_micro(n: int, most: int) -> int:
+    """The smallest micro-batch size that needs as few pieces as ``most`` does, so the pieces
+    are even (16 samples at most 15 per piece: 8 + 8, not 15 + 1; E021 D5)."""
+    pieces = math.ceil(n / max(1, most))
+    return math.ceil(n / pieces)
 
 
 # ---------------------------------------------------------------- batches
@@ -155,7 +177,7 @@ class TrainSession:
         max_grad_norm: float | None = None,
         reduction: str = "mean",
     ) -> None:
-        from memopro.access._common import setup
+        from memopro.access._common import resident_bytes, setup
         from memopro.orchestrator.candidates import QUALITY_LIMIT
         from memopro.techniques.base import QualityGrade
 
@@ -168,7 +190,12 @@ class TrainSession:
         self._plan = plan and micro_batch_size is None
         first = next(model.parameters(), None) if hasattr(model, "parameters") else None
         where = first.device.type if first is not None else None
-        self._setup = setup(budget=budget, quality=quality, device=where)
+        self._setup = setup(
+            budget=budget, quality=quality, device=where, holding=(model, optimizer)
+        )
+        # what the model and optimizer already hold in the budgeted pool (E022 D8)
+        pool = self._setup.device if self._setup.budget.device is not None else "cpu"
+        self._held = resident_bytes(pool, model, optimizer)
         self._allow_half = (
             QUALITY_LIMIT[self._setup.config.quality].value >= QualityGrade.NEAR_LOSSLESS.value
         )
@@ -241,7 +268,8 @@ class TrainSession:
         """Take the next exact step down; False when nothing is left."""
         rep = report()
         if self.micro is not None and self.micro > 1:
-            self.micro = math.ceil(self.micro / 2)
+            half = math.ceil(self.micro / 2)
+            self.micro = even_micro(self.batch_size, half) if self.batch_size else half
             rep.add("train_session.micro_batch", "applied", f"{reason}: micro-batch {self.micro}")
             return True
         if not self.checkpointing:
@@ -354,27 +382,26 @@ class TrainSession:
                 self.micro = n
                 return self._last_first_loss
             act, first_loss = measured, self._last_first_loss
-        params = sum(p.numel() * p.element_size() for p in self.model.parameters())
         trainable = sum(
             p.numel() * p.element_size() for p in self.model.parameters() if p.requires_grad
         )
-        state = sum(
-            t.numel() * t.element_size()
-            for s in self.optimizer.state.values()
-            for t in s.values()
-            if hasattr(t, "numel")
-        )
-        if not state and "adam" in type(self.optimizer).__name__.lower():
-            state = 2 * trainable
+        has_state = any(len(s) for s in self.optimizer.state.values())
+        new_state = 0
+        if not has_state and "adam" in type(self.optimizer).__name__.lower():
+            new_state = 2 * trainable  # two moments per trainable parameter, allocated later
         budget = self._setup.budget.device or self._setup.budget.host
-        # weights + gradients (of trainable parameters only) + optimizer state
-        room = budget - (params + trainable + state)
-        self.micro = max(1, min(n, room // max(1, act))) if room > 0 else 1
+        # The budget counts the model and any optimizer state already in memory (`_held`, E022
+        # D8); still to come: gradients of trainable parameters and missing optimizer state.
+        room = budget - self._held - (trainable + new_state)
+        per_sample = max(1, int(act * ALLOCATOR_MARGIN))
+        most = max(1, min(n, room // per_sample)) if room > 0 else 1
+        self.micro = even_micro(n, most)
         report().add(
             "train_session.plan",
             "applied",
-            f"one sample needs {format_size(act)} of activations; budget "
-            f"{format_size(budget)} -> micro-batch {self.micro} of {n}",
+            f"one sample needs {format_size(act)} of activations (x{ALLOCATOR_MARGIN} for the "
+            f"allocator); budget {format_size(budget)}, model and optimizer state "
+            f"{format_size(self._held)} -> micro-batch {self.micro} of {n}",
         )
         return first_loss
 

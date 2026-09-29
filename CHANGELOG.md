@@ -4,6 +4,22 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Fixed: findings of the Colab re-measurement (0098, 0099)
+- Budgets for a model you already have (`train_session`, `check` on a module, `optimize`) count
+  that model once: its memory was already missing from the free memory measured, and planning
+  subtracted it again, so `train_session` split batches more than needed (7B QLoRA on a T4:
+  micro-batch 1 of 4, 0.88x the speed of standard training). A size or fraction in `budget`
+  now bounds the total, model included. On CUDA, memory torch's allocator caches unused counts
+  as available to this process.
+- `train_session` plans with 1.25x the measured activations per sample (allocator margin; a plan
+  without it ran out of memory once) and splits batches evenly (8 + 8, not 15 + 1), also when
+  it retries after an out-of-memory error.
+- The int4 quality note names the measured cost of the back end in use (bitsandbytes nf4 on
+  CUDA: +7.6-8.4% WikiText-2 perplexity; torch int4pack on MPS: +5.7-7.6%).
+- When the default quality picks bitsandbytes int8 while int4 would fit, `load` and
+  `memopro run` report that `quality="low"` loads int4 (about 2.9x faster decoding on a T4,
+  perplexity +7.7% instead of +0.8%). The choice itself is unchanged.
+
 ### Fixed: findings of the Colab T4 run (0093, 0094)
 - `train_session` plans micro-batches for models with frozen parameters (LoRA, peft) too: when
   torch's MemTracker cannot hook them, one sample is measured with the CUDA allocator; gradients
