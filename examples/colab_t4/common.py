@@ -21,8 +21,15 @@ IN_COLAB = "google.colab" in sys.modules or os.path.isdir("/content")
 LOCAL_SMOKE = os.environ.get("MP_LOCAL_SMOKE") == "1"  # local check of the cell logic, no Colab
 
 
+LOG_FILE = None  # set by bootstrap: the cell's own progress log inside the run folder (0096)
+
+
 def _log(msg):
-    print(f"[{datetime.datetime.now():%H:%M:%S}] {msg}", flush=True)
+    line = f"[{datetime.datetime.now():%H:%M:%S}] {msg}"
+    print(line, flush=True)
+    if LOG_FILE:
+        with open(LOG_FILE, "a") as f:
+            f.write(line + "\n")
 
 
 def mount_drive():
@@ -156,6 +163,7 @@ def environment(install_info):
         import memopro._run as R  # noqa: PLC0415
 
         env["build_has"]["0089_elastic_default"] = hasattr(R, "default_elastic")
+        env["build_has"]["0094_fixes"] = hasattr(C, "SLOW_BF16_NOTE") and not R.default_elastic()
     except Exception as e:  # noqa: BLE001
         env["build_has"] = f"unknown: {e}"
     return env
@@ -338,8 +346,10 @@ def fetch_model(repo):
     local = os.path.join("/content/models", repo.replace("/", "--"))
     if os.path.isdir(local):
         return local
-    if shutil.disk_usage("/content").free < size + 10 * 2**30:
-        _log(f"not enough local disk to stage {repo}; loading from Drive")
+    free = shutil.disk_usage("/content").free
+    if free < size + 10 * 2**30:
+        _log(f"not enough local disk to stage {repo} ({size / 2**30:.1f} GiB + 10 GiB margin, "
+             f"{free / 2**30:.1f} GiB free); loading from Drive")
         return path
     t = time.time()
     shutil.copytree(path, local, symlinks=False)
@@ -397,6 +407,8 @@ def bootstrap(cell, config):
     extras = install_extras()
     write_workers()
     run = Run(root, cell, config, new_run=NEW_RUN)
+    global LOG_FILE
+    LOG_FILE = run.path("orchestrator.log")
     env = environment({**info, "extras": extras})
     with open(run.path("env.json"), "w") as f:
         json.dump(env, f, indent=1, default=str)

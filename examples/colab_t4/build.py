@@ -57,6 +57,22 @@ doctor 정확도, 모델 3개(fp16 합 약 17GB > T4)를 한 GPU에서 번갈아
 - 예상 시간: 약 1시간
 - 판정(0091): R1 회귀 7종 통과(배포 전 필수), M1 동면 뒤 같은 답, M2·M3 보고
 """),
+    "remeasure": ("colab_t4_remeasure.ipynb", "cell_remeasure.py", """# memopro Colab T4 재측정: 0094 수정(D1~D4) 확인 (docs/research/0096, E022)
+
+Colab 7차(0093)에서 드러난 결함이 고쳐졌는지 **통합 셀 하나**로 확인한다. 7차에서 받은 모델이 Drive `hf_cache/`에 있으면 다시 받지 않는다(약 1~1.5시간).
+
+| 확인 | 경우 | 기준(0096) |
+|---|---|---|
+| R1 | 회귀 검사 7종 | 모두 통과(γ는 `run`에서 기본 꺼짐) |
+| D1 | 7B QLoRA 표준 방식 대 memopro | `train_session` 계획이 건너뛰어지지 않고 완주 |
+| D2 | 1.5B·3B HF fp16 대 memopro | memopro가 fp16을 고르고, 2048토큰 첫 토큰 시간 ≤ HF fp16의 1.2배 |
+| D3 | 7B HF bnb4·bnb8 대 memopro(기본·low) | low는 int4, 디코딩 ≥ HF bnb4의 0.9배. 기본은 int8 유지 |
+| D4 | 수정하지 않은 스크립트를 `memopro run`으로(1.5B·7B) | 7B는 정책 적용(γ 기록 없음), 1.5B는 개입 안 함 |
+
+**반드시 새 sdist를 쓴다**: Drive `memopro_colab/install/`의 `memopro-0.1.0a1.tar.gz`를 이번에 받은 파일로 **바꿔 놓는다**(0094 수정 포함). 셀 첫 출력의 `build_has`에서 `0094_fixes: true`를 확인한다. 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한 뒤 실행한다.
+
+결과 요약(`summary.md`) 맨 위에 판정 표(pass/fail)가 나온다.
+"""),
 }
 
 
