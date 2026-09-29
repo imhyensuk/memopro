@@ -150,7 +150,10 @@ def scenario_regress():
                 "pass": candidates._int4_group(ctx, 4) == 64}
 
     def int4_quality_note():
-        from memopro.orchestrator.candidates import INT4_QUALITY_NOTE
+        from memopro.orchestrator import candidates
+
+        # the note for this back end (0099 D9); older builds had one note for all
+        note = getattr(candidates, "BNB_INT4_QUALITY_NOTE", None) or candidates.INT4_QUALITY_NOTE
 
         plan = plan_load(small, device=DEVICE, quality="low")
         int4 = next(c for c in plan.candidates if c.name == "quant.int4")
@@ -161,8 +164,8 @@ def scenario_regress():
         layers = sorted({type(m).__name__ for m in model.modules() if "Linear" in type(m).__name__})
         del model
         cleanup()
-        return {"chosen": entry.technique, "note_in_report": INT4_QUALITY_NOTE in entry.detail,
-                "layers": layers, "pass": INT4_QUALITY_NOTE in entry.detail
+        return {"chosen": entry.technique, "note_in_report": note in entry.detail,
+                "layers": layers, "pass": note in entry.detail
                 and entry.technique == "load.quant.int4" and "Int4PackedLinear" not in layers}
 
     def residency_file_refused():

@@ -177,14 +177,14 @@ def test_long_inputs_take_the_dequantized_path_with_the_same_result(monkeypatch)
 @needs_mps
 def test_loading_int4_reports_its_quality_cost(qwen_dir):
     from memopro.access._load import plan_load
-    from memopro.orchestrator.candidates import INT4_QUALITY_NOTE
+    from memopro.orchestrator.candidates import INT4PACK_QUALITY_NOTE
 
     int4 = next(c for c in plan_load(qwen_dir, device="mps").candidates if c.name == "quant.int4")
     memopro.load(
         qwen_dir, device="mps", quality="low", budget=int4.needs.device + int4.needs.host + 1024
     )
     entry = [e for e in memopro.report().entries if e.action == "applied"][-1]
-    assert INT4_QUALITY_NOTE in entry.detail
+    assert INT4PACK_QUALITY_NOTE in entry.detail
 
 
 def test_int4_size_estimate_uses_the_group():

@@ -49,6 +49,7 @@ def optimize(
         device=_where(model),
         budget_basis=budget_basis,
         fallback=fallback,
+        holding=(model,),  # the model is already in memory: counted once (E022 D8)
     )
     if goal == "infer":
         return _infer(model, s)

@@ -26,6 +26,7 @@ __all__ = [
     "infer_candidates",
     "post_load",
     "select",
+    "speed_hint",
 ]
 
 QUALITY_LIMIT = {
@@ -273,9 +274,22 @@ def _int4_group(ctx: LoadContext, bits: int) -> int:
     return GROUP
 
 
-INT4_QUALITY_NOTE = (
+# measured quality cost of int4 per back end (E022 D9: a CUDA load cited the MPS numbers)
+INT4PACK_QUALITY_NOTE = (
     "quality cost: int4 raised WikiText-2 perplexity by 5.7-7.6% for Qwen2.5-1.5B/3B with torch "
-    "int4pack group 32 (E020, 0084); other models and back ends differ"
+    "int4pack group 32 (E020, 0084); other models differ"
+)
+BNB_INT4_QUALITY_NOTE = (
+    "quality cost: bitsandbytes nf4 raised WikiText-2 perplexity by 7.6-8.4% for "
+    "Qwen2.5-1.5B/3B/7B on a T4 (E021/0093, E022/0098); other models differ"
+)
+INT4_QUALITY_NOTE = (  # a back end without its own measurement
+    "quality cost: int4 raised WikiText-2 perplexity by 5.7-8.4% for Qwen2.5 models with the "
+    "back ends measured so far (0084, 0093, 0098); this back end and other models differ"
+)
+BNB_INT4_SPEED_HINT = (
+    "quality='low' would load int4 (bitsandbytes nf4) instead: Qwen2.5-7B decoded 2.9x faster "
+    "on a T4 (15.8 vs 5.5 tok/s) for perplexity +7.7% instead of +0.8% (E022/0098)"
 )
 
 
@@ -295,11 +309,37 @@ def _quant_speed(tech: loading.LoadTechnique, bits: int, ctx: LoadContext) -> in
     return tech.speed
 
 
-def quality_note(cfg: Configuration) -> str:
-    """What the report says about a configuration's measured cost or reason (0084 Q-a, 0093)."""
+def quality_note(cfg: Configuration, ctx: LoadContext | None = None) -> str:
+    """What the report says about a configuration's measured cost or reason (0084 Q-a, 0093),
+    for the back end used in ``ctx`` (E022 D9)."""
     if cfg.kwargs.get("_quant_bits") == 4:
-        return INT4_QUALITY_NOTE
+        backend = loading.quantization_backend(ctx.device, 4)[0] if ctx is not None else ""
+        return {
+            "torch-int4pack": INT4PACK_QUALITY_NOTE,
+            "bitsandbytes": BNB_INT4_QUALITY_NOTE,
+        }.get(backend, INT4_QUALITY_NOTE)
     return cfg.kwargs.get("_note", "")
+
+
+def speed_hint(chosen: Configuration, candidates: list[Configuration], ctx: LoadContext) -> str:
+    """When int8 was chosen but int4 would fit, rank faster and is held back only by
+    ``quality``: say so, with the measured trade-off where there is one (E022 O1). The choice
+    itself does not change (``quality`` bounds automatic loss, 0052 E3)."""
+    if chosen.kwargs.get("_quant_bits") != 8:
+        return ""
+    int4 = next((c for c in candidates if c.kwargs.get("_quant_bits") == 4), None)
+    if (
+        int4 is None
+        or int4.ok
+        or not int4.fits
+        or not int4.why.startswith("quality ")
+        or int4.speed >= chosen.speed
+    ):
+        return ""
+    backend = backend_of(int4, ctx)
+    if backend == "bitsandbytes":
+        return BNB_INT4_SPEED_HINT
+    return f"quality='low' would load int4 ({backend}) instead, which ranks faster here"
 
 
 def backend_of(cfg: Configuration, ctx: LoadContext) -> str:
