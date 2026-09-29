@@ -231,6 +231,7 @@ def scenario_memopro(quality=None, micro=None):
     trace = []
     RESULT["session_start"] = cuda_state()
     with memopro.train_session(model, opt, **kw) as s:
+        RESULT["session_measured"] = cuda_state()  # after memopro returned the cache (0103)
         def step(x):
             loss = s.step({"input_ids": x}, lambda mb: model(input_ids=mb["input_ids"],
                                                              labels=mb["input_ids"]).loss)
@@ -283,6 +284,7 @@ def scenario_qlora(use_memopro):
         RESULT["session_start"] = cuda_state()
         trace = []
         with memopro.train_session(model, opt) as s:
+            RESULT["session_measured"] = cuda_state()  # after memopro returned the cache (0103)
             def step(x):
                 loss = s.step({"input_ids": x}, lambda mb: model(input_ids=mb["input_ids"],
                                                                  labels=mb["input_ids"]).loss)

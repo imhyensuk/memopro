@@ -1,7 +1,7 @@
 """Accelerator facts from torch (imported here only, never at ``import memopro``).
 
-CUDA: ``mem_get_info`` (free, total) per device, plus what torch's allocator caches unused in
-this process; note that this creates a CUDA context.
+CUDA: ``mem_get_info`` (free, total) per device, plus the whole segments torch's allocator
+caches unused in this process (`releasable_cache`); note that this creates a CUDA context.
 MPS: the recommended working-set limit is the device ceiling on unified memory (K5).
 ROCm and XPU are detected and listed, but budgets for them are not supported yet (fail-open).
 """
@@ -41,6 +41,24 @@ def mps_usable() -> bool:
         return False
 
 
+def releasable_cache(index: int = 0) -> int:
+    """Bytes torch's CUDA caching allocator holds in segments with nothing allocated: the driver
+    counts them as used, but this process gets them back (``empty_cache``, or on the next
+    out-of-memory error). Free pieces of segments that are partly in use are not counted: they
+    serve only allocations that fit them, and after a 4-bit load 1.67 of 1.99 GiB of cached
+    memory was never reused (E023 F2, 0103)."""
+    import torch
+
+    try:
+        stats = torch.cuda.memory_stats(index)
+        reserved = stats["reserved_bytes.all.current"]
+        active = stats["active_bytes.all.current"]
+        pieces = stats["inactive_split_bytes.all.current"]
+    except (KeyError, RuntimeError, AssertionError):
+        return 0
+    return max(0, int(reserved - active - pieces))
+
+
 def probe() -> tuple[tuple[Device, ...], tuple[str, ...]]:
     if find_spec("torch") is None:
         return (), ("torch not installed: device (GPU) memory is not reported",)
@@ -53,15 +71,12 @@ def probe() -> tuple[tuple[Device, ...], tuple[str, ...]]:
         kind = "rocm" if getattr(torch.version, "hip", None) else "cuda"
         for i in range(torch.cuda.device_count()):
             free, total = torch.cuda.mem_get_info(i)
-            # memory torch's caching allocator holds but does not use is free for this
-            # process too; the driver counts it as used (E022 D8)
-            cached = torch.cuda.memory_reserved(i) - torch.cuda.memory_allocated(i)
             devices.append(
                 Device(
                     kind=kind,
                     name=f"{kind}:{i} {torch.cuda.get_device_name(i)}",
                     total_bytes=int(total),
-                    available_bytes=int(free + max(0, cached)),
+                    available_bytes=int(free + releasable_cache(i)),
                     limit_bytes=None,
                     allocated_bytes=int(torch.cuda.memory_reserved(i)),
                     unified=False,
