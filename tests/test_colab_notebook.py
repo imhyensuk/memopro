@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-NOTEBOOKS = ("train", "infer", "multi")
+NOTEBOOKS = ("train", "infer", "multi", "remeasure")
 
 
 def test_notebook_builds_and_every_cell_compiles(tmp_path):
@@ -33,7 +33,7 @@ def test_notebook_builds_and_every_cell_compiles(tmp_path):
         )
         for value in workers.value.values:
             compile(value.value, "worker", "exec")  # the embedded worker sources compile
-    for name in ("train", "infer", "multi"):
+    for name in NOTEBOOKS:
         assert (tmp_path / f"{name}.py").exists()
 
 
