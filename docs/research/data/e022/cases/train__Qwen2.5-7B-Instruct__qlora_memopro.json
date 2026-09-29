@@ -1,0 +1,140 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "--model",
+  "Qwen/Qwen2.5-7B-Instruct",
+  "--scenario",
+  "qlora_memopro",
+  "--batch",
+  "4",
+  "--seq",
+  "512",
+  "--steps",
+  "20",
+  "--lr",
+  "2e-4"
+ ],
+ "model": "Qwen/Qwen2.5-7B-Instruct",
+ "scenario": "qlora_memopro",
+ "batch": 4,
+ "seq": 512,
+ "steps": 20,
+ "cap": 0.0,
+ "optimizer": "adamw",
+ "load_s": 67.9,
+ "layers": [
+  "Linear",
+  "Linear4bit"
+ ],
+ "trainable_params": 40370176,
+ "memory_after_first_step": {
+  "host_peak_rss_bytes": 6896480256,
+  "allocated_bytes": 8546187264,
+  "reserved_bytes": 10565451776,
+  "peak_allocated_bytes": 9535182336,
+  "peak_reserved_bytes": 10565451776,
+  "device_used_bytes": 10721558528,
+  "peak_device_used_bytes": 10721558528
+ },
+ "losses": [
+  2.8545113801956177,
+  2.8292274475097656,
+  2.3632224798202515,
+  2.413631856441498,
+  2.267201066017151,
+  2.592867851257324,
+  1.9094105064868927,
+  1.9281200766563416,
+  2.09144589304924,
+  2.0253919064998627,
+  2.4343964755535126,
+  2.155245453119278,
+  1.9357920587062836,
+  2.0688764452934265,
+  2.2717615962028503,
+  1.9447509944438934,
+  1.9595412611961365,
+  1.7867836952209473,
+  2.1781702637672424,
+  2.181187331676483
+ ],
+ "step_s": [
+  11.1444,
+  11.1751,
+  11.5871,
+  11.0544,
+  10.5381,
+  10.3132,
+  10.257,
+  10.2986,
+  10.4459,
+  10.6283,
+  10.763,
+  10.7513,
+  10.6307,
+  10.5165,
+  10.4773,
+  10.4462,
+  10.49,
+  10.5335,
+  10.5972,
+  10.623
+ ],
+ "steps_done": 20,
+ "median_step_s": 10.535786032676697,
+ "tokens_per_s": 194.38511693841699,
+ "final_loss": 2.181187331676483,
+ "session": {
+  "micro": 1,
+  "active": [
+   "micro-batch 1"
+  ],
+  "retries": 0
+ },
+ "memory": {
+  "host_peak_rss_bytes": 6896480256,
+  "allocated_bytes": 8546187264,
+  "reserved_bytes": 10567548928,
+  "peak_allocated_bytes": 9859585536,
+  "peak_reserved_bytes": 10567548928,
+  "device_used_bytes": 10723655680,
+  "peak_device_used_bytes": 10723655680
+ },
+ "worker_s": 298.2,
+ "memory_end": {
+  "host_peak_rss_bytes": 6896480256,
+  "allocated_bytes": 19137536,
+  "reserved_bytes": 5448400896,
+  "peak_allocated_bytes": 9859585536,
+  "peak_reserved_bytes": 10567548928,
+  "device_used_bytes": 5604507648,
+  "peak_device_used_bytes": 10723655680
+ },
+ "memopro_report": [
+  {
+   "technique": "load.quant.int4",
+   "action": "applied",
+   "detail": "/content/models/Qwen--Qwen2.5-7B-Instruct: quant.int4 via bitsandbytes (moderate_loss), estimated 6.98 GiB, weights 5.07 GiB on cuda; quality cost: int4 raised WikiText-2 perplexity by 5.7-7.6% for Qwen2.5-1.5B/3B with torch int4pack group 32 (E020, 0084); other models and back ends differ"
+  },
+  {
+   "technique": "train_session.plan",
+   "action": "applied",
+   "detail": "MemTracker unavailable here (e.g. frozen parameters): measured one sample instead"
+  },
+  {
+   "technique": "train_session.plan",
+   "action": "applied",
+   "detail": "one sample needs 949.39 MiB of activations; budget 4.32 GiB -> micro-batch 1 of 4"
+  },
+  {
+   "technique": "train_session",
+   "action": "reverted",
+   "detail": "20 steps, micro-batch 1, retries 0; techniques used: micro-batch 1"
+  }
+ ],
+ "case": "train__Qwen2.5-7B-Instruct__qlora_memopro",
+ "wall_s": 303.7,
+ "timeline_peak_gpu_used_bytes": 10723786752,
+ "timeline_peak_host_used_bytes": 4035915776
+}
