@@ -1,0 +1,74 @@
+{
+ "dataset": "q3",
+ "method": "memopro",
+ "budget": 1073741824,
+ "W": 6171877376,
+ "blocks": 369,
+ "times": {
+  "pass1": 6.664441459011869,
+  "pass2": 7.426082582998788,
+  "pass3": 30.617777833002037,
+  "total": 44.71489487499639
+ },
+ "result": {
+  "n": 3085938688,
+  "mean": 4.527528290054761e-05,
+  "std": 0.027915524318814278,
+  "c3": 10863412,
+  "a1": 2122667072.3397524,
+  "m3": 6958258811.393297,
+  "max_abs": 91.5
+ },
+ "rss_base": 34799616,
+ "rss_peak": 1134100480,
+ "per_pass": [
+  {
+   "loaded": 6171877376,
+   "reread": 0,
+   "read_seconds": 3.389904663999996
+  },
+  {
+   "loaded": 0,
+   "reread": 5126256640,
+   "read_seconds": 2.8136102570000014
+  },
+  {
+   "loaded": 0,
+   "reread": 5131689984,
+   "read_seconds": 2.934718786000013
+  }
+ ],
+ "rt": {
+  "budget": 1073741824,
+  "reserve": 4210688,
+  "used": 1062404096,
+  "peak_used": 1066172416,
+  "buffers": 369,
+  "resident_bytes": 1062404096,
+  "compressed_bytes": 0,
+  "pinned_bytes": 0,
+  "loads": 369,
+  "load_bytes": 6171877376,
+  "rereads": 613,
+  "reread_bytes": 10257946624,
+  "read_seconds": 9.13823370700001,
+  "drops": 918,
+  "drop_bytes": 15367438336,
+  "compressions": 0,
+  "compress_in": 0,
+  "compress_out": 0,
+  "compress_seconds": 0.0,
+  "decompressions": 0,
+  "decompress_bytes": 0,
+  "decompress_seconds": 0.0,
+  "incompressible": 0,
+  "evictions": 918,
+  "refusals": 0,
+  "restore_seconds": 9.13823370700001,
+  "written_bytes": 0
+ },
+ "read_bytes": 16429824000,
+ "swap_before": 3438343618,
+ "swap_after": 3438343618,
+ "attempt": 1
+}
