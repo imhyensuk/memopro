@@ -4,6 +4,17 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Added: `memopro.rt`, a runtime that keeps large buffers under a hard memory budget (0112)
+- Register large arrays from files (`add_file`, `load_npy`) or make them in memory (`alloc`,
+  `array`) and use them through zero-copy NumPy views (`Buffer.view()`, `Buffer.apply()`). When
+  the budget is full the runtime drops buffers it can re-read from their original file (verified
+  by digest, read without the page cache) and compresses the ones it cannot, losslessly; it never
+  writes to disk. What the budget cannot hold raises `BudgetExceeded` instead of swapping.
+- Buffers used again and again in the same order (repeated passes over more data than fits) are
+  kept by their measured reuse period, so the runtime keeps a budget's worth instead of
+  re-reading everything each pass as LRU does.
+- Rust: `memopro::rt::Runtime` with the same behaviour.
+
 ### Changed: training plans measure the CUDA cache instead of assuming it (0103)
 - `train_session` returns torch's unused CUDA cache to the driver before it measures the budget
   (the report says how much), and available CUDA memory counts only whole unused cache
