@@ -1,0 +1,7 @@
+{
+ "case": "app__Qwen2.5-7B-Instruct__python",
+ "model": "Qwen/Qwen2.5-7B-Instruct",
+ "how": "python",
+ "status": "skipped",
+ "reason": "plain loading needs ~14.2 GiB host RAM, 10.4 GiB available: not run, the OOM killer could take down the notebook kernel"
+}

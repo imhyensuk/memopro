@@ -1,0 +1,4 @@
+Loading weights:   0%|          | 0/338 [00:00<?, ?it/s]Loading weights:  49%|████▊     | 164/338 [00:00<00:00, 1639.58it/s]Loading weights:  97%|█████████▋| 328/338 [00:00<00:00, 1398.73it/s]Loading weights: 100%|██████████| 338/338 [00:00<00:00, 1466.54it/s]
+APP loaded in 11.4s on cuda:0
+APP generated in 2.3s: GPUs run out of memory due to their limited on-chip VRAM capacity compared to the large amounts of RAM used in CPUs for managing system-wide data and
+APP peak_allocated 3102707712
