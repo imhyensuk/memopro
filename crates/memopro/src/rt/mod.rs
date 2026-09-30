@@ -197,6 +197,11 @@ struct Inner {
     stats: Stats,
     cost: Cost,
     last_pinned: Option<BufferId>,
+    /// The buffer used before `last_pinned` (context for `pairs`).
+    prev_pinned: Option<BufferId>,
+    /// Second-order learned order: (previous, current) -> next. Tells a forward pass from a
+    /// backward pass over the same buffers, which a single successor per buffer cannot (0117 F2).
+    pairs: HashMap<(BufferId, BufferId), BufferId>,
     queue: VecDeque<(BufferId, f64)>,
     queued: HashSet<BufferId>,
     trace: VecDeque<Trace>,
@@ -238,6 +243,12 @@ struct Buf {
     next: Option<BufferId>,
     /// Brought back by the service thread and not used since.
     prefetched: bool,
+    /// At its last use it had stayed in memory since the use before: part of the set the demand
+    /// policy keeps. Prefetching leaves these alone while they fit in the budget minus the
+    /// prefetch window (0117 F1).
+    kept: bool,
+    /// In memory, uncompressed, since its last use.
+    stayed: bool,
 }
 
 struct Src {
@@ -343,6 +354,8 @@ impl Buf {
             uses: 0,
             next: None,
             prefetched: false,
+            kept: false,
+            stayed: false,
         }
     }
 
@@ -437,6 +450,8 @@ impl Runtime {
                     decompress: Rate::assumed(1.2e9),
                 },
                 last_pinned: None,
+                prev_pinned: None,
+                pairs: HashMap::new(),
                 queue: VecDeque::new(),
                 queued: HashSet::new(),
                 trace: VecDeque::new(),
@@ -658,6 +673,7 @@ impl Runtime {
             }
         }
         st.queued.remove(&id);
+        st.pairs.retain(|&(a, c), n| a != id && c != id && *n != id);
         drop(b);
         sh.cond.notify_all();
         Ok(())
@@ -786,11 +802,7 @@ impl Runtime {
             });
         }
         let prefetch = self.shared.config.prefetch;
-        let lookahead = if prefetch {
-            self.shared.config.lookahead.min(self.shared.limit() / 4)
-        } else {
-            0
-        };
+        let lookahead = if prefetch { self.shared.window() } else { 0 };
         let capacity = self.shared.limit().saturating_sub(lookahead);
         let (restore_bytes, restore_seconds) = predict::steady_misses(&items, capacity);
         let compute_seconds = (last_seconds - waited).max(0.0);
@@ -874,12 +886,21 @@ impl Shared {
             st.stats.pins += 1;
             st.stats.restore_seconds += waited;
             let now = st.clock;
-            if let Some(prev) = st.last_pinned.filter(|p| *p != id)
-                && let Some(pb) = st.bufs.get_mut(&prev)
-            {
-                pb.next = Some(id);
+            if st.last_pinned != Some(id) {
+                if let Some(prev) = st.last_pinned {
+                    if let Some(pb) = st.bufs.get_mut(&prev) {
+                        pb.next = Some(id);
+                    }
+                    if let Some(before) = st.prev_pinned {
+                        if st.pairs.len() >= 4 * st.bufs.len() + 1024 {
+                            st.pairs.clear(); // no stable order: do not grow without bound
+                        }
+                        st.pairs.insert((before, prev), id);
+                    }
+                }
+                st.prev_pinned = st.last_pinned;
+                st.last_pinned = Some(id);
             }
-            st.last_pinned = Some(id);
             if st.trace.len() == TRACE_LEN {
                 st.trace.pop_front();
             }
@@ -899,6 +920,8 @@ impl Shared {
             }
             b.last = now;
             b.uses += 1;
+            b.kept = b.stayed;
+            b.stayed = true;
             if std::mem::take(&mut b.prefetched) {
                 st.stats.prefetch_hits += 1;
             }
@@ -930,16 +953,27 @@ impl Shared {
         Ok(pin)
     }
 
-    /// Queue the buffers expected after `from` (learned order) until `lookahead` bytes, at
-    /// most a quarter of the budget (a larger window only evicts what it brought in).
+    /// Bytes the service thread may bring in ahead of use: `lookahead`, at most a quarter of
+    /// the budget (a larger window only evicts what it brought in).
+    fn window(&self) -> u64 {
+        self.config.lookahead.min(self.limit() / 4).max(1)
+    }
+
+    /// Queue the buffers expected after `from` (learned order: by the pair of the previous and
+    /// the current buffer when known, else by the current one) until the window is full.
     fn schedule(&self, st: &mut Inner, from: BufferId) {
-        let window = self.config.lookahead.min(self.limit() / 4).max(1);
+        let window = self.window();
+        let mut prev = st.prev_pinned;
         let mut cur = from;
         let mut bytes = 0u64;
         let mut steps = 0.0;
         let mut seen = HashSet::new();
         let mut pushed = false;
-        while let Some(n) = st.bufs.get(&cur).and_then(|b| b.next) {
+        loop {
+            let by_pair = prev.and_then(|p| st.pairs.get(&(p, cur)).copied());
+            let Some(n) = by_pair.or_else(|| st.bufs.get(&cur).and_then(|b| b.next)) else {
+                break;
+            };
             if n == from || !seen.insert(n) || steps >= 64.0 {
                 break;
             }
@@ -958,6 +992,7 @@ impl Shared {
             if bytes >= window {
                 break;
             }
+            prev = Some(cur);
             cur = n;
         }
         if pushed {
@@ -1165,10 +1200,23 @@ impl Shared {
                 (id, c)
             })
             .collect();
+        // Prefetching takes room from the buffers the demand policy keeps only when they hold
+        // more than the budget minus the window. Otherwise a prefetcher running ahead of the
+        // computation evicts what would have been hits, and the kept set wears away pass after
+        // pass (E026 P1, 0116); this splits memory into a kept part and a prefetch window.
+        let protect_kept = bound.is_some() && {
+            let kept: u64 = st
+                .bufs
+                .values()
+                .filter(|b| b.kept)
+                .map(Buf::accounted)
+                .sum();
+            kept + self.window() <= self.limit()
+        };
         let mut best: Option<(f64, BufferId, Action)> = None;
         let mut newly_incompressible = 0;
         for (&id, b) in st.bufs.iter_mut() {
-            if Some(id) == exclude || b.pins > 0 || b.busy {
+            if Some(id) == exclude || b.pins > 0 || b.busy || (protect_kept && b.kept) {
                 continue;
             }
             let staleness = now - b.last as f64 + 1.0;
@@ -1255,6 +1303,8 @@ impl Shared {
         let freed = b.accounted();
         let old = std::mem::replace(&mut b.data, Data::Empty);
         let wasted = std::mem::take(&mut b.prefetched);
+        b.kept = false;
+        b.stayed = false;
         st.used -= freed;
         st.stats.drops += 1;
         st.stats.drop_bytes += freed;
@@ -1280,6 +1330,8 @@ impl Shared {
         };
         b.busy = true;
         let wasted = std::mem::take(&mut b.prefetched);
+        b.kept = false;
+        b.stayed = false;
         let (nbytes, elem) = (b.nbytes, b.elem);
         let cap = region.capacity() as u64;
         drop(st);
