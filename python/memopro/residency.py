@@ -259,7 +259,7 @@ def cache_path(directory: Path, model_id: Any, revision: str | None, cfg_name: s
 
 def _valid(path: Path, sources: list[dict]) -> bool:
     try:
-        manifest = json.loads(path.with_suffix(".json").read_text())
+        manifest = json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return False
     return (
@@ -329,7 +329,7 @@ def _map_cache(cls: Any, model_id: Any, revision: str | None, path: Path) -> tup
 
     from memopro.techniques.integrations.int4pack import Int4PackedLinear
 
-    manifest = json.loads(path.with_suffix(".json").read_text())
+    manifest = json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
     model = _skeleton(cls, model_id, revision)
     for name, spec in manifest["int4"].items():  # shells whose buffers come from the file
         owner, _, attr = name.rpartition(".")

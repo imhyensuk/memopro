@@ -4,6 +4,11 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Fixed: text files are read as UTF-8 on Windows
+- `memopro.toml`, file-cache manifests, spill counters and Hugging Face shard indexes were read
+  with the system code page; a non-ASCII path or comment broke them on Windows (found by the
+  Windows CI job through the Colab notebook builder).
+
 ### Added: `memopro.rt` phase 2: prefetching, re-computation, prediction, PyTorch (0115)
 - A background thread learns the order buffers are used in and brings the next ones back while
   you compute (`prefetch=True` by default, `lookahead`); it never evicts anything needed sooner.

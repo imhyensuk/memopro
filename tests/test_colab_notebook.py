@@ -18,7 +18,7 @@ def test_notebook_builds_and_every_cell_compiles(tmp_path):
         capture_output=True,
     )
     for part in NOTEBOOKS:
-        nb = json.loads((ROOT / f"examples/colab_t4_{part}.ipynb").read_text())
+        nb = json.loads((ROOT / f"examples/colab_t4_{part}.ipynb").read_text(encoding="utf-8"))
         code = [c for c in nb["cells"] if c["cell_type"] == "code"]
         assert len(code) == 1
         cell = code[0]
@@ -39,10 +39,10 @@ def test_notebook_builds_and_every_cell_compiles(tmp_path):
 
 def test_committed_notebook_matches_the_sources(tmp_path):
     files = [ROOT / f"examples/colab_t4_{part}.ipynb" for part in NOTEBOOKS]
-    before = "".join(f.read_text() for f in files)
+    before = "".join(f.read_text(encoding="utf-8") for f in files)
     subprocess.run(
         [sys.executable, str(ROOT / "examples/colab_t4/build.py")], check=True, capture_output=True
     )
-    after = "".join(f.read_text() for f in files)
+    after = "".join(f.read_text(encoding="utf-8") for f in files)
     strip = lambda t: "\n".join(l for l in t.splitlines() if "EXPECTED_COMMIT =" not in l)
     assert strip(before) == strip(after), "run examples/colab_t4/build.py and commit the notebook"
