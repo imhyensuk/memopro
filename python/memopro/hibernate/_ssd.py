@@ -87,7 +87,7 @@ def _today() -> str:
 
 def written_today(directory: Path) -> int:
     try:
-        data = json.loads(_counter(directory).read_text())
+        data = json.loads(_counter(directory).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return 0
     return int(data.get(_today(), 0))
@@ -95,7 +95,7 @@ def written_today(directory: Path) -> int:
 
 def written_total(directory: Path) -> int:
     try:
-        data = json.loads(_counter(directory).read_text())
+        data = json.loads(_counter(directory).read_text(encoding="utf-8"))
     except (OSError, ValueError):
         return 0
     return int(sum(int(v) for v in data.values()))
@@ -104,13 +104,13 @@ def written_total(directory: Path) -> int:
 def _record(directory: Path, nbytes: int) -> None:
     path = _counter(directory)
     try:
-        data = json.loads(path.read_text())
+        data = json.loads(path.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         data = {}
     today = _today()
     data[today] = int(data.get(today, 0)) + nbytes
     tmp = path.with_suffix(".tmp")
-    tmp.write_text(json.dumps(data))
+    tmp.write_text(json.dumps(data), encoding="utf-8")
     os.chmod(tmp, 0o600)
     tmp.replace(path)
 
