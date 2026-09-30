@@ -11,6 +11,9 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   prefetch window.
 - The learned order remembers the previous buffer too, so a backward pass after a forward pass
   (training) is prefetched in the right direction.
+- The prefetch window is the next `lookahead` bytes of use, counting buffers already in memory;
+  counting only missing ones let it run far ahead and fill the budget with future buffers
+  (0119, 0120).
 
 ### Fixed: text files are read as UTF-8 on Windows
 - `memopro.toml`, file-cache manifests, spill counters and Hugging Face shard indexes were read
