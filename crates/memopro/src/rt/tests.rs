@@ -420,6 +420,51 @@ fn prefetching_keeps_what_the_policy_keeps() {
     }
 }
 
+/// E026's pipeline in small: 184 blocks, room for 72 (the least the reserve allows), a
+/// four-block window, and more compute than reading. Rereads per pass, with and without
+/// prefetching.
+fn pipeline_rereads(prefetch: bool) -> (Vec<u64>, Stats) {
+    let (path, _) = data_file();
+    let block = 64 * 1024;
+    let probe = Runtime::new(Config::new(64 * MIB as u64)).unwrap();
+    let reserve = probe.stats().reserve;
+    drop(probe);
+    let mut c = Config::new(reserve + 72 * block as u64);
+    c.prefetch = prefetch;
+    c.lookahead = 4 * block as u64;
+    let rt = Runtime::new(c).unwrap();
+    let ids: Vec<_> = (0..184)
+        .map(|i| rt.add_file(path, (i * block) as u64, block, 1).unwrap())
+        .collect();
+    let mut per_pass = Vec::new();
+    for _ in 0..4 {
+        let before = rt.stats().rereads;
+        for &id in &ids {
+            let p = rt.pin(id, false).unwrap();
+            std::hint::black_box(p.as_slice()[0]);
+            std::thread::sleep(std::time::Duration::from_micros(400));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        per_pass.push(rt.stats().rereads - before);
+    }
+    (per_pass, rt.stats())
+}
+
+#[test]
+fn prefetching_looks_ahead_only_its_window() {
+    let (without, _) = pipeline_rereads(false);
+    let (with, s) = pipeline_rereads(true);
+    assert!(s.prefetch_hits > 0, "{s:?}");
+    for pass in 1..4 {
+        assert!(
+            with[pass] <= without[pass] + 8,
+            "pass {pass}: {} of 184 blocks re-read with prefetching, {} without ({s:?})",
+            with[pass],
+            without[pass]
+        );
+    }
+}
+
 #[test]
 fn prefetching_follows_a_forward_and_backward_order() {
     let (path, _) = data_file();

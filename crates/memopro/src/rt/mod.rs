@@ -960,7 +960,10 @@ impl Shared {
     }
 
     /// Queue the buffers expected after `from` (learned order: by the pair of the previous and
-    /// the current buffer when known, else by the current one) until the window is full.
+    /// the current buffer when known, else by the current one) that are not in memory, within
+    /// the next `window` bytes of use. Every buffer ahead counts toward the window, in memory or
+    /// not: counting only the missing ones let the prefetcher run up to 64 buffers ahead and fill
+    /// the budget with future buffers, evicting the ones kept for the next pass (E026b, 0119).
     fn schedule(&self, st: &mut Inner, from: BufferId) {
         let window = self.window();
         let mut prev = st.prev_pinned;
@@ -981,13 +984,11 @@ impl Shared {
             let Some(b) = st.bufs.get(&n) else {
                 break;
             };
+            bytes += round_to_pages(b.nbytes) as u64;
             let wanted = !matches!(b.state(), BufferState::Resident) && b.lineage.is_none();
-            if wanted {
-                bytes += b.nbytes as u64;
-                if !b.busy && st.queued.insert(n) {
-                    st.queue.push_back((n, steps));
-                    pushed = true;
-                }
+            if wanted && !b.busy && st.queued.insert(n) {
+                st.queue.push_back((n, steps));
+                pushed = true;
             }
             if bytes >= window {
                 break;
