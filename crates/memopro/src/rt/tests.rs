@@ -377,6 +377,79 @@ fn prefetch_hints_and_dropping_the_runtime_stop_the_service_thread() {
     assert_eq!(pin.len(), MIB);
 }
 
+/// Rereads per pass of a repeating scan over 60 blocks of 256 KiB (room for 31) with "compute"
+/// between pins, so the service thread runs ahead of the caller as in E026 P1.
+fn rereads_per_pass(prefetch: bool) -> (Vec<u64>, Stats) {
+    let (path, _) = data_file();
+    let mut c = Config::new(12 * MIB as u64);
+    c.prefetch = prefetch;
+    c.lookahead = MIB as u64; // four blocks
+    let rt = Runtime::new(c).unwrap();
+    let block = MIB / 4;
+    let ids: Vec<_> = (0..60)
+        .map(|i| rt.add_file(path, (i * block) as u64, block, 1).unwrap())
+        .collect();
+    let mut per_pass = Vec::new();
+    for _ in 0..5 {
+        let before = rt.stats().rereads;
+        for &id in &ids {
+            let p = rt.pin(id, false).unwrap();
+            std::hint::black_box(p.as_slice()[0]);
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20)); // let the service thread settle
+        per_pass.push(rt.stats().rereads - before);
+    }
+    (per_pass, rt.stats())
+}
+
+#[test]
+fn prefetching_keeps_what_the_policy_keeps() {
+    let (without, _) = rereads_per_pass(false);
+    let (with, s) = rereads_per_pass(true);
+    assert!(s.prefetch_hits > 0, "{s:?}");
+    // Before 0117 F1 the prefetcher evicted the kept blocks one by one and every pass re-read
+    // all 60; now the window (four blocks) is the only extra cost.
+    for pass in 2..5 {
+        assert!(
+            with[pass] <= without[pass] + 5,
+            "pass {pass}: {} blocks re-read with prefetching, {} without",
+            with[pass],
+            without[pass]
+        );
+    }
+}
+
+#[test]
+fn prefetching_follows_a_forward_and_backward_order() {
+    let (path, _) = data_file();
+    let rt = prefetching(12, 2);
+    let ids: Vec<_> = (0..14)
+        .map(|i| rt.add_file(path, (i * MIB) as u64, MIB, 1).unwrap())
+        .collect();
+    let mut order: Vec<_> = ids.clone();
+    order.extend(ids.iter().rev().copied());
+    for step in 0..8 {
+        if step == 3 {
+            let s = rt.stats();
+            assert!(s.prefetches > 0, "{s:?}");
+        }
+        for &id in &order {
+            drop(rt.pin(id, false).unwrap());
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+    }
+    let s = rt.stats();
+    // a single successor per buffer points backwards in the forward pass and forwards in the
+    // backward pass; pairs tell the two apart
+    assert!(
+        s.prefetch_wasted * 4 <= s.prefetches,
+        "wasted {} of {} prefetches",
+        s.prefetch_wasted,
+        s.prefetches
+    );
+}
+
 fn widen(inputs: &[&[u8]], out: &mut [u8]) -> Result<()> {
     for (o, i) in out.chunks_exact_mut(4).zip(inputs[0].chunks_exact(2)) {
         o[..2].fill(0);

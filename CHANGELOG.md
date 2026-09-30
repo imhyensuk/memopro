@@ -4,6 +4,14 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Changed: prefetching no longer wears away what the runtime keeps (0116-0118)
+- On repeated passes that compute more than they read, the prefetcher used to evict buffers
+  the runtime was keeping for the next pass, so every pass re-read everything. It now takes
+  room only from buffers that were not hits while the kept ones fit in the budget minus the
+  prefetch window.
+- The learned order remembers the previous buffer too, so a backward pass after a forward pass
+  (training) is prefetched in the right direction.
+
 ### Fixed: text files are read as UTF-8 on Windows
 - `memopro.toml`, file-cache manifests, spill counters and Hugging Face shard indexes were read
   with the system code page; a non-ASCII path or comment broke them on Windows (found by the
