@@ -219,7 +219,7 @@ def _cached_files(name: str, revision: str | None) -> list[Path]:
     index = try_to_load_from_cache(name, "model.safetensors.index.json", revision=revision)
     if not isinstance(index, str):
         return []
-    shards = sorted(set(json.loads(Path(index).read_text())["weight_map"].values()))
+    shards = sorted(set(json.loads(Path(index).read_text(encoding="utf-8"))["weight_map"].values()))
     paths = [try_to_load_from_cache(name, s, revision=revision) for s in shards]
     return [Path(p) for p in paths] if all(isinstance(p, str) for p in paths) else []
 

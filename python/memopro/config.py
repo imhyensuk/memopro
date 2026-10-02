@@ -289,7 +289,7 @@ def _file_layer() -> dict[str, Any]:
             raise ConfigError(f"MEMOPRO_CONFIG points to a missing file: {path}")
         return {}
     try:
-        data = tomllib.loads(path.read_text())
+        data = tomllib.loads(path.read_text(encoding="utf-8"))
     except tomllib.TOMLDecodeError as e:
         raise ConfigError(f"{path}: {e}") from None
     return _layer(str(path), data)

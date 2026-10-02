@@ -25,9 +25,17 @@ fn data_file() -> &'static (PathBuf, Vec<u8>) {
     })
 }
 
+/// A runtime without prefetching, so counts are deterministic.
 fn runtime(budget_mib: u64, policy: Policy) -> Runtime {
     let mut c = Config::new(budget_mib * MIB as u64);
     c.policy = policy;
+    c.prefetch = false;
+    Runtime::new(c).unwrap()
+}
+
+fn prefetching(budget_mib: u64, lookahead_mib: u64) -> Runtime {
+    let mut c = Config::new(budget_mib * MIB as u64);
+    c.lookahead = lookahead_mib * MIB as u64;
     Runtime::new(c).unwrap()
 }
 
@@ -326,4 +334,253 @@ fn threads_can_share_a_runtime() {
     let s = rt.stats();
     assert!(s.peak_used <= rt.limit());
     assert_eq!(s.pinned_bytes, 0);
+}
+
+// ---------------------------------------------------------------- phase 2 (0115)
+
+#[test]
+fn prefetching_brings_the_next_buffer_back_while_the_caller_works() {
+    let (path, data) = data_file();
+    let rt = prefetching(12, 2);
+    let ids: Vec<_> = (0..20)
+        .map(|i| rt.add_file(path, (i * MIB) as u64, MIB, 1).unwrap())
+        .collect();
+    for _ in 0..4 {
+        for (i, &id) in ids.iter().enumerate() {
+            let p = rt.pin(id, false).unwrap();
+            assert_eq!(p.as_slice(), &data[i * MIB..(i + 1) * MIB]);
+            std::thread::sleep(std::time::Duration::from_millis(3)); // "compute"
+        }
+    }
+    let s = rt.stats();
+    assert!(s.prefetches > 0, "{s:?}");
+    assert!(s.prefetch_hits > 0, "{s:?}");
+    assert!(s.peak_used <= rt.limit());
+}
+
+#[test]
+fn prefetch_hints_and_dropping_the_runtime_stop_the_service_thread() {
+    let (path, _) = data_file();
+    let rt = prefetching(16, 4);
+    let id = rt.add_file(path, 0, MIB, 1).unwrap();
+    rt.prefetch(id).unwrap();
+    for _ in 0..200 {
+        if rt.state(id).unwrap() == BufferState::Resident {
+            break;
+        }
+        std::thread::sleep(std::time::Duration::from_millis(5));
+    }
+    assert_eq!(rt.state(id).unwrap(), BufferState::Resident);
+    assert!(rt.prefetch(999).is_err());
+    let pin = rt.pin(id, false).unwrap();
+    drop(rt); // joins the service thread; the pin stays valid
+    assert_eq!(pin.len(), MIB);
+}
+
+/// Rereads per pass of a repeating scan over 60 blocks of 256 KiB (room for 31) with "compute"
+/// between pins, so the service thread runs ahead of the caller as in E026 P1.
+fn rereads_per_pass(prefetch: bool) -> (Vec<u64>, Stats) {
+    let (path, _) = data_file();
+    let mut c = Config::new(12 * MIB as u64);
+    c.prefetch = prefetch;
+    c.lookahead = MIB as u64; // four blocks
+    let rt = Runtime::new(c).unwrap();
+    let block = MIB / 4;
+    let ids: Vec<_> = (0..60)
+        .map(|i| rt.add_file(path, (i * block) as u64, block, 1).unwrap())
+        .collect();
+    let mut per_pass = Vec::new();
+    for _ in 0..5 {
+        let before = rt.stats().rereads;
+        for &id in &ids {
+            let p = rt.pin(id, false).unwrap();
+            std::hint::black_box(p.as_slice()[0]);
+            std::thread::sleep(std::time::Duration::from_millis(1));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20)); // let the service thread settle
+        per_pass.push(rt.stats().rereads - before);
+    }
+    (per_pass, rt.stats())
+}
+
+#[test]
+fn prefetching_keeps_what_the_policy_keeps() {
+    let (without, _) = rereads_per_pass(false);
+    let (with, s) = rereads_per_pass(true);
+    assert!(s.prefetch_hits > 0, "{s:?}");
+    // Before 0117 F1 the prefetcher evicted the kept blocks one by one and every pass re-read
+    // all 60; now the window (four blocks) is the only extra cost.
+    for pass in 2..5 {
+        assert!(
+            with[pass] <= without[pass] + 5,
+            "pass {pass}: {} blocks re-read with prefetching, {} without",
+            with[pass],
+            without[pass]
+        );
+    }
+}
+
+/// E026's pipeline in small: 184 blocks, room for 72 (the least the reserve allows), a
+/// four-block window, and more compute than reading. Rereads per pass, with and without
+/// prefetching.
+fn pipeline_rereads(prefetch: bool) -> (Vec<u64>, Stats) {
+    let (path, _) = data_file();
+    let block = 64 * 1024;
+    let probe = Runtime::new(Config::new(64 * MIB as u64)).unwrap();
+    let reserve = probe.stats().reserve;
+    drop(probe);
+    let mut c = Config::new(reserve + 72 * block as u64);
+    c.prefetch = prefetch;
+    c.lookahead = 4 * block as u64;
+    let rt = Runtime::new(c).unwrap();
+    let ids: Vec<_> = (0..184)
+        .map(|i| rt.add_file(path, (i * block) as u64, block, 1).unwrap())
+        .collect();
+    let mut per_pass = Vec::new();
+    for _ in 0..4 {
+        let before = rt.stats().rereads;
+        for &id in &ids {
+            let p = rt.pin(id, false).unwrap();
+            std::hint::black_box(p.as_slice()[0]);
+            std::thread::sleep(std::time::Duration::from_micros(400));
+        }
+        std::thread::sleep(std::time::Duration::from_millis(20));
+        per_pass.push(rt.stats().rereads - before);
+    }
+    (per_pass, rt.stats())
+}
+
+#[test]
+fn prefetching_looks_ahead_only_its_window() {
+    let (without, _) = pipeline_rereads(false);
+    let (with, s) = pipeline_rereads(true);
+    assert!(s.prefetch_hits > 0, "{s:?}");
+    for pass in 1..4 {
+        assert!(
+            with[pass] <= without[pass] + 8,
+            "pass {pass}: {} of 184 blocks re-read with prefetching, {} without ({s:?})",
+            with[pass],
+            without[pass]
+        );
+    }
+}
+
+#[test]
+fn prefetching_follows_a_forward_and_backward_order() {
+    let (path, _) = data_file();
+    let rt = prefetching(12, 2);
+    let ids: Vec<_> = (0..14)
+        .map(|i| rt.add_file(path, (i * MIB) as u64, MIB, 1).unwrap())
+        .collect();
+    let mut order: Vec<_> = ids.clone();
+    order.extend(ids.iter().rev().copied());
+    for step in 0..8 {
+        if step == 3 {
+            let s = rt.stats();
+            assert!(s.prefetches > 0, "{s:?}");
+        }
+        for &id in &order {
+            drop(rt.pin(id, false).unwrap());
+            std::thread::sleep(std::time::Duration::from_millis(2));
+        }
+    }
+    let s = rt.stats();
+    // a single successor per buffer points backwards in the forward pass and forwards in the
+    // backward pass; pairs tell the two apart
+    assert!(
+        s.prefetch_wasted * 4 <= s.prefetches,
+        "wasted {} of {} prefetches",
+        s.prefetch_wasted,
+        s.prefetches
+    );
+}
+
+fn widen(inputs: &[&[u8]], out: &mut [u8]) -> Result<()> {
+    for (o, i) in out.chunks_exact_mut(4).zip(inputs[0].chunks_exact(2)) {
+        o[..2].fill(0);
+        o[2..].copy_from_slice(i);
+    }
+    Ok(())
+}
+
+#[test]
+fn derived_buffers_are_recomputed_exactly_when_dropped() {
+    let (path, data) = data_file();
+    let rt = runtime(16, Policy::ReuseDistance);
+    let src = rt.add_file(path, 0, 2 * MIB, 2).unwrap();
+    let wide = rt.derive(&[src], 4 * MIB, 4, Arc::new(widen)).unwrap();
+    let expect: Vec<u8> = data[..2 * MIB]
+        .chunks_exact(2)
+        .flat_map(|c| [0, 0, c[0], c[1]])
+        .collect();
+    assert_eq!(rt.pin(wide, false).unwrap().as_slice(), &expect[..]);
+    assert!(rt.evict(wide).unwrap());
+    assert_eq!(rt.state(wide).unwrap(), BufferState::Dropped);
+    assert!(rt.evict(src).unwrap());
+    assert_eq!(rt.pin(wide, false).unwrap().as_slice(), &expect[..]);
+    let s = rt.stats();
+    assert_eq!(s.recomputes, 1);
+    assert_eq!(s.rereads, 1); // the input came back from its file first
+}
+
+#[test]
+fn a_nondeterministic_recipe_fails_instead_of_returning_other_data() {
+    use std::sync::atomic::{AtomicU8, Ordering};
+    let rt = runtime(16, Policy::ReuseDistance);
+    let base = rt.alloc(MIB, 1).unwrap();
+    let calls = Arc::new(AtomicU8::new(0));
+    let c = calls.clone();
+    let noisy: Compute = Arc::new(move |_: &[&[u8]], out: &mut [u8]| {
+        out.fill(c.fetch_add(1, Ordering::SeqCst));
+        Ok(())
+    });
+    let d = rt.derive(&[base], MIB, 1, noisy).unwrap();
+    assert!(rt.evict(d).unwrap());
+    assert!(matches!(rt.pin(d, false), Err(Error::Integrity(_))));
+}
+
+#[test]
+fn inputs_of_dropped_buffers_cannot_change_or_go() {
+    let (path, _) = data_file();
+    let rt = runtime(16, Policy::ReuseDistance);
+    let src = rt.add_file(path, 0, 2 * MIB, 2).unwrap();
+    let wide = rt.derive(&[src], 4 * MIB, 4, Arc::new(widen)).unwrap();
+    assert!(rt.evict(wide).unwrap());
+    assert!(rt.free(src).is_err());
+    assert!(rt.pin(src, true).is_err());
+    // once the derived buffer is back, the input may change: the derived one keeps its data
+    // and no longer claims a recipe
+    drop(rt.pin(wide, false).unwrap());
+    drop(rt.pin(src, true).unwrap());
+    assert!(rt.evict(wide).is_ok());
+    assert_ne!(rt.state(wide).unwrap(), BufferState::Dropped);
+    assert!(rt.free(src).is_ok());
+}
+
+#[test]
+fn prediction_matches_the_rereads_of_a_repeating_scan() {
+    let (path, _) = data_file();
+    let rt = runtime(12, Policy::ReuseDistance);
+    let ids: Vec<_> = (0..20)
+        .map(|i| rt.add_file(path, (i * MIB) as u64, MIB, 1).unwrap())
+        .collect();
+    assert!(rt.predict().is_none());
+    for _ in 0..3 {
+        for &id in &ids {
+            drop(rt.pin(id, false).unwrap());
+        }
+    }
+    let p = rt.predict().expect("a full cycle was recorded");
+    assert_eq!(p.cycle_pins, 20);
+    assert_eq!(p.cycle_bytes, 20 * MIB as u64);
+    let before = rt.stats().reread_bytes;
+    for &id in &ids {
+        drop(rt.pin(id, false).unwrap());
+    }
+    let actual = rt.stats().reread_bytes - before;
+    let predicted = p.restore_bytes;
+    assert!(
+        actual.abs_diff(predicted) <= MIB as u64,
+        "predicted {predicted}, re-read {actual}"
+    );
 }

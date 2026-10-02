@@ -1,0 +1,84 @@
+{
+ "dataset": "q3",
+ "method": "memopro",
+ "budget": 1073741824,
+ "W": 6171877376,
+ "blocks": 369,
+ "times": {
+  "pass1": 8.291588666994357,
+  "pass2": 8.383767624996835,
+  "pass3": 45.35084808401007,
+  "total": 62.036308208000264
+ },
+ "result": {
+  "n": 3085938688,
+  "mean": 4.527528290054761e-05,
+  "std": 0.027915524318814278,
+  "c3": 10863412,
+  "a1": 2122667072.3397524,
+  "m3": 6958258811.393297,
+  "max_abs": 91.5
+ },
+ "rss_base": 35340288,
+ "rss_peak": 997359616,
+ "per_pass": [
+  {
+   "loaded": 6171877376,
+   "reread": 0,
+   "read_seconds": 3.542579963999999
+  },
+  {
+   "loaded": 0,
+   "reread": 7212064768,
+   "read_seconds": 4.082050919999992
+  },
+  {
+   "loaded": 0,
+   "reread": 6188654592,
+   "read_seconds": 3.6623395070000075
+  }
+ ],
+ "rt": {
+  "budget": 1073741824,
+  "reserve": 4210688,
+  "used": 1062404096,
+  "peak_used": 1066172416,
+  "buffers": 369,
+  "resident_bytes": 1062404096,
+  "compressed_bytes": 0,
+  "pinned_bytes": 0,
+  "loads": 369,
+  "load_bytes": 6171877376,
+  "rereads": 801,
+  "reread_bytes": 13400719360,
+  "read_seconds": 11.286970390999999,
+  "drops": 1106,
+  "drop_bytes": 18510217216,
+  "compressions": 0,
+  "compress_in": 0,
+  "compress_out": 0,
+  "compress_seconds": 0.0,
+  "decompressions": 0,
+  "decompress_bytes": 0,
+  "decompress_seconds": 0.0,
+  "incompressible": 0,
+  "evictions": 1106,
+  "refusals": 0,
+  "restore_seconds": 3.8391493700000012,
+  "pins": 1107,
+  "recomputes": 0,
+  "recompute_bytes": 0,
+  "recompute_seconds": 0.0,
+  "prefetches": 800,
+  "prefetch_bytes": 13383942144,
+  "prefetch_hits": 737,
+  "prefetch_wasted": 0,
+  "prefetch_skipped": 1113,
+  "written_bytes": 0
+ },
+ "read_bytes": 19572596736,
+ "swap_before": 3110338560,
+ "swap_after": 3110338560,
+ "case": "pipeline__q3__memopro__1024MiB__rep2",
+ "attempt": 1
+}
