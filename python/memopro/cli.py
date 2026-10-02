@@ -80,6 +80,16 @@ def _parser() -> argparse.ArgumentParser:
         "--no-elastic", dest="elastic", action="store_const", const=False, help="do not watch it"
     )
     run.add_argument("--census", action="store_true", help="census of the whole run")
+    run.add_argument(
+        "--transparent",
+        metavar="BUDGET",
+        default=None,
+        help="Linux: page the script's NumPy arrays of 16 MiB or more within BUDGET, losslessly "
+        "and without writing to disk (userfaultfd, 0124)",
+    )
+    run.add_argument(
+        "--report-json", metavar="PATH", default=None, help="write the report as JSON at the end"
+    )
     run.add_argument("--dry-run", action="store_true", help="show what would be done; do not run")
     run.add_argument(
         "--keep-malloc-cache",
@@ -153,6 +163,8 @@ def _run(args: argparse.Namespace) -> None:
         elastic=args.elastic,
         census=args.census,
         dry_run=args.dry_run,
+        transparent=args.transparent,
+        report_json=args.report_json,
     )
 
 

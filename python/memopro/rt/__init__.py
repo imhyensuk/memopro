@@ -40,7 +40,7 @@ from typing import Any
 from memopro._errors import InvalidArgument
 from memopro._units import format_size, parse_size
 
-__all__ = ["Buffer", "Runtime", "resolve_budget"]
+__all__ = ["Buffer", "Runtime", "resolve_budget", "transparent"]
 
 # element sizes the codec shuffles by; bfloat16 has no NumPy dtype, it is viewed as uint16
 _BFLOAT16 = "bfloat16"
@@ -262,6 +262,46 @@ class Runtime:
         if s["refusals"]:
             lines.append(f"  refused {s['refusals']} requests the budget could not hold")
         return "\n".join(lines)
+
+
+@contextlib.contextmanager
+def transparent(
+    budget: str | float = "auto",
+    *,
+    threshold: str | int = "16MiB",
+    chunk: str | int = "1MiB",
+    elem: int = 4,
+) -> Iterator[Any]:
+    """NumPy arrays of ``threshold`` bytes or more made inside this block live in memory that
+    memopro pages within ``budget`` (Linux userfaultfd, 0124); the code using them is unchanged.
+
+    The arrays start absent; a touched chunk comes into memory, and when the chunks in memory
+    would exceed the budget one is compressed losslessly in memory and its pages go back to the
+    OS until it is touched again. Nothing is written to disk. Yields the pager
+    (``pager.stats()``). Arrays made here keep using it after the block, until they are freed.
+
+    Not available where the OS has no userfaultfd (macOS, Windows): use :class:`Runtime` buffers
+    there (explicit pins)."""
+    import numpy  # noqa: F401 - NumPy must be loaded before its handler can be set
+
+    from memopro import _core
+    from memopro._errors import ModeUnavailable
+
+    try:
+        pager = _core.RtPager(
+            resolve_budget(budget), parse_size(chunk), elem, 1, 0.15, parse_size(threshold)
+        )
+    except NotImplementedError as e:  # memopro::Error::Unsupported
+        raise ModeUnavailable(
+            "transparent",
+            str(e),
+            ("memopro.rt.Runtime buffers (explicit pins)",),
+        ) from None
+    old = _core.numpy_set_handler(pager.numpy_handler())
+    try:
+        yield pager
+    finally:
+        _core.numpy_set_handler(old)
 
 
 class Buffer:
