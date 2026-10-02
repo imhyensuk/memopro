@@ -115,7 +115,7 @@ def commit():
 def workers_block():
     lines = ["WORKERS = {"]
     for name in WORKER_FILES:
-        src = (HERE / name).read_text()
+        src = (HERE / name).read_text(encoding="utf-8")
         assert "'''" not in src, name
         lines.append(f"    {name!r}: r'''{src}''',")
     lines.append("}")
@@ -123,9 +123,9 @@ def workers_block():
 
 
 def compose(cell_file):
-    text = (HERE / cell_file).read_text().replace("@@COMMIT@@", commit())
+    text = (HERE / cell_file).read_text(encoding="utf-8").replace("@@COMMIT@@", commit())
     head, body = text.split("# @@COMMON@@\n")
-    common = (HERE / "common.py").read_text()
+    common = (HERE / "common.py").read_text(encoding="utf-8")
     return head + common + "\n\n" + workers_block() + "\n\n" + body
 
 
@@ -146,10 +146,10 @@ def main():
         src = compose(cell_file)
         if out_dir:
             out_dir.mkdir(parents=True, exist_ok=True)
-            (out_dir / f"{name}.py").write_text(src)
+            (out_dir / f"{name}.py").write_text(src, encoding="utf-8")
         nb = notebook(head + COMMON_PREP.replace("{cell}", name), src)
         out = ROOT / "examples" / file
-        out.write_text(json.dumps(nb, indent=1, ensure_ascii=False) + "\n")
+        out.write_text(json.dumps(nb, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         print(out, len(nb["cells"][1]["source"]), "lines")
 
 

@@ -11,7 +11,7 @@ use pyo3::exceptions::{
 };
 use pyo3::ffi;
 use pyo3::prelude::*;
-use pyo3::types::{PyBytes, PyDict, PyType};
+use pyo3::types::{PyBytes, PyDict, PyList, PyType};
 use std::os::raw::{c_char, c_int, c_void};
 use std::path::PathBuf;
 use std::sync::Mutex;
@@ -384,11 +384,23 @@ fn state_name(s: memopro::rt::BufferState) -> &'static str {
 #[pymethods]
 impl RtRuntime {
     #[new]
-    #[pyo3(signature = (budget, compress_level=1, min_saving=0.15, policy="reuse"))]
-    fn new(budget: u64, compress_level: i32, min_saving: f64, policy: &str) -> PyResult<Self> {
+    #[pyo3(signature = (
+        budget, compress_level=1, min_saving=0.15, policy="reuse", prefetch=true,
+        lookahead=64 << 20
+    ))]
+    fn new(
+        budget: u64,
+        compress_level: i32,
+        min_saving: f64,
+        policy: &str,
+        prefetch: bool,
+        lookahead: u64,
+    ) -> PyResult<Self> {
         let mut config = memopro::rt::Config::new(budget);
         config.compress_level = compress_level;
         config.min_saving = min_saving;
+        config.prefetch = prefetch;
+        config.lookahead = lookahead;
         config.policy = match policy {
             "reuse" => memopro::rt::Policy::ReuseDistance,
             "lru" => memopro::rt::Policy::Lru,
@@ -443,6 +455,99 @@ impl RtRuntime {
         py.detach(move || rt.free(id)).map_err(rt_err)
     }
 
+    /// Ask the service thread to bring the buffer back now.
+    fn prefetch(&self, id: u64) -> PyResult<()> {
+        self.rt.prefetch(id).map_err(rt_err)
+    }
+
+    /// A buffer computed by `func(out, inputs)` now and re-computed when needed. `out` is a
+    /// memoryview valid only during the call (the Python layer copies the result into it);
+    /// `inputs` are pins of the input buffers (buffer protocol), so arrays made from them stay
+    /// valid as long as they live.
+    fn derive(
+        &self,
+        py: Python<'_>,
+        inputs: Vec<u64>,
+        nbytes: usize,
+        elem: usize,
+        func: Py<PyAny>,
+    ) -> PyResult<u64> {
+        let views_rt = self.rt.clone();
+        let ids = inputs.clone();
+        let compute: memopro::rt::Compute = std::sync::Arc::new(
+            move |_ins: &[&[u8]], out: &mut [u8]| -> memopro::Result<()> {
+                // input pins for Python (not counted as uses); taken before the GIL
+                let pins = ids
+                    .iter()
+                    // SAFETY: Python reaches them only through the buffer protocol
+                    .map(|&id| unsafe { views_rt.pin_untracked(id, false) })
+                    .collect::<memopro::Result<Vec<_>>>()?;
+                Python::attach(|py| -> PyResult<()> {
+                    // SAFETY: `out` stays valid for this call and the view is released below;
+                    // only the Python layer's own code touches it.
+                    let out_view = unsafe {
+                        Bound::from_owned_ptr_or_err(
+                            py,
+                            ffi::PyMemoryView_FromMemory(
+                                out.as_mut_ptr() as *mut c_char,
+                                out.len() as isize,
+                                ffi::PyBUF_WRITE,
+                            ),
+                        )?
+                    };
+                    let in_pins = pins
+                        .into_iter()
+                        .map(|pin| {
+                            Bound::new(
+                                py,
+                                RtPin {
+                                    ptr: pin.as_ptr() as usize,
+                                    len: pin.len(),
+                                    write: false,
+                                    pin: Mutex::new(Some(pin)),
+                                    exports: AtomicUsize::new(0),
+                                    released: AtomicBool::new(false),
+                                },
+                            )
+                        })
+                        .collect::<PyResult<Vec<_>>>()?;
+                    let result = func
+                        .bind(py)
+                        .call1((out_view.clone(), PyList::new(py, &in_pins)?));
+                    let _ = out_view.call_method0("release");
+                    for p in &in_pins {
+                        p.get().release();
+                    }
+                    result.map(|_| ())
+                })
+                .map_err(|e| {
+                    memopro::Error::InvalidArgument(format!("the derive function failed: {e}"))
+                })
+            },
+        );
+        let rt = self.rt.clone();
+        py.detach(move || rt.derive(&inputs, nbytes, elem, compute))
+            .map_err(rt_err)
+    }
+
+    /// Predicted cost of repeating the last recorded cycle of pins (None until a buffer was
+    /// pinned twice).
+    fn predict<'py>(&self, py: Python<'py>) -> PyResult<Option<Bound<'py, PyDict>>> {
+        let Some(p) = self.rt.predict() else {
+            return Ok(None);
+        };
+        let d = PyDict::new(py);
+        d.set_item("cycle_pins", p.cycle_pins)?;
+        d.set_item("cycle_bytes", p.cycle_bytes)?;
+        d.set_item("restore_bytes", p.restore_bytes)?;
+        d.set_item("restore_seconds", p.restore_seconds)?;
+        d.set_item("compute_seconds", p.compute_seconds)?;
+        d.set_item("seconds", p.seconds)?;
+        d.set_item("last_seconds", p.last_seconds)?;
+        d.set_item("prefetch", p.prefetch)?;
+        Ok(Some(d))
+    }
+
     fn evict(&self, py: Python<'_>, id: u64) -> PyResult<bool> {
         let rt = self.rt.clone();
         py.detach(move || rt.evict(id)).map_err(rt_err)
@@ -485,6 +590,15 @@ impl RtRuntime {
         d.set_item("evictions", s.evictions)?;
         d.set_item("refusals", s.refusals)?;
         d.set_item("restore_seconds", s.restore_seconds)?;
+        d.set_item("pins", s.pins)?;
+        d.set_item("recomputes", s.recomputes)?;
+        d.set_item("recompute_bytes", s.recompute_bytes)?;
+        d.set_item("recompute_seconds", s.recompute_seconds)?;
+        d.set_item("prefetches", s.prefetches)?;
+        d.set_item("prefetch_bytes", s.prefetch_bytes)?;
+        d.set_item("prefetch_hits", s.prefetch_hits)?;
+        d.set_item("prefetch_wasted", s.prefetch_wasted)?;
+        d.set_item("prefetch_skipped", s.prefetch_skipped)?;
         d.set_item("written_bytes", s.written_bytes)?;
         Ok(d)
     }

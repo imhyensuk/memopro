@@ -80,6 +80,10 @@ class Runtime:
 
     ``policy``: ``"reuse"`` (default) gives up the buffer whose next use is farthest per cost of
     getting it back; ``"lru"`` gives up the least recently used (for comparison).
+
+    ``prefetch`` (default on): a background thread learns which buffer follows which and brings
+    the next ones back (up to ``lookahead`` bytes) while you compute, never evicting anything
+    needed sooner (0115).
     """
 
     def __init__(
@@ -89,11 +93,20 @@ class Runtime:
         compress_level: int = 1,
         min_saving: float = 0.15,
         policy: str = "reuse",
+        prefetch: bool = True,
+        lookahead: str | int = "64MiB",
     ) -> None:
         from memopro import _core
 
         self.budget = resolve_budget(budget)
-        self._rt = _core.RtRuntime(self.budget, compress_level, min_saving, policy)
+        self._rt = _core.RtRuntime(
+            self.budget,
+            compress_level,
+            min_saving,
+            policy,
+            prefetch,
+            parse_size(lookahead),
+        )
 
     @property
     def limit(self) -> int:
@@ -158,6 +171,57 @@ class Runtime:
             raise InvalidArgument(f"{path}: object arrays hold Python objects, not numbers")
         return self.add_file(path, offset, dtype=np.dtype(dtype).str, shape=tuple(shape))
 
+    def derive(
+        self,
+        fn: Any,
+        *inputs: Buffer,
+        dtype: str = "float32",
+        shape: tuple[int, ...] | None = None,
+        nbytes: int | None = None,
+    ) -> Buffer:
+        """A buffer computed now as ``fn(*input_arrays)`` (NumPy views of the inputs) and
+        re-computed instead of stored when memory is short. ``fn`` must be deterministic and must
+        not keep the arrays it gets: every re-computation is checked against the first result
+        (a mismatch raises :class:`memopro.IntegrityError`, never other data)."""
+        if nbytes is None:
+            if shape is None:
+                raise InvalidArgument("give shape or nbytes for the derived buffer")
+            nbytes = _count(shape) * _itemsize(dtype)
+        nbytes = _check_shape(nbytes, dtype, shape)
+        meta = [(b.dtype, b.shape) for b in inputs]
+
+        def compute(out_view: Any, in_pins: list[Any]) -> None:
+            import weakref
+
+            import numpy as np
+
+            arrays = [_array(p, d, s) for p, (d, s) in zip(in_pins, meta, strict=True)]
+            refs = [weakref.ref(a) for a in arrays]
+            out = _array(out_view, dtype, shape)
+            try:
+                result = fn(*arrays)
+                out[...] = np.asarray(result).reshape(out.shape)
+            finally:
+                del arrays, out
+                result = None
+            if any(r() is not None for r in refs):
+                # the arrays stay valid (their pins hold the memory) but pin it for good
+                raise InvalidArgument(
+                    "the derive function kept an array of its inputs; its buffer would stay "
+                    "pinned. Return results instead of keeping the arrays"
+                )
+
+        bid = self._rt.derive([b.id for b in inputs], nbytes, _elem(dtype), compute)
+        return Buffer(self, bid, nbytes, dtype, shape)
+
+    def predict(self) -> dict[str, Any] | None:
+        """Predicted cost of repeating the last recorded cycle of buffer uses (from the last use
+        of the most recently used buffer to now): bytes that must come back per cycle under
+        this budget, the time that takes at measured speeds, your own compute time, and the
+        predicted seconds per cycle. ``None`` until a buffer has been used twice."""
+        p = self._rt.predict()
+        return None if p is None else dict(p)
+
     def stats(self) -> dict[str, Any]:
         """Counters: bytes read, re-read, dropped, compressed; peak accounted memory; …"""
         return dict(self._rt.stats())
@@ -185,6 +249,16 @@ class Runtime:
                 f"disk: {format_size(s['written_bytes'])}"
             ),
         ]
+        if s["recomputes"]:
+            lines.append(
+                f"  re-computed {format_size(s['recompute_bytes'])} ({s['recomputes']} times), "
+                f"{s['recompute_seconds']:.2f} s"
+            )
+        if s["prefetches"]:
+            lines.append(
+                f"  prefetched {format_size(s['prefetch_bytes'])} ({s['prefetches']} times, "
+                f"{s['prefetch_hits']} used, {s['prefetch_wasted']} wasted)"
+            )
         if s["refusals"]:
             lines.append(f"  refused {s['refusals']} requests the budget could not hold")
         return "\n".join(lines)
@@ -255,6 +329,10 @@ class Buffer:
         with self.view(write) as arr:
             return fn(arr)
 
+    def prefetch(self) -> None:
+        """Bring the buffer back in the background now (a hint)."""
+        self.runtime._rt.prefetch(self.id)
+
     def evict(self) -> bool:
         """Give up the memory now if that loses nothing (drop or compress); False if pinned or
         not possible."""
@@ -263,6 +341,13 @@ class Buffer:
     def free(self) -> None:
         """Forget the buffer and its memory."""
         self.runtime._rt.free(self.id)
+
+
+def _array(view: Any, dtype: str, shape: tuple[int, ...] | None) -> Any:
+    import numpy as np
+
+    arr = np.frombuffer(view, dtype=_np_dtype(dtype))
+    return arr.reshape(shape) if shape is not None else arr
 
 
 def _elem(dtype: str) -> int:
