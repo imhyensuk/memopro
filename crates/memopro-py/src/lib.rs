@@ -709,6 +709,280 @@ impl RtPin {
     }
 }
 
+// ---------------------------------------------------------------- transparent paging (0124)
+
+/// NumPy's `PyDataMemAllocator` (numpy/ndarraytypes.h, NumPy 1.22 or newer).
+#[repr(C)]
+#[derive(Clone, Copy)]
+struct NpyAllocator {
+    ctx: *mut c_void,
+    malloc: unsafe extern "C" fn(*mut c_void, usize) -> *mut c_void,
+    calloc: unsafe extern "C" fn(*mut c_void, usize, usize) -> *mut c_void,
+    realloc: unsafe extern "C" fn(*mut c_void, *mut c_void, usize) -> *mut c_void,
+    free: unsafe extern "C" fn(*mut c_void, *mut c_void, usize),
+}
+
+/// NumPy's `PyDataMem_Handler` (version 1).
+#[repr(C)]
+struct NpyHandler {
+    name: [c_char; 127],
+    version: u8,
+    allocator: NpyAllocator,
+}
+
+/// What the NumPy handler functions reach through `ctx`: the pager for large arrays and NumPy's
+/// default allocator for the rest.
+struct HandlerCtx {
+    pager: std::sync::Arc<memopro::rt::Pager>,
+    threshold: usize,
+    default: NpyAllocator,
+}
+
+const MEM_HANDLER: &std::ffi::CStr = c"mem_handler";
+
+/// NumPy's C API table (`_ARRAY_API`), from NumPy 2 or 1.x.
+fn numpy_api(py: Python<'_>) -> PyResult<*mut *mut c_void> {
+    let module = py
+        .import("numpy._core._multiarray_umath")
+        .or_else(|_| py.import("numpy.core._multiarray_umath"))?;
+    let capsule = module.getattr("_ARRAY_API")?;
+    // SAFETY: `_ARRAY_API` is NumPy's unnamed capsule of its function table.
+    let table = unsafe { ffi::PyCapsule_GetPointer(capsule.as_ptr(), std::ptr::null()) };
+    if table.is_null() {
+        return Err(PyErr::fetch(py));
+    }
+    Ok(table.cast())
+}
+
+// Indices in NumPy's C API table (numpy/__multiarray_api.h, stable since NumPy 1.22).
+const PYDATAMEM_SETHANDLER: usize = 304;
+const PYDATAMEM_DEFAULTHANDLER: usize = 306;
+
+unsafe extern "C" fn np_malloc(ctx: *mut c_void, size: usize) -> *mut c_void {
+    // SAFETY: `ctx` is the HandlerCtx this handler was made with; it lives as long as the capsule.
+    let c = unsafe { &*(ctx as *const HandlerCtx) };
+    if size >= c.threshold
+        && let Ok(p) = c.pager.map(size)
+    {
+        return p.cast();
+    }
+    // SAFETY: NumPy's own default allocator.
+    unsafe { (c.default.malloc)(c.default.ctx, size) }
+}
+
+unsafe extern "C" fn np_calloc(ctx: *mut c_void, n: usize, elsize: usize) -> *mut c_void {
+    // SAFETY: as in np_malloc.
+    let c = unsafe { &*(ctx as *const HandlerCtx) };
+    if let Some(size) = n.checked_mul(elsize)
+        && size >= c.threshold
+        && let Ok(p) = c.pager.map(size)
+    {
+        return p.cast(); // pager memory starts zeroed
+    }
+    // SAFETY: NumPy's own default allocator.
+    unsafe { (c.default.calloc)(c.default.ctx, n, elsize) }
+}
+
+unsafe extern "C" fn np_realloc(
+    ctx: *mut c_void,
+    ptr: *mut c_void,
+    new_size: usize,
+) -> *mut c_void {
+    // SAFETY: as in np_malloc.
+    let c = unsafe { &*(ctx as *const HandlerCtx) };
+    if ptr.is_null() {
+        // SAFETY: same contract.
+        return unsafe { np_malloc(ctx, new_size) };
+    }
+    let Some(old) = c.pager.owns(ptr.cast()) else {
+        // SAFETY: NumPy's own allocation.
+        return unsafe { (c.default.realloc)(c.default.ctx, ptr, new_size) };
+    };
+    // SAFETY: same contract.
+    let q = unsafe { np_malloc(ctx, new_size) };
+    if !q.is_null() {
+        // SAFETY: both regions hold at least min(old, new) bytes; the pager serves the faults.
+        unsafe { std::ptr::copy_nonoverlapping(ptr as *const u8, q as *mut u8, old.min(new_size)) };
+        // SAFETY: NumPy hands the old block back to us with realloc.
+        let _ = unsafe { c.pager.unmap(ptr.cast()) };
+    }
+    q
+}
+
+unsafe extern "C" fn np_free(ctx: *mut c_void, ptr: *mut c_void, size: usize) {
+    if ptr.is_null() {
+        return;
+    }
+    // SAFETY: as in np_malloc.
+    let c = unsafe { &*(ctx as *const HandlerCtx) };
+    if c.pager.owns(ptr.cast()).is_some() {
+        // SAFETY: NumPy frees the block it got from np_malloc/np_calloc/np_realloc.
+        let _ = unsafe { c.pager.unmap(ptr.cast()) };
+        return;
+    }
+    // SAFETY: NumPy's own allocation.
+    unsafe { (c.default.free)(c.default.ctx, ptr, size) }
+}
+
+unsafe extern "C" fn free_handler(capsule: *mut ffi::PyObject) {
+    // SAFETY: called once by Python when the capsule dies; it holds the handler made below.
+    unsafe {
+        let h = ffi::PyCapsule_GetPointer(capsule, MEM_HANDLER.as_ptr()) as *mut NpyHandler;
+        if !h.is_null() {
+            let handler = Box::from_raw(h);
+            drop(Box::from_raw(handler.allocator.ctx as *mut HandlerCtx));
+        }
+    }
+}
+
+/// Transparent paging of large NumPy arrays (Linux userfaultfd, `memopro.rt.transparent`).
+#[pyclass(module = "memopro._core", name = "RtPager", frozen)]
+struct RtPager {
+    pager: std::sync::Arc<memopro::rt::Pager>,
+    threshold: usize,
+}
+
+#[pymethods]
+impl RtPager {
+    #[new]
+    #[pyo3(signature = (budget, chunk=1 << 20, elem=4, compress_level=1, min_saving=0.15, threshold=16 << 20))]
+    fn new(
+        budget: u64,
+        chunk: usize,
+        elem: usize,
+        compress_level: i32,
+        min_saving: f64,
+        threshold: usize,
+    ) -> PyResult<Self> {
+        let config = memopro::rt::PagerConfig {
+            budget,
+            chunk,
+            elem,
+            compress_level,
+            min_saving,
+        };
+        let pager = memopro::rt::Pager::new(config).map_err(rt_err)?;
+        Ok(RtPager {
+            pager: std::sync::Arc::new(pager),
+            threshold: threshold.max(1),
+        })
+    }
+
+    fn limit(&self) -> u64 {
+        self.pager.limit()
+    }
+
+    /// A zero-filled region of at least `nbytes`; returns its address (for tests and ctypes).
+    fn map(&self, py: Python<'_>, nbytes: usize) -> PyResult<usize> {
+        let pager = &self.pager;
+        py.detach(|| pager.map(nbytes).map(|p| p as usize))
+            .map_err(rt_err)
+    }
+
+    /// Give back a region from `map`; returns its length. Nothing may use it afterwards.
+    fn unmap(&self, py: Python<'_>, address: usize) -> PyResult<usize> {
+        let pager = &self.pager;
+        // SAFETY: the caller's contract (documented): the region is no longer used.
+        py.detach(|| unsafe { pager.unmap(address as *mut u8) })
+            .map_err(rt_err)
+    }
+
+    fn stats<'py>(&self, py: Python<'py>) -> PyResult<Bound<'py, PyDict>> {
+        let s = self.pager.stats();
+        let d = PyDict::new(py);
+        d.set_item("budget", s.budget)?;
+        d.set_item("limit", s.limit)?;
+        d.set_item("used", s.used)?;
+        d.set_item("peak_used", s.peak_used)?;
+        d.set_item("regions", s.regions)?;
+        d.set_item("mapped_bytes", s.mapped_bytes)?;
+        d.set_item("resident_bytes", s.resident_bytes)?;
+        d.set_item("compressed_bytes", s.compressed_bytes)?;
+        d.set_item("faults", s.faults)?;
+        d.set_item("zero_fills", s.zero_fills)?;
+        d.set_item("restores", s.restores)?;
+        d.set_item("restore_seconds", s.restore_seconds)?;
+        d.set_item("evictions", s.evictions)?;
+        d.set_item("compress_in", s.compress_in)?;
+        d.set_item("compress_out", s.compress_out)?;
+        d.set_item("compress_seconds", s.compress_seconds)?;
+        d.set_item("incompressible", s.incompressible)?;
+        d.set_item("overruns", s.overruns)?;
+        d.set_item("spurious", s.spurious)?;
+        d.set_item("written_bytes", 0u64)?;
+        Ok(d)
+    }
+
+    /// A NumPy memory handler (`mem_handler` capsule) that puts arrays of `threshold` bytes or
+    /// more in this pager and the rest where NumPy would.
+    fn numpy_handler(&self, py: Python<'_>) -> PyResult<Py<PyAny>> {
+        let api = numpy_api(py)?;
+        // SAFETY: entry 306 is `PyObject *PyDataMem_DefaultHandler` (a capsule NumPy keeps).
+        let default_capsule =
+            unsafe { *(*api.add(PYDATAMEM_DEFAULTHANDLER) as *mut *mut ffi::PyObject) };
+        // SAFETY: NumPy's default handler capsule, named "mem_handler".
+        let default = unsafe { ffi::PyCapsule_GetPointer(default_capsule, MEM_HANDLER.as_ptr()) }
+            as *const NpyHandler;
+        if default.is_null() {
+            return Err(PyErr::fetch(py));
+        }
+        let ctx = Box::into_raw(Box::new(HandlerCtx {
+            pager: self.pager.clone(),
+            threshold: self.threshold,
+            // SAFETY: checked non-null; NumPy's default handler lives as long as NumPy.
+            default: unsafe { (*default).allocator },
+        }));
+        let mut name = [0 as c_char; 127];
+        for (d, s) in name.iter_mut().zip(b"memopro_pager") {
+            *d = *s as c_char;
+        }
+        let handler = Box::into_raw(Box::new(NpyHandler {
+            name,
+            version: 1,
+            allocator: NpyAllocator {
+                ctx: ctx.cast(),
+                malloc: np_malloc,
+                calloc: np_calloc,
+                realloc: np_realloc,
+                free: np_free,
+            },
+        }));
+        // SAFETY: the capsule owns `handler` (and its ctx) and frees them in `free_handler`.
+        let capsule =
+            unsafe { ffi::PyCapsule_New(handler.cast(), MEM_HANDLER.as_ptr(), Some(free_handler)) };
+        if capsule.is_null() {
+            // SAFETY: not handed to Python; free what we made.
+            unsafe {
+                drop(Box::from_raw(handler));
+                drop(Box::from_raw(ctx));
+            }
+            return Err(PyErr::fetch(py));
+        }
+        // SAFETY: a new reference we own.
+        Ok(unsafe { Bound::from_owned_ptr(py, capsule) }.unbind())
+    }
+}
+
+/// Make `handler` (a `mem_handler` capsule, or None for NumPy's default) NumPy's memory
+/// handler in the current context; returns the previous one.
+#[pyfunction]
+fn numpy_set_handler(py: Python<'_>, handler: Option<Bound<'_, PyAny>>) -> PyResult<Py<PyAny>> {
+    let api = numpy_api(py)?;
+    // SAFETY: entry 304 is `PyObject *PyDataMem_SetHandler(PyObject *handler)`.
+    let set: unsafe extern "C" fn(*mut ffi::PyObject) -> *mut ffi::PyObject =
+        unsafe { std::mem::transmute(*api.add(PYDATAMEM_SETHANDLER)) };
+    let arg = handler
+        .as_ref()
+        .map_or(std::ptr::null_mut(), |h| h.as_ptr());
+    // SAFETY: a capsule named "mem_handler" or NULL, as NumPy expects; returns a new reference.
+    let old = unsafe { set(arg) };
+    if old.is_null() {
+        return Err(PyErr::fetch(py));
+    }
+    // SAFETY: a new reference we own.
+    Ok(unsafe { Bound::from_owned_ptr(py, old) }.unbind())
+}
+
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", memopro::VERSION)?;
@@ -730,5 +1004,7 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(codec_pack, m)?)?;
     m.add_class::<RtRuntime>()?;
     m.add_class::<RtPin>()?;
+    m.add_class::<RtPager>()?;
+    m.add_function(wrap_pyfunction!(numpy_set_handler, m)?)?;
     Ok(())
 }

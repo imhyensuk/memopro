@@ -246,7 +246,9 @@ def stream_model(
     config = transformers.AutoConfig.from_pretrained(str(name_or_dir), revision=revision)
     cls = model_class or transformers.AutoModelForCausalLM
     with init_empty_weights(include_buffers=False):
-        model = cls.from_config(config, dtype=stored)
+        # Auto classes build from a config with from_config, model classes with _from_config
+        build = getattr(cls, "from_config", None) or cls._from_config
+        model = build(config, dtype=stored)
     _tie(model, config)
     model.eval()
     rt = runtime or Runtime(budget=budget, prefetch=prefetch, lookahead=lookahead)

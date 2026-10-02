@@ -144,16 +144,22 @@ def _grade(name: str) -> int:
 
 
 def fallback_line(plan: Any) -> str:
-    """The `fallback="stored"` option, if it would apply (0064 D-d)."""
+    """The `fallback` options that would apply: "stored" (0064 D-d) and "stream" (0124)."""
     if plan.setup is None or plan.setup.config.fallback != "none":
         return ""
+    lines = []
     stored = next((c for c in plan.candidates if c.name == "stored" and c.ok), None)
-    if stored is None:
-        return ""
-    over = over_free(plan, stored)
-    size = format_size(stored.needs.device + stored.needs.host)
-    risk = f", about {format_size(over)} over what is free" if over else ""
-    return f"  fallback='stored'  -> warn and load as stored anyway ({size}{risk})"
+    if stored is not None:
+        over = over_free(plan, stored)
+        size = format_size(stored.needs.device + stored.needs.host)
+        risk = f", about {format_size(over)} over what is free" if over else ""
+        lines.append(f"  fallback='stored'  -> warn and load as stored anyway ({size}{risk})")
+    if plan.ctx.host_budget:
+        lines.append(
+            "  fallback='stream'  -> lossless on the CPU: the stored weights stream from their "
+            f"files within {format_size(int(plan.ctx.host_budget))} (slower)"
+        )
+    return "\n".join(lines)
 
 
 def suggestions_text(source: str, suggestions: list[Suggestion], fallback: str = "") -> str:

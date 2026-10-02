@@ -20,6 +20,7 @@ The script runs in this process with ``__name__ == "__main__"`` and its own ``sy
 
 from __future__ import annotations
 
+import contextlib
 import importlib.abc
 import importlib.util
 import runpy
@@ -179,6 +180,22 @@ def plan_text(script: str, *, elastic: bool, census: bool) -> str:
     return "\n".join(lines)
 
 
+def _report_pager(pager: Any) -> None:
+    from memopro._units import format_size
+
+    st = pager.stats()
+    report().add(
+        "transparent",
+        "applied",
+        (
+            f"budget {format_size(st['budget'])}, peak {format_size(st['peak_used'])}; "
+            f"{st['faults']} faults, {st['evictions']} chunks compressed "
+            f"({format_size(st['compress_in'])} to {format_size(st['compress_out'])}), "
+            f"{st['restores']} brought back, {st['overruns']} over budget; nothing written"
+        ),
+    )
+
+
 ELASTIC_OFF_NOTE = (
     "γ is off by default (experimental): the macOS pressure level marks pressure, not the stalls "
     "a user feels (E013a/0088), and Linux PSI rose above 'warning' from the I/O of loading a "
@@ -198,10 +215,14 @@ def run(
     elastic: bool | None = None,
     census: bool = False,
     dry_run: bool = False,
+    transparent: str | None = None,
+    report_json: str | None = None,
 ) -> None:
     """Run ``script`` with memopro's process-level features (settings come from `configure`).
 
-    ``elastic=None`` takes the platform default (`default_elastic`)."""
+    ``elastic=None`` takes the platform default (`default_elastic`). ``transparent`` (a budget,
+    Linux) pages the script's large NumPy arrays within that budget (`memopro.rt.transparent`,
+    0124). ``report_json`` writes the report (and the pager's counters) to that file at the end."""
     default = elastic is None
     if default:
         elastic = default_elastic()
@@ -226,16 +247,29 @@ def run(
     sys.argv = [str(path), *argv]
     sys.path.insert(0, str(path.resolve().parent))
     recorder = None
+    pager = None
     try:
-        if census:
-            from memopro.census import record
+        with contextlib.ExitStack() as stack:
+            if transparent is not None:
+                from memopro.rt import transparent as paged
 
-            recorder = record()
-            with recorder:
-                runpy.run_path(str(path), run_name="__main__")
-        else:
+                pager = stack.enter_context(paged(transparent))
+            if census:
+                from memopro.census import record
+
+                recorder = stack.enter_context(record())
             runpy.run_path(str(path), run_name="__main__")
     finally:
+        if pager is not None:
+            _report_pager(pager)
+        if report_json is not None:
+            import json
+
+            data = {
+                "report": report().to_dict(),
+                "transparent": None if pager is None else dict(pager.stats()),
+            }
+            Path(report_json).write_text(json.dumps(data, indent=1), encoding="utf-8")
         sys.argv = saved_argv
         if sys.path and sys.path[0] == str(path.resolve().parent) and saved_path0 != sys.path[0]:
             sys.path.pop(0)
