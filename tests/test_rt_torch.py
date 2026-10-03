@@ -152,3 +152,55 @@ def test_load_streams_on_request_when_nothing_fits(tiny_gpt2):
     applied = [x.technique for x in memopro.report().entries if x.action == "applied"]
     assert applied == ["load.stream"]
     assert m.memopro_runtime.stats()["peak_used"] <= m.memopro_runtime.limit
+
+
+def _mps():
+    from memopro.env._torch import mps_usable
+
+    return mps_usable()
+
+
+@pytest.mark.skipif(not _mps(), reason="needs a usable Apple GPU (CI macOS VMs cannot allocate)")
+def test_mps_streaming_equals_the_model_loaded_on_mps(tiny_gpt2):
+    """G4 E1: weights used by the GPU in place give the same bits as a normal MPS model, for
+    inference and LoRA training, within the budget, and nothing stays pinned after `finish`."""
+    ref = transformers.AutoModelForCausalLM.from_pretrained(tiny_gpt2, dtype=torch.float32)
+    ref = ref.to("mps").eval()
+    m = rtt.stream_model(tiny_gpt2, budget="9MiB", device="mps")
+    assert m.device == torch.device("mps")
+    ids = torch.randint(0, 2000, (1, 24), generator=torch.Generator().manual_seed(1)).to("mps")
+    with torch.no_grad():
+        assert torch.equal(m(input_ids=ids).logits, ref(input_ids=ids).logits)
+
+    def lora(model):
+        add_lora(model)
+        for mod in model.modules():
+            if isinstance(mod, LoRA):
+                mod.A.data, mod.B.data = mod.A.data.to("mps"), mod.B.data.to("mps")
+
+    lora(ref)
+    lora(m)
+    m.train()
+    x = torch.randint(0, 2000, (2, 32), generator=torch.Generator().manual_seed(2)).to("mps")
+
+    def steps(model, ctx):
+        params = [p for p in model.parameters() if p.requires_grad]
+        opt = torch.optim.AdamW(params, lr=1e-2)
+        losses = []
+        for _ in range(2):
+            with ctx():
+                loss = model(input_ids=x, labels=x).loss
+                loss.backward()
+            opt.step()
+            opt.zero_grad(set_to_none=True)
+            losses.append(float(loss.detach()))
+        return losses, [p.detach().cpu() for p in params]
+
+    want = steps(ref, contextlib.nullcontext)
+    got = steps(m, lambda: rtt.saved_weights(m))
+    assert got[0] == want[0]
+    assert all(torch.equal(a, b) for a, b in zip(got[1], want[1], strict=True))
+    m.memopro_weights.finish()
+    s = m.memopro_runtime.stats()
+    assert s["peak_used"] <= m.memopro_runtime.limit and s["pinned_bytes"] == 0
+    assert m.memopro_weights.metal.held_bytes() == 0
