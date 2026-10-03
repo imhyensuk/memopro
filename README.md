@@ -9,7 +9,7 @@
 
 > 여기서 "메모리"는 에이전트·대화 기억(agent memory)이 아니라 GPU/RAM **하드웨어 메모리**를 뜻한다.
 
-상태: **v0.1~v0.3 설계 전부 구현, 미배포 (0.1.0a1)** (2026-09-26) · **새 런타임 `memopro.rt` 1·2단계 완성, 관문 통과** (2026-09-30, [0113](docs/research/0113-e025-results.md): 2.9GB·5.9GB 데이터를 0.5~1GiB 예산에서 쓰기 없이 비트 동일하게; [0121](docs/research/0121-e026c-results-gate-r2.md): 양자화 없는 3B 추론을 필요 메모리의 1/4에서 OS 페이징의 5배 속도로, 출력 비트 동일)
+상태: **v0.1~v0.3 설계 전부 구현, 미배포 (0.1.0a1)** (2026-09-26) · **새 런타임 `memopro.rt` 1~3단계 완성, 관문 모두 통과** (2026-09-30, [0113](docs/research/0113-e025-results.md): 2.9GB·5.9GB 데이터를 0.5~1GiB 예산에서 쓰기 없이 비트 동일하게; [0121](docs/research/0121-e026c-results-gate-r2.md): 양자화 없는 3B 추론을 필요 메모리의 1/4에서 OS 페이징의 5배 속도로, 출력 비트 동일; [0129](docs/research/0129-e027-results-gate-r3.md): 고치지 않은 NumPy 프로그램을 1/2에서 OS 스왑의 2.1배 속도로)
 - 런타임 C-R 1단계: 큰 배열을 예산 상한 안에서 돌린다. 원본 파일에서 다시 읽을 수 있는 버퍼는 버렸다 다시 읽고(해시 확인, 페이지 캐시 우회), 메모리에서 만든 버퍼는 무손실 압축한다. 디스크에는 쓰지 않는다(0110). 복사 없는 NumPy 뷰로 쓴다.
 - v0.1: doctor, census, β hibernate(방법 5종, 노트북 통합), HF·Lightning 콜백. Linux(CI, 메모리 제한 컨테이너), macOS, 실제 NVIDIA GPU(Colab T4)에서 검증했다.
 - v0.2: `load`, `check`, `optimize`, `train_session`, census 정밀 모드([0053](docs/research/0053-build-v02-v03.md)).
@@ -184,7 +184,7 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 | ◆ Gγ → N3 | γ + pressure + `memopro run` (0051 재조사, 0053) | 🚀 v0.3.0 | ✅ 구현 (Gγ·E013은 배포 전 확인) |
 | RT1 | 런타임 C-R 1단계: 예산 상한, 원본 재읽기·압축(쓰기 없음), 재사용 주기 정책, NumPy 연결 (0107~0113) | | ✅ 관문 G-R1 통과(E025, [0113](docs/research/0113-e025-results.md)) |
 | RT2 | 런타임 2단계: 재계산(계보), 미리 읽기(서비스 스레드), 느려짐 예측, PyTorch 연결 (0114~0121) | | ✅ 관문 G-R2 통과(E026·E026c, [0121](docs/research/0121-e026c-results-gate-r2.md)): 양자화 없이 3B를 필요 메모리의 1/4에서 OS 페이징의 5배 속도로 |
-| RT3 | 런타임 3단계: Linux 투명 모드(userfaultfd), C ABI, 접근 계층 연결 (0122·0124) | | 🔧 제작 완료(0124), 관문 G-R3(E027, CI Linux) 대기 |
+| RT3 | 런타임 3단계: Linux 투명 모드(userfaultfd), C ABI, 접근 계층 연결 (0122·0124·0128) | | ✅ 관문 G-R3 통과(E027, [0129](docs/research/0129-e027-results-gate-r3.md)): 고치지 않은 NumPy 프로그램을 필요 메모리의 1/2에서 비트 동일하게, OS 스왑의 2.1배 속도, 쓰기 0 |
 | S6 | 안정화, 문서 사이트(영어·한국어) | 🚀 v1.0.0 | |
 
 ## 알려진 한계 (개발판)
