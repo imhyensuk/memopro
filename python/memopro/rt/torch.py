@@ -76,33 +76,29 @@ def _files(name_or_dir: str | Path, revision: str | None) -> list[Path]:
 class _MetalPins:
     """Pinned runtime memory seen by the GPU as MPS tensors without copying (G4 E1).
 
-    Each weight gets a no-copy ``MTLBuffer`` over its pinned bytes, handed to torch through
-    DLPack with a deleter. When torch frees the storage (every view gone) the deleter only
-    notes it; at the next safe point an MPS event is recorded behind the work already queued,
-    and the pin and the buffer are given back once that event has completed."""
+    Each runtime buffer in use has one pin, one no-copy ``MTLBuffer`` and one torch tensor over
+    it; every use gets a view of that tensor. (Wrapping the same memory once per use, e.g. a
+    tied embedding once per loss chunk, was counted again by macOS, 0135; importing one
+    ``MTLBuffer`` into torch twice crashed MPS.) At safe points a buffer whose tensor nobody but
+    this cache holds any more is fenced with an MPS event recorded behind the queued work; once
+    the event has completed and the buffer was not used again meanwhile, the tensor, the
+    ``MTLBuffer`` and the pin are given back."""
 
     def __init__(self, runtime: Any) -> None:
-        import ctypes
         import mmap
 
+        import torch
+
         from memopro import _core
-        from memopro.residency import _Managed
 
         self.runtime = runtime
         self.core = _core
         self.page = mmap.PAGESIZE
-        self.entries: dict[int, tuple[Any, int, Any, Any]] = {}
-        self.freed: list[int] = []
-        self.fenced: list[tuple[Any, list[int]]] = []
-        self.next_id = 1
-
-        def deleter(address: int) -> None:  # called by torch; must not raise
-            try:
-                self.freed.append(_Managed.from_address(address).manager_ctx)
-            except Exception:  # noqa: BLE001, S110 - nothing may escape into torch
-                pass
-
-        self._deleter = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(deleter)
+        self._use_count = torch._C._storage_Use_Count
+        # buffer id -> {"pin", "mtl", "base", "keep", "gen"}
+        self.shared: dict[int, dict[str, Any]] = {}
+        # (event, buffer id, generation at fencing)
+        self.fenced: list[tuple[Any, int, int]] = []
 
     def pin(self, buf: Any) -> Any:
         self.reap()
@@ -112,59 +108,69 @@ class _MetalPins:
             self.reap(block=True)  # weights the GPU was still reading can go now
             return self.runtime._rt.pin(buf.id, False)
 
+    def _unused(self, record: dict[str, Any]) -> bool:
+        # the cached tensor plus the temporary storage object: nobody else holds it
+        return self._use_count(record["base"].untyped_storage()._cdata) <= 2
+
     def tensor(self, buf: Any, dtype: Any, numel: int) -> Any:
-        """A 1-D MPS tensor of ``numel`` elements over the buffer's pinned bytes."""
+        """A 1-D MPS tensor of ``numel`` elements over the buffer's pinned bytes (a view)."""
         import ctypes
 
         import torch
 
         from memopro.residency import _Device, _DType, _Managed
 
-        pin = self.pin(buf)
-        nbytes = pin.nbytes
-        length = -(-nbytes // self.page) * self.page
-        mtl = self.core.metal_wrap(pin.address, length)
-        eid = self.next_id
-        self.next_id += 1
-        shape = (ctypes.c_int64 * 1)(nbytes)
-        managed = _Managed()
-        managed.dl_tensor.data = mtl
-        managed.dl_tensor.device = _Device(8, 0)  # kDLMetal
-        managed.dl_tensor.ndim = 1
-        managed.dl_tensor.dtype = _DType(1, 8, 1)  # uint8
-        managed.dl_tensor.shape = shape
-        managed.manager_ctx = eid
-        managed.deleter = ctypes.cast(self._deleter, ctypes.c_void_p)
-        self.entries[eid] = (pin, mtl, managed, shape)
-        new = ctypes.pythonapi.PyCapsule_New
-        new.restype = ctypes.py_object
-        new.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
-        raw = torch.utils.dlpack.from_dlpack(new(ctypes.addressof(managed), b"dltensor", None))
-        return raw.view(dtype)[:numel]
+        self.reap()
+        record = self.shared.get(buf.id)
+        if record is None:
+            pin = self.pin(buf)
+            length = -(-pin.nbytes // self.page) * self.page
+            mtl = self.core.metal_wrap(pin.address, length)
+            shape = (ctypes.c_int64 * 1)(pin.nbytes)
+            managed = _Managed()
+            managed.dl_tensor.data = mtl
+            managed.dl_tensor.device = _Device(8, 0)  # kDLMetal
+            managed.dl_tensor.ndim = 1
+            managed.dl_tensor.dtype = _DType(1, 8, 1)  # uint8
+            managed.dl_tensor.shape = shape
+            new = ctypes.pythonapi.PyCapsule_New
+            new.restype = ctypes.py_object
+            new.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
+            base = torch.utils.dlpack.from_dlpack(new(ctypes.addressof(managed), b"dltensor", None))
+            record = {"pin": pin, "mtl": mtl, "base": base, "keep": (managed, shape), "gen": 0}
+            self.shared[buf.id] = record
+        record["gen"] += 1
+        return record["base"].view(dtype)[:numel]
 
     def reap(self, block: bool = False) -> None:
         import torch
 
-        if self.freed:
-            event = torch.mps.event.Event()
-            event.record()
-            self.fenced.append((event, self.freed))
-            self.freed = []
+        fenced_ids = {bid for _, bid, _ in self.fenced}
+        for bid, record in self.shared.items():
+            if bid not in fenced_ids and self._unused(record):
+                event = torch.mps.event.Event()
+                event.record()
+                self.fenced.append((event, bid, record["gen"]))
         waiting = []
-        for event, ids in self.fenced:
+        for event, bid, gen in self.fenced:
             if block:
                 event.synchronize()
-            if block or event.query():
-                for eid in ids:
-                    pin, mtl, _, _ = self.entries.pop(eid)
-                    self.core.metal_release(mtl)
-                    pin.release()
-            else:
-                waiting.append((event, ids))
+            if not (block or event.query()):
+                waiting.append((event, bid, gen))
+                continue
+            record = self.shared.get(bid)
+            if record is None:
+                continue
+            if record["gen"] != gen or not self._unused(record):
+                continue  # used again after the fence: fenced anew when it is free again
+            del self.shared[bid]
+            record["base"] = None  # torch lets go of the storage
+            self.core.metal_release(record["mtl"])
+            record["pin"].release()
         self.fenced = waiting
 
     def held_bytes(self) -> int:
-        return sum(e[0].nbytes for e in self.entries.values())
+        return sum(r["pin"].nbytes for r in self.shared.values())
 
 
 class StreamedWeights:
@@ -435,11 +441,18 @@ def enable_checkpointing(model: Any) -> None:
     model.enable_input_require_grads()  # the first layer's input must carry gradients
 
 
-def causal_lm_loss(model: Any, input_ids: Any, labels: Any = None, chunk: int = 32) -> Any:
+# float32 logits of one loss chunk stay below this: on MPS any allocation of 10-512 MiB makes
+# torch's allocator reserve a 1 GiB heap unless it sees pressure, and it never does when the
+# weights are the runtime's own memory (0136)
+LOSS_CHUNK_BYTES = 8 << 20
+
+
+def causal_lm_loss(model: Any, input_ids: Any, labels: Any = None, chunk: int | None = None) -> Any:
     """Next-token cross-entropy (mean over labels other than -100) computed ``chunk`` positions
     at a time, each chunk recomputed in the backward pass: the full float32 logits
-    (positions x vocabulary) never exist at once (E3, 0133). Same mathematics as the model's
-    own loss; the summation order differs, so the last bits can differ from it."""
+    (positions x vocabulary) never exist at once (E3, 0133). By default a chunk's float32 logits
+    stay under ``LOSS_CHUNK_BYTES`` (0136). Same mathematics as the model's own loss; the
+    summation order differs, so the last bits can differ from it."""
     import torch
     import torch.nn.functional as F
     from torch.utils.checkpoint import checkpoint
@@ -450,6 +463,9 @@ def causal_lm_loss(model: Any, input_ids: Any, labels: Any = None, chunk: int = 
     targets = labels[:, 1:]
     count = (targets != -100).sum()
     head = model.get_output_embeddings()
+    if chunk is None:
+        row = hidden.shape[0] * head.out_features * 4
+        chunk = max(1, LOSS_CHUNK_BYTES // row)
 
     def part(h: Any, t: Any) -> Any:
         logits = head(h).float()
