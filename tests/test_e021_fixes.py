@@ -1,6 +1,7 @@
 """E021 (Colab run 7, 0093) defects D1-D4, fixed in 0094."""
 
 import copy
+import functools
 import os
 
 import pytest
@@ -10,6 +11,8 @@ from memopro.config import reset_config
 
 torch = pytest.importorskip("torch")
 transformers = pytest.importorskip("transformers")
+
+import helpers
 
 
 @pytest.fixture(autouse=True)
@@ -23,19 +26,7 @@ def isolated(monkeypatch):
     reset_config()
 
 
-def gpt2(dtype=torch.float32):
-    torch.manual_seed(0)
-    cfg = transformers.GPT2Config(
-        n_layer=2,
-        n_embd=64,
-        n_head=2,
-        vocab_size=500,
-        n_positions=64,
-        attn_pdrop=0.0,
-        resid_pdrop=0.0,
-        embd_pdrop=0.0,
-    )
-    return transformers.GPT2LMHeadModel(cfg).to(dtype)
+gpt2 = functools.partial(helpers.gpt2, dropout=False)
 
 
 # ---------------------------------------------------------------- D1

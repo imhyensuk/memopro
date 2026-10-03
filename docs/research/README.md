@@ -172,6 +172,7 @@
 | [0143](0143-e033b-preregistration.md) | 2026-10-04 | experiment (사전 등록) | E033b = G4-E4 다시: E033과 같은 경우·기준, S15·S3만 `rtt.generate`로. 시작 스왑 4,080MiB, 다른 앱 열림 | 확정 |
 | [0144](0144-e033b-results.md) | 2026-10-04 | experiment | E033b 결과: 관문 G4-E4 **다시 실패(X3 스왑만)**. X1 통과(4/4 비트 동일, S3도 4/4), X2 통과(3.52 → 1.09초/토큰, 3.22배), footprint +2,522MiB는 한도 안이지만 시스템 스왑 +70MiB(기준 64, 첫 시도 +1,061). 다른 앱이 밀려나는 시스템 스왑과 우리 프로세스를 가를 수 없음. 선택지 A(앱 닫고 E033c)/B(메모리 줄이기)/C(프로세스 단위 기준 결정)/D | 확정 |
 | [0145](0145-e033c-preregistration.md) | 2026-10-04 | experiment (사전 등록) | 사용자 결정 A: E033c = G4-E4 세 번째, 코드·경우·기준은 E033b 그대로, 사용자가 다른 앱을 닫은 뒤 실행 | 확정 |
+| [0146](0146-code-cleanup.md) | 2026-10-04 | implementation | 코드 정리: 안 쓰이는 `drop_kept`·`MIN_TENSOR_BYTES` 제거, MPS 무복사 DLPack 조립을 `residency.metal_tensor`로, safetensors 찾기를 `access/_info.local_safetensors`로, 시험의 GPT-2 생성 5곳을 `tests/helpers.py`로 통합, 노트북 시험이 추적 파일을 다시 쓰던 문제 수정(`build.py --nb-dir`), 빌드 산출물·캐시 삭제(612MB). 연구 기록·실험 스크립트는 그대로 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

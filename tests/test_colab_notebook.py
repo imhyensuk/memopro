@@ -11,14 +11,26 @@ ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOKS = ("train", "infer", "multi", "remeasure", "remeasure2", "qlora")
 
 
-def test_notebook_builds_and_every_cell_compiles(tmp_path):
+def build(tmp_path):
+    """Build into ``tmp_path`` (never over the committed notebooks)."""
     subprocess.run(
-        [sys.executable, str(ROOT / "examples/colab_t4/build.py"), "--out-dir", str(tmp_path)],
+        [
+            sys.executable,
+            str(ROOT / "examples/colab_t4/build.py"),
+            "--out-dir",
+            str(tmp_path),
+            "--nb-dir",
+            str(tmp_path),
+        ],
         check=True,
         capture_output=True,
     )
+
+
+def test_notebook_builds_and_every_cell_compiles(tmp_path):
+    build(tmp_path)
     for part in NOTEBOOKS:
-        nb = json.loads((ROOT / f"examples/colab_t4_{part}.ipynb").read_text(encoding="utf-8"))
+        nb = json.loads((tmp_path / f"colab_t4_{part}.ipynb").read_text(encoding="utf-8"))
         code = [c for c in nb["cells"] if c["cell_type"] == "code"]
         assert len(code) == 1
         cell = code[0]
@@ -38,11 +50,9 @@ def test_notebook_builds_and_every_cell_compiles(tmp_path):
 
 
 def test_committed_notebook_matches_the_sources(tmp_path):
-    files = [ROOT / f"examples/colab_t4_{part}.ipynb" for part in NOTEBOOKS]
-    before = "".join(f.read_text(encoding="utf-8") for f in files)
-    subprocess.run(
-        [sys.executable, str(ROOT / "examples/colab_t4/build.py")], check=True, capture_output=True
-    )
-    after = "".join(f.read_text(encoding="utf-8") for f in files)
+    build(tmp_path)
+    names = [f"colab_t4_{part}.ipynb" for part in NOTEBOOKS]
+    before = "".join((ROOT / "examples" / n).read_text(encoding="utf-8") for n in names)
+    after = "".join((tmp_path / n).read_text(encoding="utf-8") for n in names)
     strip = lambda t: "\n".join(l for l in t.splitlines() if "EXPECTED_COMMIT =" not in l)
     assert strip(before) == strip(after), "run examples/colab_t4/build.py and commit the notebook"
