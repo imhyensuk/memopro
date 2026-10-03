@@ -632,6 +632,12 @@ impl RtPin {
         self.len
     }
 
+    /// Address of the pinned data (page-aligned; valid while the pin is held).
+    #[getter]
+    fn address(&self) -> usize {
+        self.ptr
+    }
+
     #[getter]
     fn writable(&self) -> bool {
         self.write
@@ -983,6 +989,22 @@ fn numpy_set_handler(py: Python<'_>, handler: Option<Bound<'_, PyAny>>) -> PyRes
     Ok(unsafe { Bound::from_owned_ptr(py, old) }.unbind())
 }
 
+/// A no-copy `MTLBuffer` over pinned runtime memory (macOS, G4 E1); give it back with
+/// `metal_release`. The caller keeps the memory pinned until the GPU no longer uses it.
+#[cfg(unix)]
+#[pyfunction]
+fn metal_wrap(address: usize, length: usize) -> PyResult<usize> {
+    // SAFETY: the caller's contract (documented): pinned memory outlives the buffer's use.
+    unsafe { memopro::residency::metal_wrap(address as *mut u8, length) }.map_err(rt_err)
+}
+
+#[cfg(unix)]
+#[pyfunction]
+fn metal_release(buffer: usize) {
+    // SAFETY: a handle from metal_wrap, released once by the Python side.
+    unsafe { memopro::residency::metal_release(buffer) }
+}
+
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", memopro::VERSION)?;
@@ -1000,6 +1022,10 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(engine_write, m)?)?;
     #[cfg(unix)]
     m.add_class::<FileMap>()?;
+    #[cfg(unix)]
+    m.add_function(wrap_pyfunction!(metal_wrap, m)?)?;
+    #[cfg(unix)]
+    m.add_function(wrap_pyfunction!(metal_release, m)?)?;
     m.add_class::<Compressed>()?;
     m.add_function(wrap_pyfunction!(codec_pack, m)?)?;
     m.add_class::<RtRuntime>()?;
