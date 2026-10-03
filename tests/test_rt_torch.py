@@ -152,3 +152,100 @@ def test_load_streams_on_request_when_nothing_fits(tiny_gpt2):
     applied = [x.technique for x in memopro.report().entries if x.action == "applied"]
     assert applied == ["load.stream"]
     assert m.memopro_runtime.stats()["peak_used"] <= m.memopro_runtime.limit
+
+
+def _mps():
+    from memopro.env._torch import mps_usable
+
+    return mps_usable()
+
+
+@pytest.mark.skipif(not _mps(), reason="needs a usable Apple GPU (CI macOS VMs cannot allocate)")
+def test_mps_streaming_equals_the_model_loaded_on_mps(tiny_gpt2):
+    """G4 E1: weights used by the GPU in place give the same bits as a normal MPS model, for
+    inference and LoRA training, within the budget, and nothing stays pinned after `finish`."""
+    ref = transformers.AutoModelForCausalLM.from_pretrained(tiny_gpt2, dtype=torch.float32)
+    ref = ref.to("mps").eval()
+    m = rtt.stream_model(tiny_gpt2, budget="9MiB", device="mps")
+    assert m.device == torch.device("mps")
+    ids = torch.randint(0, 2000, (1, 24), generator=torch.Generator().manual_seed(1)).to("mps")
+    with torch.no_grad():
+        assert torch.equal(m(input_ids=ids).logits, ref(input_ids=ids).logits)
+
+    def lora(model):
+        add_lora(model)
+        for mod in model.modules():
+            if isinstance(mod, LoRA):
+                mod.A.data, mod.B.data = mod.A.data.to("mps"), mod.B.data.to("mps")
+
+    lora(ref)
+    lora(m)
+    m.train()
+    x = torch.randint(0, 2000, (2, 32), generator=torch.Generator().manual_seed(2)).to("mps")
+
+    def steps(model, ctx):
+        params = [p for p in model.parameters() if p.requires_grad]
+        opt = torch.optim.AdamW(params, lr=1e-2)
+        losses = []
+        for _ in range(2):
+            with ctx():
+                loss = model(input_ids=x, labels=x).loss
+                loss.backward()
+            opt.step()
+            opt.zero_grad(set_to_none=True)
+            losses.append(float(loss.detach()))
+        return losses, [p.detach().cpu() for p in params]
+
+    want = steps(ref, contextlib.nullcontext)
+    got = steps(m, lambda: rtt.saved_weights(m))
+    assert got[0] == want[0]
+    assert all(torch.equal(a, b) for a, b in zip(got[1], want[1], strict=True))
+    m.memopro_weights.finish()
+    s = m.memopro_runtime.stats()
+    assert s["peak_used"] <= m.memopro_runtime.limit and s["pinned_bytes"] == 0
+    assert m.memopro_weights.metal.held_bytes() == 0
+
+
+def test_checkpointing_and_chunked_loss_keep_training_exact_enough(tiny_gpt2):
+    """E3 (0133): reentrant checkpointing and the chunked loss train like the plain step (same
+    mathematics; summation order may move the last bits) and keep the weights' budget."""
+    ids = torch.randint(0, 2000, (2, 32), generator=torch.Generator().manual_seed(4))
+    plain = rtt.stream_model(tiny_gpt2, budget="9MiB")
+    add_lora(plain)
+    plain.train()
+    with torch.no_grad():
+        want = float(plain(input_ids=ids, labels=ids).loss)
+    m = rtt.stream_model(tiny_gpt2, budget="9MiB")
+    add_lora(m)
+    rtt.enable_checkpointing(m)
+    m.train()
+    with rtt.saved_weights(m):
+        loss = rtt.causal_lm_loss(m, ids, chunk=8)
+        loss.backward()
+    assert abs(float(loss) - want) < 1e-5
+    grads = [p.grad for p in m.parameters() if p.requires_grad]
+    assert all(g is not None and torch.isfinite(g).all() for g in grads)
+    m.memopro_weights.finish()
+    s = m.memopro_runtime.stats()
+    assert s["peak_used"] <= m.memopro_runtime.limit and s["pinned_bytes"] == 0
+
+
+def test_loss_chunks_keep_float32_logits_under_the_mps_heap_threshold(tiny_gpt2, monkeypatch):
+    """0136: by default a chunk's float32 logits stay under LOSS_CHUNK_BYTES."""
+    ids = torch.randint(0, 2000, (2, 32), generator=torch.Generator().manual_seed(5))
+    m = rtt.stream_model(tiny_gpt2, budget="9MiB")
+    with torch.no_grad():
+        want = float(rtt.causal_lm_loss(m, ids, chunk=31))
+    head = m.get_output_embeddings()
+    sizes = []
+    head.register_forward_hook(lambda mod, a, out: sizes.append(out.numel() * 4))
+    monkeypatch.setattr(rtt, "LOSS_CHUNK_BYTES", 2 * 7 * head.out_features * 4)
+    with torch.no_grad():
+        got = float(rtt.causal_lm_loss(m, ids))
+    assert abs(got - want) < 1e-5
+    assert max(sizes) <= rtt.LOSS_CHUNK_BYTES and len(sizes) == 5  # 31 positions, 7 at a time
+
+
+def test_checkpointing_needs_a_streamed_model():
+    with pytest.raises(memopro.InvalidArgument):
+        rtt.enable_checkpointing(torch.nn.Linear(2, 2))
