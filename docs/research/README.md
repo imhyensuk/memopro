@@ -167,6 +167,7 @@
 | [0138](0138-e028c-results-gate-g4-b1.md) | 2026-10-03 | experiment | E028c 결과: **관문 G4-B1 통과**. 8GB M1 GPU에서 3B bf16 LoRA를 1GiB·768MiB 예산으로 손실 비트 동일(11.9~12.1토큰/초), 1.5B 768MiB 5.6초/단계(CPU의 46배), footprint 증가가 예산 + 229~243MiB(기준 + 512MiB), 스왑 증가 없음 | 확정 |
 | [0139](0139-g4-e4-draft-build.md) | 2026-10-03 | implementation | G4 E4 제작: `memopro.rt.torch.draft_model`(상주 int4 초안, 그룹 32, `memopro_draft_bytes`, 어휘 확인) + HF 보조 생성 감싸기. 선행(추측 디코딩, HF 보조 생성, SubSpec, ML-SpecQD) 그대로라 신규성 주장 없음. 개발 확인: 3B bf16 흘려 쓰기 4.2초/토큰 → 1.5B int4 초안으로 0.89초/토큰, 앞 8토큰 같음. bib 중복 키 정리 | 확정 |
 | [0140](0140-e033-preregistration.md) | 2026-10-03 | experiment (사전 등록) | E033 = 관문 G4-E4: 3B bf16 1GiB 흘려 쓰기, 프롬프트 4개 × 64토큰 탐욕, P(단독)/S15(1.5B int4 초안)/S3(자기 초안). X1 S15 토큰 = P, X2 ≥ 2.5배, X3 footprint ≤ 예산 + 초안 + 512MiB 그리고 ≤ 3B 절반 | 확정 |
+| [0141](0141-e033-results.md) | 2026-10-04 | experiment | E033 결과: 관문 G4-E4 **실패**. X2 속도 통과(3B bf16 흘려 쓰기 3.55 → 1.07초/토큰, 3.3배, 프롬프트별 1.8~12.1배). X1 실패(4개 중 3개 동일): 초안과 무관하게 bf16 로짓 동점 하나가 계산 행 수에 따라 갈림(한 행 35.25/35.0, 여러 행 35.25/35.25). X3는 footprint 한도 안이지만 시스템 스왑 +280MiB. 선택지 A(행 불변 검증 후 E033b)/B(무손실 정의 결정)/C | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
