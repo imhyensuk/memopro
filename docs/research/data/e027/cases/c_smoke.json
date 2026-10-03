@@ -1,0 +1,8 @@
+{
+ "build_returncode": 0,
+ "cc_returncode": 0,
+ "cc_output": "",
+ "returncode": 0,
+ "output": "memopro 0.1.0-alpha.1, C ABI 1\npeak 7344128 of limit 8372224, re-read 24 times, re-computed 1, written 0\nok\n",
+ "ok": true
+}
