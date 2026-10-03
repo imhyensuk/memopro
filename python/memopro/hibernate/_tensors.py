@@ -13,8 +13,6 @@ from dataclasses import dataclass, field
 import numpy as np
 import torch
 
-MIN_TENSOR_BYTES = 1  # every tensor counts; the 1 MiB suggestion floor applies to objects
-
 
 @dataclass
 class Slot:

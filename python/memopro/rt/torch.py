@@ -73,13 +73,9 @@ _RT_DTYPE = {
 
 
 def _files(name_or_dir: str | Path, revision: str | None) -> list[Path]:
-    path = Path(name_or_dir).expanduser()
-    if path.is_dir():
-        files = sorted(path.glob("*.safetensors"))
-    else:
-        from memopro.access._info import _cached_files
+    from memopro.access._info import local_safetensors
 
-        files = _cached_files(str(name_or_dir), revision)
+    files = local_safetensors(name_or_dir, revision)
     if not files:
         raise ModeUnavailable(
             "memopro.rt.torch.stream_model",
@@ -130,11 +126,7 @@ class _MetalPins:
 
     def tensor(self, buf: Any, dtype: Any, numel: int) -> Any:
         """A 1-D MPS tensor of ``numel`` elements over the buffer's pinned bytes (a view)."""
-        import ctypes
-
-        import torch
-
-        from memopro.residency import _Device, _DType, _Managed
+        from memopro.residency import metal_tensor
 
         self.reap()
         record = self.shared.get(buf.id)
@@ -142,18 +134,8 @@ class _MetalPins:
             pin = self.pin(buf)
             length = -(-pin.nbytes // self.page) * self.page
             mtl = self.core.metal_wrap(pin.address, length)
-            shape = (ctypes.c_int64 * 1)(pin.nbytes)
-            managed = _Managed()
-            managed.dl_tensor.data = mtl
-            managed.dl_tensor.device = _Device(8, 0)  # kDLMetal
-            managed.dl_tensor.ndim = 1
-            managed.dl_tensor.dtype = _DType(1, 8, 1)  # uint8
-            managed.dl_tensor.shape = shape
-            new = ctypes.pythonapi.PyCapsule_New
-            new.restype = ctypes.py_object
-            new.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
-            base = torch.utils.dlpack.from_dlpack(new(ctypes.addressof(managed), b"dltensor", None))
-            record = {"pin": pin, "mtl": mtl, "base": base, "keep": (managed, shape), "gen": 0}
+            base, keep = metal_tensor(mtl, pin.nbytes)
+            record = {"pin": pin, "mtl": mtl, "base": base, "keep": keep, "gen": 0}
             self.shared[buf.id] = record
         record["gen"] += 1
         return record["base"].view(dtype)[:numel]

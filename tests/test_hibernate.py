@@ -15,6 +15,8 @@ from memopro.hibernate import _ssd
 
 transformers = pytest.importorskip("transformers")
 
+import helpers
+
 
 @pytest.fixture(autouse=True)
 def isolated(tmp_path, monkeypatch):
@@ -35,13 +37,8 @@ def isolated(tmp_path, monkeypatch):
 
 
 def tiny_gpt2(tmp_path, dtype=None):
-    torch.manual_seed(0)
-    cfg = transformers.GPT2Config(n_layer=2, n_embd=64, n_head=2, vocab_size=500, n_positions=64)
-    src = transformers.GPT2LMHeadModel(cfg)
-    if dtype is not None:
-        src = src.to(dtype)
     path = tmp_path / "model"
-    src.save_pretrained(path)
+    helpers.gpt2(dtype).save_pretrained(path)
     return path
 
 

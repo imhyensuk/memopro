@@ -200,12 +200,6 @@ def _forget_spill(key: int, path: str) -> None:
     _ssd.remove(path)
 
 
-def drop_kept(tensor: torch.Tensor) -> None:
-    kept = _kept_spills.pop(id(tensor), None)
-    if kept is not None:
-        _ssd.remove(kept[0])
-
-
 WAKE = {
     "source": wake_source,
     "host": wake_host,

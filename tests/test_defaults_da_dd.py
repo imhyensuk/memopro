@@ -13,6 +13,8 @@ from memopro.config import configure, reset_config
 torch = pytest.importorskip("torch")
 transformers = pytest.importorskip("transformers")
 
+import helpers
+
 
 @pytest.fixture(autouse=True)
 def isolated(monkeypatch):
@@ -26,9 +28,7 @@ def isolated(monkeypatch):
 
 
 def gpt2():
-    torch.manual_seed(0)
-    cfg = transformers.GPT2Config(n_layer=2, n_embd=64, n_head=2, vocab_size=500, n_positions=64)
-    return transformers.GPT2LMHeadModel(cfg).eval()
+    return helpers.gpt2().eval()
 
 
 @pytest.fixture(scope="module")
