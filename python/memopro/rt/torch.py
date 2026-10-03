@@ -33,7 +33,13 @@ from typing import Any
 from memopro._errors import BudgetExceeded, InvalidArgument, ModeUnavailable
 from memopro.rt import Runtime
 
-__all__ = ["StreamedWeights", "saved_weights", "stream_model"]
+__all__ = [
+    "StreamedWeights",
+    "causal_lm_loss",
+    "enable_checkpointing",
+    "saved_weights",
+    "stream_model",
+]
 
 warnings.filterwarnings("ignore", message="The given buffer is not writable")
 
@@ -303,10 +309,16 @@ class StreamedWeights:
             base = torch.frombuffer(pin, dtype=dtype, count=numel)
         return torch.as_strided(base, size, stride, offset)
 
-    def finish(self) -> None:
-        """Wait for the GPU and give back every weight it held (end of a step or of use)."""
+    def finish(self, release_cache: bool = True) -> None:
+        """Wait for the GPU and give back every weight it held (end of a step or of use); on
+        the GPU also give back what torch's MPS allocator keeps cached (E3, 0133: it held twice
+        the memory in use)."""
         if self.metal is not None:
             self.metal.reap(block=True)
+            if release_cache:
+                import torch
+
+                torch.mps.empty_cache()
 
 
 def _tie(model: Any, config: Any) -> None:
@@ -407,3 +419,46 @@ def saved_weights(model: Any) -> Iterator[None]:
         raise InvalidArgument("saved_weights needs a model from memopro.rt.torch.stream_model")
     with torch.autograd.graph.saved_tensors_hooks(weights.pack, weights.unpack):
         yield
+
+
+def enable_checkpointing(model: Any) -> None:
+    """Keep only each layer's input for the backward pass and recompute the rest (E3, 0133).
+
+    Uses torch's reentrant checkpointing: the recomputation runs inside :func:`saved_weights`,
+    so weights it saves become references too. (The non-reentrant kind saves recomputed
+    tensors through its own hooks, which kept streamed weights pinned until the budget ran
+    out.) Recomputing a layer pins its weights again, and the backward pass right after finds
+    them still in memory, so the bytes read per step stay about the same."""
+    if not hasattr(model, "memopro_weights"):
+        raise InvalidArgument("enable_checkpointing needs a model from stream_model")
+    model.gradient_checkpointing_enable(gradient_checkpointing_kwargs={"use_reentrant": True})
+    model.enable_input_require_grads()  # the first layer's input must carry gradients
+
+
+def causal_lm_loss(model: Any, input_ids: Any, labels: Any = None, chunk: int = 32) -> Any:
+    """Next-token cross-entropy (mean over labels other than -100) computed ``chunk`` positions
+    at a time, each chunk recomputed in the backward pass: the full float32 logits
+    (positions x vocabulary) never exist at once (E3, 0133). Same mathematics as the model's
+    own loss; the summation order differs, so the last bits can differ from it."""
+    import torch
+    import torch.nn.functional as F
+    from torch.utils.checkpoint import checkpoint
+
+    labels = input_ids if labels is None else labels
+    base = getattr(model, model.base_model_prefix)
+    hidden = base(input_ids=input_ids).last_hidden_state[:, :-1]
+    targets = labels[:, 1:]
+    count = (targets != -100).sum()
+    head = model.get_output_embeddings()
+
+    def part(h: Any, t: Any) -> Any:
+        logits = head(h).float()
+        return F.cross_entropy(
+            logits.reshape(-1, logits.shape[-1]), t.reshape(-1), ignore_index=-100, reduction="sum"
+        )
+
+    total = torch.zeros((), device=hidden.device)
+    for start in range(0, hidden.shape[1], chunk):
+        h, t = hidden[:, start : start + chunk], targets[:, start : start + chunk]
+        total = total + checkpoint(part, h, t, use_reentrant=True)
+    return total / count.clamp_min(1)

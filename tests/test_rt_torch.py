@@ -204,3 +204,32 @@ def test_mps_streaming_equals_the_model_loaded_on_mps(tiny_gpt2):
     s = m.memopro_runtime.stats()
     assert s["peak_used"] <= m.memopro_runtime.limit and s["pinned_bytes"] == 0
     assert m.memopro_weights.metal.held_bytes() == 0
+
+
+def test_checkpointing_and_chunked_loss_keep_training_exact_enough(tiny_gpt2):
+    """E3 (0133): reentrant checkpointing and the chunked loss train like the plain step (same
+    mathematics; summation order may move the last bits) and keep the weights' budget."""
+    ids = torch.randint(0, 2000, (2, 32), generator=torch.Generator().manual_seed(4))
+    plain = rtt.stream_model(tiny_gpt2, budget="9MiB")
+    add_lora(plain)
+    plain.train()
+    with torch.no_grad():
+        want = float(plain(input_ids=ids, labels=ids).loss)
+    m = rtt.stream_model(tiny_gpt2, budget="9MiB")
+    add_lora(m)
+    rtt.enable_checkpointing(m)
+    m.train()
+    with rtt.saved_weights(m):
+        loss = rtt.causal_lm_loss(m, ids, chunk=8)
+        loss.backward()
+    assert abs(float(loss) - want) < 1e-5
+    grads = [p.grad for p in m.parameters() if p.requires_grad]
+    assert all(g is not None and torch.isfinite(g).all() for g in grads)
+    m.memopro_weights.finish()
+    s = m.memopro_runtime.stats()
+    assert s["peak_used"] <= m.memopro_runtime.limit and s["pinned_bytes"] == 0
+
+
+def test_checkpointing_needs_a_streamed_model():
+    with pytest.raises(memopro.InvalidArgument):
+        rtt.enable_checkpointing(torch.nn.Linear(2, 2))
