@@ -1,0 +1,42 @@
+{
+ "report": {
+  "entries": [
+   {
+    "technique": "elastic",
+    "action": "skipped",
+    "detail": "\u03b3 is off by default (experimental): the macOS pressure level marks pressure, not the stalls a user feels (E013a/0088), and Linux PSI rose above 'warning' from the I/O of loading a model, halving budgets so the loading policy stood aside (E021/0093); --elastic turns it on",
+    "reclaimed_bytes": null,
+    "timestamp": 1791031510.6517053
+   },
+   {
+    "technique": "transparent",
+    "action": "applied",
+    "detail": "budget 596.00 MiB, peak 595.00 MiB; 8524 faults, 8383 chunks compressed (8.19 GiB to 3.78 GiB), 6988 brought back, 0 over budget; nothing written",
+    "reclaimed_bytes": null,
+    "timestamp": 1791031533.3875163
+   }
+  ]
+ },
+ "transparent": {
+  "budget": 624951296,
+  "limit": 623902720,
+  "used": 0,
+  "peak_used": 623902720,
+  "regions": 0,
+  "mapped_bytes": 0,
+  "resident_bytes": 0,
+  "compressed_bytes": 0,
+  "faults": 8524,
+  "zero_fills": 1536,
+  "restores": 6988,
+  "restore_seconds": 6.534486667000008,
+  "evictions": 8383,
+  "compress_in": 8790212608,
+  "compress_out": 4061738472,
+  "compress_seconds": 9.425418784000017,
+  "incompressible": 0,
+  "overruns": 0,
+  "spurious": 0,
+  "written_bytes": 0
+ }
+}
