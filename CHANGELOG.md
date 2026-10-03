@@ -4,6 +4,18 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Added: 16-bit training on the Apple GPU with weights streamed from their files (G4, 0130-0138)
+- `memopro.rt.torch.stream_model(..., device="mps")`: runtime memory is handed to the GPU
+  without copying (one no-copy Metal buffer per runtime buffer, views for every use); it is
+  given back only after the GPU has finished with it (MPS events at safe points).
+- `memopro.rt.torch.enable_checkpointing(model)` (reentrant, so checkpointed layers keep only
+  references to streamed weights) and `causal_lm_loss(model, input_ids)`, which never holds the
+  full float32 logits; by default a chunk's logits stay under 8 MiB, because on MPS any
+  allocation of 10-512 MiB makes torch reserve a 1 GiB heap (0136).
+- `StreamedWeights.finish()` waits for the GPU, gives back pins and empties the MPS cache.
+- Measured on an 8 GB M1: Qwen2.5-3B bf16 LoRA at 1 GiB and 768 MiB budgets with identical
+  losses and the whole process within budget + 250 MiB (E028c).
+
 ### Added: runtime phase 3 — C ABI, transparent paging on Linux, streamed loading (0124)
 - `crates/memopro-c`: the runtime from C/C++ (`include/memopro.h`, `mp_*`), with status codes,
   a per-thread error message and no panic crossing the boundary.
