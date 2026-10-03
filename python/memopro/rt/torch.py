@@ -15,7 +15,11 @@ backward pass instead of the weight itself; the weight is pinned again when back
     model = memopro.rt.torch.stream_model("Qwen/Qwen2.5-3B-Instruct", budget="1.5GB")
     out = model.generate(**inputs, max_new_tokens=16)       # bf16 weights, no quantization
 
-CPU only for now (weights are used where they are, in the runtime's memory).
+On the CPU the weights are used where they are, in the runtime's memory. On Apple GPUs
+(``device="mps"``, G4 E1) the same memory is handed to the GPU without copying (a no-copy Metal
+buffer per pinned weight, unified memory); a weight stays pinned until the GPU has finished with
+it (an MPS event recorded after torch let go of it), so the runtime never moves memory the GPU
+still reads.
 """
 
 from __future__ import annotations
@@ -26,7 +30,7 @@ from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
 
-from memopro._errors import InvalidArgument, ModeUnavailable
+from memopro._errors import BudgetExceeded, InvalidArgument, ModeUnavailable
 from memopro.rt import Runtime
 
 __all__ = ["StreamedWeights", "saved_weights", "stream_model"]
@@ -63,15 +67,113 @@ def _files(name_or_dir: str | Path, revision: str | None) -> list[Path]:
     return files
 
 
+class _MetalPins:
+    """Pinned runtime memory seen by the GPU as MPS tensors without copying (G4 E1).
+
+    Each weight gets a no-copy ``MTLBuffer`` over its pinned bytes, handed to torch through
+    DLPack with a deleter. When torch frees the storage (every view gone) the deleter only
+    notes it; at the next safe point an MPS event is recorded behind the work already queued,
+    and the pin and the buffer are given back once that event has completed."""
+
+    def __init__(self, runtime: Any) -> None:
+        import ctypes
+        import mmap
+
+        from memopro import _core
+        from memopro.residency import _Managed
+
+        self.runtime = runtime
+        self.core = _core
+        self.page = mmap.PAGESIZE
+        self.entries: dict[int, tuple[Any, int, Any, Any]] = {}
+        self.freed: list[int] = []
+        self.fenced: list[tuple[Any, list[int]]] = []
+        self.next_id = 1
+
+        def deleter(address: int) -> None:  # called by torch; must not raise
+            try:
+                self.freed.append(_Managed.from_address(address).manager_ctx)
+            except Exception:  # noqa: BLE001, S110 - nothing may escape into torch
+                pass
+
+        self._deleter = ctypes.CFUNCTYPE(None, ctypes.c_void_p)(deleter)
+
+    def pin(self, buf: Any) -> Any:
+        self.reap()
+        try:
+            return self.runtime._rt.pin(buf.id, False)
+        except BudgetExceeded:
+            self.reap(block=True)  # weights the GPU was still reading can go now
+            return self.runtime._rt.pin(buf.id, False)
+
+    def tensor(self, buf: Any, dtype: Any, numel: int) -> Any:
+        """A 1-D MPS tensor of ``numel`` elements over the buffer's pinned bytes."""
+        import ctypes
+
+        import torch
+
+        from memopro.residency import _Device, _DType, _Managed
+
+        pin = self.pin(buf)
+        nbytes = pin.nbytes
+        length = -(-nbytes // self.page) * self.page
+        mtl = self.core.metal_wrap(pin.address, length)
+        eid = self.next_id
+        self.next_id += 1
+        shape = (ctypes.c_int64 * 1)(nbytes)
+        managed = _Managed()
+        managed.dl_tensor.data = mtl
+        managed.dl_tensor.device = _Device(8, 0)  # kDLMetal
+        managed.dl_tensor.ndim = 1
+        managed.dl_tensor.dtype = _DType(1, 8, 1)  # uint8
+        managed.dl_tensor.shape = shape
+        managed.manager_ctx = eid
+        managed.deleter = ctypes.cast(self._deleter, ctypes.c_void_p)
+        self.entries[eid] = (pin, mtl, managed, shape)
+        new = ctypes.pythonapi.PyCapsule_New
+        new.restype = ctypes.py_object
+        new.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
+        raw = torch.utils.dlpack.from_dlpack(new(ctypes.addressof(managed), b"dltensor", None))
+        return raw.view(dtype)[:numel]
+
+    def reap(self, block: bool = False) -> None:
+        import torch
+
+        if self.freed:
+            event = torch.mps.event.Event()
+            event.record()
+            self.fenced.append((event, self.freed))
+            self.freed = []
+        waiting = []
+        for event, ids in self.fenced:
+            if block:
+                event.synchronize()
+            if block or event.query():
+                for eid in ids:
+                    pin, mtl, _, _ = self.entries.pop(eid)
+                    self.core.metal_release(mtl)
+                    pin.release()
+            else:
+                waiting.append((event, ids))
+        self.fenced = waiting
+
+    def held_bytes(self) -> int:
+        return sum(e[0].nbytes for e in self.entries.values())
+
+
 class StreamedWeights:
     """The weights of one model as runtime buffers, and the hooks that pin them around each
     module's forward. Reached as ``model.memopro_weights``."""
 
-    def __init__(self, model: Any, runtime: Runtime, regions: dict[str, Any]) -> None:
+    def __init__(
+        self, model: Any, runtime: Runtime, regions: dict[str, Any], device: str = "cpu"
+    ) -> None:
         import torch
 
         self.runtime = runtime
         self.model = model
+        self.device = torch.device(device)
+        self.metal = _MetalPins(runtime) if self.device.type == "mps" else None
         prefix = getattr(model, "base_model_prefix", "") or ""
         # one runtime buffer per distinct parameter object (tied weights share one)
         self.buffers: dict[int, tuple[Any, torch.dtype, tuple[int, ...]]] = {}
@@ -99,6 +201,11 @@ class StreamedWeights:
         if missing:
             raise InvalidArgument(f"no weights in the files for {missing[:5]}")
         self._load_saved_buffers(regions, prefix)
+        if self.device.type != "cpu":
+            for module in model.modules():
+                for name, b in module._buffers.items():
+                    if b is not None and b.device.type != "meta":
+                        module._buffers[name] = b.to(self.device)
         # storage address -> (buffer, dtype, numel) of weights pinned right now (for backward)
         self.pinned: dict[int, tuple[Any, torch.dtype, int]] = {}
         self._own: dict[Any, list[tuple[str, Any]]] = {}
@@ -132,12 +239,15 @@ class StreamedWeights:
         import torch
 
         buf, dtype, shape = self.buffers[pid]
-        pin = self.runtime._rt.pin(buf.id, False)
         numel = 1
         for d in shape:
             numel *= d
-        # the tensor keeps `pin` alive, and the pin keeps the memory put (0115)
-        t = torch.frombuffer(pin, dtype=dtype, count=numel).view(shape)
+        if self.metal is not None:
+            t = self.metal.tensor(buf, dtype, numel).view(shape)
+        else:
+            pin = self.runtime._rt.pin(buf.id, False)
+            # the tensor keeps `pin` alive, and the pin keeps the memory put (0115)
+            t = torch.frombuffer(pin, dtype=dtype, count=numel).view(shape)
         self.pinned[t.untyped_storage().data_ptr()] = (buf, dtype, numel)
         return t
 
@@ -164,7 +274,7 @@ class StreamedWeights:
     # ---------------------------------------------------------------- backward
 
     def pack(self, t: Any) -> Any:
-        if t.requires_grad or t.device.type != "cpu":
+        if t.requires_grad or t.device.type != self.device.type:
             return t
         info = self.pinned.get(t.untyped_storage().data_ptr())
         if info is None:
@@ -186,9 +296,17 @@ class StreamedWeights:
         import torch
 
         _, buf, dtype, numel, size, stride, offset = x
-        pin = self.runtime._rt.pin(buf.id, False)
-        base = torch.frombuffer(pin, dtype=dtype, count=numel)
+        if self.metal is not None:
+            base = self.metal.tensor(buf, dtype, numel)
+        else:
+            pin = self.runtime._rt.pin(buf.id, False)
+            base = torch.frombuffer(pin, dtype=dtype, count=numel)
         return torch.as_strided(base, size, stride, offset)
+
+    def finish(self) -> None:
+        """Wait for the GPU and give back every weight it held (end of a step or of use)."""
+        if self.metal is not None:
+            self.metal.reap(block=True)
 
 
 def _tie(model: Any, config: Any) -> None:
@@ -222,16 +340,29 @@ def stream_model(
     model_class: Any = None,
     prefetch: bool = True,
     lookahead: str | int = "64MiB",
+    device: str = "cpu",
 ) -> Any:
     """A Hugging Face model whose weights stay on disk and are streamed through a runtime with
     ``budget`` bytes (or the given ``runtime``). Weights keep their stored dtype; results equal
-    those of loading the model normally."""
+    those of loading the model normally on the same device. ``device="mps"`` computes on the
+    Apple GPU with the runtime's memory used in place (G4 E1)."""
     import torch
     import transformers
     from accelerate import init_empty_weights
 
     from memopro.hibernate._source import read_header
 
+    if device not in ("cpu", "mps"):
+        raise InvalidArgument(f"device must be 'cpu' or 'mps', not {device!r}")
+    if device == "mps":
+        from memopro.env._torch import mps_usable
+
+        if not mps_usable():
+            raise ModeUnavailable(
+                "memopro.rt.torch.stream_model(device='mps')",
+                "no usable Apple GPU here",
+                ("device='cpu'",),
+            )
     files = _files(name_or_dir, revision)
     regions: dict[str, Any] = {}
     for f in files:
@@ -252,14 +383,15 @@ def stream_model(
     _tie(model, config)
     model.eval()
     rt = runtime or Runtime(budget=budget, prefetch=prefetch, lookahead=lookahead)
-    weights = StreamedWeights(model, rt, regions)
+    weights = StreamedWeights(model, rt, regions, device=device)
     model.memopro_weights = weights
     model.memopro_runtime = rt
-    # parameters live on the meta device between uses; the model computes on the CPU
+    # parameters live on the meta device between uses; the model computes on `device`
+    where = torch.device(device)
     model.__class__ = type(
         f"Streamed{type(model).__name__}",
         (type(model),),
-        {"device": property(lambda self: torch.device("cpu"))},
+        {"device": property(lambda self: where)},
     )
     return model
 

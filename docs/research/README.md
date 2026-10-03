@@ -156,6 +156,8 @@
 | [0127](0127-pentanary-quantization-survey-e032.md) | 2026-10-03 | survey + experiment (탐색) | 펜티너리(5단계, 2.32비트) 조사와 E032: Qwen2.5-1.5B 사후 양자화(보정 없음)는 펜티너리 퍼플렉서티 7,359~40,296·bf16 1등 일치 2~5%, 3단계는 일치 0.1~0.2%로 붕괴. int4 g32는 일치 72.5%(k=4에서 검증당 약 2.9토큰), 퍼플렉서티 16.2→19.6. 결론: 펜티너리는 지금 만들지 않음(7B·보정 사후 양자화로 다시 볼 가치만), int4 초안 + 흘려 쓰는 bf16 검증(E4)이 유망. SubSpec·ML-SpecQD가 같은 생각을 이미 함 | 확정 |
 | [0128](0128-pager-ping-pong-fix.md) | 2026-10-03 | implementation | 투명 페이저 결함: PR #38 CI는 통과했으나 Python 작업이 3시간 36분 — 두 배열을 번갈아 쓰면 MRU가 지금 쓰는 피연산자 청크를 내보내 원소 몇 개마다 폴트(핑퐁). 수정: 최근 폴트 청크(들어가는 수의 1/4, 최대 16) 보호 + Linux 시험 추가 | 확정 |
 | [0129](0129-e027-results-gate-r3.md) | 2026-10-03 | experiment | E027 결과: **관문 G-R3 통과**(CI Linux, 2 vCPU·8GB): 고치지 않은 NumPy 영상 처리(최대 1,578MiB)를 cgroup 788MiB(1/2)에서 `memopro run --transparent`로 비트 동일하게 22.6초(그냥 5.4초, 한도에서는 OOM), OS 스왑 48.3초·zswap 53.0초보다 2.1·2.3배 빠름, 디스크 쓰기 0, 압축 2.16배, overrun 0. C ABI·Linux 시험 통과. 런타임 C-R 1~3단계 관문 모두 통과 | 확정 |
+| [0130](0130-g4-e1-mps-streaming-build.md) | 2026-10-03 | implementation + 개발 점검 | G4 E1: 런타임이 고정한 메모리를 무복사 Metal 버퍼 → DLPack으로 MPS 텐서로(`stream_model(device="mps")`), DLPack deleter + MPS 이벤트로 GPU가 끝난 뒤에만 고정 해제. M1 MPS bf16 역전파 259 vs CPU 2.8 GFLOPS. 작은 GPT-2: 보통 MPS 모델과 추론·생성·LoRA 비트 동일. 1.5B 768MiB LoRA 한 단계 257초(CPU) → 약 5초(MPS), 생성은 1.86 vs 1.34초/토큰(감싸기·동기화 비용). GPU 할당은 RSS에 안 잡혀 phys_footprint로 잼 | 확정 |
+| [0131](0131-e028-preregistration.md) | 2026-10-03 | experiment (사전 등록) | E028 = G4-B1: 8GB M1, MPS 스트리밍 16비트 LoRA(r=8 q·v, 1 × 128토큰, 5단계). B1 1.5B 768MiB 단계 시간 ≤ CPU(E026) 257초의 1/10, B2 3B 1GiB(≈1/6)·768MiB(≈1/8) 완주와 손실 비트 동일, B3 footprint 증가 ≤ 예산 + 1GiB, 스왑 ≤ 64MiB | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

@@ -154,6 +154,47 @@ impl Drop for FileMap {
     }
 }
 
+/// An `MTLBuffer` over `len` bytes at `ptr`, without copying (macOS; G4 E1: runtime buffers used
+/// by the GPU in place). The caller owns one retain and gives it back with [`metal_release`].
+///
+/// # Safety
+/// `ptr` must stay valid (mapped, not reused) for `len` bytes until the buffer is released and
+/// no GPU work uses it any more.
+pub unsafe fn metal_wrap(ptr: *mut u8, len: usize) -> Result<usize> {
+    let page = page_size();
+    if ptr.is_null() || (ptr as usize) % page != 0 || len == 0 || len % page != 0 {
+        return Err(Error::InvalidArgument(format!(
+            "a no-copy Metal buffer needs a page-aligned address and a length in whole pages \
+             ({page} bytes); got {ptr:p}, {len}"
+        )));
+    }
+    #[cfg(target_os = "macos")]
+    {
+        // SAFETY: checked alignment; validity is the caller's contract.
+        unsafe { metal::no_copy(ptr.cast(), len) }
+    }
+    #[cfg(not(target_os = "macos"))]
+    {
+        Err(Error::Unsupported(
+            "Metal buffers exist on macOS only".into(),
+        ))
+    }
+}
+
+/// Give back a buffer from [`metal_wrap`].
+///
+/// # Safety
+/// `buffer` came from [`metal_wrap`] and is released once.
+pub unsafe fn metal_release(buffer: usize) {
+    #[cfg(target_os = "macos")]
+    // SAFETY: the caller's contract: one retain we own.
+    unsafe {
+        metal::release(buffer)
+    };
+    #[cfg(not(target_os = "macos"))]
+    let _ = buffer; // metal_wrap never succeeds here, so there is nothing to give back
+}
+
 #[cfg(target_os = "macos")]
 mod metal {
     use super::{Error, Result};
