@@ -155,6 +155,7 @@
 | [0126](0126-decision-g4-approval-cleanup-downloads.md) | 2026-10-03 | decision | 사용자 결정: G4 초안 방향 승인, 16GB 이상 Mac 시험은 나중에, 프로젝트 폴더 정리 뒤 7B 이상 모델 다운로드 허락(패키지 설치는 별도), 펜티너리 양자화 조사. 정리: `cargo clean` 2.1GiB와 옛 dist·캐시 삭제(모델 캐시는 유지) → 프로젝트 11GB, 디스크 여유 18GiB. 7B(15GB)는 여유가 부족해 사용자가 프로젝트 밖에서 공간을 확보하기로 함 | 확정 |
 | [0127](0127-pentanary-quantization-survey-e032.md) | 2026-10-03 | survey + experiment (탐색) | 펜티너리(5단계, 2.32비트) 조사와 E032: Qwen2.5-1.5B 사후 양자화(보정 없음)는 펜티너리 퍼플렉서티 7,359~40,296·bf16 1등 일치 2~5%, 3단계는 일치 0.1~0.2%로 붕괴. int4 g32는 일치 72.5%(k=4에서 검증당 약 2.9토큰), 퍼플렉서티 16.2→19.6. 결론: 펜티너리는 지금 만들지 않음(7B·보정 사후 양자화로 다시 볼 가치만), int4 초안 + 흘려 쓰는 bf16 검증(E4)이 유망. SubSpec·ML-SpecQD가 같은 생각을 이미 함 | 확정 |
 | [0128](0128-pager-ping-pong-fix.md) | 2026-10-03 | implementation | 투명 페이저 결함: PR #38 CI는 통과했으나 Python 작업이 3시간 36분 — 두 배열을 번갈아 쓰면 MRU가 지금 쓰는 피연산자 청크를 내보내 원소 몇 개마다 폴트(핑퐁). 수정: 최근 폴트 청크(들어가는 수의 1/4, 최대 16) 보호 + Linux 시험 추가 | 확정 |
+| [0129](0129-e027-results-gate-r3.md) | 2026-10-03 | experiment | E027 결과: **관문 G-R3 통과**(CI Linux, 2 vCPU·8GB): 고치지 않은 NumPy 영상 처리(최대 1,578MiB)를 cgroup 788MiB(1/2)에서 `memopro run --transparent`로 비트 동일하게 22.6초(그냥 5.4초, 한도에서는 OOM), OS 스왑 48.3초·zswap 53.0초보다 2.1·2.3배 빠름, 디스크 쓰기 0, 압축 2.16배, overrun 0. C ABI·Linux 시험 통과. 런타임 C-R 1~3단계 관문 모두 통과 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
