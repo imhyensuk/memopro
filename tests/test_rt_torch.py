@@ -230,6 +230,22 @@ def test_checkpointing_and_chunked_loss_keep_training_exact_enough(tiny_gpt2):
     assert s["peak_used"] <= m.memopro_runtime.limit and s["pinned_bytes"] == 0
 
 
+def test_loss_chunks_keep_float32_logits_under_the_mps_heap_threshold(tiny_gpt2, monkeypatch):
+    """0136: by default a chunk's float32 logits stay under LOSS_CHUNK_BYTES."""
+    ids = torch.randint(0, 2000, (2, 32), generator=torch.Generator().manual_seed(5))
+    m = rtt.stream_model(tiny_gpt2, budget="9MiB")
+    with torch.no_grad():
+        want = float(rtt.causal_lm_loss(m, ids, chunk=31))
+    head = m.get_output_embeddings()
+    sizes = []
+    head.register_forward_hook(lambda mod, a, out: sizes.append(out.numel() * 4))
+    monkeypatch.setattr(rtt, "LOSS_CHUNK_BYTES", 2 * 7 * head.out_features * 4)
+    with torch.no_grad():
+        got = float(rtt.causal_lm_loss(m, ids))
+    assert abs(got - want) < 1e-5
+    assert max(sizes) <= rtt.LOSS_CHUNK_BYTES and len(sizes) == 5  # 31 positions, 7 at a time
+
+
 def test_checkpointing_needs_a_streamed_model():
     with pytest.raises(memopro.InvalidArgument):
         rtt.enable_checkpointing(torch.nn.Linear(2, 2))
