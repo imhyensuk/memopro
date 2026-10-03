@@ -1,0 +1,15 @@
+[package]
+name = "memopro-c"
+description = "C ABI of the memopro runtime (mp_* functions, include/memopro.h); not published to crates.io."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "memopro_c"
+crate-type = ["cdylib", "staticlib", "rlib"]
+
+[dependencies]
+memopro = { path = "../memopro" }

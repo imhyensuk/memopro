@@ -466,6 +466,32 @@ fn prefetching_looks_ahead_only_its_window() {
 }
 
 #[test]
+fn prefetching_and_pins_race_on_compressed_buffers_safely() {
+    // while a pin makes room (compressing, outside the lock) the service thread may bring the
+    // same buffer back first; the pin must notice instead of assuming it is still compressed
+    let rt = prefetching(24, 8);
+    let bufs: Vec<_> = (0..8)
+        .map(|k| {
+            let id = rt.alloc(4 * MIB, 4).unwrap();
+            let data = widened(MIB, 7 + k);
+            rt.pin(id, true)
+                .unwrap()
+                .as_mut_slice()
+                .unwrap()
+                .copy_from_slice(&data);
+            (id, data)
+        })
+        .collect();
+    for _ in 0..6 {
+        for (id, data) in &bufs {
+            assert_eq!(rt.pin(*id, false).unwrap().as_slice(), &data[..]);
+        }
+    }
+    let s = rt.stats();
+    assert!(s.compressions > 0 && s.peak_used <= rt.limit(), "{s:?}");
+}
+
+#[test]
 fn prefetching_follows_a_forward_and_backward_order() {
     let (path, _) = data_file();
     let rt = prefetching(12, 2);

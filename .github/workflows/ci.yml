@@ -32,6 +32,13 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test -p memopro
+      - run: cargo test -p memopro-c
+      - name: C ABI smoke test (include/memopro.h)
+        run: |
+          cargo build -q -p memopro-c --release
+          cc -std=c11 -Wall -Wextra -Werror -o target/mp_smoke crates/memopro-c/tests/smoke.c \
+            -Icrates/memopro-c/include -Ltarget/release -lmemopro_c -Wl,-rpath,"$PWD/target/release"
+          ./target/mp_smoke
 
   python:
     name: Python ${{ matrix.python }} (ubuntu)

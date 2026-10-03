@@ -4,6 +4,20 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Added: runtime phase 3 — C ABI, transparent paging on Linux, streamed loading (0124)
+- `crates/memopro-c`: the runtime from C/C++ (`include/memopro.h`, `mp_*`), with status codes,
+  a per-thread error message and no panic crossing the boundary.
+- `memopro.rt.transparent(budget)` (Linux): NumPy arrays made inside the block are paged by
+  userfaultfd within the budget, compressed losslessly in memory when the budget is full;
+  `memopro run --transparent BUDGET script.py` applies it to an unchanged script, and
+  `--report-json PATH` writes the report. Other systems get a clear `ModeUnavailable`.
+- `memopro.load(..., fallback="stream")`: when nothing fits losslessly, stream the stored
+  weights from their files on the CPU (`memopro.rt.torch`), with a warning and a report entry.
+
+### Fixed: a race between prefetching and pins
+- A pin that made room (compressing outside the lock) could find that the prefetcher had
+  already brought its buffer back and panic; it now looks again.
+
 ### Changed: prefetching no longer wears away what the runtime keeps (0116-0118)
 - On repeated passes that compute more than they read, the prefetcher used to evict buffers
   the runtime was keeping for the next pass, so every pass re-read everything. It now takes

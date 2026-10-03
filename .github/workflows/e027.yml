@@ -1,0 +1,41 @@
+name: E027 transparent paging
+
+# Gate G-R3 of the runtime (docs/research/0122): an unchanged NumPy program at half its memory
+# with memopro's transparent paging (userfaultfd), on a Linux runner, against the program alone
+# and OS swap. Manual only; results are uploaded as the `e027` artifact.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e027:
+    name: E027 (Linux, cgroup v2, userfaultfd)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip maturin pytest numpy
+      - run: maturin build --release --out dist
+      - run: python -m pip install --no-index --find-links dist memopro
+      - name: Kernel, memory and userfaultfd
+        run: |
+          uname -a
+          cat /proc/sys/vm/unprivileged_userfaultfd
+          free -m
+          swapon --show
+      - name: E027
+        env:
+          E027_OUT: ${{ runner.temp }}/e027
+        run: python experiments/e027_transparent/run.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e027
+          path: ${{ runner.temp }}/e027
