@@ -171,6 +171,7 @@
 | [0142](0142-row-invariant-verification.md) | 2026-10-04 | implementation | 사용자 결정 A. 행 불변 검증: `_row_invariant`(프롬프트 행은 덩어리, 그 뒤 행은 디코더 층·마지막 정규화·출력 머리를 한 행씩, 층 가중치는 한 번 고정)와 공개 `memopro.rt.torch.generate(model, ids, draft=)`(반환 = 일반 탐욕 `generate`). 시험: 여러 행 로짓 = 한 행씩 로짓(비트, CPU·MPS). 개발 확인: E033 프롬프트 1·2가 P와 같음, 0.93·0.32초/토큰 | 확정 |
 | [0143](0143-e033b-preregistration.md) | 2026-10-04 | experiment (사전 등록) | E033b = G4-E4 다시: E033과 같은 경우·기준, S15·S3만 `rtt.generate`로. 시작 스왑 4,080MiB, 다른 앱 열림 | 확정 |
 | [0144](0144-e033b-results.md) | 2026-10-04 | experiment | E033b 결과: 관문 G4-E4 **다시 실패(X3 스왑만)**. X1 통과(4/4 비트 동일, S3도 4/4), X2 통과(3.52 → 1.09초/토큰, 3.22배), footprint +2,522MiB는 한도 안이지만 시스템 스왑 +70MiB(기준 64, 첫 시도 +1,061). 다른 앱이 밀려나는 시스템 스왑과 우리 프로세스를 가를 수 없음. 선택지 A(앱 닫고 E033c)/B(메모리 줄이기)/C(프로세스 단위 기준 결정)/D | 확정 |
+| [0145](0145-e033c-preregistration.md) | 2026-10-04 | experiment (사전 등록) | 사용자 결정 A: E033c = G4-E4 세 번째, 코드·경우·기준은 E033b 그대로, 사용자가 다른 앱을 닫은 뒤 실행 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
