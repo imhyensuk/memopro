@@ -185,6 +185,7 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 | RT1 | 런타임 C-R 1단계: 예산 상한, 원본 재읽기·압축(쓰기 없음), 재사용 주기 정책, NumPy 연결 (0107~0113) | | ✅ 관문 G-R1 통과(E025, [0113](docs/research/0113-e025-results.md)) |
 | RT2 | 런타임 2단계: 재계산(계보), 미리 읽기(서비스 스레드), 느려짐 예측, PyTorch 연결 (0114~0121) | | ✅ 관문 G-R2 통과(E026·E026c, [0121](docs/research/0121-e026c-results-gate-r2.md)): 양자화 없이 3B를 필요 메모리의 1/4에서 OS 페이징의 5배 속도로 |
 | RT3 | 런타임 3단계: Linux 투명 모드(userfaultfd), C ABI, 접근 계층 연결 (0122·0124·0128) | | ✅ 관문 G-R3 통과(E027, [0129](docs/research/0129-e027-results-gate-r3.md)): 고치지 않은 NumPy 프로그램을 필요 메모리의 1/2에서 비트 동일하게, OS 스왑의 2.1배 속도, 쓰기 0 |
+| G4-B | 메모리가 작은 기기에서 손실 없는 16비트 학습: GPU 무복사 스트리밍(E1), 활성값 줄이기(E3) (0123·0125·0130~0138) | | ✅ 관문 G4-B1 통과(E028c, [0138](docs/research/0138-e028c-results-gate-g4-b1.md)): 8GB M1 GPU에서 3B bf16 LoRA를 1GiB·768MiB 예산으로 손실 비트 동일, 프로세스 메모리 예산 + 250MiB 안, 1.5B는 CPU의 46배 |
 | S6 | 안정화, 문서 사이트(영어·한국어) | 🚀 v1.0.0 | |
 
 ## 알려진 한계 (개발판)
