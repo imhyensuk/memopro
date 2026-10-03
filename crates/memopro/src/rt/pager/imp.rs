@@ -29,6 +29,8 @@ const UFFD_FEATURE_PAGEFAULT_FLAG_WP: u64 = 1 << 0;
 /// Bits of `_UFFDIO_COPY` and `_UFFDIO_WRITEPROTECT` in the `ioctls` a registration reports.
 const HAS_COPY: u64 = 1 << 0x03;
 const HAS_WRITEPROTECT: u64 = 1 << 0x06;
+/// At most this many most recently faulted chunks count as in use and are not evicted.
+const HOT_CHUNKS: u64 = 16;
 
 #[repr(C)]
 struct UffdioApi {
@@ -526,9 +528,14 @@ impl Shared {
         }
     }
 
-    /// The chunk in memory whose next fault is predicted farthest.
+    /// The chunk in memory whose next fault is predicted farthest, never one of the chunks
+    /// faulted in most recently: code works on them right now (two arrays read and written
+    /// in step ping-ponged chunk for chunk otherwise, and CI tests took hours, 0128). If only
+    /// such chunks are left, the one faulted in longest ago.
     fn choose(&self, st: &State, exclude: (usize, usize)) -> Option<(usize, usize)> {
         let now = st.clock as f64;
+        let fits = (self.limit / self.config.chunk as u64).max(1);
+        let hot = (fits / 4).clamp(1, HOT_CHUNKS) as f64;
         let (sum, count) = st
             .regions
             .values()
@@ -537,23 +544,31 @@ impl Shared {
             .fold((0.0, 0u64), |(s, n), c| (s + c.period, n + 1));
         let typical = if count > 0 { sum / count as f64 } else { 0.0 };
         let mut best: Option<(f64, usize, usize)> = None;
+        let mut oldest_hot: Option<(f64, usize, usize)> = None;
         for (&start, r) in &st.regions {
             for (ci, c) in r.chunks.iter().enumerate() {
                 if !matches!(c.data, Data::Resident) || c.incompressible || (start, ci) == exclude {
+                    continue;
+                }
+                let age = now - c.last as f64;
+                if age < hot {
+                    if oldest_hot.is_none_or(|(a, _, _)| age > a) {
+                        oldest_hot = Some((age, start, ci));
+                    }
                     continue;
                 }
                 let period = if c.period > 0.0 { c.period } else { typical };
                 let distance = if period > 0.0 {
                     (c.last as f64 + period - now).max(0.0) + 1.0
                 } else {
-                    now - c.last as f64 + 1.0
+                    age + 1.0
                 };
                 if best.is_none_or(|(d, _, _)| distance > d) {
                     best = Some((distance, start, ci));
                 }
             }
         }
-        best.map(|(_, s, c)| (s, c))
+        best.or(oldest_hot).map(|(_, s, c)| (s, c))
     }
 
     fn evict(&self, st: &mut State, start: usize, ci: usize) {

@@ -135,3 +135,40 @@ fn a_repeated_scan_keeps_a_budget_worth() {
     // SAFETY: done with it.
     unsafe { p.unmap(ptr) }.unwrap();
 }
+
+#[test]
+fn two_arrays_used_in_step_do_not_ping_pong() {
+    // `dst[i] = src[i] + 1` over two regions larger than the budget: evicting the chunk just
+    // faulted in (the other operand) made every few elements fault (CI took hours, 0128)
+    let Some(p) = pager(8) else { return };
+    let len = 16 * MIB;
+    let (src, dst) = (p.map(len).unwrap(), p.map(len).unwrap());
+    // SAFETY: two fresh regions of `len` bytes, used only here.
+    let (a, b) = unsafe {
+        (
+            std::slice::from_raw_parts_mut(src as *mut u32, len / 4),
+            std::slice::from_raw_parts_mut(dst as *mut u32, len / 4),
+        )
+    };
+    for (i, w) in a.iter_mut().enumerate() {
+        *w = pattern(i);
+    }
+    let before = p.stats().faults;
+    for (x, y) in b.iter_mut().zip(a.iter()) {
+        *x = *y + 1;
+    }
+    let faults = p.stats().faults - before;
+    let chunks = (2 * len / (256 * 1024)) as u64;
+    assert!(faults <= 4 * chunks, "{faults} faults for {chunks} chunks");
+    assert!(
+        b.iter()
+            .enumerate()
+            .step_by(1009)
+            .all(|(i, &w)| w == pattern(i) + 1)
+    );
+    // SAFETY: done with both.
+    unsafe {
+        p.unmap(src).unwrap();
+        p.unmap(dst).unwrap();
+    }
+}
