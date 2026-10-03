@@ -27,7 +27,13 @@ weights (Hugging Face assisted generation, greedy: every token kept is the strea
 choice).
 
     draft = memopro.rt.torch.draft_model("Qwen/Qwen2.5-1.5B-Instruct", target=model)
-    out = model.generate(**inputs, max_new_tokens=64, do_sample=False, assistant_model=draft)
+    out = memopro.rt.torch.generate(model, input_ids, draft=draft, max_new_tokens=64)
+
+``generate`` returns exactly the tokens of ``model.generate(input_ids, do_sample=False)``: a GPU
+computes a row of a matrix product with slightly different rounding depending on how many rows
+it gets, so checking several proposed tokens at once could break a near-tie differently
+(0141). It therefore computes every row after the prompt alone, as plain generation does, with
+each layer's weights pinned once for all of them (0142).
 """
 
 from __future__ import annotations
@@ -46,6 +52,7 @@ __all__ = [
     "causal_lm_loss",
     "draft_model",
     "enable_checkpointing",
+    "generate",
     "saved_weights",
     "stream_model",
 ]
@@ -476,6 +483,141 @@ def draft_model(
             size += t.untyped_storage().nbytes()
     model.memopro_draft_bytes = size
     return model
+
+
+def _rows(t: Any, start: int, stop: int) -> Any:
+    return None if t is None else t[:, start:stop]
+
+
+@contextlib.contextmanager
+def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
+    """Inside this block, rows at positions >= ``prompt`` go through the decoder layers, the
+    final norm and the output head one at a time, exactly as in plain generation; earlier rows
+    keep the block shape of the prompt's own pass (0142)."""
+    import torch
+
+    base = getattr(model, getattr(model, "base_model_prefix", ""), None)
+    layers = getattr(base, "layers", None)
+    norm, head = getattr(base, "norm", None), model.get_output_embeddings()
+    if layers is None or norm is None or head is None:
+        raise ModeUnavailable(
+            "memopro.rt.torch.generate",
+            f"{type(model).__name__}: no decoder layers/norm/output head where Llama-like "
+            "models keep them",
+            ("model.generate(..., assistant_model=draft) (outputs may differ at near-ties)",),
+        )
+    weights = model.memopro_weights
+    state = {"before": 0}
+
+    def hold(module: Any) -> list[Any]:
+        """Pin the weights under ``module`` once for all rows (the tensors keep them pinned;
+        each leaf's own hooks then reuse the pinned memory)."""
+        return [
+            weights._tensor(id(p))
+            for m in module.modules()
+            if m in weights._own
+            for _, p in weights._own[m]
+        ]
+
+    def layer_forward(layer: Any, original: Any) -> Any:
+        def forward(hidden: Any, *args: Any, **kw: Any) -> Any:
+            cache = kw.get("past_key_values")
+            q = hidden.shape[1]
+            if args or cache is None or q == 1:
+                return original(hidden, *args, **kw)
+            before = cache.get_seq_length(layer.self_attn.layer_idx)
+            if layer is layers[0]:
+                state["before"] = before
+            block = max(0, min(q, prompt - before))
+            if block == q:
+                return original(hidden, **kw)
+            mask, pos, emb = (
+                kw.get("attention_mask"),
+                kw.get("position_ids"),
+                kw.get("position_embeddings"),
+            )
+            held = hold(layer)
+            try:
+                outs = []
+                if block:
+                    part = dict(kw)
+                    if mask is not None:
+                        part["attention_mask"] = mask[..., :block, : before + block]
+                    part["position_ids"] = _rows(pos, 0, block)
+                    if emb is not None:
+                        part["position_embeddings"] = tuple(_rows(e, 0, block) for e in emb)
+                    outs.append(original(hidden[:, :block], **part))
+                for i in range(block, q):
+                    one = dict(kw)
+                    one["attention_mask"] = None  # one row sees every cached key
+                    one["position_ids"] = _rows(pos, i, i + 1)
+                    if emb is not None:
+                        one["position_embeddings"] = tuple(_rows(e, i, i + 1) for e in emb)
+                    outs.append(original(hidden[:, i : i + 1], **one))
+            finally:
+                del held
+            return torch.cat(outs, dim=1)
+
+        return forward
+
+    def norm_forward(original: Any) -> Any:
+        def forward(hidden: Any) -> Any:
+            q = hidden.shape[1]
+            block = max(0, min(q, prompt - state["before"]))
+            if q == 1 or block == q:
+                return original(hidden)
+            parts = [original(hidden[:, :block])] if block else []
+            parts += [original(hidden[:, i : i + 1]) for i in range(block, q)]
+            return torch.cat(parts, dim=1)
+
+        return forward
+
+    def head_forward(original: Any) -> Any:
+        def forward(hidden: Any) -> Any:
+            if hidden.dim() < 3 or hidden.shape[1] == 1:
+                return original(hidden)
+            held = hold(head)
+            try:
+                return torch.cat(
+                    [original(hidden[:, i : i + 1]) for i in range(hidden.shape[1])], dim=1
+                )
+            finally:
+                del held
+
+        return forward
+
+    patched = [(layer, layer_forward(layer, layer.forward)) for layer in layers]
+    patched += [(norm, norm_forward(norm.forward)), (head, head_forward(head.forward))]
+    for module, forward in patched:
+        module.forward = forward
+    try:
+        yield
+    finally:
+        for module, _ in patched:
+            del module.forward
+
+
+def generate(model: Any, input_ids: Any, *, draft: Any = None, **kwargs: Any) -> Any:
+    """Greedy generation from a streamed model, with an optional resident ``draft``
+    (:func:`draft_model`) proposing tokens: returns exactly what
+    ``model.generate(input_ids, do_sample=False, **kwargs)`` returns, in fewer passes over the
+    streamed weights (G4 E4, 0142). One sequence at a time, no padding."""
+    import torch
+
+    if not hasattr(model, "memopro_weights"):
+        raise InvalidArgument("generate needs a model from memopro.rt.torch.stream_model")
+    if kwargs.get("do_sample"):
+        raise InvalidArgument("generate is greedy: sampling would not reproduce plain outputs")
+    if input_ids.dim() != 2 or input_ids.shape[0] != 1:
+        raise InvalidArgument("generate takes one sequence: input_ids of shape [1, length]")
+    mask = kwargs.get("attention_mask")
+    if mask is not None and not bool(mask.all()):
+        raise InvalidArgument("generate takes no padding (an attention_mask of all ones)")
+    kwargs["do_sample"] = False
+    if draft is not None:
+        kwargs["assistant_model"] = draft
+    with torch.no_grad(), _row_invariant(model, input_ids.shape[1]):
+        return model.generate(input_ids=input_ids, **kwargs)
 
 
 @contextlib.contextmanager
