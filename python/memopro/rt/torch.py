@@ -20,6 +20,14 @@ On the CPU the weights are used where they are, in the runtime's memory. On Appl
 buffer per pinned weight, unified memory); a weight stays pinned until the GPU has finished with
 it (an MPS event recorded after torch let go of it), so the runtime never moves memory the GPU
 still reads.
+
+Faster lossless generation (G4 E4): a small int4 copy of a model with the same vocabulary stays
+in memory and proposes tokens; the streamed model checks several of them in one pass over its
+weights (Hugging Face assisted generation, greedy: every token kept is the streamed model's own
+choice).
+
+    draft = memopro.rt.torch.draft_model("Qwen/Qwen2.5-1.5B-Instruct", target=model)
+    out = model.generate(**inputs, max_new_tokens=64, do_sample=False, assistant_model=draft)
 """
 
 from __future__ import annotations
@@ -36,6 +44,7 @@ from memopro.rt import Runtime
 __all__ = [
     "StreamedWeights",
     "causal_lm_loss",
+    "draft_model",
     "enable_checkpointing",
     "saved_weights",
     "stream_model",
@@ -411,6 +420,61 @@ def stream_model(
         (type(model),),
         {"device": property(lambda self: where)},
     )
+    return model
+
+
+def draft_model(
+    name_or_dir: str | Path,
+    *,
+    target: Any = None,
+    device: str = "mps",
+    revision: str | None = None,
+) -> Any:
+    """An int4 copy of a Hugging Face model that stays in device memory, to propose tokens for
+    ``target`` (a streamed model) through ``generate(assistant_model=...)`` (G4 E4, 0139).
+
+    Linear layers become torch's int4 kernel layers (``int4pack``, group 32); embeddings, norms
+    and the output head stay in bfloat16. Its size in bytes is ``memopro_draft_bytes``; it is
+    device memory outside the streamed model's budget. The draft never changes what greedy
+    generation returns, only how many passes over the streamed weights it takes."""
+    import gc
+
+    import torch
+    import transformers
+
+    from memopro.techniques.integrations import int4pack
+
+    if device != "mps":
+        raise ModeUnavailable(
+            "memopro.rt.torch.draft_model",
+            f"int4 drafts use torch's int4 kernel on Apple GPUs; not on {device!r}",
+            ("pass a smaller model loaded normally as assistant_model",),
+        )
+    reason = int4pack.works(device)
+    if reason:
+        raise ModeUnavailable("memopro.rt.torch.draft_model", reason, ("device='cpu' streaming",))
+    config = transformers.AutoConfig.from_pretrained(str(name_or_dir), revision=revision)
+    if target is not None and getattr(target.config, "vocab_size", None) != config.vocab_size:
+        raise InvalidArgument(
+            f"{name_or_dir}: vocabulary {config.vocab_size} differs from the target's "
+            f"{getattr(target.config, 'vocab_size', None)}; a draft must share the tokenizer"
+        )
+    # memory-mapped bf16 on the CPU, converted one layer at a time (0069)
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+        str(name_or_dir), revision=revision, dtype=torch.bfloat16
+    )
+    int4pack.convert(model, device)
+    model.eval()
+    gc.collect()
+    torch.mps.empty_cache()
+    seen: set[int] = set()
+    size = 0
+    for t in [*model.parameters(), *model.buffers()]:
+        key = t.untyped_storage().data_ptr()
+        if key not in seen:
+            seen.add(key)
+            size += t.untyped_storage().nbytes()
+    model.memopro_draft_bytes = size
     return model
 
 

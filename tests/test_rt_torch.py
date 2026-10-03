@@ -249,3 +249,51 @@ def test_loss_chunks_keep_float32_logits_under_the_mps_heap_threshold(tiny_gpt2,
 def test_checkpointing_needs_a_streamed_model():
     with pytest.raises(memopro.InvalidArgument):
         rtt.enable_checkpointing(torch.nn.Linear(2, 2))
+
+
+def _tiny_qwen(path, seed, vocab=8000):
+    """A small Qwen2 in bfloat16 (about 12 MB, tied embeddings) whose layers int4 can take."""
+    torch.manual_seed(seed)
+    cfg = transformers.Qwen2Config(
+        hidden_size=256,
+        intermediate_size=1024,
+        num_hidden_layers=4,
+        num_attention_heads=4,
+        num_key_value_heads=2,
+        vocab_size=vocab,
+        max_position_embeddings=256,
+        tie_word_embeddings=True,
+    )
+    model = transformers.Qwen2ForCausalLM(cfg).to(torch.bfloat16)
+    model.save_pretrained(path, safe_serialization=True)
+    return path
+
+
+def test_int4_draft_keeps_greedy_generation_of_the_streamed_model(tmp_path):
+    """G4 E4 (0139): with a resident int4 draft, assisted greedy generation returns exactly what
+    the streamed model returns alone (the draft only proposes)."""
+    from memopro.env._torch import mps_usable
+
+    if not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    pytest.importorskip("torchao")
+    target = _tiny_qwen(tmp_path / "target", 0)
+    m = rtt.stream_model(target, budget="9MiB", device="mps")
+    ids = torch.randint(0, 8000, (1, 12), generator=torch.Generator().manual_seed(3)).to("mps")
+    kw = {"max_new_tokens": 24, "do_sample": False, "pad_token_id": 0}
+    with torch.no_grad():
+        plain = m.generate(input_ids=ids, **kw)
+        for draft_path in (target, _tiny_qwen(tmp_path / "other", 1)):
+            draft = rtt.draft_model(draft_path, target=m)
+            assert draft.memopro_draft_bytes > 0
+            assert any(type(x).__name__ == "Int4PackedLinear" for x in draft.modules())
+            assert torch.equal(m.generate(input_ids=ids, assistant_model=draft, **kw), plain)
+    m.memopro_weights.finish()
+    assert m.memopro_runtime.stats()["peak_used"] <= m.memopro_runtime.limit
+    with pytest.raises(memopro.InvalidArgument):
+        rtt.draft_model(_tiny_qwen(tmp_path / "vocab", 2, vocab=3000), target=m)
+
+
+def test_int4_drafts_need_an_apple_gpu(tmp_path):
+    with pytest.raises(memopro.ModeUnavailable):
+        rtt.draft_model(tmp_path, device="cpu")
