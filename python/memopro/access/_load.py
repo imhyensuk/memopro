@@ -186,6 +186,8 @@ def load(
     info, ctx, candidates = plan.info, plan.ctx, plan.candidates
     usable = [c for c in candidates if c.usable]
     fallback = None
+    if not usable and plan.setup.config.fallback == "stream":
+        return _load_streamed(plan, model_id, revision, task, tokenizer, from_pretrained)
     if not usable:
         fallback = _fallback(plan)
         if fallback is None:
@@ -282,6 +284,45 @@ def _load_file_backed(
         detail += "; " + _fallback_note(plan, cfg)
     _suggest_mps_heap_setting()  # before "applied", as hibernate's note (the last entry is the load)
     report().add(f"load.{cfg.name}", "applied", detail)
+    if tokenizer:
+        from transformers import AutoTokenizer
+
+        return model, AutoTokenizer.from_pretrained(model_id, revision=revision)
+    return model
+
+
+def _load_streamed(
+    plan: LoadPlan,
+    model_id: Any,
+    revision: Any,
+    task: str | None,
+    tokenizer: bool,
+    from_pretrained: dict[str, Any],
+) -> Any:
+    """``fallback="stream"`` (0124): nothing fits, so the stored weights stay in their files and
+    are streamed through `memopro.rt` on the CPU within the host budget (lossless, slower)."""
+    import warnings
+
+    from memopro.rt.torch import stream_model
+
+    if from_pretrained:
+        raise InvalidArgument(
+            "fallback='stream' builds the model from its files itself; from_pretrained "
+            f"arguments ({', '.join(sorted(from_pretrained))}) cannot be applied"
+        )
+    budget = plan.ctx.host_budget
+    if not budget:
+        raise InvalidArgument("fallback='stream' needs a host budget; none is available")
+    model = stream_model(
+        model_id, budget=int(budget), revision=revision, model_class=_model_class(plan.info, task)
+    )
+    detail = (
+        f"{plan.info.source}: nothing fits the budget; fallback='stream': the stored weights stay "
+        f"in their files and are streamed through memopro.rt on the CPU within "
+        f"{format_size(int(budget))} (lossless, slower than running from memory)"
+    )
+    warnings.warn(f"memopro.load: {detail}", UserWarning, stacklevel=3)
+    report().add("load.stream", "applied", detail)
     if tokenizer:
         from transformers import AutoTokenizer
 

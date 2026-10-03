@@ -24,10 +24,12 @@
 //! work (reading, compressing, decompressing, re-computing) runs outside the lock with the buffer
 //! marked busy, so other threads keep going; they wait only for that buffer.
 
+pub mod pager;
 mod predict;
 mod region;
 mod source;
 
+pub use pager::{Pager, PagerConfig, PagerStats};
 pub use predict::Prediction;
 pub use region::{Region, page_size, round_to_pages};
 pub use source::SourceFile;
@@ -869,10 +871,10 @@ impl Shared {
             let has_lineage = b.lineage.is_some();
             match b.state() {
                 BufferState::Resident => break,
-                BufferState::Compressed => st = self.restore_packed(st, id, None)?,
+                BufferState::Compressed => st = self.restore_packed(st, id, None)?.0,
                 BufferState::Dropped if has_lineage => st = self.restore_lineage(me, st, id)?,
                 BufferState::Dropped | BufferState::Unloaded => {
-                    st = self.restore_source(st, id, None)?
+                    st = self.restore_source(st, id, None)?.0
                 }
             }
         }
@@ -1038,7 +1040,8 @@ impl Shared {
             }
         };
         match result {
-            Ok(mut st) => {
+            Ok((st, false)) => st, // someone else brought it back meanwhile
+            Ok((mut st, true)) => {
                 if let Some(b) = st.bufs.get_mut(&id) {
                     b.prefetched = true;
                 }
@@ -1137,7 +1140,10 @@ impl Shared {
                 None if bound.is_some() => {
                     return Err(Error::Budget("prefetch would evict sooner needs".into()));
                 }
-                None if st.bufs.values().any(|b| b.busy) => st = self.wait(st),
+                // wait for others' slow work, never for the buffer this room is for
+                None if st.bufs.iter().any(|(i, b)| b.busy && Some(*i) != exclude) => {
+                    st = self.wait(st)
+                }
                 None => {
                     st.stats.refusals += 1;
                     let pinned: u64 = st
@@ -1375,7 +1381,7 @@ impl Shared {
         st: MutexGuard<'a, Inner>,
         id: BufferId,
         bound: Option<f64>,
-    ) -> Result<MutexGuard<'a, Inner>> {
+    ) -> Result<(MutexGuard<'a, Inner>, bool)> {
         let (nbytes, file, offset, expected) = {
             let b = st.bufs.get(&id).expect("checked by the caller");
             let Some(src) = &b.source else {
@@ -1387,6 +1393,13 @@ impl Shared {
         };
         let cap = round_to_pages(nbytes) as u64;
         let mut st = self.make_room(st, cap, Some(id), bound)?;
+        // making room may have let go of the lock (compression): another thread (the prefetcher)
+        // may have brought the buffer back or freed it meanwhile; the caller looks again
+        match st.bufs.get(&id) {
+            None => return Err(unknown(id)),
+            Some(b) if b.busy || !matches!(b.data, Data::Empty) => return Ok((st, false)),
+            Some(_) => {}
+        }
         st.used += cap;
         st.stats.peak_used = st.stats.peak_used.max(st.used);
         st.bufs.get_mut(&id).expect("still there").busy = true;
@@ -1429,7 +1442,7 @@ impl Shared {
             }
         };
         self.cond.notify_all();
-        outcome.map(|()| st)
+        outcome.map(|()| (st, true))
     }
 
     /// Decompress a compressed buffer (outside the lock); its pieces go when it is whole.
@@ -1438,10 +1451,16 @@ impl Shared {
         st: MutexGuard<'a, Inner>,
         id: BufferId,
         bound: Option<f64>,
-    ) -> Result<MutexGuard<'a, Inner>> {
+    ) -> Result<(MutexGuard<'a, Inner>, bool)> {
         let nbytes = st.bufs.get(&id).expect("checked by the caller").nbytes;
         let cap = round_to_pages(nbytes) as u64;
         let mut st = self.make_room(st, cap, Some(id), bound)?;
+        // as in restore_source: the buffer may have changed while room was made
+        match st.bufs.get(&id) {
+            None => return Err(unknown(id)),
+            Some(b) if b.busy || !matches!(b.data, Data::Compressed(_)) => return Ok((st, false)),
+            Some(_) => {}
+        }
         let b = st.bufs.get_mut(&id).expect("still there");
         let Data::Compressed(packed) = std::mem::replace(&mut b.data, Data::Empty) else {
             unreachable!("checked by the caller")
@@ -1476,7 +1495,7 @@ impl Shared {
             }
         };
         self.cond.notify_all();
-        outcome.map(|()| st)
+        outcome.map(|()| (st, true))
     }
 
     /// Re-compute a dropped derived buffer from its inputs (on the caller's thread: `compute`

@@ -184,7 +184,7 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 | ◆ Gγ → N3 | γ + pressure + `memopro run` (0051 재조사, 0053) | 🚀 v0.3.0 | ✅ 구현 (Gγ·E013은 배포 전 확인) |
 | RT1 | 런타임 C-R 1단계: 예산 상한, 원본 재읽기·압축(쓰기 없음), 재사용 주기 정책, NumPy 연결 (0107~0113) | | ✅ 관문 G-R1 통과(E025, [0113](docs/research/0113-e025-results.md)) |
 | RT2 | 런타임 2단계: 재계산(계보), 미리 읽기(서비스 스레드), 느려짐 예측, PyTorch 연결 (0114~0121) | | ✅ 관문 G-R2 통과(E026·E026c, [0121](docs/research/0121-e026c-results-gate-r2.md)): 양자화 없이 3B를 필요 메모리의 1/4에서 OS 페이징의 5배 속도로 |
-| RT3 | 런타임 3단계: Linux 투명 모드(userfaultfd), C ABI, 접근 계층 기본 경로 | | |
+| RT3 | 런타임 3단계: Linux 투명 모드(userfaultfd), C ABI, 접근 계층 연결 (0122·0124) | | 🔧 제작 완료(0124), 관문 G-R3(E027, CI Linux) 대기 |
 | S6 | 안정화, 문서 사이트(영어·한국어) | 🚀 v1.0.0 | |
 
 ## 알려진 한계 (개발판)

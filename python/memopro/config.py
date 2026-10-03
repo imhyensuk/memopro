@@ -31,8 +31,9 @@ DISK_WRITES = ("ask", "never", "allow")
 # What the measured host budget starts from (0059 D3); only "conservative" never needs swap
 BUDGET_BASES = ("conservative", "os", "total")
 POOLS = ("device", "host", "disk")
-# What load/optimize do when nothing fits the budget (0064 D-d): stop, or load as stored anyway
-FALLBACKS = ("none", "stored")
+# What load/optimize do when nothing fits the budget (0064 D-d): stop, or load as stored anyway;
+# `stream` (load only, 0124) streams the stored weights from their files on the CPU (memopro.rt)
+FALLBACKS = ("none", "stored", "stream")
 # What kind of memory holds loaded weights (0072): anonymous, or clean file-backed pages (MPS)
 RESIDENCIES = ("memory", "file")
 # Write-free hibernation methods that `mode="auto"` may pick, in order (0032 H1). `bf16` is lossy

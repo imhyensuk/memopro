@@ -129,3 +129,26 @@ def test_saved_weights_needs_a_streamed_model():
 def test_missing_files_are_a_clear_error(tmp_path):
     with pytest.raises(memopro.ModeUnavailable):
         rtt.stream_model(tmp_path)
+
+
+def test_load_streams_on_request_when_nothing_fits(tiny_gpt2):
+    """fallback="stream" (0124): memopro.load hands back a streamed model, lossless."""
+    from memopro.access._load import plan_load
+
+    memopro.report().clear()
+    plan = plan_load(tiny_gpt2, device="cpu")
+    stored = next(c for c in plan.candidates if c.name == "stored")
+    tight = int((stored.needs.device + stored.needs.host) * 0.9)  # stored does not fit
+    with pytest.raises(memopro.BudgetExceeded) as e:
+        memopro.load(tiny_gpt2, device="cpu", budget=tight, quality="lossless")
+    assert "fallback='stream'" in str(e.value)
+    with pytest.warns(UserWarning, match="fallback='stream'"):
+        m = memopro.load(
+            tiny_gpt2, device="cpu", budget=tight, quality="lossless", fallback="stream"
+        )
+    ids = torch.randint(0, 2000, (1, 16), generator=torch.Generator().manual_seed(3))
+    with torch.no_grad():
+        assert torch.equal(m(input_ids=ids).logits, reference(tiny_gpt2)(input_ids=ids).logits)
+    applied = [x.technique for x in memopro.report().entries if x.action == "applied"]
+    assert applied == ["load.stream"]
+    assert m.memopro_runtime.stats()["peak_used"] <= m.memopro_runtime.limit
