@@ -161,6 +161,7 @@
 | [0132](0132-e028-results.md) | 2026-10-03 | experiment | E028 결과: 관문 G4-B1 **실패(B3 메모리)**. 통과: B1 1.5B LoRA 5.6초/단계(CPU 257초의 46배), B2 3B를 가중치 예산 1/6·1/8로 5단계 완주·손실 비트 동일(약 11~12토큰/초). 실패: 런타임 상한은 지켰으나 활성값·fp32 로짓·MPS 할당기 캐시로 footprint가 예산보다 1.7~2.3GiB 큼(허용 +1GiB), 3B 768MiB 스왑 +199MiB. 선택지 A(E3 활성값 관리 뒤 E028b)/B 사용자 결정 대기 | 확정 |
 | [0133](0133-g4-e3-activations-build.md) | 2026-10-04 | implementation + 개발 점검 | G4 E3: 사용자 결정 A. 분해 결과 활성값·fp32 로짓 약 850MiB, MPS 할당기가 그 2배를 캐시로 붙잡음. `enable_checkpointing`(재진입; 비재진입은 재계산 저장이 `saved_weights`를 우회해 고정이 쌓임), `causal_lm_loss`(32위치 조각, 재진입 체크포인트), `finish()`가 MPS 캐시도 반환. 3B 768MiB 예산 밖 몫 1,270 → 312MiB, 단계 약 12초 | 확정 |
 | [0134](0134-e028b-preregistration.md) | 2026-10-04 | experiment (사전 등록) | E028b = G4-B1 재측정(E3 적용): 경우·B1·B2는 E028과 같음, B3는 footprint 증가 ≤ 예산 + 512MiB로 엄격하게 | 확정 |
+| [0135](0135-e028b-results.md) | 2026-10-04 | experiment | E028b 결과: G4-B1 **다시 실패(B3, 1.5B만)**. 3B 1GiB·768MiB는 footprint 증가 1,370·1,111MiB로 예산 + 512MiB 안, 스왑 증가 없음, 손실 비트 동일, 약 11.5~11.8토큰/초. 1.5B는 +1,980MiB — 원인: 묶인 임베딩(445MiB)을 조각 손실이 조각마다 새 무복사 MTLBuffer로 감싸 4개가 동시에 살아 footprint·MPS 드라이버에 중복 계산(E1 설계 결함). 선택지 A′(감싸기 재사용 뒤 E028c)/B | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
