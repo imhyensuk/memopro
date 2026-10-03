@@ -225,8 +225,11 @@ def run_all() -> None:
             rec["attempt"] = attempt
             if rec["swap_after"] - rec["swap_before"] <= 64 * MIB:
                 break
-            print("   swap grew: repeating once (contamination rule)", flush=True)
-            first = rec
+            if attempt == 1:
+                print("   swap grew: repeating once (contamination rule)", flush=True)
+                first = rec
+            else:
+                print("   swap grew again: kept as measured", flush=True)
         if first is not None:
             rec["first_attempt"] = first
         (OUT / "cases" / f"{name}.json").write_text(json.dumps(rec, indent=1))
