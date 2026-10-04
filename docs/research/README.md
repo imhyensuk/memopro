@@ -175,6 +175,7 @@
 | [0146](0146-code-cleanup.md) | 2026-10-04 | implementation | 코드 정리: 안 쓰이는 `drop_kept`·`MIN_TENSOR_BYTES` 제거, MPS 무복사 DLPack 조립을 `residency.metal_tensor`로, safetensors 찾기를 `access/_info.local_safetensors`로, 시험의 GPT-2 생성 5곳을 `tests/helpers.py`로 통합, 노트북 시험이 추적 파일을 다시 쓰던 문제 수정(`build.py --nb-dir`), 빌드 산출물·캐시 삭제(612MB). 연구 기록·실험 스크립트는 그대로 | 확정 |
 | [0147](0147-objective-evaluation-3.md) | 2026-10-04 | assessment | 객관 평가 3(목표가 넓어져 0106과 직접 비교 불가): G4-B 40%, 범용 런타임 65%, 접근 계층 66%, 연구 코어 35%, 제품 준비 35% → 가중 약 47%. 빈 곳: 경쟁자 직접 비교, 7B, 한 줄 API, 공개 배포. 목표 문장 재정리(0107+0123, SSD 제외 명시, 성공 기준 S1~S4) → 0148에서 승인 | 확정 |
 | [0148](0148-goal-consolidation-approved.md) | 2026-10-04 | decision | 사용자 승인: 목표 문장 하나(메모리 초과 작업을 무손실·상한 보장·쓸 만한 속도로; 주 목표 G4-B와 G2′·G3, G1 유지, G4-C 보조; 런타임은 디스크에 쓰지 않음), 성공 기준 S1~S4. CLAUDE.md 목표 문단 교체 | 확정 |
+| [0149](0149-g4-e8-one-line-api.md) | 2026-10-05 | implementation | G4 E8: `memopro.finetune`(PEFT LoRA를 흘려 쓰는 16비트 가중치 위에; PEFT가 어댑터를 meta에 두는 문제를 to_empty + reset으로 해결)·`memopro.generate`(초안 선택, 일반 탐욕 생성과 같은 글), README 첫머리·목표 표를 0148로. 개발 확인: 3B 1GiB 7.3초/단계, 생성 82.9 → 44.6초(같은 글) | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

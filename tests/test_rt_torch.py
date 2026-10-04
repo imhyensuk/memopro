@@ -336,3 +336,39 @@ def test_int4_draft_keeps_greedy_generation_of_the_streamed_model(tmp_path):
 def test_int4_drafts_need_an_apple_gpu(tmp_path):
     with pytest.raises(memopro.ModeUnavailable):
         rtt.draft_model(tmp_path, device="cpu")
+
+
+def test_one_line_finetune_and_generate(tmp_path):
+    """G4 E8 (0149): `memopro.finetune` trains PEFT LoRA adapters on streamed weights (loss falls,
+    base weights untouched, the adapter saves), and `memopro.generate` returns the same text as
+    plain greedy generation of the fine-tuned model, with or without a draft."""
+    pytest.importorskip("peft")
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    vocab = {f"w{i}": i for i in range(8000)}
+    core = tokenizers.Tokenizer(tokenizers.models.WordLevel(vocab, unk_token="w0"))
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(4)]
+    r = memopro.finetune(
+        path,
+        texts,
+        tokenizer=tok,
+        budget="9MiB",
+        device="cpu",
+        epochs=3,
+        seq_len=64,
+        lr=1e-2,
+        targets=("q_proj", "v_proj"),
+    )
+    assert r.losses[-1] < r.losses[0] and r.tokens > 0
+    assert all(not p.requires_grad for n, p in r.model.named_parameters() if "lora_" not in n)
+    r.adapter.save_pretrained(tmp_path / "adapter")
+    assert (tmp_path / "adapter" / "adapter_config.json").exists()
+    ids = tok("w2 w9 w16", return_tensors="pt").input_ids
+    with torch.no_grad():
+        plain = r.model.generate(input_ids=ids, max_new_tokens=8, do_sample=False, pad_token_id=1)
+    text = memopro.generate(r.model, "w2 w9 w16", tokenizer=tok, max_new_tokens=8, chat=False)
+    assert text == tok.decode(plain[0, ids.shape[1] :], skip_special_tokens=True)
+    s = r.model.memopro_runtime.stats()
+    assert s["peak_used"] <= r.model.memopro_runtime.limit and s["pinned_bytes"] == 0
