@@ -176,6 +176,7 @@
 | [0147](0147-objective-evaluation-3.md) | 2026-10-04 | assessment | 객관 평가 3(목표가 넓어져 0106과 직접 비교 불가): G4-B 40%, 범용 런타임 65%, 접근 계층 66%, 연구 코어 35%, 제품 준비 35% → 가중 약 47%. 빈 곳: 경쟁자 직접 비교, 7B, 한 줄 API, 공개 배포. 목표 문장 재정리(0107+0123, SSD 제외 명시, 성공 기준 S1~S4) → 0148에서 승인 | 확정 |
 | [0148](0148-goal-consolidation-approved.md) | 2026-10-04 | decision | 사용자 승인: 목표 문장 하나(메모리 초과 작업을 무손실·상한 보장·쓸 만한 속도로; 주 목표 G4-B와 G2′·G3, G1 유지, G4-C 보조; 런타임은 디스크에 쓰지 않음), 성공 기준 S1~S4. CLAUDE.md 목표 문단 교체 | 확정 |
 | [0149](0149-g4-e8-one-line-api.md) | 2026-10-05 | implementation | G4 E8: `memopro.finetune`(PEFT LoRA를 흘려 쓰는 16비트 가중치 위에; PEFT가 어댑터를 meta에 두는 문제를 to_empty + reset으로 해결)·`memopro.generate`(초안 선택, 일반 탐욕 생성과 같은 글), README 첫머리·목표 표를 0148로. 개발 확인: 3B 1GiB 7.3초/단계, 생성 82.9 → 44.6초(같은 글) | 확정 |
+| [0150](0150-e034-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E034 = S3: 같은 16비트 LoRA(Qwen2.5 1.5B·3B, r 8 q·k·v·o, 10단계 × 129토큰)를 mlx-tune 0.6.0(별도 venv, Unsloth 호환 MLX)과 `memopro.finetune`으로. 예측 Q1 3B 메모리(memopro ≤ 2.5GiB, mlx-tune ≥ 5.5GiB), Q2 mlx-tune 3B 스왑 > 1GiB, Q3 1.5B는 mlx-tune ≥ 2배 빠름, Q4 3B는 memopro ≥ mlx-tune | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

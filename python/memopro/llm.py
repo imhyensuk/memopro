@@ -58,6 +58,7 @@ class FinetuneResult:
     model: Any  # the streamed model with LoRA layers, ready for `generate`
     adapter: Any  # the PEFT model: `adapter.save_pretrained(path)` writes a standard adapter
     losses: list[float] = field(default_factory=list)
+    step_seconds: list[float] = field(default_factory=list)
     seconds: float = 0.0
     tokens: int = 0
 
@@ -118,6 +119,7 @@ def finetune(
     for _ in range(epochs):
         for piece in pieces:
             x = piece.unsqueeze(0).to(m.device)
+            t = time.perf_counter()
             with rtt.saved_weights(m):
                 loss = rtt.causal_lm_loss(m, x)
                 loss.backward()
@@ -125,6 +127,7 @@ def finetune(
             opt.zero_grad(set_to_none=True)
             m.memopro_weights.finish()
             result.losses.append(float(loss.detach()))
+            result.step_seconds.append(time.perf_counter() - t)
             result.tokens += x.shape[1]
     result.seconds = time.perf_counter() - start
     m.eval()
