@@ -178,6 +178,7 @@
 | [0149](0149-g4-e8-one-line-api.md) | 2026-10-05 | implementation | G4 E8: `memopro.finetune`(PEFT LoRA를 흘려 쓰는 16비트 가중치 위에; PEFT가 어댑터를 meta에 두는 문제를 to_empty + reset으로 해결)·`memopro.generate`(초안 선택, 일반 탐욕 생성과 같은 글), README 첫머리·목표 표를 0148로. 개발 확인: 3B 1GiB 7.3초/단계, 생성 82.9 → 44.6초(같은 글) | 확정 |
 | [0150](0150-e034-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E034 = S3: 같은 16비트 LoRA(Qwen2.5 1.5B·3B, r 8 q·k·v·o, 10단계 × 129토큰)를 mlx-tune 0.6.0(별도 venv, Unsloth 호환 MLX)과 `memopro.finetune`으로. 예측 Q1 3B 메모리(memopro ≤ 2.5GiB, mlx-tune ≥ 5.5GiB), Q2 mlx-tune 3B 스왑 > 1GiB, Q3 1.5B는 mlx-tune ≥ 2배 빠름, Q4 3B는 memopro ≥ mlx-tune | 확정 |
 | [0151](0151-e034-results.md) | 2026-10-05 | experiment | E034 결과: **S3 충족**, 예측 Q1~Q4 모두 맞음. 1.5B: mlx-tune 118.9 대 memopro 45.4토큰/초(2.6배), footprint 3,632 대 1,411MiB. 3B: mlx-tune은 첫 단계 전 Metal 메모리 부족(보충 실행 최대 footprint 6.46GB), memopro는 1GiB 예산으로 20.0토큰/초·+1,680MiB 완주. 실행기 PATH 결함과 보충 실행 기록 | 확정 |
+| [0152](0152-e033c-results-gate-g4-e4.md) | 2026-10-05 | experiment | E033c 결과: **관문 G4-E4 통과, S2 충족**. X1 4/4 비트 동일(S3도), X2 3.36 → 1.19초/토큰(2.82배), X3 footprint +2,511MiB·스왑 −62MiB(둘째 시도). Chrome 닫힘·KakaoTalk 24MiB. 실행기가 S3 둘째 시도 중 백그라운드 시간 한도로 멈춰 S3만 같은 규칙으로 보충 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
