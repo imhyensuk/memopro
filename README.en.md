@@ -1,11 +1,18 @@
 # memopro
 
-**Reclaim idle memory and see how much memory is wasted: memory relief and redundancy diagnostics
-for PyTorch developers with limited GPU/RAM.**
+**Run work that exceeds your machine's memory, losslessly, within a guaranteed memory ceiling.**
+An open-source library (Rust core + Python) for memory-limited devices (8-16 GB laptops and Macs,
+small GPUs). On an 8 GB M1 it trains 16-bit LoRA on a 3B model within a 1 GiB budget and generates
+the same tokens as plain generation 3.2x faster; weights stream from their files and nothing is
+written to disk. "Memory" here means hardware memory (GPU/RAM), not agent or conversation memory.
 
-memopro is for developers who build their own projects, services, experiments and fine-tuning runs
-with PyTorch on machines with little memory. "Memory" here means hardware memory (GPU/RAM), not
-agent or conversation memory.
+```python
+import memopro
+
+r = memopro.finetune("Qwen/Qwen2.5-3B-Instruct", texts, budget="1GiB")  # 16-bit LoRA (PEFT)
+r.adapter.save_pretrained("my-lora")                                     # a standard PEFT adapter
+print(memopro.generate(r.model, "Hello!", draft="Qwen/Qwen2.5-1.5B-Instruct"))  # same text, faster
+```
 
 > **Status: alpha (0.1.0a1, not published).** Everything in the v0.1-v0.3 design is built.
 > The 0.1 features are tested on Linux (CI, including a memory-limited container), macOS (CPU
