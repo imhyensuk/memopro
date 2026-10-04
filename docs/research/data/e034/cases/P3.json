@@ -1,0 +1,102 @@
+{
+ "iters": [
+  {
+   "iter": 1,
+   "loss": 2.569429874420166,
+   "tok_s": 15.947637766528414
+  },
+  {
+   "iter": 2,
+   "loss": 3.7197892665863037,
+   "tok_s": 19.991585842188023
+  },
+  {
+   "iter": 3,
+   "loss": 3.4480347633361816,
+   "tok_s": 20.341940664802298
+  },
+  {
+   "iter": 4,
+   "loss": 3.4442970752716064,
+   "tok_s": 20.202508747990024
+  },
+  {
+   "iter": 5,
+   "loss": 3.6646921634674072,
+   "tok_s": 19.985662353982267
+  },
+  {
+   "iter": 6,
+   "loss": 3.3852081298828125,
+   "tok_s": 19.79465842283594
+  },
+  {
+   "iter": 7,
+   "loss": 3.288221836090088,
+   "tok_s": 19.72669391949881
+  },
+  {
+   "iter": 8,
+   "loss": 3.829929828643799,
+   "tok_s": 19.31771454623972
+  },
+  {
+   "iter": 9,
+   "loss": 3.80416202545166,
+   "tok_s": 20.60103341888534
+  },
+  {
+   "iter": 10,
+   "loss": 3.8092758655548096,
+   "tok_s": 20.37831861651649
+  }
+ ],
+ "train_s": 66.05501833301969,
+ "base_footprint": 15107136,
+ "peak_footprint": 1776949120,
+ "rt": {
+  "budget": 1073741824,
+  "reserve": 4210688,
+  "used": 1031831552,
+  "peak_used": 1069531136,
+  "buffers": 434,
+  "resident_bytes": 1031831552,
+  "compressed_bytes": 0,
+  "pinned_bytes": 0,
+  "loads": 434,
+  "load_bytes": 6171877376,
+  "rereads": 11437,
+  "reread_bytes": 127581338112,
+  "read_seconds": 56.82075868400007,
+  "drops": 11795,
+  "drop_bytes": 132802265088,
+  "compressions": 0,
+  "compress_in": 0,
+  "compress_out": 0,
+  "compress_seconds": 0.0,
+  "decompressions": 0,
+  "decompress_bytes": 0,
+  "decompress_seconds": 0.0,
+  "incompressible": 0,
+  "evictions": 11795,
+  "refusals": 0,
+  "restore_seconds": 47.269583265000506,
+  "pins": 10383,
+  "recomputes": 0,
+  "recompute_bytes": 0,
+  "recompute_seconds": 0.0,
+  "prefetches": 9587,
+  "prefetch_bytes": 86518875648,
+  "prefetch_hits": 7111,
+  "prefetch_wasted": 2446,
+  "prefetch_skipped": 3668,
+  "written_bytes": 0
+ },
+ "limit": 1069531136,
+ "case": "P3",
+ "tool": "memopro",
+ "model": "q3",
+ "wall_s": 72.39282166701742,
+ "swap_before": 3308980797,
+ "swap_after": 2914716221
+}
