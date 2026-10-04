@@ -1,0 +1,43 @@
+======================================================================
+Starting Fine-Tuning
+======================================================================
+
+[Using Native MLX Training]
+
+Applying LoRA adapters...
+Applying LoRA to 36 layers: {'rank': 8, 'scale': 2.0, 'dropout': 0.0, 'keys': ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']}
+✓ LoRA applied successfully to 36 layers
+  Trainable LoRA parameters: 288
+Preparing training data...
+  Detected format: text
+✓ Prepared 10 training samples
+  Saved to: /Users/imhyeonseok/Desktop/memopro/docs/research/data/e034/mlx/X3/train.jsonl
+✓ Created validation set (copied from train)
+
+Training configuration:
+  Iterations: 10
+  Batch size: 1
+  Learning rate: 0.0002
+  LR scheduler: cosine
+  Grad checkpoint: True
+  Adapter file: /Users/imhyeonseok/Desktop/memopro/docs/research/data/e034/mlx/X3/adapters/adapters.safetensors
+
+Loaded 10 training samples, 10 validation samples
+Starting training loop...
+  [1miter   train_loss     tok/s     tokens[0m
+[1;34mtrain[0m [38;5;244m░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░[0m [1;34m  0%[0m [38;5;244m·[0m [1;34m    0[0m[38;5;244m/10[0m
+
+Native training failed: [METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).
+Falling back to subprocess training...
+
+[Using Subprocess Training (Legacy)]
+Preparing training data...
+  Detected format: text
+✓ Prepared 10 training samples
+  Saved to: /Users/imhyeonseok/Desktop/memopro/docs/research/data/e034/mlx/X3/train.jsonl
+✓ Created validation set (copied from train)
+Created LoRA config: /Users/imhyeonseok/Desktop/memopro/docs/research/data/e034/mlx/X3/lora_config.yaml
+
+Running training command:
+mlx_lm.lora --model Qwen/Qwen2.5-3B-Instruct --train --data /Users/imhyeonseok/Desktop/memopro/docs/research/data/e034/mlx/X3 --iters 10 --learning-rate 0.0002 --batch-size 1 --adapter-path /Users/imhyeonseok/Desktop/memopro/docs/research/data/e034/mlx/X3/adapters -c /Users/imhyeonseok/Desktop/memopro/docs/research/data/e034/mlx/X3/lora_config.yaml --save-every 100 --grad-checkpoint
+

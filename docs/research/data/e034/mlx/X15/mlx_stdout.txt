@@ -1,0 +1,46 @@
+======================================================================
+Starting Fine-Tuning
+======================================================================
+
+[Using Native MLX Training]
+
+Applying LoRA adapters...
+Applying LoRA to 28 layers: {'rank': 8, 'scale': 2.0, 'dropout': 0.0, 'keys': ['self_attn.k_proj', 'self_attn.o_proj', 'self_attn.q_proj', 'self_attn.v_proj']}
+✓ LoRA applied successfully to 28 layers
+  Trainable LoRA parameters: 224
+Preparing training data...
+  Detected format: text
+✓ Prepared 10 training samples
+  Saved to: /Users/imhyeonseok/Desktop/memopro/docs/research/data/e034/mlx/X15/train.jsonl
+✓ Created validation set (copied from train)
+
+Training configuration:
+  Iterations: 10
+  Batch size: 1
+  Learning rate: 0.0002
+  LR scheduler: cosine
+  Grad checkpoint: True
+  Adapter file: /Users/imhyeonseok/Desktop/memopro/docs/research/data/e034/mlx/X15/adapters/adapters.safetensors
+
+Loaded 10 training samples, 10 validation samples
+Starting training loop...
+  [1miter   train_loss     tok/s     tokens[0m
+  [38;5;244m   1[0m    [1;35mval[0m [1m3.718[0m    [38;5;244m2.10s[0m
+  [38;5;244m   1[0m    [1;32m4.031 ▼[0m    [1m   86[0m    [38;5;244m  0.1k[0m
+  [38;5;244m   2[0m    [1;32m3.482 ▼[0m    [1m  110[0m    [38;5;244m  0.3k[0m
+  [38;5;244m   3[0m    [1;33m3.601 ▲[0m    [1m  120[0m    [38;5;244m  0.4k[0m
+  [38;5;244m   4[0m    [1;33m3.640 ▲[0m    [1m  120[0m    [38;5;244m  0.5k[0m
+  [38;5;244m   5[0m    [1;33m3.846 ▲[0m    [1m  120[0m    [38;5;244m  0.6k[0m
+  [38;5;244m   6[0m    [1;32m3.810 ▼[0m    [1m  120[0m    [38;5;244m  0.8k[0m
+  [38;5;244m   7[0m    [1;32m2.658 ▼[0m    [1m  120[0m    [38;5;244m  0.9k[0m
+  [38;5;244m   8[0m    [1;33m3.494 ▲[0m    [1m  120[0m    [38;5;244m  1.0k[0m
+  [38;5;244m   9[0m    [1;33m3.709 ▲[0m    [1m  120[0m    [38;5;244m  1.2k[0m
+  [38;5;244m  10[0m    [1;35mval[0m [1m3.200[0m    [38;5;244m2.08s[0m
+  [38;5;244m  10[0m    [1;32m3.324 ▼[0m    [1m  120[0m    [38;5;244m  1.3k[0m
+[1;34mtrain[0m [34m██████████████████████████████[0m [1;34m100%[0m [38;5;244m·[0m [1;34m   10[0m[38;5;244m/10[0m
+  Adapter config saved to: /Users/imhyeonseok/Desktop/memopro/docs/research/data/e034/mlx/X15/adapters/adapter_config.json
+
+======================================================================
+Training Complete!
+======================================================================
+  Adapters saved to: /Users/imhyeonseok/Desktop/memopro/docs/research/data/e034/mlx/X15/adapters
