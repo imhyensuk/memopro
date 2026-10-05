@@ -228,6 +228,7 @@
 | [0200](0200-e042-lora-error-cause.md) | 2026-10-06 | 진단 + implementation | E042 LoRA 오류 원인: Colab의 torchao 0.10을 peft 0.21이 거부(그냥 실행 포함 9경우). Colab에서도 userfaultfd 됨 확인. 고침: 오래된 torchao 제거, 이어 할 때 error 경우 재실행, VmHWM 이전 데이터 결과 재측정 | 확정 |
 | [0201](0201-cuda-gpu-cache-prefetch.md) | 2026-10-06 | decision + implementation | CUDA 흘려 쓰기 개선: GPU 캐시 층(`gpu_budget`, auto = 여유 − max(2GiB, 15%), 처음 순서대로 채우고 내보내지 않음)과 다음 모듈 미리 복사(보조 스트림). CPU 강제 시험에서 캐시 없음·일부·전부 모두 결과 비트 동일 | 확정 |
 | [0202](0202-e043-preregistration.md) | 2026-10-06 | experiment (사전 등록) | E043: E042 노트북에 덧붙인 속도 측정. 기준 3B ≤ 그냥 2배, 7B ≤ 2.0초/토큰(1차 40.9), DINOv2 ≤ 그냥 2배, 출력 동일 | 확정 |
+| [0203](0203-e044-preregistration.md) | 2026-10-06 | experiment (사전 등록) | E044: Qwen2.5-3B·7B 2,048토큰 실제 KV 캐시의 무손실 압축률(바이트 섞기+zstd, 채널 순 배치, 엔트로피 하한, 가중치 기준선). 규칙: ≤0.6 만든다 / 0.6~0.8 보통 / >0.8 이득 작음 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
