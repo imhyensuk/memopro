@@ -226,6 +226,8 @@
 | [0198](0198-e040b-results.md) | 2026-10-05 | experiment | E040b 결과(예상대로): 영상 묶음(4.1배, OS 스왑보다 3.3배 빠름)·scikit-learn(3.5배)은 고치지 않고 메모리 절반에서 결과 동일, 데이터프레임·시뮬레이션은 15분 제한. 채점표 U8 ✔, 종합 50.1%(비교 제외 54.3%) | 확정 |
 | [0199](0199-e042-run1.md) | 2026-10-06 | experiment | E042 1차(Colab T4): 생성 3B·7B와 비전 추론(ResNet-152, DINOv2-giant)은 그냥 실행과 같음(7B는 T4에 그냥 들어감, 흘려 쓰기 생성 41~47초/토큰). LoRA는 그냥 실행까지 모두 오류(원인 진단 중). 데이터 작업은 `ru_maxrss`가 execve를 넘어 노트북 커널 값(5.19GiB)을 넘겨받은 측정 결함으로 무효 → VmHWM으로 고침. 채점표 U6 ✔, 종합 51.3%(비교 제외 56.0%) | 확정(부분) |
 | [0200](0200-e042-lora-error-cause.md) | 2026-10-06 | 진단 + implementation | E042 LoRA 오류 원인: Colab의 torchao 0.10을 peft 0.21이 거부(그냥 실행 포함 9경우). Colab에서도 userfaultfd 됨 확인. 고침: 오래된 torchao 제거, 이어 할 때 error 경우 재실행, VmHWM 이전 데이터 결과 재측정 | 확정 |
+| [0201](0201-cuda-gpu-cache-prefetch.md) | 2026-10-06 | decision + implementation | CUDA 흘려 쓰기 개선: GPU 캐시 층(`gpu_budget`, auto = 여유 − max(2GiB, 15%), 처음 순서대로 채우고 내보내지 않음)과 다음 모듈 미리 복사(보조 스트림). CPU 강제 시험에서 캐시 없음·일부·전부 모두 결과 비트 동일 | 확정 |
+| [0202](0202-e043-preregistration.md) | 2026-10-06 | experiment (사전 등록) | E043: E042 노트북에 덧붙인 속도 측정. 기준 3B ≤ 그냥 2배, 7B ≤ 2.0초/토큰(1차 40.9), DINOv2 ≤ 그냥 2배, 출력 동일 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
