@@ -428,6 +428,46 @@ def test_finetune_budget_covers_the_step_on_mps(tmp_path):
         memopro.finetune(path, texts, tokenizer=tok, budget="20MiB", device="mps", seq_len=64)
 
 
+@pytest.mark.parametrize("device", ["cpu", "mps"])
+def test_generate_budget_covers_the_generation(tmp_path, device):
+    """0182: `memopro.generate` holds back part of the budget for the cache and intermediates
+    (on Apple GPUs measured after each pass), keeps the text of plain greedy generation, and
+    refuses budgets that cannot hold the largest weight next to them."""
+    from memopro.env._torch import mps_usable
+
+    if device == "mps" and not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    m = rtt.stream_model(path, budget="24MiB", device=device)
+    full = m.memopro_runtime.limit
+    ids = tok("w2 w9 w16", return_tensors="pt").input_ids
+    with torch.no_grad():
+        plain = m.generate(
+            input_ids=ids.to(device), max_new_tokens=8, do_sample=False, pad_token_id=1
+        )
+    text = memopro.generate(m, "w2 w9 w16", tokenizer=tok, max_new_tokens=8, chat=False)
+    assert text == tok.decode(plain[0, ids.shape[1] :], skip_special_tokens=True)
+    assert m.memopro_runtime.limit < full
+    assert m.memopro_runtime.stats()["peak_used"] <= full
+    m.memopro_weights.finish()
+    with pytest.raises(memopro.BudgetExceeded):
+        memopro.generate(
+            path,
+            "w2 w9",
+            tokenizer=tok,
+            budget="12MiB",
+            device=device,
+            max_new_tokens=4000,
+            chat=False,
+        )
+
+
 def test_draft_with_a_smaller_padded_vocabulary_keeps_greedy_output(tmp_path):
     """0170: Qwen2.5 pads its vocabulary differently per size (7B 152,064 rows, 1.5B 151,936)
     over the same tokenizer; a draft with fewer rows is padded with -inf logits."""
