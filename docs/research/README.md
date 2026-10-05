@@ -184,6 +184,7 @@
 | [0155](0155-e035-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E035 = G4-E2: 이전 코드(9aa1fe6, worktree)와 새 코드를 같은 기기에서 번갈아 두 번. S1 1.5B 학습 ≥ 1.3배, S3 footprint ≤ 한도 + 1GiB, S4 손실 차이 ≤ 1e-3, S5 3B 생성 ≥ 1.0배·같은 토큰. 3B 학습은 보고만 | 확정 |
 | [0156](0156-e035-results.md) | 2026-10-05 | experiment | E035 결과: 관문 G4-E2 **실패**. S1 1.5B 학습 1.09배(기준 1.3), S3 1.5B 체크포인팅 끔 footprint +2,015MiB > 1,787, S4 손실 차이 2.8e-2. S5 생성 1.00배·같은 토큰 통과. 버퍼 유지·울타리 변경은 3B 손실 비트 동일(계산 불변). 체크포인팅을 끄면 MPS에서 첫 단계부터 수치가 다르고 반복끼리도 달라짐(비결정). 선택지 A(체크포인팅 항상 켬, E2 닫기)/B/C(MLX 백엔드) | 확정 |
 | [0157](0157-e2-closed.md) | 2026-10-05 | decision | 사용자 결정 A: E2 닫기. 버퍼 유지·한꺼번에 울타리는 남김(결과 동일), `finetune` 체크포인팅은 다시 항상 켬(`checkpointing=False`는 명시적 선택, 비결정 가능 문서화), 자동 측정 코드 삭제. 결론: 흘려 쓰기 학습 속도의 상한은 PyTorch MPS 계산 | 확정 |
+| [0158](0158-e036-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E036 = S1: Qwen2.5-7B-Instruct bf16(14.2GiB, 리비전 고정 내려받기)을 8GB M1에서 `memopro.finetune`으로 16비트 LoRA, 예산 2GiB·1.5GiB, 5단계 × 129토큰. K1 완주, K2 손실 비트 동일, K3 footprint ≤ 예산 + 512MiB·스왑 ≤ 64MiB | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
