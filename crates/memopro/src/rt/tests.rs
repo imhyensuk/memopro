@@ -610,3 +610,38 @@ fn prediction_matches_the_rereads_of_a_repeating_scan() {
         "predicted {predicted}, re-read {actual}"
     );
 }
+
+#[test]
+fn holding_back_shrinks_the_limit_and_gives_up_unpinned_buffers() {
+    // 0165: memory the runtime does not own (activations) counts against the same budget
+    let (path, data) = data_file();
+    let rt = runtime(32, Policy::ReuseDistance);
+    let full = rt.limit();
+    let ids: Vec<_> = (0..4)
+        .map(|i| rt.add_file(path, (i * 4 * MIB) as u64, 4 * MIB, 1).unwrap())
+        .collect();
+    for &id in &ids {
+        drop(rt.pin(id, false).unwrap()); // all four in memory: 16 MiB
+    }
+    assert_eq!(rt.stats().used, 16 * MIB as u64);
+    let keep = rt.pin(ids[0], false).unwrap();
+    rt.hold_back(full - 8 * MIB as u64).unwrap(); // room for two buffers
+    assert_eq!(rt.limit(), 8 * MIB as u64);
+    assert!(rt.stats().used <= rt.limit());
+    assert_eq!(keep.as_slice(), &data[..4 * MIB]); // the pinned one stayed
+    // the pinned buffer cannot go: holding back more fails and changes nothing
+    assert!(rt.hold_back(full - 2 * MIB as u64).is_err());
+    assert_eq!(rt.limit(), 8 * MIB as u64);
+    drop(keep);
+    rt.hold_back(0).unwrap();
+    assert_eq!(rt.limit(), full);
+    // what was given up comes back from the file, unchanged
+    for (i, &id) in ids.iter().enumerate() {
+        assert_eq!(
+            rt.pin(id, false).unwrap().as_slice(),
+            &data[i * 4 * MIB..(i + 1) * 4 * MIB]
+        );
+    }
+    // never more than the budget minus the runtime's own headroom
+    assert!(rt.hold_back(32 * MIB as u64).is_err());
+}
