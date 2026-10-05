@@ -13,6 +13,7 @@ type ReallocFn = unsafe extern "C" fn(*mut c_void, size_t) -> *mut c_void;
 type PosixMemalignFn = unsafe extern "C" fn(*mut *mut c_void, size_t, size_t) -> c_int;
 type AlignedFn = unsafe extern "C" fn(size_t, size_t) -> *mut c_void;
 type UsableFn = unsafe extern "C" fn(*mut c_void) -> size_t;
+type MadviseFn = unsafe extern "C" fn(*mut c_void, size_t, c_int) -> c_int;
 
 static REAL_MALLOC: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static REAL_FREE: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
@@ -22,6 +23,7 @@ static REAL_POSIX_MEMALIGN: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mu
 static REAL_ALIGNED_ALLOC: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static REAL_MEMALIGN: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static REAL_USABLE: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static REAL_MADVISE: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 
 // `dlsym` may allocate while the real functions are being looked up: those few bytes come from
 // here and are never given back
@@ -43,6 +45,7 @@ static PAGE: AtomicUsize = AtomicUsize::new(0);
 static REPORT: AtomicPtr<c_char> = AtomicPtr::new(std::ptr::null_mut());
 static PAGED: AtomicU64 = AtomicU64::new(0);
 static PAGED_BYTES: AtomicU64 = AtomicU64::new(0);
+static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
 
 thread_local! {
     /// Inside our own work (setting up, a pager call, the lookups): allocate from the system.
@@ -113,6 +116,7 @@ fn resolve() {
     REAL_ALIGNED_ALLOC.store(lookup(b"aligned_alloc\0"), Ordering::Release);
     REAL_MEMALIGN.store(lookup(b"memalign\0"), Ordering::Release);
     REAL_USABLE.store(lookup(b"malloc_usable_size\0"), Ordering::Release);
+    REAL_MADVISE.store(lookup(b"madvise\0"), Ordering::Release);
     RESOLVING.with(|r| r.set(false));
 }
 
@@ -266,6 +270,18 @@ fn pager() -> Option<&'static Pager> {
             PAGER.store(Box::into_raw(Box::new(p)), Ordering::Release);
             // SAFETY: registering a plain function to run at exit.
             unsafe { libc::atexit(report) };
+            let _ = STARTED.set(std::time::Instant::now());
+            // a run killed at a time limit leaves no exit report: rewrite it every few seconds
+            if let Some(every) = env_u64(b"MEMOPRO_PRELOAD_REPORT_EVERY\0").filter(|s| *s > 0) {
+                let _ = std::thread::Builder::new()
+                    .name("memopro-report".into())
+                    .spawn(move || {
+                        loop {
+                            std::thread::sleep(std::time::Duration::from_secs(every));
+                            report();
+                        }
+                    });
+            }
             STATE.store(READY, Ordering::Release);
             // SAFETY: just published.
             Some(unsafe { &*PAGER.load(Ordering::Acquire) })
@@ -324,7 +340,7 @@ extern "C" fn report() {
          \"outside_peak\": {}, \"faults\": {}, \"zero_fills\": {}, \"restores\": {}, \
          \"restore_seconds\": {}, \"evictions\": {}, \"compress_in\": {}, \"compress_out\": {}, \
          \"compress_seconds\": {}, \"incompressible\": {}, \"overruns\": {}, \"spurious\": {}, \
-         \"paged_allocations\": {}, \"paged_bytes\": {}, \"threshold\": {}}}\n",
+         \"paged_allocations\": {}, \"paged_bytes\": {}, \"threshold\": {}, \"seconds\": {}}}\n",
         s.budget,
         s.limit,
         s.limit_low,
@@ -344,6 +360,7 @@ extern "C" fn report() {
         PAGED.load(Ordering::Relaxed),
         PAGED_BYTES.load(Ordering::Relaxed),
         THRESHOLD.load(Ordering::Relaxed),
+        STARTED.get().map_or(0.0, |t| t.elapsed().as_secs_f64()),
     );
     // SAFETY: getenv's string, still valid at exit.
     if let Ok(p) = unsafe { std::ffi::CStr::from_ptr(path) }.to_str() {
@@ -502,4 +519,26 @@ pub unsafe extern "C" fn malloc_usable_size(p: *mut c_void) -> size_t {
     }
     // SAFETY: libc's malloc_usable_size of libc's block.
     unsafe { std::mem::transmute::<*mut c_void, UsableFn>(real(&REAL_USABLE))(p) }
+}
+
+/// # Safety
+/// The C `madvise` contract. Huge pages are refused for pager regions: a transparent huge page
+/// fault in a userfaultfd range never reached the pager and the toucher spun (NumPy advises
+/// `MADV_HUGEPAGE` for large arrays from `malloc`; 0191).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn madvise(addr: *mut c_void, len: size_t, advice: c_int) -> c_int {
+    if advice == libc::MADV_HUGEPAGE
+        && STATE.load(Ordering::Acquire) == READY
+        && !in_pager_thread()
+        && BUSY.with(|b| b.get()) == 0
+    {
+        // SAFETY: published once and never freed.
+        let pager = unsafe { &*PAGER.load(Ordering::Acquire) };
+        let _busy = Busy::enter();
+        if pager.contains(addr.cast()) {
+            return 0;
+        }
+    }
+    // SAFETY: libc's madvise.
+    unsafe { std::mem::transmute::<*mut c_void, MadviseFn>(real(&REAL_MADVISE))(addr, len, advice) }
 }

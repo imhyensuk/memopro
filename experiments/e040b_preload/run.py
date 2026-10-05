@@ -69,7 +69,7 @@ def workload(name: str, script: Path) -> dict:
     limited = case(f"{name}_2_plain_limited", [py, str(script)], limit, False)
     report = OUT / "cases" / f"{name}_3_preload_report.json"
     env = ["env", f"LD_PRELOAD={LIB}", f"MEMOPRO_PRELOAD_BUDGET={limit}",
-           f"MEMOPRO_PRELOAD_PROCESS={limit - SLACK}", f"MEMOPRO_PRELOAD_REPORT={report}"]
+           f"MEMOPRO_PRELOAD_PROCESS={limit - SLACK}", f"MEMOPRO_PRELOAD_REPORT={report}", "MEMOPRO_PRELOAD_REPORT_EVERY=5"]
     paged = case(f"{name}_3_preload", env + [py, str(script)], limit, False)
     swap = case(f"{name}_4_plain_swap", [py, str(script)], limit, True)
     got = paged.get("result") or {}

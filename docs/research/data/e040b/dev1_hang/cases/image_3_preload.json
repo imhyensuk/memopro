@@ -1,0 +1,9 @@
+{
+ "case": "image_3_preload",
+ "limit": 826277888,
+ "swap": false,
+ "returncode": "timeout",
+ "wall_seconds": 900.118637177,
+ "result": null,
+ "stderr_tail": ""
+}

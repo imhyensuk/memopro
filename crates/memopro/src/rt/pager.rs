@@ -137,6 +137,10 @@ impl Pager {
         match self._never {}
     }
 
+    pub fn contains(&self, _addr: *const u8) -> bool {
+        match self._never {}
+    }
+
     pub fn limit(&self) -> u64 {
         match self._never {}
     }
