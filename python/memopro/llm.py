@@ -77,12 +77,16 @@ def finetune(
     alpha: int = 16,
     targets: tuple[str, ...] = ("q_proj", "k_proj", "v_proj", "o_proj"),
     seed: int = 0,
+    checkpointing: bool = True,
 ) -> FinetuneResult:
     """LoRA fine-tuning of a causal LM whose 16-bit weights stay in their files.
 
     ``texts`` are joined (end-of-text token between them) and cut into ``seq_len``-token pieces,
     one per step. Only the LoRA weights train (AdamW, float32); the base weights are streamed
-    within ``budget`` and never change."""
+    within ``budget`` and never change. Layer checkpointing keeps activations small and results
+    reproducible; ``checkpointing=False`` saves a pass over the streamed weights (about 10% on an
+    M1) but keeps every layer's activations and, on Apple GPUs, made results differ from run to
+    run (0156)."""
     import peft
     import torch
 
@@ -106,10 +110,11 @@ def finetune(
     for p in m.parameters():
         if p.requires_grad:
             p.data = p.data.float()
-    rtt.enable_checkpointing(m)
     m.train()
     eos = tok.eos_token or ""
     ids = tok(eos.join(texts) + eos, return_tensors="pt").input_ids[0]
+    if checkpointing:
+        rtt.enable_checkpointing(m)
     pieces = [ids[i : i + seq_len] for i in range(0, len(ids) - 1, seq_len)]
     pieces = [p for p in pieces if len(p) > 1]
     params = [p for p in m.parameters() if p.requires_grad]
