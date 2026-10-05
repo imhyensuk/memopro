@@ -1,0 +1,40 @@
+{
+ "status": "ok",
+ "error": null,
+ "result": {
+  "coef": "a9b9ed86098f6946ac00bda1e9d6576ebac3caae9491182e2712f9130b5fbeb9",
+  "accuracy": 0.9514175,
+  "nnz": 21699438,
+  "seconds": 17.02732268299951,
+  "import_rss_bytes": 5568835584,
+  "maxrss_bytes": 5568835584
+ },
+ "preloaded": true,
+ "case": "data__classify__preload",
+ "wall_s": 17.6,
+ "timeline_peak_gpu_used_bytes": 3145728,
+ "timeline_peak_host_used_bytes": 4547137536,
+ "pager": {
+  "budget": 2784417792,
+  "limit": 2783369216,
+  "limit_low": 2531485696,
+  "peak_used": 2379218944,
+  "outside_peak": 184774656,
+  "faults": 4899,
+  "zero_fills": 4899,
+  "restores": 0,
+  "restore_seconds": 1.886153030999998,
+  "evictions": 0,
+  "compress_in": 0,
+  "compress_out": 0,
+  "compress_seconds": 0,
+  "incompressible": 0,
+  "overruns": 0,
+  "spurious": 0,
+  "paged_allocations": 22,
+  "paged_bytes": 5123561784,
+  "threshold": 4194304,
+  "seconds": 16.431135071
+ },
+ "limit": 2784417792
+}

@@ -1,0 +1,41 @@
+{
+ "status": "ok",
+ "error": null,
+ "result": {
+  "per_store": "49cb8fa74accc9bd7a04b7a2c5e5f4bff0f7cb94b6dc3c177b39c531a4aff27a",
+  "top": "452ad99081182b466b5535f63441a82da5f98efb5ac2221f2f61902b68fa4d84",
+  "sorted_revenue": "3669526891788c4366e2a4da0baac4a4b9855ceae365a6d3a4e20cfaab5ebdb4",
+  "total": 20035592915.31,
+  "seconds": 17.081302327999765,
+  "import_rss_bytes": 5568835584,
+  "maxrss_bytes": 5568835584
+ },
+ "preloaded": true,
+ "case": "data__dataframe__preload",
+ "wall_s": 17.7,
+ "timeline_peak_gpu_used_bytes": 3145728,
+ "timeline_peak_host_used_bytes": 3915235328,
+ "pager": {
+  "budget": 2784417792,
+  "limit": 2783369216,
+  "limit_low": 2606655488,
+  "peak_used": 1644167168,
+  "outside_peak": 109604864,
+  "faults": 7197,
+  "zero_fills": 7197,
+  "restores": 0,
+  "restore_seconds": 2.5877265170000014,
+  "evictions": 0,
+  "compress_in": 0,
+  "compress_out": 0,
+  "compress_seconds": 0,
+  "incompressible": 0,
+  "overruns": 0,
+  "spurious": 0,
+  "paged_allocations": 98,
+  "paged_bytes": 7546506520,
+  "threshold": 4194304,
+  "seconds": 17.198487971
+ },
+ "limit": 2784417792
+}
