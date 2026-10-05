@@ -217,6 +217,7 @@
 | [0188](0188-e041b-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E041b: 생성 G3·G7·RG7은 같음, 학습 3B 2,048토큰(3/2.75GiB)·7B 1,024토큰(2.75/2.5GiB, 표본 밖), 7B 2,048토큰 3.75GiB는 시작 전 거절(K5) | 확정 |
 | [0189](0189-transparent-widening-design.md) | 2026-10-05 | decision + design + survey | 사용자 결정 A(E040): `memopro-preload`(Linux `LD_PRELOAD`)가 문턱(4MiB) 이상의 모든 할당을 페이저로, 페이저 한도 = 프로세스 예산 − 페이저 밖 RSS. 선행: ExtMEM(ATC'24, LD_PRELOAD + userfaultfd), libvmmalloc → 새로움 주장 없음. 되읽기 대책은 측정 뒤 | 확정(설계) |
 | [0190](0190-e041b-results.md) | 2026-10-05 | experiment | E041b 결과: 관문 실패(G7 스왑 +284MiB, 연구자의 동시 빌드와 겹침). 그 밖은 모두 통과: 3B 2,048토큰·7B 1,024토큰 학습이 예산 + 256MiB 안·손실 비트 동일(36·16토큰/초), 7B 2,048토큰은 시작 전 거절, 생성 출력 동일. 채점표 A12 ✔, 종합 48.8% | 확정 |
+| [0192](0192-e041c-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E041c: E041b의 G7(7B 생성 + 초안, 3GiB)만 같은 기준(K1·K3)으로 다시, 측정 중 이 기기에서 다른 작업 없음 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
