@@ -4,6 +4,17 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Changed: on Apple GPUs the `finetune` budget covers the whole training step (0162-0169)
+- `Runtime.hold_back(nbytes)` (Rust and Python) keeps part of a runtime's budget for memory it
+  does not own; unpinned buffers are given up to fit the smaller limit.
+- `memopro.finetune` on MPS holds back room for the step's activations (estimated, then
+  measured each step) and refuses budgets that cannot hold the largest weight next to them.
+  Measured at 512 tokens on an 8 GB M1: the process stays within the budget + 139-158 MiB for
+  3B and 7B (it was + 542-732 MiB), losses unchanged.
+- `stream_model(device="mps")` sets `PYTORCH_MPS_LOW_WATERMARK_RATIO=0.01` unless the user set
+  it (torch's MPS allocator otherwise gives activations over 10 MiB a 1 GiB heap); it only takes
+  effect before MPS starts.
+
 ### Fixed: NaN gradients from large output heads on Apple GPUs (0159)
 - torch 2.14's MPS matmul can return NaN when its inner dimension exceeds 2**17 (and is not a
   multiple of 16384). The output head's backward has the vocabulary there (Qwen2.5: 151,936 and
