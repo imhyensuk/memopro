@@ -424,3 +424,44 @@ def test_finetune_budget_covers_the_step_on_mps(tmp_path):
     assert m.memopro_runtime.stats()["peak_used"] <= full
     with pytest.raises(memopro.BudgetExceeded):
         memopro.finetune(path, texts, tokenizer=tok, budget="20MiB", device="mps", seq_len=64)
+
+
+def test_draft_with_a_smaller_padded_vocabulary_keeps_greedy_output(tmp_path):
+    """0170: Qwen2.5 pads its vocabulary differently per size (7B 152,064 rows, 1.5B 151,936)
+    over the same tokenizer; a draft with fewer rows is padded with -inf logits."""
+    from memopro.env._torch import mps_usable
+
+    if not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    pytest.importorskip("torchao")
+    tokenizers = pytest.importorskip("tokenizers")
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(7990)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    target, draft = _tiny_qwen(tmp_path / "t", 0, vocab=8064), _tiny_qwen(tmp_path / "d", 1)
+    tok.save_pretrained(target)
+    tok.save_pretrained(draft)
+    m = rtt.stream_model(target, budget="9MiB", device="mps")
+    d = rtt.draft_model(draft, target=m)
+    assert d.config.vocab_size == 8064
+    ids = torch.randint(0, 7990, (1, 12), generator=torch.Generator().manual_seed(8)).to("mps")
+    kw = {"max_new_tokens": 24, "pad_token_id": 1}
+    with torch.no_grad():
+        plain = m.generate(input_ids=ids, do_sample=False, **kw)
+    assert torch.equal(rtt.generate(m, ids, draft=d, **kw), plain)
+    m.memopro_weights.finish()
+
+
+@pytest.mark.parametrize("device", ["cpu", "mps"])
+def test_padded_draft_logits_keep_their_values_at_qwen_vocabulary_width(device):
+    """0170: torch 2.14's MPS F.pad changed logits 151,936 wide; the padding uses torch.cat."""
+    from memopro.env._torch import mps_usable
+
+    if device == "mps" and not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    y = torch.randn(1, 3, 151936, dtype=torch.bfloat16).to(device)
+    out = rtt._padded(lambda x: x, 128)(y)
+    assert out.shape[-1] == 152064 and torch.equal(out[..., :151936], y)
+    assert bool(torch.isneginf(out[..., 151936:]).all())
