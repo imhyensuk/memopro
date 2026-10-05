@@ -131,6 +131,40 @@ def test_real_run_sets_the_ratio_and_keeps_a_user_value(tmp_path):
         assert f"RATIO {expected}" in done.stdout
 
 
+@pytest.mark.skipif(
+    sys.platform != "darwin" or platform.machine() != "arm64", reason="Apple silicon only"
+)
+def test_streamed_mps_models_lower_the_ratio_run_set_but_not_a_user_value(tmp_path):
+    """0175: `memopro run`'s 0.1 suits loaded models (0080), streamed weights need 0.01 (0162)."""
+    from helpers import gpt2
+
+    from memopro.rt.torch import MPS_LOW_WATERMARK as STREAMED_RATIO
+
+    gpt2().save_pretrained(tmp_path / "m", safe_serialization=True)
+    (tmp_path / "app.py").write_text(
+        "import os\n"
+        "import memopro.rt.torch as rtt\n"
+        "try:\n"
+        "    rtt.stream_model('m', budget='64MiB', device='mps')\n"
+        "except rtt.ModeUnavailable:\n"
+        "    pass  # a VM without a usable GPU: the ratio is set before that check\n"
+        f"print('RATIO', os.environ[{MPS_LOW_WATERMARK_VAR!r}])\n"
+    )
+    base = {k: v for k, v in os.environ.items() if k != MPS_LOW_WATERMARK_VAR}
+    for extra, expected in (({}, STREAMED_RATIO), ({MPS_LOW_WATERMARK_VAR: "0.7"}, "0.7")):
+        done = subprocess.run(
+            [sys.executable, "-m", "memopro", "run", "--no-elastic", "app.py"],
+            cwd=tmp_path,
+            env={**base, **extra},
+            capture_output=True,
+            text=True,
+            timeout=300,
+            check=False,
+        )
+        assert done.returncode == 0, done.stderr[-2000:]
+        assert f"RATIO {expected}" in done.stdout
+
+
 _PROBE = """
 import torch
 # like model weights on MPS: in use above the ratio x the recommended maximum
