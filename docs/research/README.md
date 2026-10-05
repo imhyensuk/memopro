@@ -190,6 +190,7 @@
 | [0161](0161-e036b-results-s1.md) | 2026-10-05 | experiment | E036b 결과: **S1 충족**. 8GB M1에서 Qwen2.5-7B bf16(14.2GiB) 16비트 LoRA를 예산 1.5GiB·2GiB로 5단계 완주, 손실 유한·비트 동일, footprint +1,899/+2,410MiB, 스왑 −168/+42MiB, 7.3토큰/초(단계당 약 18초) | 확정 |
 | [0162](0162-mps-watermark-default.md) | 2026-10-05 | implementation | 긴 시퀀스(512토큰)에서 3B footprint가 예산 + 1.3GiB(1GiB 힙 재발). 낮은 워터마크 0.01이면 예산 + 515MiB·같은 속도 → `stream_model(device="mps")`가 MPS 시작 전 `PYTORCH_MPS_LOW_WATERMARK_RATIO` 기본 0.01(사용자 값 유지, 시작 뒤엔 효과 없음). `memopro run`의 0.1은 미결 | 확정 |
 | [0163](0163-e037-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E037: `finetune` seq 512, 3B(1GiB·768MiB)·7B(2GiB·1.5GiB) 5단계, 실행기는 워터마크를 넣지 않음. K1 완주, K2 유한·비트 동일, K3 footprint ≤ 예산 + 512MiB·스왑 ≤ 64MiB | 확정 |
+| [0164](0164-e037-results.md) | 2026-10-05 | experiment | E037 결과: **실패(K3만)**. 512토큰 5단계를 3B·7B 네 경우 완주, 예산 간 손실 비트 동일, 3B 33~34·7B 약 13토큰/초. footprint가 예산 + 542~550MiB(3B), + 727~732MiB(7B): 1GiB 힙은 막혔지만 `budget`이 가중치만 묶어 활성값 등이 그 위에 붙음. 선택지 A(budget이 단계 전체를 덮게)/B(기준 변경)/C(활성값 줄이기) | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
