@@ -29,6 +29,7 @@ LIB = os.environ.get("E040B_LIB", str(ROOT / "target" / "release" / "libmemopro_
 MIB = 1 << 20
 SLACK = 64 * MIB  # what the cgroup counts beyond the process's resident set (page tables etc.)
 TIMEOUT = 900
+CHUNK = int(os.environ.get("E040B_CHUNK") or 1 << 20)
 WORKLOADS = {
     "image": ROOT / "experiments" / "e027_transparent" / "workload.py",
     "dataframe": ROOT / "experiments" / "e040_workloads" / "dataframe.py",
@@ -69,7 +70,7 @@ def workload(name: str, script: Path) -> dict:
     limited = case(f"{name}_2_plain_limited", [py, str(script)], limit, False)
     report = OUT / "cases" / f"{name}_3_preload_report.json"
     env = ["env", f"LD_PRELOAD={LIB}", f"MEMOPRO_PRELOAD_BUDGET={limit}",
-           f"MEMOPRO_PRELOAD_PROCESS={limit - SLACK}", f"MEMOPRO_PRELOAD_REPORT={report}", "MEMOPRO_PRELOAD_REPORT_EVERY=5"]
+           f"MEMOPRO_PRELOAD_PROCESS={limit - SLACK}", f"MEMOPRO_PRELOAD_REPORT={report}", "MEMOPRO_PRELOAD_REPORT_EVERY=5", f"MEMOPRO_PRELOAD_CHUNK={CHUNK}"]
     paged = case(f"{name}_3_preload", env + [py, str(script)], limit, False)
     swap = case(f"{name}_4_plain_swap", [py, str(script)], limit, True)
     got = paged.get("result") or {}
