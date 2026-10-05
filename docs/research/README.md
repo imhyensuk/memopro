@@ -194,6 +194,7 @@
 | [0165](0165-step-budget.md) | 2026-10-05 | decision + implementation | 사용자 결정 A: budget이 단계 전체를 덮음. Rust `Runtime::hold_back`(한도를 실행 중 줄이고 고정 안 된 버퍼 내보냄), `finetune`(MPS)이 활성값을 추정(1.5배)·측정해 떼어 두고 가장 큰 가중치가 안 들어가면 `BudgetExceeded`. 개발 확인: 3B 1GiB 512토큰 예산 + 127MiB(E037 + 542) | 확정 |
 | [0166](0166-e037b-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E037b: 512토큰, 3B 1GiB·768MiB, 7B 2.5GiB·2GiB 학습, 7B 1.5GiB 거절. K3 footprint ≤ 예산 + 256MiB(엄격), K4 거절 | 확정 |
 | [0167](0167-e037b-results.md) | 2026-10-05 | experiment | E037b 결과: **실패(사전 등록 실수)**. 학습한 3B 1GiB·7B 2.5GiB·2GiB는 footprint 예산 + 121~132MiB(기준 256), 7B 손실 예산 간·E037과 비트 동일, 7B 1.5GiB 거절(통과). 3B 768MiB도 거절(임베딩 593 + 활성값 397 > 763)됐는데 학습으로 등록해 K1~K3 형식상 실패. 선택지 A(E037c)/B | 확정 |
+| [0168](0168-e037c-preregistration.md) | 2026-10-05 | experiment (사전 등록) | 사용자 결정 A: E037c = E037b의 3B를 바로잡음(1.25GiB·1GiB 학습, 768MiB는 거절 확인), 등록 전 거절 규칙으로 각 경우 계산(T3b 여유 23MiB). 기준은 E037b와 같음 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
