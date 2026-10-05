@@ -122,6 +122,14 @@ dependencies = [
 ]
 
 [[package]]
+name = "memopro-preload"
+version = "0.1.0-alpha.1"
+dependencies = [
+ "libc",
+ "memopro",
+]
+
+[[package]]
 name = "memopro-py"
 version = "0.1.0-alpha.1"
 dependencies = [

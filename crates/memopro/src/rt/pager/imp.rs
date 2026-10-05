@@ -32,6 +32,24 @@ const HAS_WRITEPROTECT: u64 = 1 << 0x06;
 /// At most this many most recently faulted chunks count as in use and are not evicted.
 const HOT_CHUNKS: u64 = 16;
 
+thread_local! {
+    static PAGER_THREAD: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
+}
+
+/// Whether the calling thread is a pager's own: an allocator that hands memory out of a pager
+/// must not do so to the pager itself (its lock is held while it allocates; 0189).
+pub fn in_pager_thread() -> bool {
+    PAGER_THREAD.with(|c| c.get())
+}
+
+/// Resident bytes of this process (`/proc/self/statm`).
+fn resident_set() -> u64 {
+    std::fs::read_to_string("/proc/self/statm")
+        .ok()
+        .and_then(|s| s.split_whitespace().nth(1)?.parse::<u64>().ok())
+        .map_or(0, |pages| pages * page_size() as u64)
+}
+
 #[repr(C)]
 struct UffdioApi {
     api: u64,
@@ -219,6 +237,7 @@ impl Pager {
         let stats = PagerStats {
             budget: config.budget,
             limit,
+            limit_low: limit,
             ..PagerStats::default()
         };
         let shared = Arc::new(Shared {
@@ -402,6 +421,7 @@ impl Shared {
 
     /// The pager thread: serve page faults until stopped.
     fn serve(&self) {
+        PAGER_THREAD.with(|c| c.set(true));
         let uffd = self.uffd.as_raw_fd();
         let mut msgs = [UffdMsg::default(); 64];
         loop {
@@ -519,7 +539,14 @@ impl Shared {
     }
 
     fn make_room(&self, st: &mut State, need: u64, exclude: (usize, usize)) {
-        while st.resident + st.compressed + need > self.limit {
+        let mut limit = self.limit;
+        if let Some(total) = self.config.process_budget {
+            let outside = resident_set().saturating_sub(st.resident + st.compressed);
+            limit = limit.min(total.saturating_sub(outside + self.config.chunk as u64));
+            st.stats.outside_peak = st.stats.outside_peak.max(outside);
+            st.stats.limit_low = st.stats.limit_low.min(limit);
+        }
+        while st.resident + st.compressed + need > limit {
             let Some((start, ci)) = self.choose(st, exclude) else {
                 st.stats.overruns += 1;
                 return;
