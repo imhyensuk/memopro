@@ -9,7 +9,9 @@
 //! - `MEMOPRO_PRELOAD_PROCESS` bytes for the whole process: the pager's limit shrinks by what
 //!   the process holds outside it;
 //! - `MEMOPRO_PRELOAD_THRESHOLD` bytes;
-//! - `MEMOPRO_PRELOAD_REPORT` a file for the pager's counters at exit (JSON).
+//! - `MEMOPRO_PRELOAD_REPORT` a file for the pager's counters at exit (JSON);
+//! - `MEMOPRO_PRELOAD_REPORT_EVERY` seconds: also rewrite that file this often (a run killed
+//!   at a time limit gets no exit report).
 //!
 //! Prior art: ExtMEM (USENIX ATC 2024) preloads a library over userfaultfd, libvmmalloc
 //! interposes `malloc`; nothing here is claimed as new. Limits: a child made by `fork` without
