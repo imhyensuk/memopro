@@ -4,6 +4,13 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Added: drafts for targets with a larger padded vocabulary (0170)
+- `draft_model(name, target=model)` accepts a draft whose vocabulary is smaller only by
+  padding rows over the same tokenizer (Qwen2.5: 7B 152,064 rows, 1.5B 151,936) and pads its
+  logits with -inf. torch 2.14's MPS `F.pad` changed logits this wide, so the padding uses
+  `torch.cat`. Measured: Qwen2.5-7B lossless generation on an 8 GB M1, 8.95 -> 2.37 s/token with
+  identical output (E038b).
+
 ### Changed: on Apple GPUs the `finetune` budget covers the whole training step (0162-0169)
 - `Runtime.hold_back(nbytes)` (Rust and Python) keeps part of a runtime's budget for memory it
   does not own; unpinned buffers are given up to fit the smaller limit.
