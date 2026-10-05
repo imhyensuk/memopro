@@ -201,7 +201,8 @@ def summarize_suite(run, probe):
                   f"userfaultfd probe: {probe.get('status')} {probe.get('why', '')}")
             continue
         pr, mr = p.get("result") or {}, m.get("result") or {}
-        keys = [k for k in pr if k not in ("seconds", "build_seconds", "import_rss_bytes", "maxrss_bytes")]
+        keys = [k for k in pr if k not in ("seconds", "build_seconds", "import_rss_bytes",
+                                            "maxrss_bytes", "maxrss_rusage_bytes")]
         same = bool(mr) and all(mr.get(k) == pr.get(k) for k in keys)
         limit = m.get("limit") or 0
         within = bool(mr) and mr.get("maxrss_bytes", 1 << 62) <= limit + 64 * MIB
@@ -219,6 +220,13 @@ def summarize_suite(run, probe):
         notes.append(f"| {key} | {r.get('status')} | {fmt(r.get('load_s'), 1)} | "
                      f"{fmt_bytes(mem.get('host_peak_rss_bytes'))} | "
                      f"{fmt_bytes(r.get('timeline_peak_gpu_used_bytes'))} |")
+    errors = [(k, r) for k, r in sorted(recs.items()) if r.get("status") not in ("ok", None)
+              and r.get("status") != "skipped"]
+    if errors:
+        notes += ["", "## Errors", ""]
+        for key, r in errors:
+            text = (r.get("error") or r.get("exit") or "").replace("|", "/").replace("\n", " ")
+            notes.append(f"- `{key}` ({r.get('status')}): {text[:400]}")
     cols = [("check", lambda r: r["check"]), ("criterion", lambda r: r["criterion"]),
             ("result", lambda r: r["result"]), ("detail", lambda r: r["detail"])]
     return write_summary(run, "memopro Colab T4 suite (E042)", cols, rows, notes)

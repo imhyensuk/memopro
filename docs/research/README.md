@@ -224,6 +224,7 @@
 | [0196](0196-e040b-development-and-preregistration.md) | 2026-10-05 | experiment (개발 + 사전 등록) | E040b 개발 측정 넷: NumPy의 MADV_HUGEPAGE가 userfaultfd 영역에서 멈춤 → 고침. 영상·scikit-learn은 1/2에서 됨. 데이터프레임은 무작위 접근으로 되읽기 폭주(64KiB 조각도 15분 제한, OS 스왑 30초), 시뮬레이션은 압축률 한계(overruns). E040b 판정 측정 사전 등록 | 확정 |
 | [0197](0197-e042-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E042 Colab T4 통합 시험(`colab_t4_suite.ipynb`): Qwen2.5-3B·7B 생성·16비트 LoRA, ResNet-152·DINOv2-giant 추론·LoRA, 데이터 네 작업(preload). 기준 G·L·V·VL·D | 확정 |
 | [0198](0198-e040b-results.md) | 2026-10-05 | experiment | E040b 결과(예상대로): 영상 묶음(4.1배, OS 스왑보다 3.3배 빠름)·scikit-learn(3.5배)은 고치지 않고 메모리 절반에서 결과 동일, 데이터프레임·시뮬레이션은 15분 제한. 채점표 U8 ✔, 종합 50.1%(비교 제외 54.3%) | 확정 |
+| [0199](0199-e042-run1.md) | 2026-10-06 | experiment | E042 1차(Colab T4): 생성 3B·7B와 비전 추론(ResNet-152, DINOv2-giant)은 그냥 실행과 같음(7B는 T4에 그냥 들어감, 흘려 쓰기 생성 41~47초/토큰). LoRA는 그냥 실행까지 모두 오류(원인 진단 중). 데이터 작업은 `ru_maxrss`가 execve를 넘어 노트북 커널 값(5.19GiB)을 넘겨받은 측정 결함으로 무효 → VmHWM으로 고침. 채점표 U6 ✔, 종합 51.3%(비교 제외 56.0%) | 확정(부분) |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
