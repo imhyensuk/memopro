@@ -5,6 +5,11 @@ name: E040 more workloads with transparent paging
 # Manual only; results are uploaded as the `e040` artifact.
 on:
   workflow_dispatch:
+    inputs:
+      diag:
+        description: "diagnosis after the failure (0184): memopro without a limit"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -33,6 +38,7 @@ jobs:
       - name: E040
         env:
           E040_OUT: ${{ runner.temp }}/e040
+          E040_DIAG: ${{ inputs.diag }}
         run: python experiments/e040_workloads/run.py
       - uses: actions/upload-artifact@v4
         if: always()

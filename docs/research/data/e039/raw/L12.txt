@@ -1,0 +1,72 @@
+system
+You are Qwen, created by Alibaba Cloud. You are a helpful assistant.
+user
+Explain how a hash table handles collisions.
+assistant
+
+----- stderr -----
+0.00.350.822 I llama_completion: llama backend init
+0.00.350.829 I llama_completion: load the model and apply lora adapter, if any
+0.00.650.721 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.05.592.498 W ggml_metal_log_allocated_size: warning: current allocated size is greater than the recommended max working set size
+0.08.378.984 I cmn          init: llama threadpool init, n_threads = 4
+0.18.662.775 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.18.662.779 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+0.18.674.879 I 
+0.18.675.381 I system_info: n_threads = 4 (n_threads_batch = 4) / 8 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | DOTPROD = 1 | ACCELERATE = 1 | OPENMP = 1 | REPACK = 1 | 
+0.18.675.383 I 
+0.18.679.604 I sampler seed: 813687018
+0.18.679.681 I sampler params: 
+	repeat_last_n = 64, repeat_penalty = 1.050, frequency_penalty = 0.000, presence_penalty = 0.000
+	dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = 64
+	top_k = 20, top_p = 0.800, min_p = 0.050, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 0.000
+	mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+0.18.679.757 I sampler chain: logits -> logit-bias -> penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> min-p -> ?xtc -> temp-ext -> dist 
+0.18.679.759 I generate: n_ctx = 512, n_batch = 2048, n_predict = 32, n_keep = 0
+0.18.679.759 I 
+0.26.494.750 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.26.494.916 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+0.26.494.926 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.26.494.926 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+0.26.494.958 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.26.494.960 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+0.26.494.962 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.26.494.963 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+0.26.494.994 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.26.494.996 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+0.26.494.997 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.26.494.997 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+0.26.494.998 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.26.494.998 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+0.26.495.001 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.26.495.001 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+0.26.495.005 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.26.495.006 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+0.26.495.006 E ggml_metal_graph_compute: backend is in error state from a previous command buffer failure - recreate the backend to recover
+0.26.495.295 E graph_compute: ggml_backend_sched_graph_compute_async failed with error -1
+0.26.495.297 E process_ubatch: failed to compute graph, compute status: -1
+0.26.495.338 W decode: removing memory module entries for seq_id = 0, pos = [0, +inf)
+0.26.495.393 E llama_decode: failed to decode, ret = -3
+0.26.495.398 E cmn  common_promp: failed to eval
+0.26.496.330 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.26.496.333 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+0.26.497.503 E ggml_metal_synchronize: error: command buffer 0 failed with status 5
+0.26.497.506 E error: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory)
+       26.58 real        27.07 user         5.49 sys
+          2091040768  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              144729  page reclaims
+              713672  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                1224  voluntary context switches
+              616258  involuntary context switches
+        459861254084  instructions retired
+         94737694062  cycles elapsed
+           198031232  peak memory footprint
