@@ -1,0 +1,9 @@
+{
+ "case": "dataframe_2_plain_limited",
+ "limit": 833617920,
+ "swap": false,
+ "returncode": -9,
+ "wall_seconds": 0.9299258180000152,
+ "result": null,
+ "stderr_tail": ""
+}

@@ -1,0 +1,17 @@
+{
+ "case": "dataframe_1_plain",
+ "limit": null,
+ "swap": false,
+ "returncode": 0,
+ "wall_seconds": 6.083442464000029,
+ "result": {
+  "per_store": "49cb8fa74accc9bd7a04b7a2c5e5f4bff0f7cb94b6dc3c177b39c531a4aff27a",
+  "top": "452ad99081182b466b5535f63441a82da5f98efb5ac2221f2f61902b68fa4d84",
+  "sorted_revenue": "3669526891788c4366e2a4da0baac4a4b9855ceae365a6d3a4e20cfaab5ebdb4",
+  "total": 20035592915.31,
+  "seconds": 5.7151410420000275,
+  "import_rss_bytes": 68689920,
+  "maxrss_bytes": 1668567040
+ },
+ "stderr_tail": ""
+}

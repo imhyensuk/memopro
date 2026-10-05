@@ -1,0 +1,122 @@
+[
+ {
+  "name": "image",
+  "peak": 1654067200,
+  "limit": 826277888,
+  "t1": true,
+  "t2": true,
+  "t3": true,
+  "pager": {
+   "budget": 826277888,
+   "limit": 825229312,
+   "limit_low": 690779921,
+   "peak_used": 709176366,
+   "outside_peak": 67340527,
+   "faults": 7480,
+   "zero_fills": 1536,
+   "restores": 5944,
+   "restore_seconds": 5.181697970000011,
+   "evictions": 7205,
+   "compress_in": 7554990080,
+   "compress_out": 3414096317,
+   "compress_seconds": 9.709355885999972,
+   "incompressible": 0,
+   "overruns": 0,
+   "spurious": 0,
+   "paged_allocations": 2,
+   "paged_bytes": 1610612736,
+   "threshold": 4194304
+  },
+  "maxrss_preload": 760737792,
+  "seconds": {
+   "plain": 4.992151251999985,
+   "preload": 21.179627246000024,
+   "swap": 61.55120105499998
+  },
+  "returncodes": {
+   "limited": -9,
+   "preload": 0,
+   "swap": 0
+  }
+ },
+ {
+  "name": "dataframe",
+  "peak": 1668567040,
+  "limit": 833617920,
+  "t1": false,
+  "t2": true,
+  "t3": false,
+  "pager": {},
+  "maxrss_preload": null,
+  "seconds": {
+   "plain": 5.7151410420000275,
+   "preload": null,
+   "swap": 25.829720812999994
+  },
+  "returncodes": {
+   "limited": -9,
+   "preload": "timeout",
+   "swap": 0
+  }
+ },
+ {
+  "name": "classify",
+  "peak": 2525646848,
+  "limit": 1262485504,
+  "t1": true,
+  "t2": true,
+  "t3": true,
+  "pager": {
+   "budget": 1262485504,
+   "limit": 1261436928,
+   "limit_low": 750158680,
+   "peak_used": 1040357330,
+   "outside_peak": 444169384,
+   "faults": 9843,
+   "zero_fills": 4567,
+   "restores": 5276,
+   "restore_seconds": 7.690724508000016,
+   "evictions": 7648,
+   "compress_in": 8019509248,
+   "compress_out": 1526562266,
+   "compress_seconds": 19.702628086999994,
+   "incompressible": 325,
+   "overruns": 0,
+   "spurious": 0,
+   "paged_allocations": 19,
+   "paged_bytes": 4776370776,
+   "threshold": 4194304
+  },
+  "maxrss_preload": 1196019712,
+  "seconds": {
+   "plain": 11.299196368999901,
+   "preload": 40.30842127200003,
+   "swap": 25.83262496700013
+  },
+  "returncodes": {
+   "limited": -9,
+   "preload": 0,
+   "swap": 0
+  }
+ },
+ {
+  "name": "simulate",
+  "peak": 2315235328,
+  "limit": 1156579328,
+  "t1": false,
+  "t2": true,
+  "t3": false,
+  "pager": {},
+  "maxrss_preload": null,
+  "seconds": {
+   "plain": 14.506477283000095,
+   "preload": null,
+   "swap": 66.6620678510003
+  },
+  "returncodes": {
+   "limited": -9,
+   "preload": "timeout",
+   "swap": 0
+  }
+ }
+]

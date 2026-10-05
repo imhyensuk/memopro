@@ -441,6 +441,11 @@ def stream_model(
         model = build(config, dtype=stored)
     _tie(model, config)
     model.eval()
+    # generation settings as loading would set them (Qwen2.5: repetition_penalty 1.05; 0195)
+    with contextlib.suppress(Exception):
+        model.generation_config = transformers.GenerationConfig.from_pretrained(
+            str(name_or_dir), revision=revision
+        )
     regions = _renamed(regions, model)
     rt = runtime or Runtime(budget=budget, prefetch=prefetch, lookahead=lookahead)
     weights = StreamedWeights(model, rt, regions, device=device)

@@ -15,6 +15,19 @@ HERE = Path(__file__).resolve().parent
 ROOT = HERE.parents[1]
 WORKER_FILES = ["worker_common.py", "worker_train.py", "worker_infer.py", "worker_multi.py",
                 "app_naive_load.py"]
+# more files a notebook writes next to the workers: name on Colab -> path in this repository
+EXTRA_WORKERS = {
+    "suite": {
+        "worker_suite.py": HERE / "worker_suite.py",
+        "worker_data.py": HERE / "worker_data.py",
+        "image.py": ROOT / "experiments/e027_transparent/workload.py",
+        "common.py": ROOT / "experiments/e040_workloads/common.py",
+        "dataframe.py": ROOT / "experiments/e040_workloads/dataframe.py",
+        "classify.py": ROOT / "experiments/e040_workloads/classify.py",
+        "simulate.py": ROOT / "experiments/e040_workloads/simulate.py",
+        "preload_smoke.c": ROOT / "crates/memopro-preload/tests/smoke.c",
+    },
+}
 
 COMMON_PREP = """
 **준비 (처음 한 번, 세 노트북 공통)**
@@ -105,6 +118,24 @@ Colab 7차(0093)에서 드러난 결함이 고쳐졌는지 **통합 셀 하나**
 
 결과 요약(`summary.md`)에 판정 표와, 학습 시작 전후의 캐시 상태(memopro가 돌려준 양)가 나온다.
 """),
+    "suite": ("colab_t4_suite.ipynb", "cell_suite.py", """# memopro Colab T4 통합 시험: 언어 모델·비전·데이터프레임·시뮬레이션 (docs/research/0197, E042)
+
+셀 **하나**로 아래를 차례로 잰다. 모든 경우는 새 프로세스에서 돌고, 결과와 모델은 Google Drive에 남는다(끊겨도 이어서 한다).
+
+| 갈래 | 경우 | 무엇을 보나 |
+|---|---|---|
+| 언어 모델 | Qwen2.5-3B·7B 생성, 16비트 LoRA | 그냥 GPU에 올리기 대 memopro(호스트 메모리에서 GPU로 흘려 쓰기). 7B는 T4(15GB)에 그냥은 안 들어간다 |
+| 비전 | ResNet-152(CNN), DINOv2-giant(11억 파라미터) 추론, DINOv2 LoRA | 예산 약 1/4·1/2에서 결과가 그냥 실행과 같은가 |
+| 데이터 | 영상 묶음, pandas, scikit-learn, 열 확산 시뮬레이션 | 코드를 고치지 않고 `memopro-preload`로 메모리 절반에서 같은 결과 |
+
+**준비 (이 노트북만 다름)**
+1. 런타임 → 런타임 유형 변경 → **T4 GPU**.
+2. Google Drive `memopro_colab/install/`에 **소스 묶음 `memopro-src.tar.gz`**를 올린다(memopro와 `memopro-preload`를 함께 빌드한다, 첫 실행 5~8분). 예전 sdist는 CUDA 흘려 쓰기와 preload가 없어 쓰지 않는다. 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한다.
+3. Drive에 모델용 공간이 약 **26GB** 필요하다(3B 6GB, 7B 15GB, DINOv2 4GB, ResNet 0.2GB). 모자라면 설정의 `MODEL_CACHE = "local"`로 바꾼다(모델을 이 세션의 로컬 디스크에만 받는다).
+4. 셀을 실행한다. 예상 시간 2~3시간(첫 다운로드 포함).
+
+결과 요약(`summary.md`) 맨 위에 판정 표(pass/fail)가 나온다. 판정 기준은 docs/research/0197에 미리 정해 두었다.
+"""),
 }
 
 
@@ -113,21 +144,22 @@ def commit():
                           text=True, check=False).stdout.strip() or "unknown"
 
 
-def workers_block():
+def workers_block(extra=None):
     lines = ["WORKERS = {"]
-    for name in WORKER_FILES:
-        src = (HERE / name).read_text(encoding="utf-8")
+    files = {name: HERE / name for name in WORKER_FILES} | (extra or {})
+    for name, path in files.items():
+        src = path.read_text(encoding="utf-8")
         assert "'''" not in src, name
         lines.append(f"    {name!r}: r'''{src}''',")
     lines.append("}")
     return "\n".join(lines)
 
 
-def compose(cell_file):
+def compose(cell_file, extra=None):
     text = (HERE / cell_file).read_text(encoding="utf-8").replace("@@COMMIT@@", commit())
     head, body = text.split("# @@COMMON@@\n")
     common = (HERE / "common.py").read_text(encoding="utf-8")
-    return head + common + "\n\n" + workers_block() + "\n\n" + body
+    return head + common + "\n\n" + workers_block(extra) + "\n\n" + body
 
 
 def notebook(title_md, src):
@@ -145,7 +177,7 @@ def main():
     out_dir = Path(sys.argv[sys.argv.index("--out-dir") + 1]) if "--out-dir" in sys.argv else None
     nb_dir = Path(sys.argv[sys.argv.index("--nb-dir") + 1]) if "--nb-dir" in sys.argv else ROOT / "examples"
     for name, (file, cell_file, head) in NOTEBOOKS.items():
-        src = compose(cell_file)
+        src = compose(cell_file, EXTRA_WORKERS.get(name))
         if out_dir:
             out_dir.mkdir(parents=True, exist_ok=True)
             (out_dir / f"{name}.py").write_text(src, encoding="utf-8")

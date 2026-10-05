@@ -1,0 +1,9 @@
+{
+ "case": "dataframe_3_preload",
+ "limit": 832569344,
+ "swap": false,
+ "returncode": "timeout",
+ "wall_seconds": 900.1015919110001,
+ "result": null,
+ "stderr_tail": ""
+}
