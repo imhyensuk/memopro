@@ -4,12 +4,12 @@ build-backend = "maturin"
 
 [project]
 name = "memopro"
-description = "Memory relief and redundancy diagnostics for PyTorch developers with limited GPU/RAM (early development)."
+description = "Run work that exceeds your machine's memory losslessly, within a guaranteed memory ceiling: 16-bit LLM fine-tuning and generation beyond device memory, and a budgeted runtime for large arrays (alpha)."
 readme = "README.en.md"
 requires-python = ">=3.11"
 license = "MIT OR Apache-2.0"
 license-files = ["LICENSE-MIT", "LICENSE-APACHE"]
-keywords = ["memory", "deep-learning", "pytorch", "compression", "gpu"]
+keywords = ["memory", "deep-learning", "pytorch", "llm", "lora", "fine-tuning", "out-of-core"]
 classifiers = [
     "Development Status :: 2 - Pre-Alpha",
     "Intended Audience :: Developers",
@@ -24,6 +24,7 @@ dependencies = []
 [project.optional-dependencies]
 torch = ["torch>=2.4", "numpy"]
 hf = ["torch>=2.4", "numpy", "transformers", "accelerate", "safetensors"]
+llm = ["torch>=2.4", "numpy", "transformers", "accelerate", "safetensors", "peft", "torchao"]
 notebook = ["ipython"]
 dev = ["pytest>=8", "ruff>=0.6"]
 
