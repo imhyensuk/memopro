@@ -372,3 +372,30 @@ def test_one_line_finetune_and_generate(tmp_path):
     assert text == tok.decode(plain[0, ids.shape[1] :], skip_special_tokens=True)
     s = r.model.memopro_runtime.stats()
     assert s["peak_used"] <= r.model.memopro_runtime.limit and s["pinned_bytes"] == 0
+
+
+def test_finetune_checkpoints_only_when_activations_would_not_fit(tmp_path, monkeypatch):
+    """0154: on Apple GPUs a short probe measures activations per token; checkpointing (a third
+    pass over streamed weights) is turned on only when a step would exceed ACTIVATION_ROOM, and
+    the losses do not depend on the choice (same mathematics)."""
+    from memopro.env._torch import mps_usable
+
+    if not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    pytest.importorskip("peft")
+    tokenizers = pytest.importorskip("tokenizers")
+    import memopro.llm
+
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(2)]
+    kw = {"tokenizer": tok, "budget": "9MiB", "device": "mps", "seq_len": 64}
+    free = memopro.finetune(path, texts, **kw)
+    monkeypatch.setattr(memopro.llm, "ACTIVATION_ROOM", 0)
+    tight = memopro.finetune(path, texts, **kw)
+    assert not free.checkpointing and tight.checkpointing
+    assert all(abs(a - b) < 1e-3 for a, b in zip(free.losses, tight.losses, strict=True))

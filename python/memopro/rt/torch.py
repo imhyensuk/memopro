@@ -91,10 +91,14 @@ class _MetalPins:
     Each runtime buffer in use has one pin, one no-copy ``MTLBuffer`` and one torch tensor over
     it; every use gets a view of that tensor. (Wrapping the same memory once per use, e.g. a
     tied embedding once per loss chunk, was counted again by macOS, 0135; importing one
-    ``MTLBuffer`` into torch twice crashed MPS.) At safe points a buffer whose tensor nobody but
-    this cache holds any more is fenced with an MPS event recorded behind the queued work; once
-    the event has completed and the buffer was not used again meanwhile, the tensor, the
-    ``MTLBuffer`` and the pin are given back."""
+    ``MTLBuffer`` into torch twice crashed MPS.)
+
+    Wrapped buffers stay wrapped after use, so the next use costs nothing, until the runtime runs
+    short of room (less than a quarter of its limit free): then every buffer nobody but this
+    cache holds is fenced with one MPS event recorded behind the queued work, and given back
+    once the event has completed if it was not used again meanwhile. (Fencing each buffer as soon
+    as it was free recorded an event per layer; each one commits the GPU's command buffer, which
+    cost about 40% of a training step, 0154.)"""
 
     def __init__(self, runtime: Any) -> None:
         import mmap
@@ -107,13 +111,15 @@ class _MetalPins:
         self.core = _core
         self.page = mmap.PAGESIZE
         self._use_count = torch._C._storage_Use_Count
+        self.limit = runtime.limit
+        self.low = self.limit // 4
         # buffer id -> {"pin", "mtl", "base", "keep", "gen"}
         self.shared: dict[int, dict[str, Any]] = {}
-        # (event, buffer id, generation at fencing)
-        self.fenced: list[tuple[Any, int, int]] = []
+        # (event, [(buffer id, generation at fencing)]) per fenced batch
+        self.fenced: list[tuple[Any, list[tuple[int, int]]]] = []
+        self.fenced_ids: set[int] = set()
 
     def pin(self, buf: Any) -> Any:
-        self.reap()
         try:
             return self.runtime._rt.pin(buf.id, False)
         except BudgetExceeded:
@@ -128,9 +134,9 @@ class _MetalPins:
         """A 1-D MPS tensor of ``numel`` elements over the buffer's pinned bytes (a view)."""
         from memopro.residency import metal_tensor
 
-        self.reap()
         record = self.shared.get(buf.id)
         if record is None:
+            self.reap()
             pin = self.pin(buf)
             length = -(-pin.nbytes // self.page) * self.page
             mtl = self.core.metal_wrap(pin.address, length)
@@ -140,31 +146,41 @@ class _MetalPins:
         record["gen"] += 1
         return record["base"].view(dtype)[:numel]
 
-    def reap(self, block: bool = False) -> None:
-        import torch
-
-        fenced_ids = {bid for _, bid, _ in self.fenced}
-        for bid, record in self.shared.items():
-            if bid not in fenced_ids and self._unused(record):
-                event = torch.mps.event.Event()
-                event.record()
-                self.fenced.append((event, bid, record["gen"]))
-        waiting = []
-        for event, bid, gen in self.fenced:
-            if block:
-                event.synchronize()
-            if not (block or event.query()):
-                waiting.append((event, bid, gen))
-                continue
+    def _give_back(self, batch: list[tuple[int, int]]) -> None:
+        for bid, gen in batch:
+            self.fenced_ids.discard(bid)
             record = self.shared.get(bid)
-            if record is None:
-                continue
-            if record["gen"] != gen or not self._unused(record):
-                continue  # used again after the fence: fenced anew when it is free again
+            if record is None or record["gen"] != gen or not self._unused(record):
+                continue  # used again after the fence: fenced anew when room runs short
             del self.shared[bid]
             record["base"] = None  # torch lets go of the storage
             self.core.metal_release(record["mtl"])
             record["pin"].release()
+
+    def reap(self, block: bool = False) -> None:
+        """Give back fenced buffers the GPU is done with; when room runs short (or ``block``),
+        fence every unused buffer first."""
+        import torch
+
+        if block or self.limit - self.runtime._rt.stats()["used"] < self.low:
+            batch = [
+                (bid, r["gen"])
+                for bid, r in self.shared.items()
+                if bid not in self.fenced_ids and self._unused(r)
+            ]
+            if batch:
+                event = torch.mps.event.Event()
+                event.record()
+                self.fenced.append((event, batch))
+                self.fenced_ids.update(bid for bid, _ in batch)
+        waiting = []
+        for event, batch in self.fenced:
+            if block:
+                event.synchronize()
+            elif not event.query():
+                waiting.append((event, batch))
+                continue
+            self._give_back(batch)
         self.fenced = waiting
 
     def held_bytes(self) -> int:
