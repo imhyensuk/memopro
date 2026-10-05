@@ -1,0 +1,9 @@
+{
+ "case": "image_2_plain_limited",
+ "limit": 826277888,
+ "swap": false,
+ "returncode": -9,
+ "wall_seconds": 2.3512492029999805,
+ "result": null,
+ "stderr_tail": ""
+}

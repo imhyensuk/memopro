@@ -13,6 +13,7 @@ type ReallocFn = unsafe extern "C" fn(*mut c_void, size_t) -> *mut c_void;
 type PosixMemalignFn = unsafe extern "C" fn(*mut *mut c_void, size_t, size_t) -> c_int;
 type AlignedFn = unsafe extern "C" fn(size_t, size_t) -> *mut c_void;
 type UsableFn = unsafe extern "C" fn(*mut c_void) -> size_t;
+type MadviseFn = unsafe extern "C" fn(*mut c_void, size_t, c_int) -> c_int;
 
 static REAL_MALLOC: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static REAL_FREE: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
@@ -22,6 +23,7 @@ static REAL_POSIX_MEMALIGN: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mu
 static REAL_ALIGNED_ALLOC: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static REAL_MEMALIGN: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 static REAL_USABLE: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
+static REAL_MADVISE: AtomicPtr<c_void> = AtomicPtr::new(std::ptr::null_mut());
 
 // `dlsym` may allocate while the real functions are being looked up: those few bytes come from
 // here and are never given back
@@ -113,6 +115,7 @@ fn resolve() {
     REAL_ALIGNED_ALLOC.store(lookup(b"aligned_alloc\0"), Ordering::Release);
     REAL_MEMALIGN.store(lookup(b"memalign\0"), Ordering::Release);
     REAL_USABLE.store(lookup(b"malloc_usable_size\0"), Ordering::Release);
+    REAL_MADVISE.store(lookup(b"madvise\0"), Ordering::Release);
     RESOLVING.with(|r| r.set(false));
 }
 
@@ -502,4 +505,26 @@ pub unsafe extern "C" fn malloc_usable_size(p: *mut c_void) -> size_t {
     }
     // SAFETY: libc's malloc_usable_size of libc's block.
     unsafe { std::mem::transmute::<*mut c_void, UsableFn>(real(&REAL_USABLE))(p) }
+}
+
+/// # Safety
+/// The C `madvise` contract. Huge pages are refused for pager regions: a transparent huge page
+/// fault in a userfaultfd range never reached the pager and the toucher spun (NumPy advises
+/// `MADV_HUGEPAGE` for large arrays from `malloc`; 0191).
+#[unsafe(no_mangle)]
+pub unsafe extern "C" fn madvise(addr: *mut c_void, len: size_t, advice: c_int) -> c_int {
+    if advice == libc::MADV_HUGEPAGE
+        && STATE.load(Ordering::Acquire) == READY
+        && !in_pager_thread()
+        && BUSY.with(|b| b.get()) == 0
+    {
+        // SAFETY: published once and never freed.
+        let pager = unsafe { &*PAGER.load(Ordering::Acquire) };
+        let _busy = Busy::enter();
+        if pager.contains(addr.cast()) {
+            return 0;
+        }
+    }
+    // SAFETY: libc's madvise.
+    unsafe { std::mem::transmute::<*mut c_void, MadviseFn>(real(&REAL_MADVISE))(addr, len, advice) }
 }
