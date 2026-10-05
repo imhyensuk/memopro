@@ -1,0 +1,109 @@
+system
+You are Qwen, created by Alibaba Cloud. You are a helpful assistant.
+user
+Explain how a hash table handles collisions.
+assistant
+A hash table is a data structure that allows for efficient insertion, deletion, and retrieval of elements. It uses a hash function to map keys to indices in an
+
+
+----- stderr -----
+0.00.284.989 I llama_completion: llama backend init
+0.00.284.998 I llama_completion: load the model and apply lora adapter, if any
+0.00.583.355 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.05.757.062 I cmn          init: llama threadpool init, n_threads = 4
+0.25.785.747 I 
+0.25.785.801 I system_info: n_threads = 4 (n_threads_batch = 4) / 8 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | DOTPROD = 1 | ACCELERATE = 1 | OPENMP = 1 | REPACK = 1 | 
+0.25.785.802 I 
+0.25.786.954 I sampler seed: 2922632204
+0.25.786.983 I sampler params: 
+	repeat_last_n = 64, repeat_penalty = 1.050, frequency_penalty = 0.000, presence_penalty = 0.000
+	dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = 64
+	top_k = 20, top_p = 0.800, min_p = 0.050, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 0.000
+	mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+0.25.787.163 I sampler chain: logits -> logit-bias -> penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> min-p -> ?xtc -> temp-ext -> dist 
+0.25.787.165 I generate: n_ctx = 512, n_batch = 2048, n_predict = 32, n_keep = 0
+0.25.787.165 I 
+8.12.209.920 I common_perf_print:    sampling time =      42.67 ms
+8.12.209.921 I common_perf_print:    samplers time =      24.53 ms /    70 tokens
+8.12.209.921 I common_perf_print:        load time =   25234.23 ms
+8.12.209.922 I common_perf_print: prompt eval time =   14202.86 ms /    38 tokens (  373.76 ms per token,     2.68 tokens per second)
+8.12.209.923 I common_perf_print:        eval time =  452173.86 ms /    31 runs   (14586.25 ms per token,     0.07 tokens per second)
+8.12.209.923 I common_perf_print:       total time =  466424.18 ms /    69 tokens
+8.12.209.926 I common_perf_print: unaccounted time =       4.80 ms /   0.0 %      (total - sampling - prompt eval - eval) / (total)
+8.12.209.926 I common_perf_print:    graphs reused =         30
+      492.29 real       173.03 user       107.75 sys
+          3470049280  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+               79788  page reclaims
+            12800106  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                1108  voluntary context switches
+            12336148  involuntary context switches
+       2931393205900  instructions retired
+        825995932162  cycles elapsed
+           196163392  peak memory footprint
+
+
+===== next prompt =====
+
+system
+You are Qwen, created by Alibaba Cloud. You are a helpful assistant.
+user
+Write a Python function that checks whether a string is a palindrome, with a short docstring.
+assistant
+Certainly! Below is a Python function that checks whether a given string is a palindrome. The function includes a docstring to describe its purpose.
+
+```python
+def
+
+
+----- stderr -----
+0.00.316.953 I llama_completion: llama backend init
+0.00.316.960 I llama_completion: load the model and apply lora adapter, if any
+0.00.608.531 W load: control-looking token: 128247 '</s>' was not control-type; this is probably a bug in the model. its type will be overridden
+0.05.463.210 I cmn          init: llama threadpool init, n_threads = 4
+0.25.415.188 I 
+0.25.415.253 I system_info: n_threads = 4 (n_threads_batch = 4) / 8 | MTL : EMBED_LIBRARY = 1 | CPU : NEON = 1 | ARM_FMA = 1 | DOTPROD = 1 | ACCELERATE = 1 | OPENMP = 1 | REPACK = 1 | 
+0.25.415.255 I 
+0.25.417.257 I sampler seed: 3928435485
+0.25.417.270 I sampler params: 
+	repeat_last_n = 64, repeat_penalty = 1.050, frequency_penalty = 0.000, presence_penalty = 0.000
+	dry_multiplier = 0.000, dry_base = 1.750, dry_allowed_length = 2, dry_penalty_last_n = 64
+	top_k = 20, top_p = 0.800, min_p = 0.050, xtc_probability = 0.000, xtc_threshold = 0.100, typical_p = 1.000, top_n_sigma = -1.000, temp = 0.000
+	mirostat = 0, mirostat_lr = 0.100, mirostat_ent = 5.000, adaptive_target = -1.000, adaptive_decay = 0.900
+0.25.417.276 I sampler chain: logits -> logit-bias -> penalties -> ?dry -> ?top-n-sigma -> top-k -> ?typical -> top-p -> min-p -> ?xtc -> temp-ext -> dist 
+0.25.417.277 I generate: n_ctx = 512, n_batch = 2048, n_predict = 32, n_keep = 0
+0.25.417.277 I 
+8.22.873.204 I common_perf_print:    sampling time =      40.07 ms
+8.22.873.209 I common_perf_print:    samplers time =      24.36 ms /    80 tokens
+8.22.873.210 I common_perf_print:        load time =   24837.32 ms
+8.22.873.211 I common_perf_print: prompt eval time =   13770.75 ms /    48 tokens (  286.89 ms per token,     3.49 tokens per second)
+8.22.873.211 I common_perf_print:        eval time =  463641.31 ms /    31 runs   (14956.17 ms per token,     0.07 tokens per second)
+8.22.873.212 I common_perf_print:       total time =  477458.04 ms /    79 tokens
+8.22.873.212 I common_perf_print: unaccounted time =       5.92 ms /   0.0 %      (total - sampling - prompt eval - eval) / (total)
+8.22.873.213 I common_perf_print:    graphs reused =         30
+      502.94 real       172.88 user       108.78 sys
+          2746613760  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              118746  page reclaims
+            12771138  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+                 835  voluntary context switches
+            12313109  involuntary context switches
+       2944616679962  instructions retired
+        831929996628  cycles elapsed
+           198096704  peak memory footprint
