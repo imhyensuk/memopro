@@ -1,0 +1,9 @@
+{
+ "time": "2026-10-05T17:56:24",
+ "part": "llama",
+ "platform": "macOS-26.6.2-arm64-arm-64bit-Mach-O",
+ "python": "3.14.0",
+ "commit": "b3da8b6d7486a35cbebf65c22183f12c3001fe9d",
+ "llama": "version: 0.5.0 (build 11146, commit 7fe450e19)\nbuilt with AppleClang 21.0.0.21000334 for Darwin arm64",
+ "pmset": "Now drawing from 'Battery Power'\n -InternalBattery-0 (id=7405667)\t86%; discharging; 7:04 remaining present: true"
+}

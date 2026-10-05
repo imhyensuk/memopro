@@ -1,0 +1,41 @@
+name: E040 more workloads with transparent paging
+
+# E040 (docs/research/0181): pandas, scikit-learn and a NumPy simulation, unchanged, at half
+# their memory with transparent paging (userfaultfd) on a Linux runner, as in E027 (0122).
+# Manual only; results are uploaded as the `e040` artifact.
+on:
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  e040:
+    name: E040 (Linux, cgroup v2, userfaultfd)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip maturin pytest numpy pandas scikit-learn scipy
+      - run: maturin build --release --out dist
+      - run: python -m pip install --no-index --find-links dist memopro
+      - name: Kernel, memory and userfaultfd
+        run: |
+          uname -a
+          cat /proc/sys/vm/unprivileged_userfaultfd
+          free -m
+          swapon --show
+      - name: E040
+        env:
+          E040_OUT: ${{ runner.temp }}/e040
+        run: python experiments/e040_workloads/run.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e040
+          path: ${{ runner.temp }}/e040
