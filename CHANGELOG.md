@@ -4,6 +4,16 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Fixed: NaN gradients from large output heads on Apple GPUs (0159)
+- torch 2.14's MPS matmul can return NaN when its inner dimension exceeds 2**17 (and is not a
+  multiple of 16384). The output head's backward has the vocabulary there (Qwen2.5: 151,936 and
+  152,064), which broke 7B LoRA training. On MPS `causal_lm_loss` now runs heads over 2**17 rows
+  in slices of 65,536 rows. Streamed and plain gradients are bit-identical again.
+- `memopro.finetune`/`memopro.generate` load the tokenizer at the model's revision, so
+  pinned downloads work offline.
+- Measured: Qwen2.5-7B 16-bit LoRA on an 8 GB M1 at a 1.5 GiB budget, 7.3 tokens/s, identical
+  losses across budgets (E036b).
+
 ### Changed: weights handed to the Apple GPU stay wrapped until room runs short (G4 E2, 0154, 0157)
 - A streamed weight used on MPS keeps its no-copy Metal buffer after use; buffers nobody holds
   are given back together (one MPS event per batch) only when the runtime has less than a

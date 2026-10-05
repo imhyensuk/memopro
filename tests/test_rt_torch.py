@@ -372,3 +372,28 @@ def test_one_line_finetune_and_generate(tmp_path):
     assert text == tok.decode(plain[0, ids.shape[1] :], skip_special_tokens=True)
     s = r.model.memopro_runtime.stats()
     assert s["peak_used"] <= r.model.memopro_runtime.limit and s["pinned_bytes"] == 0
+
+
+def test_loss_never_multiplies_over_more_than_2_17_vocabulary_rows_on_mps(tmp_path, monkeypatch):
+    """0159: torch's MPS matmul can return NaN when its inner dimension exceeds 2**17 (seen with
+    Qwen2.5 heads of 151,936-152,064 rows and hidden sizes >= 1,536); the head's backward has
+    the vocabulary there, so on MPS `causal_lm_loss` runs large heads in slices."""
+    from memopro.env._torch import mps_usable
+
+    if not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    import torch.nn.functional as F
+
+    m = rtt.stream_model(_tiny_qwen(tmp_path / "t", 0, vocab=151936), budget="160MiB", device="mps")
+    ids = torch.randint(0, 151936, (1, 40), generator=torch.Generator().manual_seed(7)).to("mps")
+    with torch.no_grad():
+        want = F.cross_entropy(m(input_ids=ids).logits[0, :-1].float(), ids[0, 1:])
+        rows = []
+        linear = F.linear
+        monkeypatch.setattr(
+            F, "linear", lambda x, w, b=None: rows.append(w.shape[0]) or linear(x, w, b)
+        )
+        loss = rtt.causal_lm_loss(m, ids)
+    assert max(rows) <= 1 << 17 and torch.isfinite(loss)
+    assert abs(float(loss) - float(want)) < 1e-4  # same logits, sliced or not
+    m.memopro_weights.finish()

@@ -50,7 +50,9 @@ def _tokenizer(model: Any, tokenizer: Any) -> Any:
         return tokenizer
     import transformers
 
-    return transformers.AutoTokenizer.from_pretrained(model.config._name_or_path)
+    # the revision the weights came from (a pinned download has no "main" ref to fall back to)
+    revision = getattr(model.config, "_commit_hash", None)
+    return transformers.AutoTokenizer.from_pretrained(model.config._name_or_path, revision=revision)
 
 
 @dataclass
