@@ -649,6 +649,11 @@ def enable_checkpointing(model: Any) -> None:
 # torch's allocator reserve a 1 GiB heap unless it sees pressure, and it never does when the
 # weights are the runtime's own memory (0136)
 LOSS_CHUNK_BYTES = 8 << 20
+# torch 2.14 on MPS: a matmul whose inner dimension exceeds 2**17 (and is not a multiple of
+# 16384) can return NaN depending on where its operands were allocated. The output head's
+# backward (gradient x weight) has the vocabulary as its inner dimension (151,936 / 152,064 in
+# Qwen2.5), so on MPS a large head runs in slices of VOCAB_SLICE rows (0159).
+VOCAB_SLICE = 1 << 16
 
 
 def causal_lm_loss(model: Any, input_ids: Any, labels: Any = None, chunk: int | None = None) -> Any:
@@ -671,10 +676,28 @@ def causal_lm_loss(model: Any, input_ids: Any, labels: Any = None, chunk: int | 
         row = hidden.shape[0] * head.out_features * 4
         chunk = max(1, LOSS_CHUNK_BYTES // row)
 
-    def part(h: Any, t: Any) -> Any:
-        logits = head(h).float()
+    slice_head = hidden.device.type == "mps" and head.out_features > 1 << 17
+
+    def part(h: Any, t: Any) -> Any:  # also re-run by the checkpoint during backward
+        if slice_head:
+            head.forward = sliced
+        try:
+            logits = head(h).float()
+        finally:
+            if slice_head:
+                del head.forward
         return F.cross_entropy(
             logits.reshape(-1, logits.shape[-1]), t.reshape(-1), ignore_index=-100, reduction="sum"
+        )
+
+    def sliced(x: Any) -> Any:  # the head's own forward, in slices of its rows (same logits)
+        w, b = head.weight, head.bias
+        return torch.cat(
+            [
+                F.linear(x, w[i : i + VOCAB_SLICE], None if b is None else b[i : i + VOCAB_SLICE])
+                for i in range(0, w.shape[0], VOCAB_SLICE)
+            ],
+            dim=-1,
         )
 
     total = torch.zeros((), device=hidden.device)
