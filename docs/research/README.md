@@ -187,6 +187,7 @@
 | [0158](0158-e036-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E036 = S1: Qwen2.5-7B-Instruct bf16(14.2GiB, 리비전 고정 내려받기)을 8GB M1에서 `memopro.finetune`으로 16비트 LoRA, 예산 2GiB·1.5GiB, 5단계 × 129토큰. K1 완주, K2 손실 비트 동일, K3 footprint ≤ 예산 + 512MiB·스왑 ≤ 64MiB | 확정 |
 | [0159](0159-e036-results-mps-matmul-bug.md) | 2026-10-05 | experiment | E036 결과: S1 **실패**. 7B 16비트 LoRA가 8GB M1에서 단계당 약 18초(6.4~7.3토큰/초)로 돌았지만 손실이 셋째 단계부터 NaN, K3 메모리 초과(+2,771/+2,275MiB, 기준점에 import 360MiB 포함). 원인: PyTorch MPS 행렬곱이 내부 차원 > 2^17(16,384 배수 아님)에서 NaN — 출력 머리 backward(어휘 151,936·152,064). memopro 없이도 재현. 우회책: MPS에서 head를 65,536행씩 잘라 계산 → 흘려 쓰기와 그냥 실행의 기울기 비트 동일 | 확정 |
 | [0160](0160-e036b-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E036b = S1 다시: 같은 경우·기준, 우회책 적용, 기준 footprint는 import·MPS 시작 뒤(E028c와 같게), K2는 손실이 유한해야 통과 | 확정 |
+| [0161](0161-e036b-results-s1.md) | 2026-10-05 | experiment | E036b 결과: **S1 충족**. 8GB M1에서 Qwen2.5-7B bf16(14.2GiB) 16비트 LoRA를 예산 1.5GiB·2GiB로 5단계 완주, 손실 유한·비트 동일, footprint +1,899/+2,410MiB, 스왑 −168/+42MiB, 7.3토큰/초(단계당 약 18초) | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
