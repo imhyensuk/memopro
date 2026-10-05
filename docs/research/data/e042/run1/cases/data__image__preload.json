@@ -1,0 +1,43 @@
+{
+ "status": "ok",
+ "error": null,
+ "result": {
+  "images": 2048,
+  "means_sha256": "9fa1a56a76da24e6462edc34024a2605248b9bc8652529cca5bd29945e89e5d2",
+  "counts_sha256": "fc7c091ef96ec55850f923c49a19cffe7346da5955f7bc57262955f75e680038",
+  "total": 478153025805,
+  "max": 1802,
+  "stack_sha256": "c7d6d44d86eb75183f05281e57c0d485eb15bfe147cd2a95f86368a332034985",
+  "build_seconds": 5.549880090999977,
+  "seconds": 11.06278183699942,
+  "maxrss_bytes": 5568835584
+ },
+ "preloaded": true,
+ "case": "data__image__preload",
+ "wall_s": 11.3,
+ "timeline_peak_gpu_used_bytes": 3145728,
+ "timeline_peak_host_used_bytes": 3824168960,
+ "pager": {
+  "budget": 2784417792,
+  "limit": 2783369216,
+  "limit_low": 2669164544,
+  "peak_used": 1610612736,
+  "outside_peak": 47095808,
+  "faults": 1536,
+  "zero_fills": 1536,
+  "restores": 0,
+  "restore_seconds": 0.5629705389999995,
+  "evictions": 0,
+  "compress_in": 0,
+  "compress_out": 0,
+  "compress_seconds": 0,
+  "incompressible": 0,
+  "overruns": 0,
+  "spurious": 0,
+  "paged_allocations": 2,
+  "paged_bytes": 1610612736,
+  "threshold": 4194304,
+  "seconds": 11.135008948
+ },
+ "limit": 2784417792
+}
