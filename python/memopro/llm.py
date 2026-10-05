@@ -24,6 +24,9 @@ from memopro._errors import InvalidArgument
 
 __all__ = ["FinetuneResult", "finetune", "generate"]
 
+# the first step's room for activations is this many times the estimate, until measured (0165)
+_FIRST_STEP_MARGIN = 1.5
+
 
 def _device(device: str) -> str:
     if device != "auto":
@@ -55,6 +58,34 @@ def _tokenizer(model: Any, tokenizer: Any) -> Any:
     return transformers.AutoTokenizer.from_pretrained(model.config._name_or_path, revision=revision)
 
 
+def _activation_estimate(config: Any, tokens: int) -> int:
+    """Bytes a checkpointed training step keeps outside the weights: every layer's input, one
+    layer recomputed with its gradients, and a few loss chunks (bf16)."""
+    import memopro.rt.torch as rtt
+
+    h, i, layers = config.hidden_size, config.intermediate_size, config.num_hidden_layers
+    chunk = min(rtt.LOSS_CHUNK_BYTES, tokens * config.vocab_size * 4)  # float32 logits
+    return 2 * tokens * (layers * h + 4 * (4 * h + 3 * i)) + 4 * chunk
+
+
+def _hold(m: Any, nbytes: int) -> None:
+    """Keep ``nbytes`` of the runtime's budget for the step's own memory, or say why not."""
+    from memopro._errors import BudgetExceeded
+
+    weights, rt = m.memopro_weights, m.memopro_runtime
+    weights.metal.reap(block=True)  # wrapped weights nobody uses can go
+    largest = max(b[0].nbytes for b in weights.buffers.values())
+    stats = rt.stats()
+    budget = stats["budget"]
+    if budget - stats["reserve"] - nbytes < largest:
+        raise BudgetExceeded(
+            f"a {budget >> 20} MiB budget cannot hold the largest weight ({largest >> 20} MiB) "
+            f"and the step's activations (about {nbytes >> 20} MiB); raise the budget or "
+            "lower seq_len"
+        )
+    rt.hold_back(nbytes)
+
+
 @dataclass
 class FinetuneResult:
     model: Any  # the streamed model with LoRA layers, ready for `generate`
@@ -63,6 +94,7 @@ class FinetuneResult:
     step_seconds: list[float] = field(default_factory=list)
     seconds: float = 0.0
     tokens: int = 0
+    held_back: int = 0  # bytes of the budget kept for activations (Apple GPUs)
 
 
 def finetune(
@@ -122,6 +154,10 @@ def finetune(
     params = [p for p in m.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(params, lr=lr)
     result = FinetuneResult(m, adapter)
+    gpu = m.device.type == "mps"
+    if gpu:  # the budget covers the whole step: weights plus what the step keeps (0165)
+        result.held_back = int(_FIRST_STEP_MARGIN * _activation_estimate(m.config, seq_len))
+        _hold(m, result.held_back)
     start = time.perf_counter()
     for _ in range(epochs):
         for piece in pieces:
@@ -132,6 +168,11 @@ def finetune(
                 loss.backward()
             opt.step()
             opt.zero_grad(set_to_none=True)
+            if gpu:  # what the step really kept on the GPU, weights excluded
+                kept = torch.mps.driver_allocated_memory() - m.memopro_weights.metal.held_bytes()
+                if kept > result.held_back:
+                    result.held_back = kept
+                    _hold(m, kept)
             m.memopro_weights.finish()
             result.losses.append(float(loss.detach()))
             result.step_seconds.append(time.perf_counter() - t)

@@ -397,3 +397,30 @@ def test_loss_never_multiplies_over_more_than_2_17_vocabulary_rows_on_mps(tmp_pa
     assert max(rows) <= 1 << 17 and torch.isfinite(loss)
     assert abs(float(loss) - float(want)) < 1e-4  # same logits, sliced or not
     m.memopro_weights.finish()
+
+
+def test_finetune_budget_covers_the_step_on_mps(tmp_path):
+    """0165: on Apple GPUs `finetune` holds back part of the runtime's budget for the step's
+    activations (estimated first, then measured), and refuses budgets that cannot hold the
+    largest weight next to them."""
+    from memopro.env._torch import mps_usable
+
+    if not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    pytest.importorskip("peft")
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(2)]
+    m = rtt.stream_model(path, budget="128MiB", device="mps")
+    full = m.memopro_runtime.limit
+    r = memopro.finetune(m, texts, tokenizer=tok, seq_len=64)
+    assert r.held_back > 0 and m.memopro_runtime.limit == full - r.held_back
+    assert all(math.isfinite(x) for x in r.losses)
+    assert m.memopro_runtime.stats()["peak_used"] <= full
+    with pytest.raises(memopro.BudgetExceeded):
+        memopro.finetune(path, texts, tokenizer=tok, budget="20MiB", device="mps", seq_len=64)
