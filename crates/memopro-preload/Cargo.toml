@@ -1,0 +1,16 @@
+[package]
+name = "memopro-preload"
+description = "Linux LD_PRELOAD library: large allocations of an unchanged program go to memopro's transparent pager (0189); not published."
+version.workspace = true
+edition.workspace = true
+rust-version.workspace = true
+license.workspace = true
+publish = false
+
+[lib]
+name = "memopro_preload"
+crate-type = ["cdylib"]
+
+[dependencies]
+memopro = { path = "../memopro" }
+libc = "0.2"

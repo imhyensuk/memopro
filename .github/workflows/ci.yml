@@ -39,6 +39,15 @@ jobs:
           cc -std=c11 -Wall -Wextra -Werror -o target/mp_smoke crates/memopro-c/tests/smoke.c \
             -Icrates/memopro-c/include -Ltarget/release -lmemopro_c -Wl,-rpath,"$PWD/target/release"
           ./target/mp_smoke
+      - name: LD_PRELOAD smoke test (0189)
+        run: |
+          cargo build -q -p memopro-preload --release
+          cc -std=c11 -O1 -Wall -Wextra -Werror -o target/preload_smoke crates/memopro-preload/tests/smoke.c
+          LD_PRELOAD="$PWD/target/release/libmemopro_preload.so" MEMOPRO_PRELOAD_BUDGET=67108864 \
+            MEMOPRO_PRELOAD_REPORT=target/preload_report.json ./target/preload_smoke
+          cat target/preload_report.json
+          python3 -c "import json; r = json.load(open('target/preload_report.json')); \
+            assert r['paged_allocations'] >= 24 and r['evictions'] > 0 and r['overruns'] == 0, r"
 
   python:
     name: Python ${{ matrix.python }} (ubuntu)

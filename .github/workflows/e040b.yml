@@ -1,0 +1,49 @@
+name: E040b preload paging
+
+# E040b (docs/research/0190): E040 programs and E027 image stack with every large allocation
+# in the pager (memopro-preload, 0189), whole process within the limit; Linux runner.
+# Manual only; results are uploaded as the `e040b` artifact. Input `only` limits the workloads.
+on:
+  workflow_dispatch:
+    inputs:
+      only:
+        description: "comma-separated workloads (empty = all)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  e040b:
+    name: E040b (Linux, cgroup v2, userfaultfd)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 90
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip maturin pytest numpy pandas scikit-learn scipy
+      - run: maturin build --release --out dist
+      - run: python -m pip install --no-index --find-links dist memopro
+      - run: cargo build -q -p memopro-preload --release
+      - name: Kernel, memory and userfaultfd
+        run: |
+          uname -a
+          cat /proc/sys/vm/unprivileged_userfaultfd
+          free -m
+          swapon --show
+      - name: E040b
+        env:
+          E040B_OUT: ${{ runner.temp }}/e040b
+          E040B_ONLY: ${{ inputs.only }}
+          E040B_LIB: ${{ github.workspace }}/target/release/libmemopro_preload.so
+        run: python experiments/e040b_preload/run.py
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e040b
+          path: ${{ runner.temp }}/e040b
