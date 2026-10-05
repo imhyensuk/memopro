@@ -261,10 +261,14 @@ fn pager() -> Option<&'static Pager> {
         unsafe { libc::getenv(c"MEMOPRO_PRELOAD_REPORT".as_ptr()) },
         Ordering::Relaxed,
     );
-    let config = PagerConfig {
+    let mut config = PagerConfig {
         process_budget: env_u64(b"MEMOPRO_PRELOAD_PROCESS\0"),
         ..PagerConfig::new(budget)
     };
+    // smaller chunks move less per touch under random access (sorts, joins; 0196)
+    if let Some(chunk) = env_u64(b"MEMOPRO_PRELOAD_CHUNK\0") {
+        config.chunk = chunk as usize;
+    }
     match Pager::new(config) {
         Ok(p) => {
             PAGER.store(Box::into_raw(Box::new(p)), Ordering::Release);

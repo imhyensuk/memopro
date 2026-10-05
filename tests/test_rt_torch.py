@@ -376,6 +376,61 @@ def test_one_line_finetune_and_generate(tmp_path):
     assert s["peak_used"] <= r.model.memopro_runtime.limit and s["pinned_bytes"] == 0
 
 
+def test_streamed_vision_model_matches_plain(tmp_path):
+    """0195: a ViT classifier (whose checkpoint names transformers 5 renames on loading) streams
+    at an eighth of its size with the same logits, bit for bit, as the model loaded normally."""
+    torch.manual_seed(0)
+    cfg = transformers.ViTConfig(
+        hidden_size=512,
+        num_hidden_layers=6,
+        num_attention_heads=8,
+        intermediate_size=2048,
+        image_size=64,
+        patch_size=8,
+        num_labels=10,
+    )
+    plain = transformers.ViTForImageClassification(cfg).eval()
+    plain.save_pretrained(tmp_path, safe_serialization=True)
+    x = torch.randn(2, 3, 64, 64)
+    with torch.no_grad():
+        want = plain(pixel_values=x).logits
+    m = rtt.stream_model(
+        tmp_path, budget="10MiB", model_class=transformers.ViTForImageClassification
+    )
+    with torch.no_grad():
+        got = m(pixel_values=x).logits
+    assert torch.equal(want, got)
+    assert (
+        m.memopro_runtime.stats()["peak_used"]
+        <= 10 << 20
+        < sum(p.numel() * 4 for p in plain.parameters()) // 7
+    )
+
+
+def test_copy_path_trains_like_weights_in_place(tmp_path):
+    """0195: on CUDA each use copies a weight to the device and gives the runtime buffer back
+    at once (forward and backward). Forced on the CPU, that path gives the same LoRA losses,
+    bit for bit, as weights used in place, and leaves nothing pinned."""
+    pytest.importorskip("peft")
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(3)]
+    losses = []
+    for copy in (False, True):
+        m = rtt.stream_model(path, budget="24MiB", device="cpu")
+        m.memopro_weights.copy = copy
+        r = memopro.finetune(m, texts, tokenizer=tok, seq_len=64, lr=1e-2)
+        losses.append(r.losses)
+        s = m.memopro_runtime.stats()
+        assert s["pinned_bytes"] == 0 and s["peak_used"] <= m.memopro_runtime.limit
+    assert losses[0] == losses[1] and len(losses[0]) > 1
+
+
 def test_loss_never_multiplies_over_more_than_2_17_vocabulary_rows_on_mps(tmp_path, monkeypatch):
     """0159: torch's MPS matmul can return NaN when its inner dimension exceeds 2**17 (seen with
     Qwen2.5 heads of 151,936-152,064 rows and hidden sizes >= 1,536); the head's backward has

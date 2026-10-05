@@ -10,6 +10,10 @@ on:
         description: "comma-separated workloads (empty = all)"
         required: false
         default: ""
+      chunk:
+        description: "pager chunk bytes (empty = 1 MiB)"
+        required: false
+        default: ""
       probe:
         description: "development probe (0191) instead of the measurement"
         required: false
@@ -50,6 +54,7 @@ jobs:
         env:
           E040B_OUT: ${{ runner.temp }}/e040b
           E040B_ONLY: ${{ inputs.only }}
+          E040B_CHUNK: ${{ inputs.chunk }}
           E040B_LIB: ${{ github.workspace }}/target/release/libmemopro_preload.so
         run: python experiments/e040b_preload/run.py
       - uses: actions/upload-artifact@v4
