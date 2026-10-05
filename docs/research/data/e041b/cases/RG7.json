@@ -1,0 +1,10 @@
+{
+ "budget": 2147483648,
+ "base_footprint": 368151104,
+ "swap_before": 4422432194,
+ "refused": "a 2048 MiB budget cannot hold the largest weight (1039 MiB) and the draft, cache and intermediates (about 1248 MiB); raise the budget or lower max_new_tokens",
+ "refused_at_hold": 1,
+ "swap_after": 4372100546,
+ "case": "RG7",
+ "attempt": 1
+}
