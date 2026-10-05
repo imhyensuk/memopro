@@ -3,6 +3,7 @@
  *   MEMOPRO_PRELOAD_REPORT=report.json ./smoke
  * 24 blocks of 8 MiB (3x the budget) through malloc, calloc, realloc and posix_memalign, each
  * filled with a compressible pattern and read back exactly; then small blocks. Prints "ok". */
+#define _POSIX_C_SOURCE 200112L
 #include <stdint.h>
 #include <stdio.h>
 #include <stdlib.h>
