@@ -1,6 +1,6 @@
 name: E040b preload paging
 
-# E040b (docs/research/0190): E040 programs and E027 image stack with every large allocation
+# E040b (docs/research/0191): E040 programs and E027 image stack with every large allocation
 # in the pager (memopro-preload, 0189), whole process within the limit; Linux runner.
 # Manual only; results are uploaded as the `e040b` artifact. Input `only` limits the workloads.
 on:
