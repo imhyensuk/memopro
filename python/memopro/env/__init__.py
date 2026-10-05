@@ -95,6 +95,8 @@ MALLOC_CACHE_NOTE = (
 
 MPS_LOW_WATERMARK_VAR = "PYTORCH_MPS_LOW_WATERMARK_RATIO"
 MPS_LOW_WATERMARK = "0.1"
+# set by `memopro run` next to its ratio, so that streamed MPS models may still lower it (0175)
+MPS_LOW_WATERMARK_BY_RUN = "MEMOPRO_RUN_MPS_WATERMARK"
 MPS_HEAP_NOTE = (
     "PyTorch's MPS allocator reserves a whole 1 GiB heap for any 10-512 MiB allocation (a long "
     "prompt, full logits) while it sees no memory pressure (0080); set "
