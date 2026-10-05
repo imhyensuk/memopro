@@ -1,0 +1,17 @@
+{
+ "case": "simulate_1_plain",
+ "limit": null,
+ "swap": false,
+ "returncode": 0,
+ "wall_seconds": 14.769573963000084,
+ "result": {
+  "mean": "e0a1f379586b00abb857f3f5333a8b5c41804330e44318702b0a2a384674b993",
+  "peak": "3c5ecd1242bab2eb988f19b02e924f920b18dd2aaf538868602fd90001cd3dbf",
+  "history": "4dec054f586c3b9a5cdbcc6fd67ccefeb3f71e4bd4005b34efbf482679b802ca",
+  "final": "8e5ca9676420db2cdd62b9733eb5e1ab4ce1c9ee134c772bdde29621ddca2311",
+  "seconds": 14.633573723000154,
+  "import_rss_bytes": 31064064,
+  "maxrss_bytes": 2315247616
+ },
+ "stderr_tail": ""
+}
