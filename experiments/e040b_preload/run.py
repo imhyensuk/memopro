@@ -1,4 +1,4 @@
-"""E040b (docs/research/0190): E040's programs (and E027's image stack) unchanged at half their
+"""E040b (docs/research/0191): E040's programs (and E027's image stack) unchanged at half their
 memory with every large allocation in memopro's pager (`memopro-preload`, 0189) and the whole
 process held to the limit — on a Linux CI runner (`e040b.yml`).
 
@@ -86,7 +86,7 @@ def workload(name: str, script: Path) -> dict:
 
 
 def summarize(results: list[dict]) -> str:
-    rows = ["# E040b summary (0190)", "",
+    rows = ["# E040b summary (0191)", "",
             "| workload | T1 same result | T2 plain fails at L | T3 preload finishes at L | pass |",
             "|---|---|---|---|---|"]
     for r in results:
