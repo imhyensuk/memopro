@@ -199,6 +199,9 @@ class StreamedWeights:
         self.model = model
         self.device = torch.device(device)
         self.metal = _MetalPins(runtime) if self.device.type == "mps" else None
+        # a discrete GPU (CUDA) cannot use runtime memory in place: each use copies the weight to
+        # the device and lets the runtime buffer go at once (0195)
+        self.copy = self.device.type == "cuda"
         prefix = getattr(model, "base_model_prefix", "") or ""
         # one runtime buffer per distinct parameter object (tied weights share one)
         self.buffers: dict[int, tuple[Any, torch.dtype, tuple[int, ...]]] = {}
@@ -273,6 +276,8 @@ class StreamedWeights:
             pin = self.runtime._rt.pin(buf.id, False)
             # the tensor keeps `pin` alive, and the pin keeps the memory put (0115)
             t = torch.frombuffer(pin, dtype=dtype, count=numel).view(shape)
+            if self.copy:  # the device copy outlives the pin, which goes with `pin` here
+                t = t.to(self.device, copy=True)
         self.pinned[t.untyped_storage().data_ptr()] = (buf, dtype, numel)
         return t
 
@@ -326,6 +331,8 @@ class StreamedWeights:
         else:
             pin = self.runtime._rt.pin(buf.id, False)
             base = torch.frombuffer(pin, dtype=dtype, count=numel)
+            if self.copy:
+                base = base.to(self.device, copy=True)
         return torch.as_strided(base, size, stride, offset)
 
     def finish(self, release_cache: bool = True) -> None:
@@ -384,15 +391,21 @@ def stream_model(
     """A Hugging Face model whose weights stay on disk and are streamed through a runtime with
     ``budget`` bytes (or the given ``runtime``). Weights keep their stored dtype; results equal
     those of loading the model normally on the same device. ``device="mps"`` computes on the
-    Apple GPU with the runtime's memory used in place (G4 E1)."""
+    Apple GPU with the runtime's memory used in place (G4 E1); ``device="cuda"`` copies each
+    module's weights to the GPU for its forward and backward and drops them after (0195), so
+    the GPU holds one module's weights plus the activations, and ``budget`` is host memory."""
     import torch
     import transformers
     from accelerate import init_empty_weights
 
     from memopro.hibernate._source import read_header
 
-    if device not in ("cpu", "mps"):
-        raise InvalidArgument(f"device must be 'cpu' or 'mps', not {device!r}")
+    if device not in ("cpu", "mps", "cuda"):
+        raise InvalidArgument(f"device must be 'cpu', 'mps' or 'cuda', not {device!r}")
+    if device == "cuda" and not torch.cuda.is_available():
+        raise ModeUnavailable(
+            "memopro.rt.torch.stream_model(device='cuda')", "no CUDA GPU here", ("device='cpu'",)
+        )
     if device == "mps":
         import os
 
@@ -428,6 +441,7 @@ def stream_model(
         model = build(config, dtype=stored)
     _tie(model, config)
     model.eval()
+    regions = _renamed(regions, model)
     rt = runtime or Runtime(budget=budget, prefetch=prefetch, lookahead=lookahead)
     weights = StreamedWeights(model, rt, regions, device=device)
     model.memopro_weights = weights
@@ -440,6 +454,29 @@ def stream_model(
         {"device": property(lambda self: where)},
     )
     return model
+
+
+def _renamed(regions: dict[str, Any], model: Any) -> dict[str, Any]:
+    """Checkpoint names as the model names them: transformers renames some on loading (ViT in
+    transformers 5: ``encoder.layer.N.attention.attention.query`` -> ``layers.N.attention.q_proj``,
+    0195). Pure renames only; a key that would need merging or splitting keeps its name, and the
+    model then reports the weight as missing."""
+    try:
+        from transformers.conversion_mapping import get_model_conversion_mapping
+        from transformers.core_model_loading import WeightRenaming, rename_source_key
+    except ImportError:  # older transformers: checkpoint names are model names
+        return regions
+    mapping = get_model_conversion_mapping(model)
+    if not mapping:
+        return regions
+    renames = [m for m in mapping if isinstance(m, WeightRenaming)]
+    others = [m for m in mapping if not isinstance(m, WeightRenaming)]
+    meta = model.state_dict()
+    out = {}
+    for key, region in regions.items():
+        new, converter = rename_source_key(key, renames, others, model.base_model_prefix, meta)
+        out[key if converter is not None else new] = region
+    return out
 
 
 def _padded(forward: Any, pad: int) -> Any:

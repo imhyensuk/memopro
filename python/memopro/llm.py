@@ -32,8 +32,12 @@ _FIRST_STEP_MARGIN = 1.4
 def _device(device: str) -> str:
     if device != "auto":
         return device
+    import torch
+
     from memopro.env._torch import mps_usable
 
+    if torch.cuda.is_available():
+        return "cuda"
     return "mps" if mps_usable() else "cpu"
 
 
@@ -182,9 +186,11 @@ def finetune(
     opt = torch.optim.AdamW(params, lr=lr)
     result = FinetuneResult(m, adapter)
     gpu = m.device.type == "mps"
-    # the budget covers the whole step: weights plus what the step keeps (0165; CPU 0175)
-    result.held_back = int(_FIRST_STEP_MARGIN * _activation_estimate(m.config, seq_len))
-    _hold(m, result.held_back)
+    # the budget covers the whole step: weights plus what the step keeps (0165; CPU 0175). On
+    # CUDA the step's memory is the GPU's own, outside the (host) budget (0195)
+    if m.device.type != "cuda":
+        result.held_back = int(_FIRST_STEP_MARGIN * _activation_estimate(m.config, seq_len))
+        _hold(m, result.held_back)
     start = time.perf_counter()
     for _ in range(epochs):
         for piece in pieces:
@@ -255,7 +261,8 @@ def generate(
     what = (
         "the draft, cache and intermediates" if draft is not None else "the cache and intermediates"
     )
-    _hold(m, held[0], what, "max_new_tokens")
+    if m.device.type != "cuda":  # on CUDA the cache lives in GPU memory (0195)
+        _hold(m, held[0], what, "max_new_tokens")
 
     def measure(*_: Any) -> None:  # what generation really kept on the GPU
         kept = _gpu_kept(m)
