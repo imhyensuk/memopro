@@ -223,6 +223,7 @@
 | [0195](0195-colab-suite-design-cuda-streaming.md) | 2026-10-05 | decision + implementation | Colab 통합 시험: 환경은 T4(CPU·메모리는 CPU 런타임과 같고 GPU가 더해짐), 저장소는 Drive(`hf_cache/`·결과, 소스 묶음 설치). `stream_model(device="cuda")` 복사 경로, transformers 이름 변환 따르기(ViT·DINOv2·ResNet 흘려 쓰기 비트 동일), `generation_config` 읽기 | 확정 |
 | [0196](0196-e040b-development-and-preregistration.md) | 2026-10-05 | experiment (개발 + 사전 등록) | E040b 개발 측정 넷: NumPy의 MADV_HUGEPAGE가 userfaultfd 영역에서 멈춤 → 고침. 영상·scikit-learn은 1/2에서 됨. 데이터프레임은 무작위 접근으로 되읽기 폭주(64KiB 조각도 15분 제한, OS 스왑 30초), 시뮬레이션은 압축률 한계(overruns). E040b 판정 측정 사전 등록 | 확정 |
 | [0197](0197-e042-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E042 Colab T4 통합 시험(`colab_t4_suite.ipynb`): Qwen2.5-3B·7B 생성·16비트 LoRA, ResNet-152·DINOv2-giant 추론·LoRA, 데이터 네 작업(preload). 기준 G·L·V·VL·D | 확정 |
+| [0198](0198-e040b-results.md) | 2026-10-05 | experiment | E040b 결과(예상대로): 영상 묶음(4.1배, OS 스왑보다 3.3배 빠름)·scikit-learn(3.5배)은 고치지 않고 메모리 절반에서 결과 동일, 데이터프레임·시뮬레이션은 15분 제한. 채점표 U8 ✔, 종합 50.1%(비교 제외 54.3%) | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
