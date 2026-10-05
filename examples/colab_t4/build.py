@@ -3,6 +3,7 @@ each a short guide and one self-contained code cell.
 
 The code cell = its settings + common.py + the worker sources (written to disk at run time) +
 its body. Usage: .venv/bin/python examples/colab_t4/build.py [--out-dir DIR for .py copies]
+[--nb-dir DIR for the notebooks, default examples/]
 """
 
 import json
@@ -142,13 +143,14 @@ def notebook(title_md, src):
 
 def main():
     out_dir = Path(sys.argv[sys.argv.index("--out-dir") + 1]) if "--out-dir" in sys.argv else None
+    nb_dir = Path(sys.argv[sys.argv.index("--nb-dir") + 1]) if "--nb-dir" in sys.argv else ROOT / "examples"
     for name, (file, cell_file, head) in NOTEBOOKS.items():
         src = compose(cell_file)
         if out_dir:
             out_dir.mkdir(parents=True, exist_ok=True)
             (out_dir / f"{name}.py").write_text(src, encoding="utf-8")
         nb = notebook(head + COMMON_PREP.replace("{cell}", name), src)
-        out = ROOT / "examples" / file
+        out = nb_dir / file
         out.write_text(json.dumps(nb, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         print(out, len(nb["cells"][1]["source"]), "lines")
 

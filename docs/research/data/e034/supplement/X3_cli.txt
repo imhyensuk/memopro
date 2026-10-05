@@ -1,0 +1,50 @@
+Loading configuration file docs/research/data/e034/mlx/X3/lora_config.yaml
+Loading pretrained model
+Loading datasets
+Training
+[34m╭─[0m[34m [0m[1;35mmlx_lm.lora[0m[34m [0m[34m───────────────────────────────────────────────────────────────────────────────────────────────────────[0m[34m─╮[0m
+[34m│[0m    [39mmodel        [0m   [1mQwen/Qwen2.5-3B-Instruct[0m                                                                          [34m│[0m
+[34m│[0m    [39mtype         [0m   [1mlora · 16 layers · rank 8[0m                                                                         [34m│[0m
+[34m│[0m    [39mdataset      [0m   [1mdocs/research/data/e034/mlx/X3[0m                                                                    [34m│[0m
+[34m│[0m    [39moptimizer    [0m   [1madam · lr 2.0e-04[0m                                                                                 [34m│[0m
+[34m│[0m    [39mbatch · iters[0m   [1m1 · 10[0m                                                                                            [34m│[0m
+[34m│[0m    [39mmax seq      [0m   [1m2,048[0m                                                                                             [34m│[0m
+[34m╰──────────────────────────────────────────────────────────────────────────────────────────────────────────────────────╯[0m
+Trainable parameters: 0.216% (6.652M/3085.939M)
+  [1miter   train_loss     tok/s     tokens[0m
+[1;34mtrain[0m [38;5;244m░░░░░░░░░░░░░░░░░░░░░░░░░░░░░░[0m [1;34m  0%[0m [38;5;244m·[0m [1;34m    0[0m[38;5;244m/10[0m
+Traceback (most recent call last):
+  File "/Users/imhyeonseok/Desktop/memopro/.cache/venv-mlx/bin/mlx_lm.lora", line 6, in <module>
+    sys.exit(main())
+             ^^^^^^
+  File "/Users/imhyeonseok/Desktop/memopro/.cache/venv-mlx/lib/python3.12/site-packages/mlx_lm/lora.py", line 392, in main
+    run(types.SimpleNamespace(**args))
+  File "/Users/imhyeonseok/Desktop/memopro/.cache/venv-mlx/lib/python3.12/site-packages/mlx_lm/lora.py", line 364, in run
+    train_model(args, model, train_set, valid_set, training_callback)
+  File "/Users/imhyeonseok/Desktop/memopro/.cache/venv-mlx/lib/python3.12/site-packages/mlx_lm/lora.py", line 306, in train_model
+    train(
+  File "/Users/imhyeonseok/Desktop/memopro/.cache/venv-mlx/lib/python3.12/site-packages/mlx_lm/tuner/trainer.py", line 297, in train
+    val_loss = evaluate(
+               ^^^^^^^^^
+  File "/Users/imhyeonseok/Desktop/memopro/.cache/venv-mlx/lib/python3.12/site-packages/mlx_lm/tuner/trainer.py", line 209, in evaluate
+    mx.eval(all_losses, ntokens)
+RuntimeError: [METAL] Command buffer execution failed: Insufficient Memory (00000008:kIOGPUCommandBufferCallbackErrorOutOfMemory).
+       22.35 real         1.41 user         4.73 sys
+          1397735424  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+              429462  page reclaims
+                2584  page faults
+                   0  swaps
+                   0  block input operations
+                   0  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+               89922  voluntary context switches
+               39202  involuntary context switches
+         38221547106  instructions retired
+         18624778533  cycles elapsed
+          6461667072  peak memory footprint
+exit 1 seconds 22 swap_before 2355.69M swap_after 2838.06M

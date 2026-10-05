@@ -1,8 +1,15 @@
 # memopro
 
-> **노트북과 학습 중에 잠든 메모리를 되찾고, 낭비되는 메모리를 보여 준다.**
-> PyTorch 개발자를 위한 메모리 회수·진단 라이브러리 (Rust + Python). 불러온 모델은 SSD에 쓰지 않고 원본에서 복원하며, 모든 절감량은 실측으로 보고한다.
-> 내 기기의 실제 가용 메모리에 맞춰 모델을 불러오고(`load`) 학습을 맞추며(`train_session`), OS 메모리 압박에 대응하고(γ), 코드 수정 없이 실행한다(`memopro run`).
+> **메모리가 부족한 기기에서, 그 메모리를 넘는 작업을 손실 없이 메모리 상한 안에서 돌린다.**
+> 오픈소스 라이브러리 (Rust 코어 + Python). 8GB M1에서 3B 모델의 16비트 LoRA를 1GiB 예산으로 학습하고([0138](docs/research/0138-e028c-results-gate-g4-b1.md)), 일반 생성과 비트 동일한 무손실 생성을 3.2배 빠르게 한다([0144](docs/research/0144-e033b-results.md)). 가중치는 원본 파일에서 흘려 쓰고 디스크에는 아무것도 쓰지 않는다.
+
+```python
+import memopro
+
+r = memopro.finetune("Qwen/Qwen2.5-3B-Instruct", texts, budget="1GiB")  # 16비트 LoRA (PEFT), 양자화 없음
+r.adapter.save_pretrained("my-lora")                                     # 표준 PEFT 어댑터
+print(memopro.generate(r.model, "안녕?", draft="Qwen/Qwen2.5-1.5B-Instruct"))  # 초안이 있어도 출력은 같다
+```
 
 - **Python** (PyPI `memopro`): PyTorch 개발자를 위한 한 줄 인터페이스
 - **Rust** (crates.io `memopro`): 프레임워크와 무관한 메모리 코어 (환경·예산 감지, 원본 파일 재읽기와 해시 확인, 텐서 원장, 메모리 상한이 보장된 방출)
@@ -23,10 +30,11 @@
 
 | # | 목표 |
 |---|---|
-| 궁극 | 더 큰 메모리(예: 32GB)가 필요하던 작업을 **제한된 환경(8~16GB)**에서 구동한다. AI 학습·추론·개발뿐 아니라 **메모리 효율이 필요한 모든 작업**(큰 배열, 이미지, 데이터프레임, 시뮬레이션 등)이 대상이다 ([0107](docs/research/0107-direction-goal-redefinition.md)) |
-| G1 | AI 개발·학습·활용 **전 단계**에서 메모리 부담 최소화 — 접근 계층(`load`, `train_session` 등)이 맡는다 |
-| G2′ | 작업 집합이 메모리 안이면 **필요 메모리의 1/2~1/4 환경**에서 구동. 무손실 기본, 메모리 상한 보장, 느려짐을 실행 전에 예측 |
-| G3 | 메모리 **하드웨어 병목** 극복 — **주 목표**(0107): 버퍼마다 두기·압축·원본 재읽기·재계산·이동을 고르는 새 Rust 런타임(설계 중, [0108](docs/research/0108-survey-new-runtime-prior-art.md)) |
+| 한 문장 | 메모리가 부족한 기기(8~16GB 노트북·Mac, 작은 GPU)에서, 그 기기 메모리를 넘는 작업을 **손실 없이, 보장된 메모리 상한 안에서, 쓸 만한 속도로** 돌린다 ([0148](docs/research/0148-goal-consolidation-approved.md)) |
+| 주 목표 1 (G4-B) | 기기 메모리를 넘는 LLM의 16비트 LoRA 학습과 추론. 기본은 무손실(일반 실행과 비트 동일). 같은 기기에서 Unsloth·mlx-tune·HF가 못 돌리는 크기로 경쟁하고, 커널 속도 경쟁은 하지 않는다 |
+| 주 목표 2 (G2′·G3) | 큰 배열·영상·데이터프레임·시뮬레이션을 필요 메모리의 1/2~1/4에서. 무손실, 상한 보장, 느려짐 예측. 엔진은 Rust 런타임 C-R(유지·무손실 압축·원본 재읽기·재계산) |
+| 유지 (G1) / 보조 (G4-C) | 접근 계층(`load`, `train_session`, `memopro run` 등) / CUDA에서 Unsloth 류 백엔드를 선택적으로 감싸기 |
+| 원칙 | 런타임은 디스크에 쓰지 않는다(0110) |
 
 - **대상**: PyTorch 개발자(직접 만든 모델, 이미지·비전·오디오, LLM, 파인튜닝, 연구 코드, 서비스)와 메모리가 큰 작업을 하는 Python·C/C++·Rust 개발자(0107에서 확장)
 - **대상 아님**: 코드 없이 LLM 앱을 쓰려는 최종 사용자
@@ -185,7 +193,7 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 | RT1 | 런타임 C-R 1단계: 예산 상한, 원본 재읽기·압축(쓰기 없음), 재사용 주기 정책, NumPy 연결 (0107~0113) | | ✅ 관문 G-R1 통과(E025, [0113](docs/research/0113-e025-results.md)) |
 | RT2 | 런타임 2단계: 재계산(계보), 미리 읽기(서비스 스레드), 느려짐 예측, PyTorch 연결 (0114~0121) | | ✅ 관문 G-R2 통과(E026·E026c, [0121](docs/research/0121-e026c-results-gate-r2.md)): 양자화 없이 3B를 필요 메모리의 1/4에서 OS 페이징의 5배 속도로 |
 | RT3 | 런타임 3단계: Linux 투명 모드(userfaultfd), C ABI, 접근 계층 연결 (0122·0124·0128) | | ✅ 관문 G-R3 통과(E027, [0129](docs/research/0129-e027-results-gate-r3.md)): 고치지 않은 NumPy 프로그램을 필요 메모리의 1/2에서 비트 동일하게, OS 스왑의 2.1배 속도, 쓰기 0 |
-| G4-B | 메모리가 작은 기기에서 손실 없는 16비트 학습: GPU 무복사 스트리밍(E1), 활성값 줄이기(E3) (0123·0125·0130~0138) | | ✅ 관문 G4-B1 통과(E028c, [0138](docs/research/0138-e028c-results-gate-g4-b1.md)): 8GB M1 GPU에서 3B bf16 LoRA를 1GiB·768MiB 예산으로 손실 비트 동일, 프로세스 메모리 예산 + 250MiB 안, 1.5B는 CPU의 46배 |
+| G4-B | 메모리가 작은 기기에서 손실 없는 16비트 학습·추론: GPU 무복사 스트리밍(E1), 활성값 줄이기(E3), 초안 + 행 불변 검증(E4), 한 줄 API(E8) (0123·0125·0130~0152) | | ✅ G4-B1(E028c, [0138](docs/research/0138-e028c-results-gate-g4-b1.md)): 8GB M1에서 3B bf16 LoRA를 1GiB·768MiB로 · ✅ G4-E4(E033c, [0152](docs/research/0152-e033c-results-gate-g4-e4.md)): 무손실 3B 생성이 일반 생성과 비트 동일하게 2.8배 · ✅ S3(E034, [0151](docs/research/0151-e034-results.md)): 같은 3B 16비트 LoRA를 mlx-tune은 메모리 부족으로 시작 못 함, memopro는 1GiB로 20토큰/초 · `memopro.finetune`/`memopro.generate`([0149](docs/research/0149-g4-e8-one-line-api.md)) |
 | S6 | 안정화, 문서 사이트(영어·한국어) | 🚀 v1.0.0 | |
 
 ## 알려진 한계 (개발판)
