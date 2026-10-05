@@ -407,6 +407,41 @@ def test_streamed_vision_model_matches_plain(tmp_path):
     )
 
 
+def test_copy_path_cache_and_prefetch_keep_results(tmp_path):
+    """0201: on the copy path (CUDA) copies stay on the device up to ``gpu_budget`` and the next
+    module's weights are copied ahead. Forced on the CPU: with no cache, part of the model or
+    all of it cached, LoRA losses and greedy text equal the in-place path bit for bit; a full
+    cache copies each weight once, and with no cache the prefetch supplies most weights."""
+    pytest.importorskip("peft")
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(3)]
+    results, stats = [], {}
+    for name, copy, gpu_budget in (
+        ("in place", False, 0),
+        ("no cache", True, 0),
+        ("part", True, 4 << 20),
+        ("all", True, 1 << 30),
+    ):
+        m = rtt.stream_model(path, budget="24MiB", device="cpu")
+        m.memopro_weights.copy, m.memopro_weights.gpu_budget = copy, gpu_budget
+        text = memopro.generate(m, "w2 w9 w16", tokenizer=tok, max_new_tokens=6, chat=False)
+        r = memopro.finetune(m, texts, tokenizer=tok, seq_len=64, lr=1e-2)
+        results.append((text, r.losses))
+        stats[name] = dict(m.memopro_weights.copy_stats)
+        assert m.memopro_runtime.stats()["pinned_bytes"] == 0
+    assert all(x == results[0] for x in results[1:])
+    weights = len(m.memopro_weights.buffers)
+    assert stats["all"]["copies"] == weights and stats["all"]["hits"] > 0
+    assert stats["no cache"]["prefetched"] > stats["no cache"]["copies"] // 2
+    assert 0 < stats["part"]["hits"] and stats["part"]["copies"] < stats["no cache"]["copies"]
+
+
 def test_copy_path_trains_like_weights_in_place(tmp_path):
     """0195: on CUDA each use copies a weight to the device and gives the runtime buffer back
     at once (forward and backward). Forced on the CPU, that path gives the same LoRA losses,

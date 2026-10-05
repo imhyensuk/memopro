@@ -202,6 +202,17 @@ class StreamedWeights:
         # a discrete GPU (CUDA) cannot use runtime memory in place: each use copies the weight to
         # the device and lets the runtime buffer go at once (0195)
         self.copy = self.device.type == "cuda"
+        # copies kept on the device, up to `gpu_budget` bytes: with room for the whole model
+        # every use after the first is a hit (0201)
+        self.gpu_budget = 0
+        self.gpu_cache: dict[int, Any] = {}
+        self.gpu_cache_bytes = 0
+        # the next module's copies, made while the device computes the current one (0201)
+        self._prefetched: dict[int, Any] = {}
+        self._order: list[Any] = []
+        self._seen: set[Any] = set()
+        self._stream: Any = None
+        self.copy_stats = {"copies": 0, "copy_bytes": 0, "hits": 0, "prefetched": 0}
         prefix = getattr(model, "base_model_prefix", "") or ""
         # one runtime buffer per distinct parameter object (tied weights share one)
         self.buffers: dict[int, tuple[Any, torch.dtype, tuple[int, ...]]] = {}
@@ -225,6 +236,7 @@ class StreamedWeights:
                 region.path, region.offset, region.nbytes, dtype=_RT_DTYPE[dtype]
             )
             self.buffers[id(param)] = (buf, region.dtype, tuple(region.shape))
+        self._pid_of = {buf.id: pid for pid, (buf, _, _) in self.buffers.items()}
         missing = [n for n, p in model.named_parameters() if id(p) not in self.buffers]
         if missing:
             raise InvalidArgument(f"no weights in the files for {missing[:5]}")
@@ -272,18 +284,90 @@ class StreamedWeights:
             numel *= d
         if self.metal is not None:
             t = self.metal.tensor(buf, dtype, numel).view(shape)
+        elif self.copy:
+            t = self._device_copy(pid)
         else:
             pin = self.runtime._rt.pin(buf.id, False)
             # the tensor keeps `pin` alive, and the pin keeps the memory put (0115)
             t = torch.frombuffer(pin, dtype=dtype, count=numel).view(shape)
-            if self.copy:  # the device copy outlives the pin, which goes with `pin` here
-                t = t.to(self.device, copy=True)
         self.pinned[t.untyped_storage().data_ptr()] = (buf, dtype, numel)
         return t
+
+    def _copy_now(self, pid: int, non_blocking: bool = False) -> Any:
+        """A device copy of one weight; the runtime buffer is pinned only while it is read."""
+        import torch
+
+        buf, dtype, shape = self.buffers[pid]
+        numel = 1
+        for d in shape:
+            numel *= d
+        pin = self.runtime._rt.pin(buf.id, False)
+        host = torch.frombuffer(pin, dtype=dtype, count=numel).view(shape)
+        # from pageable memory the host side of the copy is done when this returns, so the pin
+        # can go with `pin` (0195)
+        t = host.to(self.device, copy=True, non_blocking=non_blocking)
+        self.copy_stats["copies"] += 1
+        self.copy_stats["copy_bytes"] += buf.nbytes
+        return t
+
+    def _device_copy(self, pid: int) -> Any:
+        """The device copy of a weight: from the cache, from the prefetch, or made now."""
+        import torch
+
+        t = self.gpu_cache.get(pid)
+        if t is not None:
+            self.copy_stats["hits"] += 1
+            return t
+        t = self._prefetched.pop(pid, None)
+        if t is not None:
+            self.copy_stats["prefetched"] += 1
+            if self._stream is not None:  # the copy was queued on the side stream
+                torch.cuda.current_stream(self.device).wait_stream(self._stream)
+                t.record_stream(torch.cuda.current_stream(self.device))
+        else:
+            t = self._copy_now(pid)
+        nbytes = t.numel() * t.element_size()
+        if self.gpu_cache_bytes + nbytes <= self.gpu_budget:
+            self.gpu_cache[pid] = t
+            self.gpu_cache_bytes += nbytes
+        return t
+
+    def _prefetch_after(self, module: Any) -> None:
+        """Copy the weights of the module that came after `module` last time (forward order),
+        on a side stream while the device computes `module`."""
+        import torch
+
+        if not self._order or module not in self._seen:
+            return
+        i = self._order.index(module)
+        nxt = self._order[(i + 1) % len(self._order)]
+        self._prefetched.clear()
+        want = [id(p) for _, p in self._own.get(nxt, ()) if id(p) not in self.gpu_cache]
+        if not want:
+            return
+        if self.device.type == "cuda":
+            if self._stream is None:
+                self._stream = torch.cuda.Stream(self.device)
+            self._stream.wait_stream(torch.cuda.current_stream(self.device))
+            with torch.cuda.stream(self._stream):
+                for pid in want:
+                    self._prefetched[pid] = self._copy_now(pid, non_blocking=True)
+        else:  # the same bookkeeping without a device stream (tests on the CPU)
+            for pid in want:
+                self._prefetched[pid] = self._copy_now(pid)
+
+    def drop_gpu_cache(self) -> None:
+        """Give back the device copies kept by the cache and the prefetch."""
+        self.gpu_cache.clear()
+        self.gpu_cache_bytes = 0
+        self._prefetched.clear()
 
     def _before(self, module: Any, args: Any) -> None:
         import torch
 
+        if self.copy and module not in self._seen:  # learn the forward order once
+            self._seen.add(module)
+            self._order.append(module)
         swapped = []
         for name, param in self._own[module]:
             t = self._tensor(id(param))
@@ -295,6 +379,8 @@ class StreamedWeights:
         for name, param, ptr in self._held[module].pop():
             module._parameters[name] = param
             self.pinned.pop(ptr, None)
+        if self.copy:
+            self._prefetch_after(module)
 
     def remove(self) -> None:
         for h in self._handles:
@@ -328,11 +414,11 @@ class StreamedWeights:
         _, buf, dtype, numel, size, stride, offset = x
         if self.metal is not None:
             base = self.metal.tensor(buf, dtype, numel)
+        elif self.copy:
+            base = self._device_copy(self._pid_of[buf.id])
         else:
             pin = self.runtime._rt.pin(buf.id, False)
             base = torch.frombuffer(pin, dtype=dtype, count=numel)
-            if self.copy:
-                base = base.to(self.device, copy=True)
         return torch.as_strided(base, size, stride, offset)
 
     def finish(self, release_cache: bool = True) -> None:
@@ -387,13 +473,17 @@ def stream_model(
     prefetch: bool = True,
     lookahead: str | int = "64MiB",
     device: str = "cpu",
+    gpu_budget: str | int = "auto",
 ) -> Any:
     """A Hugging Face model whose weights stay on disk and are streamed through a runtime with
     ``budget`` bytes (or the given ``runtime``). Weights keep their stored dtype; results equal
     those of loading the model normally on the same device. ``device="mps"`` computes on the
     Apple GPU with the runtime's memory used in place (G4 E1); ``device="cuda"`` copies each
-    module's weights to the GPU for its forward and backward and drops them after (0195), so
-    the GPU holds one module's weights plus the activations, and ``budget`` is host memory."""
+    module's weights to the GPU for its forward and backward (0195); ``budget`` is host memory.
+    On CUDA up to ``gpu_budget`` bytes of those copies stay on the GPU for the next use, and the
+    next module's weights are copied while the current one computes (0201). ``"auto"`` keeps
+    the GPU's free memory minus room for activations (2 GiB or 15% of the GPU, the larger); 0
+    keeps one module's weights at a time."""
     import torch
     import transformers
     from accelerate import init_empty_weights
@@ -449,6 +539,8 @@ def stream_model(
     regions = _renamed(regions, model)
     rt = runtime or Runtime(budget=budget, prefetch=prefetch, lookahead=lookahead)
     weights = StreamedWeights(model, rt, regions, device=device)
+    if weights.copy:
+        weights.gpu_budget = _gpu_budget(gpu_budget, torch.device(device))
     model.memopro_weights = weights
     model.memopro_runtime = rt
     # parameters live on the meta device between uses; the model computes on `device`
@@ -459,6 +551,18 @@ def stream_model(
         {"device": property(lambda self: where)},
     )
     return model
+
+
+def _gpu_budget(value: str | int, device: Any) -> int:
+    """Bytes of weight copies kept on a CUDA device (0201)."""
+    import torch
+
+    if value != "auto":
+        from memopro._units import parse_size
+
+        return max(0, parse_size(value))
+    free, total = torch.cuda.mem_get_info(device)
+    return max(0, free - max(2 << 30, int(0.15 * total)))
 
 
 def _renamed(regions: dict[str, Any], model: Any) -> dict[str, Any]:

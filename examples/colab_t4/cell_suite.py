@@ -91,6 +91,19 @@ def suite_body():
                 run_case(run, f"vis_lora__{n}__memopro_{b // MIB}", "worker_suite.py",
                          ["vis_lora", model, "memopro", b, *args], TIMEOUT_S,
                          {**extra, **DETERMINISTIC})
+    # ---- speed after the GPU cache and prefetch (E043, docs/research/0202): the same memopro
+    # cases again under new keys, each model's largest budget
+    for model, budgets in {**LM_MODELS, **{VISION_LORA["model"]: VISION_MODELS[VISION_LORA["model"]]}}.items():
+        free_local_models(keep=(local_name(model),))
+        path = fetch_model(model)
+        n, b = short(model), budgets[-1]
+        if model in LM_MODELS:
+            run_case(run, f"lm_gen__{n}__memopro_{b // MIB}__cache", "worker_suite.py",
+                     ["lm_gen", model, "memopro", b, GEN_TOKENS], TIMEOUT_S, {"MP_MODEL_PATH": path})
+        else:
+            run_case(run, f"vis_infer__{n}__memopro_{b // MIB}__cache", "worker_suite.py",
+                     ["vis_infer", model, "memopro", b, VISION_BATCH], TIMEOUT_S,
+                     {"MP_MODEL_PATH": path})
     free_local_models()
     # ---- data programs (CPU), unchanged and under memopro-preload at half their memory
     lib = os.environ.get("MP_PRELOAD_LIB")
@@ -197,6 +210,21 @@ def summarize_suite(run, probe):
           all(ok(m) for m in ms) and ms[0].get("loss_bits") == ms[1].get("loss_bits"),
           f"plain {p.get('status')} {[round(x, 4) for x in p.get('losses') or []]}; memopro "
           f"{[round(x, 4) for x in ms[0].get('losses') or []]}")
+    for model, budgets in {**LM_MODELS, **{VISION_LORA["model"]: VISION_MODELS[VISION_LORA["model"]]}}.items():
+        n, b = short(model), budgets[-1]
+        kind = "lm_gen" if model in LM_MODELS else "vis_infer"
+        p = recs.get(f"{kind}__{n}__plain", {})
+        old = recs.get(f"{kind}__{n}__memopro_{b // MIB}", {})
+        new = recs.get(f"{kind}__{n}__memopro_{b // MIB}__cache", {})
+        same = (new.get("texts") == p.get("texts")) if kind == "lm_gen" else (
+            new.get("output_sha") == p.get("output_sha"))
+        speed = "s_per_token" if kind == "lm_gen" else "second_s"
+        a, z, ref = old.get(speed), new.get(speed), p.get(speed)
+        limit = {"Qwen2.5-7B-Instruct": 2.0}.get(n, 2 * (ref or 0))
+        check(f"S-{n}", "same output as plain; time <= the pre-registered limit (0202)",
+              ok(new) and same and z is not None and z <= limit,
+              f"plain {fmt(ref)}, no cache {fmt(a)}, cache {fmt(z)} (limit {fmt(limit)}); "
+              f"copies {new.get('copy_stats') or '-'}")
     for w in DATA_WORKLOADS:
         n = w.removesuffix(".py")
         p, m = recs.get(f"data__{n}__plain", {}), recs.get(f"data__{n}__preload", {})
