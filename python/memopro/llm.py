@@ -73,7 +73,8 @@ def _hold(m: Any, nbytes: int) -> None:
     from memopro._errors import BudgetExceeded
 
     weights, rt = m.memopro_weights, m.memopro_runtime
-    weights.metal.reap(block=True)  # wrapped weights nobody uses can go
+    if weights.metal is not None:
+        weights.metal.reap(block=True)  # wrapped weights nobody uses can go
     largest = max(b[0].nbytes for b in weights.buffers.values())
     stats = rt.stats()
     budget = stats["budget"]
@@ -94,7 +95,7 @@ class FinetuneResult:
     step_seconds: list[float] = field(default_factory=list)
     seconds: float = 0.0
     tokens: int = 0
-    held_back: int = 0  # bytes of the budget kept for activations (Apple GPUs)
+    held_back: int = 0  # bytes of the budget kept for the step's activations
 
 
 def finetune(
@@ -155,9 +156,9 @@ def finetune(
     opt = torch.optim.AdamW(params, lr=lr)
     result = FinetuneResult(m, adapter)
     gpu = m.device.type == "mps"
-    if gpu:  # the budget covers the whole step: weights plus what the step keeps (0165)
-        result.held_back = int(_FIRST_STEP_MARGIN * _activation_estimate(m.config, seq_len))
-        _hold(m, result.held_back)
+    # the budget covers the whole step: weights plus what the step keeps (0165; CPU 0175)
+    result.held_back = int(_FIRST_STEP_MARGIN * _activation_estimate(m.config, seq_len))
+    _hold(m, result.held_back)
     start = time.perf_counter()
     for _ in range(epochs):
         for piece in pieces:
@@ -168,7 +169,9 @@ def finetune(
                 loss.backward()
             opt.step()
             opt.zero_grad(set_to_none=True)
-            if gpu:  # what the step really kept on the GPU, weights excluded
+            # what the step really kept on the GPU, weights excluded (the CPU has no such count:
+            # there the estimate stays)
+            if gpu:
                 kept = torch.mps.driver_allocated_memory() - m.memopro_weights.metal.held_bytes()
                 if kept > result.held_back:
                     result.held_back = kept

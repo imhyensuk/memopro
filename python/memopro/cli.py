@@ -175,12 +175,14 @@ def _restart_for_macos(args: argparse.Namespace) -> None:
       OS instead of the allocator cache;
     - PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1 on Apple silicon (0080 W1): PyTorch's MPS allocator
       allocates exact sizes instead of reserving 1 GiB heaps. It must be set before torch first
-      uses MPS, hence the restart. A value the user already set is kept.
+      uses MPS, hence the restart. A value the user already set is kept. Streamed MPS models
+      (`memopro.rt.torch.stream_model`) lower it to their own 0.01 (0175).
     """
     import os
 
     from memopro.env import (
         MPS_LOW_WATERMARK,
+        MPS_LOW_WATERMARK_BY_RUN,
         MPS_LOW_WATERMARK_VAR,
         macos_malloc_cache_on,
         mps_heap_reserve_on,
@@ -207,6 +209,8 @@ def _restart_for_macos(args: argparse.Namespace) -> None:
     )
     sys.stdout.flush()
     env = {**os.environ, **changes}
+    if MPS_LOW_WATERMARK_VAR in changes:
+        env[MPS_LOW_WATERMARK_BY_RUN] = MPS_LOW_WATERMARK
     os.execve(sys.executable, [sys.executable, "-m", "memopro", *sys.argv[1:]], env)
 
 

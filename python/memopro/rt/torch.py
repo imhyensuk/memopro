@@ -366,7 +366,7 @@ def _find(regions: dict[str, Any], name: str, prefix: str) -> Any:
 # pass a low watermark (this ratio of the recommended maximum); streamed weights are not its
 # allocations, so with the default ratio long sequences (activations over 10 MiB) took up to
 # 1 GiB more than the budget. 0.01 keeps the 3B LoRA step at seq 512 within budget + 512 MiB at
-# the same speed (0162); a value set by the user is kept.
+# the same speed (0162); a value set by the user is kept, the one `memopro run` set is not (0175).
 MPS_LOW_WATERMARK = "0.01"
 
 
@@ -396,10 +396,13 @@ def stream_model(
     if device == "mps":
         import os
 
+        from memopro.env import MPS_LOW_WATERMARK_BY_RUN, MPS_LOW_WATERMARK_VAR
         from memopro.env._torch import mps_usable
 
         # before torch's MPS allocator starts (later it has no effect): see MPS_LOW_WATERMARK
-        os.environ.setdefault("PYTORCH_MPS_LOW_WATERMARK_RATIO", MPS_LOW_WATERMARK)
+        mine = os.environ.get(MPS_LOW_WATERMARK_VAR)
+        if mine is None or mine == os.environ.get(MPS_LOW_WATERMARK_BY_RUN):
+            os.environ[MPS_LOW_WATERMARK_VAR] = MPS_LOW_WATERMARK
         if not mps_usable():
             raise ModeUnavailable(
                 "memopro.rt.torch.stream_model(device='mps')",

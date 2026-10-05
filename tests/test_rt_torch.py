@@ -354,7 +354,7 @@ def test_one_line_finetune_and_generate(tmp_path):
         path,
         texts,
         tokenizer=tok,
-        budget="9MiB",
+        budget="24MiB",  # about 14 MiB of it for the step: weights still stream
         device="cpu",
         epochs=3,
         seq_len=64,
@@ -362,6 +362,8 @@ def test_one_line_finetune_and_generate(tmp_path):
         targets=("q_proj", "v_proj"),
     )
     assert r.losses[-1] < r.losses[0] and r.tokens > 0
+    assert r.held_back > 0  # the budget covers the step on the CPU too (0175)
+    assert r.model.memopro_runtime.limit < 12 << 20
     assert all(not p.requires_grad for n, p in r.model.named_parameters() if "lora_" not in n)
     r.adapter.save_pretrained(tmp_path / "adapter")
     assert (tmp_path / "adapter" / "adapter_config.json").exists()
