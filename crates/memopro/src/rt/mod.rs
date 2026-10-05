@@ -29,7 +29,7 @@ mod predict;
 mod region;
 mod source;
 
-pub use pager::{Pager, PagerConfig, PagerStats};
+pub use pager::{Pager, PagerConfig, PagerStats, in_pager_thread};
 pub use predict::Prediction;
 pub use region::{Region, page_size, round_to_pages};
 pub use source::SourceFile;

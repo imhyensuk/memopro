@@ -872,6 +872,7 @@ impl RtPager {
             elem,
             compress_level,
             min_saving,
+            process_budget: None,
         };
         let pager = memopro::rt::Pager::new(config).map_err(rt_err)?;
         Ok(RtPager {
@@ -921,6 +922,8 @@ impl RtPager {
         d.set_item("incompressible", s.incompressible)?;
         d.set_item("overruns", s.overruns)?;
         d.set_item("spurious", s.spurious)?;
+        d.set_item("outside_peak", s.outside_peak)?;
+        d.set_item("limit_low", s.limit_low)?;
         d.set_item("written_bytes", 0u64)?;
         Ok(d)
     }

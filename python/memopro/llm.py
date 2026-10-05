@@ -24,8 +24,9 @@ from memopro._errors import InvalidArgument
 
 __all__ = ["FinetuneResult", "finetune", "generate"]
 
-# the first step's room for activations is this many times the estimate, until measured (0165)
-_FIRST_STEP_MARGIN = 1.5
+# the first step's room is this many times the estimate, until measured (0165). Measured over
+# estimate was 1.32-1.37 for Qwen2.5-3B/7B at 512 and 2,048 tokens (E037c, E041; 0187)
+_FIRST_STEP_MARGIN = 1.4
 
 
 def _device(device: str) -> str:
@@ -60,23 +61,28 @@ def _tokenizer(model: Any, tokenizer: Any) -> Any:
 
 def _activation_estimate(config: Any, tokens: int) -> int:
     """Bytes a checkpointed training step keeps outside the weights: every layer's input, one
-    layer recomputed with its gradients, and a few loss chunks (bf16)."""
+    layer recomputed with its gradients (bf16), that layer's float32 attention scores and their
+    gradient (0187: this term is 16x larger at 2,048 tokens than at 512), and a few loss
+    chunks."""
     import memopro.rt.torch as rtt
 
     h, i, layers = config.hidden_size, config.intermediate_size, config.num_hidden_layers
+    scores = 2 * config.num_attention_heads * tokens * tokens * 4
     chunk = min(rtt.LOSS_CHUNK_BYTES, tokens * config.vocab_size * 4)  # float32 logits
-    return 2 * tokens * (layers * h + 4 * (4 * h + 3 * i)) + 4 * chunk
+    return 2 * tokens * (layers * h + 4 * (4 * h + 3 * i)) + scores + 4 * chunk
 
 
 def _generation_estimate(config: Any, tokens: int) -> int:
     """Bytes generation keeps outside the weights for ``tokens`` positions: the key/value cache,
-    one layer's prompt intermediates and the last row's float32 logits (bf16 elsewhere)."""
+    one layer's prompt intermediates with its float32 attention scores, and the last row's
+    float32 logits (bf16 elsewhere)."""
     h, i, layers = config.hidden_size, config.intermediate_size, config.num_hidden_layers
     heads = config.num_attention_heads
     kv = getattr(config, "num_key_value_heads", None) or heads
     head_dim = getattr(config, "head_dim", None) or h // heads
     cache = 2 * layers * kv * head_dim * tokens * 2
-    return cache + 2 * tokens * (4 * h + 3 * i) + 4 * config.vocab_size * 4
+    scores = heads * tokens * tokens * 4
+    return cache + 2 * tokens * (4 * h + 3 * i) + scores + 4 * config.vocab_size * 4
 
 
 def _gpu_kept(m: Any) -> int:
