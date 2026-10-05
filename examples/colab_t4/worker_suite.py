@@ -24,6 +24,14 @@ VISION_CLASSES = {"resnet": "ResNetForImageClassification", "dinov2": "Dinov2Mod
                   "vit": "ViTModel"}
 
 
+def copy_stats(m):
+    """Device copies, cache hits, prefetched weights and the cache size (0201), if streamed."""
+    w = getattr(m, "memopro_weights", None)
+    if w is None or not hasattr(w, "copy_stats"):
+        return None
+    return {**w.copy_stats, "gpu_budget": w.gpu_budget, "gpu_cache_bytes": w.gpu_cache_bytes}
+
+
 def sha(t):
     return hashlib.sha256(t.detach().float().cpu().numpy().tobytes()).hexdigest()[:16]
 
@@ -93,7 +101,8 @@ def lm_gen(model_id, mode, budget, new_tokens):
         sync()
         secs.append(time.time() - t)
     finish(texts=texts, seconds=secs, s_per_token=sum(secs) / (new_tokens * len(PROMPTS)),
-           rt=getattr(getattr(m, "memopro_runtime", None), "stats", lambda: None)())
+           rt=getattr(getattr(m, "memopro_runtime", None), "stats", lambda: None)(),
+           copy_stats=copy_stats(m))
 
 
 def lm_lora(model_id, mode, budget, steps, seq):
@@ -168,7 +177,8 @@ def vis_infer(model_id, mode, budget, batch):
         sync()
     finish(output_sha=sha(y), same_twice=bool(torch.equal(y, y2)), shape=list(y.shape),
            first_s=first, second_s=time.time() - t,
-           rt=getattr(getattr(m, "memopro_runtime", None), "stats", lambda: None)())
+           rt=getattr(getattr(m, "memopro_runtime", None), "stats", lambda: None)(),
+           copy_stats=copy_stats(m))
 
 
 def vis_lora(model_id, mode, budget, steps, batch):
