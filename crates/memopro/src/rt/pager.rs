@@ -36,6 +36,10 @@ pub struct PagerConfig {
     pub compress_level: i32,
     /// Smallest fraction compression must save for a chunk to be evicted.
     pub min_saving: f64,
+    /// Bytes the whole process may occupy (0189): when set, the chunks' limit shrinks by the
+    /// memory the process holds outside the pager (resident set minus the pager's own bytes),
+    /// measured whenever room is made.
+    pub process_budget: Option<u64>,
 }
 
 impl PagerConfig {
@@ -46,6 +50,7 @@ impl PagerConfig {
             elem: 4,
             compress_level: 1,
             min_saving: 0.15,
+            process_budget: None,
         }
     }
 }
@@ -79,13 +84,23 @@ pub struct PagerStats {
     pub overruns: u64,
     /// Faults on chunks already in memory (a write racing an eviction, or a second waiter).
     pub spurious: u64,
+    /// With a process budget: the most memory seen outside the pager, and the lowest limit
+    /// the chunks were held to.
+    pub outside_peak: u64,
+    pub limit_low: u64,
 }
 
 #[cfg(target_os = "linux")]
 mod imp;
 
 #[cfg(target_os = "linux")]
-pub use imp::Pager;
+pub use imp::{Pager, in_pager_thread};
+
+/// Whether the calling thread is a pager's own (always false where there is no pager).
+#[cfg(not(target_os = "linux"))]
+pub fn in_pager_thread() -> bool {
+    false
+}
 
 /// Transparent paging is only built on Linux (userfaultfd).
 #[cfg(not(target_os = "linux"))]

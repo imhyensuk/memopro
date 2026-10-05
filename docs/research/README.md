@@ -215,6 +215,7 @@
 | [0186](0186-e041-results.md) | 2026-10-05 | experiment | E041 결과: **실패**. 생성은 출력 동일·footprint 예산 + 256MiB 안·7B 2GiB 거절 정상이나 스왑 +72/+262MiB. 2,048토큰 학습은 측정 활성값(3B 2,022·7B 3,214MiB)이 추정보다 커 첫 단계 뒤 거절, 빠진 항은 float32 어텐션 점수. 선택지 A(추정 보강 + E041b)/B/C | 확정 |
 | [0187](0187-attention-term.md) | 2026-10-05 | decision + implementation | 사용자 결정 A(E041): 활성값 추정에 float32 어텐션 점수 항(2 × 머리 × T² × 4B), 첫 단계 몫 1.5 → 1.4배(측정 ÷ 추정 1.32~1.37). 들어가지 않는 예산은 시작 전에 거절 | 확정 |
 | [0188](0188-e041b-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E041b: 생성 G3·G7·RG7은 같음, 학습 3B 2,048토큰(3/2.75GiB)·7B 1,024토큰(2.75/2.5GiB, 표본 밖), 7B 2,048토큰 3.75GiB는 시작 전 거절(K5) | 확정 |
+| [0189](0189-transparent-widening-design.md) | 2026-10-05 | decision + design + survey | 사용자 결정 A(E040): `memopro-preload`(Linux `LD_PRELOAD`)가 문턱(4MiB) 이상의 모든 할당을 페이저로, 페이저 한도 = 프로세스 예산 − 페이저 밖 RSS. 선행: ExtMEM(ATC'24, LD_PRELOAD + userfaultfd), libvmmalloc → 새로움 주장 없음. 되읽기 대책은 측정 뒤 | 확정(설계) |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
