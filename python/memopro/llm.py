@@ -24,6 +24,10 @@ from memopro._errors import InvalidArgument
 
 __all__ = ["FinetuneResult", "finetune", "generate"]
 
+# activations a training step may keep without checkpointing (outside the weights' budget, 0154)
+ACTIVATION_ROOM = 512 << 20
+_PROBE_TOKENS = 32
+
 
 def _device(device: str) -> str:
     if device != "auto":
@@ -53,6 +57,26 @@ def _tokenizer(model: Any, tokenizer: Any) -> Any:
     return transformers.AutoTokenizer.from_pretrained(model.config._name_or_path)
 
 
+def _activation_bytes(m: Any, ids: Any) -> float:
+    """GPU memory one training forward pass over ``ids`` keeps for backward (no checkpointing);
+    infinite where it cannot be measured (only MPS is)."""
+    import torch
+
+    import memopro.rt.torch as rtt
+
+    if m.device.type != "mps":
+        return float("inf")
+    torch.mps.synchronize()
+    before = torch.mps.current_allocated_memory()
+    with rtt.saved_weights(m):
+        loss = rtt.causal_lm_loss(m, ids.unsqueeze(0).to(m.device))
+    torch.mps.synchronize()
+    kept = torch.mps.current_allocated_memory() - before
+    del loss
+    m.memopro_weights.finish()
+    return kept
+
+
 @dataclass
 class FinetuneResult:
     model: Any  # the streamed model with LoRA layers, ready for `generate`
@@ -61,6 +85,7 @@ class FinetuneResult:
     step_seconds: list[float] = field(default_factory=list)
     seconds: float = 0.0
     tokens: int = 0
+    checkpointing: bool = True
 
 
 def finetune(
@@ -77,12 +102,16 @@ def finetune(
     alpha: int = 16,
     targets: tuple[str, ...] = ("q_proj", "k_proj", "v_proj", "o_proj"),
     seed: int = 0,
+    checkpointing: bool | None = None,
 ) -> FinetuneResult:
     """LoRA fine-tuning of a causal LM whose 16-bit weights stay in their files.
 
     ``texts`` are joined (end-of-text token between them) and cut into ``seq_len``-token pieces,
     one per step. Only the LoRA weights train (AdamW, float32); the base weights are streamed
-    within ``budget`` and never change."""
+    within ``budget`` and never change. ``checkpointing=None`` turns layer checkpointing on only
+    when a step's activations would exceed ``ACTIVATION_ROOM`` (measured on a short slice on
+    Apple GPUs; always on elsewhere): it re-runs the forward pass, a third pass over the
+    streamed weights."""
     import peft
     import torch
 
@@ -106,15 +135,19 @@ def finetune(
     for p in m.parameters():
         if p.requires_grad:
             p.data = p.data.float()
-    rtt.enable_checkpointing(m)
     m.train()
     eos = tok.eos_token or ""
     ids = tok(eos.join(texts) + eos, return_tensors="pt").input_ids[0]
+    if checkpointing is None:
+        per_token = _activation_bytes(m, ids[:_PROBE_TOKENS]) / min(len(ids), _PROBE_TOKENS)
+        checkpointing = per_token * seq_len > ACTIVATION_ROOM
+    if checkpointing:
+        rtt.enable_checkpointing(m)
     pieces = [ids[i : i + seq_len] for i in range(0, len(ids) - 1, seq_len)]
     pieces = [p for p in pieces if len(p) > 1]
     params = [p for p in m.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(params, lr=lr)
-    result = FinetuneResult(m, adapter)
+    result = FinetuneResult(m, adapter, checkpointing=checkpointing)
     start = time.perf_counter()
     for _ in range(epochs):
         for piece in pieces:

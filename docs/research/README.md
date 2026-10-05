@@ -180,6 +180,8 @@
 | [0151](0151-e034-results.md) | 2026-10-05 | experiment | E034 결과: **S3 충족**, 예측 Q1~Q4 모두 맞음. 1.5B: mlx-tune 118.9 대 memopro 45.4토큰/초(2.6배), footprint 3,632 대 1,411MiB. 3B: mlx-tune은 첫 단계 전 Metal 메모리 부족(보충 실행 최대 footprint 6.46GB), memopro는 1GiB 예산으로 20.0토큰/초·+1,680MiB 완주. 실행기 PATH 결함과 보충 실행 기록 | 확정 |
 | [0152](0152-e033c-results-gate-g4-e4.md) | 2026-10-05 | experiment | E033c 결과: **관문 G4-E4 통과, S2 충족**. X1 4/4 비트 동일(S3도), X2 3.36 → 1.19초/토큰(2.82배), X3 footprint +2,511MiB·스왑 −62MiB(둘째 시도). Chrome 닫힘·KakaoTalk 24MiB. 실행기가 S3 둘째 시도 중 백그라운드 시간 한도로 멈춰 S3만 같은 규칙으로 보충 | 확정 |
 | [0153](0153-release-prep.md) | 2026-10-05 | implementation | S4 배포 준비: PyPI·crates.io `memopro` 이름 비어 있음, 설명을 0148 목표로, `llm` 선택 의존성, 크레이트 README 갱신. 휠(830KB)·sdist 새 venv 설치 시험, `cargo publish --dry-run` 통과. 게시는 사용자 확인 대기(Trusted Publishing 등록, 크레이트 토큰, 환경 승인, 저장소 공개 여부) | 확정 |
+| [0154](0154-g4-e2-speed-build.md) | 2026-10-05 | implementation | G4 E2: 흘려 쓰기 부가 비용의 원인은 버퍼마다 MPS 이벤트 기록(번당 1.25ms, GPU 명령 제출)과 매번 다시 감싸기 → 감싼 버퍼를 남겨 두고 여유 < 한도/4일 때만 이벤트 하나로 울타리. `finetune(checkpointing=None)`은 32토큰 조각으로 활성값을 재 512MiB 이하면 체크포인팅 끔. 개발 측정: 전부 상주 4.12 → 3.22초(PyTorch와 같음), 768MiB 4.90 → 3.25초. 배터리+저전력 모드 발견(측정 27% 느림). bf16→fp32 계산은 이득 없음 | 확정 |
+| [0155](0155-e035-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E035 = G4-E2: 이전 코드(9aa1fe6, worktree)와 새 코드를 같은 기기에서 번갈아 두 번. S1 1.5B 학습 ≥ 1.3배, S3 footprint ≤ 한도 + 1GiB, S4 손실 차이 ≤ 1e-3, S5 3B 생성 ≥ 1.0배·같은 토큰. 3B 학습은 보고만 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
