@@ -439,6 +439,45 @@ def stream_model(
     return model
 
 
+def _padded(forward: Any, pad: int) -> Any:
+    """``forward`` with ``pad`` columns of -inf appended to its logits."""
+    import torch
+
+    def padded(x: Any) -> Any:
+        # torch.cat, not F.pad: torch 2.14's MPS constant pad changed the values (0170)
+        y = forward(x)
+        return torch.cat([y, y.new_full((*y.shape[:-1], pad), -float("inf"))], dim=-1)
+
+    return padded
+
+
+def _vocabulary_padding(name_or_dir: Any, revision: Any, config: Any, target: Any) -> int:
+    """Rows the target's vocabulary has beyond the draft's when both use the same tokenizer
+    (Qwen2.5 pads 7B's to 152,064 and 1.5B's to 151,936, 0170); otherwise InvalidArgument."""
+    import transformers
+
+    try:
+        mine = transformers.AutoTokenizer.from_pretrained(str(name_or_dir), revision=revision)
+        theirs = transformers.AutoTokenizer.from_pretrained(
+            target.config._name_or_path, revision=getattr(target.config, "_commit_hash", None)
+        )
+        vocab = mine.get_vocab()
+        # a real tokenizer covers nearly all of the model's rows (Qwen2.5: 151,665 of 151,936);
+        # a folder without tokenizer files yields a one-token default
+        covers = 0.9 * config.vocab_size <= len(mine) <= config.vocab_size
+        same = covers and vocab == theirs.get_vocab()
+    except Exception:  # noqa: BLE001 - no tokenizer to compare: not shown to be shared
+        same = False
+    extra = target.config.vocab_size - config.vocab_size
+    if extra < 0 or not same:
+        raise InvalidArgument(
+            f"{name_or_dir}: vocabulary {config.vocab_size} differs from the target's "
+            f"{target.config.vocab_size} and the tokenizers differ; a draft must share the "
+            "tokenizer"
+        )
+    return extra
+
+
 def draft_model(
     name_or_dir: str | Path,
     *,
@@ -470,17 +509,19 @@ def draft_model(
     if reason:
         raise ModeUnavailable("memopro.rt.torch.draft_model", reason, ("device='cpu' streaming",))
     config = transformers.AutoConfig.from_pretrained(str(name_or_dir), revision=revision)
+    pad = 0
     if target is not None and getattr(target.config, "vocab_size", None) != config.vocab_size:
-        raise InvalidArgument(
-            f"{name_or_dir}: vocabulary {config.vocab_size} differs from the target's "
-            f"{getattr(target.config, 'vocab_size', None)}; a draft must share the tokenizer"
-        )
+        pad = _vocabulary_padding(name_or_dir, revision, config, target)
     # memory-mapped bf16 on the CPU, converted one layer at a time (0069)
     model = transformers.AutoModelForCausalLM.from_pretrained(
         str(name_or_dir), revision=revision, dtype=torch.bfloat16
     )
     int4pack.convert(model, device)
     model.eval()
+    if pad:  # the target's extra rows are padding: the draft never proposes them
+        head = model.get_output_embeddings()
+        head.forward = _padded(head.forward, pad)
+        model.config.vocab_size += pad
     gc.collect()
     torch.mps.empty_cache()
     seen: set[int] = set()
