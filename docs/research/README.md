@@ -206,6 +206,8 @@
 | [0177](0177-paper-plan.md) | 2026-10-05 | decision (제안) | 논문 계획: 짧은 논문 여럿(학사 논문용). 후보 P1~P8, 추천 P1(8GB에서 7B 16비트 LoRA) + P2(행 불변 검증 무손실 추측 디코딩) + P4(MPS 함정 경험 보고), 여유 시 P3/P6 | 제안 |
 | [0178](0178-roadmap-to-100.md) | 2026-10-05 | decision (제안) | 100%까지의 로드맵: 영역별 측정 가능한 완료 조건(A1~A6, B1~B4, C1~C3, D1~D4, E1~E6)과 여섯 단계(공개 → 범위 → 논문 → 기기·경쟁자 → 범용 런타임 → 속도·1.0). 마지막 약 5%는 외부 사용자·게재·16GB 기기에 달림 | 제안 |
 | [0179](0179-scorecard.md) | 2026-10-05 | assessment | 채점표(조건 충족 ✔/✘만, 미측정은 ✘): I 현재 목표 29/62(46.8%), II 초기 목표 13/20(65%), III SOTA 비교 5/19(26.3%), IV 범용성 9/20(45%), 종합 **45.8%**. SOTA·최대 범용이라 할 근거 없음, 이긴 상대는 OS 페이징과 mlx-tune(메모리)뿐 | 확정 |
+| [0180](0180-e039-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E039: 흘려 쓰는 무손실 추론 비교, 8GB M1 Qwen2.5-3B bf16 — memopro(MP·MS) 대 llama.cpp(bf16 GGUF, CPU·12층·모든 층) 대 AirLLM(`AirLLMBaseModel` mps). S8 최대 RSS, S9 s/token. 개발 확인: llama.cpp는 GPU 설정이 모두 Metal 메모리 부족, AirLLM Mac 기본 경로는 Qwen2 불가 | 확정 |
+| [0181](0181-e040-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E040: pandas(1,600만 행 판매 표)·scikit-learn(희소 TF-IDF SGD)·NumPy 열 확산 시뮬레이션을 고치지 않고 L = 피크/2에서 `memopro run --transparent`(Linux CI). 작업마다 E027의 T1~T3. 페이저는 압축만이라 압축 안 되는 데이터는 실패할 수 있음을 미리 적음 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
