@@ -1,0 +1,31 @@
+{
+ "completed": true,
+ "prompts": [
+  {
+   "returncode": 0,
+   "metal_oom": false,
+   "max_rss": 3470049280,
+   "peak_footprint": 196163392,
+   "prompt_tokens": 38,
+   "load_s": 25.23423,
+   "seconds": 466.37672,
+   "text": null
+  },
+  {
+   "returncode": 0,
+   "metal_oom": false,
+   "max_rss": 2746613760,
+   "peak_footprint": 198096704,
+   "prompt_tokens": 48,
+   "load_s": 24.83732,
+   "seconds": 477.41206,
+   "text": null
+  }
+ ],
+ "max_rss": 3470049280,
+ "peak_footprint": 198096704,
+ "case": "L0",
+ "started": "2026-10-05T18:01:32",
+ "swap_before": 3730372034,
+ "swap_after": 2857893888
+}

@@ -1,0 +1,10 @@
+{
+ "error": "Traceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e039_stream_infer/run.py\", line 322, in <module>\n    main()\n    ~~~~^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e039_stream_infer/run.py\", line 294, in main\n    rec = airllm_case() if a.inner == \"A\" else memopro_case(a.inner)\n          ~~~~~~~~~~~^^\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e039_stream_infer/run.py\", line 101, in airllm_case\n    from airllm.airllm_base import AirLLMBaseModel  # the generic transformers streaming path\n    ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/.cache/airllm-pkgs/airllm/__init__.py\", line 9, in <module>\n    from .airllm_llama_mlx import AirLLMLlamaMlx\n  File \"/Users/imhyeonseok/Desktop/memopro/.cache/airllm-pkgs/airllm/airllm_llama_mlx.py\", line 13, in <module>\n    from sentencepiece import SentencePieceProcessor\nModuleNotFoundError: No module named 'sentencepiece'\n        2.76 real         0.77 user         0.15 sys\n           239648768  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n               16136  page reclaims\n                1774  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                1718  voluntary context switches\n                 898  involuntary context switches\n          6887980848  instructions retired\n          2795897604  cycles elapsed\n           168200320  peak memory footprint\n",
+ "completed": false,
+ "max_rss": 239648768,
+ "peak_footprint": 168200320,
+ "case": "A",
+ "started": "2026-10-05T18:19:13",
+ "swap_before": 3234206842,
+ "swap_after": 3234206842
+}

@@ -1,0 +1,9 @@
+{
+ "budget": 3758096384,
+ "base_footprint": 367938112,
+ "swap_before": 4538761216,
+ "refused": "a 3584 MiB budget cannot hold the largest weight (1039 MiB) and the step's activations (about 3230 MiB); raise the budget or lower seq_len",
+ "swap_after": 5135862333,
+ "case": "T7b",
+ "attempt": 1
+}

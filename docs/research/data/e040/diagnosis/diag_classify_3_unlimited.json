@@ -1,0 +1,16 @@
+{
+ "case": "diag_classify_3_unlimited",
+ "limit": null,
+ "swap": false,
+ "returncode": 0,
+ "wall_seconds": 34.92909351900005,
+ "result": {
+  "coef": "50aeb42249f560e4a08362abe475cb2c789c5aaf508b886f4625ffefd03bb168",
+  "accuracy": 0.9514175,
+  "nnz": 21699438,
+  "seconds": 34.43419086899996,
+  "import_rss_bytes": 49250304,
+  "maxrss_bytes": 1535934464
+ },
+ "stderr_tail": "memopro report:\n  [skipped] elastic - \u03b3 is off by default (experimental): the macOS pressure level marks pressure, not the stalls a user feels (E013a/0088), and Linux PSI rose above 'warning' from the I/O of loading a model, halving budgets so the loading policy stood aside (E021/0093); --elastic turns it on\n  [applied] transparent - budget 1.07 GiB, peak 1.07 GiB; 8139 faults, 5553 chunks compressed (5.42 GiB to 1.22 GiB), 3572 brought back, 0 over budget; nothing written\n"
+}
