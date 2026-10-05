@@ -290,6 +290,10 @@ impl Pager {
         if p == libc::MAP_FAILED {
             return Err(Error::Io(io::Error::last_os_error()));
         }
+        // a transparent huge page fault in a userfaultfd range never reached the pager thread
+        // and the toucher spun (NumPy advises MADV_HUGEPAGE for arrays from malloc; 0191)
+        // SAFETY: advice on the mapping made above.
+        unsafe { libc::madvise(p, size, libc::MADV_NOHUGEPAGE) };
         let mut reg = UffdioRegister {
             range: UffdioRange {
                 start: p as u64,
@@ -370,6 +374,17 @@ impl Pager {
             .regions
             .get(&(addr as usize))
             .map(|r| r.len)
+    }
+
+    /// Whether `addr` lies inside one of this pager's regions.
+    pub fn contains(&self, addr: *const u8) -> bool {
+        let a = addr as usize;
+        self.shared
+            .lock()
+            .regions
+            .range(..=a)
+            .next_back()
+            .is_some_and(|(start, r)| a < start + r.len)
     }
 
     pub fn limit(&self) -> u64 {
