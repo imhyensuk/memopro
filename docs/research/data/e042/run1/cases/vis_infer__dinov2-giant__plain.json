@@ -1,0 +1,49 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "vis_infer",
+  "facebook/dinov2-giant",
+  "plain",
+  "0",
+  "8"
+ ],
+ "kind": "vis_infer",
+ "model": "facebook/dinov2-giant",
+ "mode": "plain",
+ "budget": 0,
+ "load_s": 16.2,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 5568835584,
+  "allocated_bytes": 4545923072,
+  "reserved_bytes": 4722786304,
+  "peak_allocated_bytes": 4545923072,
+  "peak_reserved_bytes": 4722786304,
+  "device_used_bytes": 4832755712,
+  "peak_device_used_bytes": 4832755712
+ },
+ "output_sha": "4998111509c05e8a",
+ "same_twice": true,
+ "shape": [
+  8,
+  1536
+ ],
+ "first_s": 2.101551055908203,
+ "second_s": 1.658010721206665,
+ "rt": null,
+ "worker_s": 26.2,
+ "memory_end": {
+  "host_peak_rss_bytes": 5568835584,
+  "allocated_bytes": 4585572352,
+  "reserved_bytes": 5001707520,
+  "peak_allocated_bytes": 4783474688,
+  "peak_reserved_bytes": 5001707520,
+  "device_used_bytes": 5141037056,
+  "peak_device_used_bytes": 5141037056
+ },
+ "memopro_report": [],
+ "case": "vis_infer__dinov2-giant__plain",
+ "wall_s": 30.3,
+ "timeline_peak_gpu_used_bytes": 5141168128,
+ "timeline_peak_host_used_bytes": 3100966912
+}

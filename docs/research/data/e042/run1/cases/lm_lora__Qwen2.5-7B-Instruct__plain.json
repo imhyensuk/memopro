@@ -1,0 +1,43 @@
+{
+ "status": "error",
+ "device": "cuda",
+ "argv": [
+  "lm_lora",
+  "Qwen/Qwen2.5-7B-Instruct",
+  "plain",
+  "0",
+  "5",
+  "512"
+ ],
+ "kind": "lm_lora",
+ "model": "Qwen/Qwen2.5-7B-Instruct",
+ "mode": "plain",
+ "budget": 0,
+ "load_s": 56.5,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 5568835584,
+  "allocated_bytes": 15276322816,
+  "reserved_bytes": 15411970048,
+  "peak_allocated_bytes": 15276322816,
+  "peak_reserved_bytes": 15411970048,
+  "device_used_bytes": 15538716672,
+  "peak_device_used_bytes": 15538716672
+ },
+ "error": "ImportError: Found an incompatible version of torchao. Found version 0.10.0, but only versions above 0.16.0 are supported",
+ "trace": "Traceback (most recent call last):\n  File \"/content/memopro_colab/worker_common.py\", line 117, in guarded\n    main()\n    ~~~~^^\n  File \"/content/memopro_colab/worker_suite.py\", line 223, in main\n    fn(model_id, mode, int(budget), *map(int, rest))\n    ~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_suite.py\", line 124, in lm_lora\n    m = peft.get_peft_model(m, peft.LoraConfig(r=8, lora_alpha=16,\n                                               target_modules=[\"q_proj\", \"k_proj\", \"v_proj\", \"o_proj\"]))\n  File \"/usr/local/lib/python3.13/dist-packages/peft/mapping_func.py\", line 190, in get_peft_model\n    return PeftModel(\n        model,\n    ...<3 lines>...\n        low_cpu_mem_usage=low_cpu_mem_usage,\n    )\n  File \"/usr/local/lib/python3.13/dist-packages/peft/peft_model.py\", line 177, in __init__\n    self.base_model = cls(model, {adapter_name: peft_config}, adapter_name)\n                      ~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/peft/tuners/tuners_utils.py\", line 344, in __init__\n    self.inject_adapter(self.model, adapter_name, low_cpu_mem_usage=low_cpu_mem_usage, state_dict=state_dict)\n    ~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/peft/tuners/tuners_utils.py\", line 978, in inject_adapter\n    self._create_and_replace(\n    ~~~~~~~~~~~~~~~~~~~~~~~~^\n        peft_config, adapter_name, target, target_name, parent, current_key=key\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/usr/local/lib/python3.13/dist-packages/peft/tuners/lora/model.py\", line 298, in _create_and_replace\n    new_module = self._create_new_module(lora_config, adapter_name, target, device_map=device_map, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/peft/tuners/lora/model.py\", line 447, in _create_new_module\n    new_module = dispatcher(target, adapter_name, config=lora_config, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/peft/tuners/lora/torchao.py\", line 160, in dispatch_torchao\n    if not is_torchao_available():\n           ~~~~~~~~~~~~~~~~~~~~^^\n  File \"/usr/local/lib/python3.13/dist-packages/peft/import_utils.py\", line 153, in is_torchao_available\n    raise ImportError(\n    ...<2 lines>...\n    )\nImportError: Found an incompatible version of torchao. Found version 0.10.0, but only versions above 0.16.0 are supported\n",
+ "worker_s": 76.4,
+ "memory_end": {
+  "host_peak_rss_bytes": 5568835584,
+  "allocated_bytes": 15276322816,
+  "reserved_bytes": 15411970048,
+  "peak_allocated_bytes": 15276322816,
+  "peak_reserved_bytes": 15411970048,
+  "device_used_bytes": 15538716672,
+  "peak_device_used_bytes": 15538716672
+ },
+ "memopro_report": [],
+ "case": "lm_lora__Qwen2.5-7B-Instruct__plain",
+ "wall_s": 84.0,
+ "timeline_peak_gpu_used_bytes": 15538847744,
+ "timeline_peak_host_used_bytes": 3736821760
+}

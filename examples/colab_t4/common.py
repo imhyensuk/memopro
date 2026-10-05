@@ -154,7 +154,18 @@ def install_extras():
             missing.append(name)
     if missing:
         _pip(*missing)
-    return {"installed": missing}
+    removed = []
+    try:  # Colab ships torchao 0.10, which peft >= 0.21 refuses when it adds any LoRA layer (0200)
+        from importlib.metadata import version  # noqa: PLC0415
+
+        major, minor = (int(x) for x in version("torchao").split(".")[:2])
+        if (major, minor) < (0, 16):
+            subprocess.run([sys.executable, "-m", "pip", "uninstall", "-y", "-q", "torchao"],
+                           capture_output=True, check=False)
+            removed.append(f"torchao {major}.{minor}")
+    except Exception:  # noqa: BLE001 - not installed, or an unusual version string
+        pass
+    return {"installed": missing, "removed": removed}
 
 
 def environment(install_info):
@@ -243,8 +254,8 @@ class Run:
         if not os.path.exists(p):
             return None
         rec = json.load(open(p))
-        if RETRY_FAILED and rec.get("status") in ("crashed", "timeout"):
-            return None  # try a crashed or timed-out case again on resume
+        if RETRY_FAILED and rec.get("status") in ("crashed", "timeout", "error"):
+            return None  # try a crashed, timed-out or failed case again on resume (0200)
         return rec
 
     def save(self, key, rec):

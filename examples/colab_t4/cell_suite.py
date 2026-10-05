@@ -97,6 +97,10 @@ def suite_body():
     probe = preload_probe(run, lib)
     for w in DATA_WORKLOADS:
         n = w.removesuffix(".py")
+        for mode in ("plain", "preload"):  # measured before VmHWM (0199): measure again
+            old = run.done(f"data__{n}__{mode}")
+            if old is not None and "maxrss_rusage_bytes" not in (old.get("result") or {}):
+                os.remove(run.path("cases", f"data__{n}__{mode}.json"))
         plain = run_case(run, f"data__{n}__plain", "worker_data.py", [w], TIMEOUT_S,
                          {"MP_DEVICE": "cpu"})
         peak = ((plain.get("result") or {}).get("maxrss_bytes")) or 0
