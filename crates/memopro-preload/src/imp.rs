@@ -45,6 +45,7 @@ static PAGE: AtomicUsize = AtomicUsize::new(0);
 static REPORT: AtomicPtr<c_char> = AtomicPtr::new(std::ptr::null_mut());
 static PAGED: AtomicU64 = AtomicU64::new(0);
 static PAGED_BYTES: AtomicU64 = AtomicU64::new(0);
+static STARTED: std::sync::OnceLock<std::time::Instant> = std::sync::OnceLock::new();
 
 thread_local! {
     /// Inside our own work (setting up, a pager call, the lookups): allocate from the system.
@@ -269,6 +270,18 @@ fn pager() -> Option<&'static Pager> {
             PAGER.store(Box::into_raw(Box::new(p)), Ordering::Release);
             // SAFETY: registering a plain function to run at exit.
             unsafe { libc::atexit(report) };
+            let _ = STARTED.set(std::time::Instant::now());
+            // a run killed at a time limit leaves no exit report: rewrite it every few seconds
+            if let Some(every) = env_u64(b"MEMOPRO_PRELOAD_REPORT_EVERY\0").filter(|s| *s > 0) {
+                let _ = std::thread::Builder::new()
+                    .name("memopro-report".into())
+                    .spawn(move || {
+                        loop {
+                            std::thread::sleep(std::time::Duration::from_secs(every));
+                            report();
+                        }
+                    });
+            }
             STATE.store(READY, Ordering::Release);
             // SAFETY: just published.
             Some(unsafe { &*PAGER.load(Ordering::Acquire) })
@@ -327,7 +340,7 @@ extern "C" fn report() {
          \"outside_peak\": {}, \"faults\": {}, \"zero_fills\": {}, \"restores\": {}, \
          \"restore_seconds\": {}, \"evictions\": {}, \"compress_in\": {}, \"compress_out\": {}, \
          \"compress_seconds\": {}, \"incompressible\": {}, \"overruns\": {}, \"spurious\": {}, \
-         \"paged_allocations\": {}, \"paged_bytes\": {}, \"threshold\": {}}}\n",
+         \"paged_allocations\": {}, \"paged_bytes\": {}, \"threshold\": {}, \"seconds\": {}}}\n",
         s.budget,
         s.limit,
         s.limit_low,
@@ -347,6 +360,7 @@ extern "C" fn report() {
         PAGED.load(Ordering::Relaxed),
         PAGED_BYTES.load(Ordering::Relaxed),
         THRESHOLD.load(Ordering::Relaxed),
+        STARTED.get().map_or(0.0, |t| t.elapsed().as_secs_f64()),
     );
     // SAFETY: getenv's string, still valid at exit.
     if let Ok(p) = unsafe { std::ffi::CStr::from_ptr(path) }.to_str() {
