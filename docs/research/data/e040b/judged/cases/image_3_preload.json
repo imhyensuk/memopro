@@ -1,0 +1,19 @@
+{
+ "case": "image_3_preload",
+ "limit": 826277888,
+ "swap": false,
+ "returncode": 0,
+ "wall_seconds": 21.348740786999997,
+ "result": {
+  "images": 2048,
+  "means_sha256": "9fa1a56a76da24e6462edc34024a2605248b9bc8652529cca5bd29945e89e5d2",
+  "counts_sha256": "fc7c091ef96ec55850f923c49a19cffe7346da5955f7bc57262955f75e680038",
+  "total": 478153025805,
+  "max": 1802,
+  "stack_sha256": "c7d6d44d86eb75183f05281e57c0d485eb15bfe147cd2a95f86368a332034985",
+  "build_seconds": 5.228859969000013,
+  "seconds": 21.161257567000007,
+  "maxrss_bytes": 760774656
+ },
+ "stderr_tail": ""
+}
