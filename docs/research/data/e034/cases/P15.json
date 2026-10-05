@@ -1,0 +1,102 @@
+{
+ "iters": [
+  {
+   "iter": 1,
+   "loss": 2.8019495010375977,
+   "tok_s": 31.555169308272696
+  },
+  {
+   "iter": 2,
+   "loss": 3.915489673614502,
+   "tok_s": 44.35640278436233
+  },
+  {
+   "iter": 3,
+   "loss": 3.348799228668213,
+   "tok_s": 46.34476684577957
+  },
+  {
+   "iter": 4,
+   "loss": 3.553407669067383,
+   "tok_s": 48.035550024483605
+  },
+  {
+   "iter": 5,
+   "loss": 3.6313977241516113,
+   "tok_s": 45.49974993716989
+  },
+  {
+   "iter": 6,
+   "loss": 3.5670528411865234,
+   "tok_s": 45.43482846819862
+  },
+  {
+   "iter": 7,
+   "loss": 3.456481695175171,
+   "tok_s": 46.41919538117222
+  },
+  {
+   "iter": 8,
+   "loss": 3.8751020431518555,
+   "tok_s": 40.689777421581724
+  },
+  {
+   "iter": 9,
+   "loss": 3.8524010181427,
+   "tok_s": 45.43658815599658
+  },
+  {
+   "iter": 10,
+   "loss": 3.929349184036255,
+   "tok_s": 46.06914979391907
+  }
+ ],
+ "train_s": 29.73371900001075,
+ "base_footprint": 15123520,
+ "peak_footprint": 1494652032,
+ "rt": {
+  "budget": 805306368,
+  "reserve": 4210688,
+  "used": 800505856,
+  "peak_used": 801095680,
+  "buffers": 338,
+  "resident_bytes": 800505856,
+  "compressed_bytes": 0,
+  "pinned_bytes": 93618176,
+  "loads": 338,
+  "load_bytes": 3087428608,
+  "rereads": 8281,
+  "reread_bytes": 62250719744,
+  "read_seconds": 22.10403732899996,
+  "drops": 8500,
+  "drop_bytes": 64597180416,
+  "compressions": 0,
+  "compress_in": 0,
+  "compress_out": 0,
+  "compress_seconds": 0.0,
+  "decompressions": 0,
+  "decompress_bytes": 0,
+  "decompress_seconds": 0.0,
+  "incompressible": 0,
+  "evictions": 8500,
+  "refusals": 0,
+  "restore_seconds": 16.06173625299956,
+  "pins": 6969,
+  "recomputes": 0,
+  "recompute_bytes": 0,
+  "recompute_seconds": 0.0,
+  "prefetches": 6805,
+  "prefetch_bytes": 42316944384,
+  "prefetch_hits": 4730,
+  "prefetch_wasted": 2048,
+  "prefetch_skipped": 1825,
+  "written_bytes": 0
+ },
+ "limit": 801095680,
+ "case": "P15",
+ "tool": "memopro",
+ "model": "q15",
+ "wall_s": 35.47851650003577,
+ "swap_before": 1813711421,
+ "swap_after": 1796934205
+}

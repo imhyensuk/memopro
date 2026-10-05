@@ -4,6 +4,22 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Added: one-line fine-tuning and generation (G4 E8, 0149)
+- `memopro.finetune(model, texts, budget=...)`: 16-bit LoRA (through PEFT) on a model whose
+  weights stream from their files; returns the model, the PEFT adapter (`save_pretrained`),
+  losses and timing.
+- `memopro.generate(model, prompt, draft=...)`: greedy text, the same as plain generation, faster
+  with a resident int4 draft on Apple GPUs.
+- `memopro.rt.torch.generate`: assisted generation that returns exactly plain greedy output
+  (rows after the prompt are computed one at a time, as plain generation does; 0142).
+
+### Added: faster lossless generation with a resident int4 draft (G4 E4, 0139)
+- `memopro.rt.torch.draft_model(name, target=model)`: an int4 copy of a model with the same
+  vocabulary, kept on the Apple GPU (torch's int4 kernel), to pass as
+  `generate(..., assistant_model=draft)` to a streamed model. Greedy output stays the streamed
+  model's own; each pass over the streamed weights can now yield several tokens. The draft's
+  size (`memopro_draft_bytes`) is device memory outside the streaming budget.
+
 ### Added: 16-bit training on the Apple GPU with weights streamed from their files (G4, 0130-0138)
 - `memopro.rt.torch.stream_model(..., device="mps")`: runtime memory is handed to the GPU
   without copying (one no-copy Metal buffer per runtime buffer, views for every use); it is

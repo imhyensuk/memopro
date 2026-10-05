@@ -224,6 +224,15 @@ def _cached_files(name: str, revision: str | None) -> list[Path]:
     return [Path(p) for p in paths] if all(isinstance(p, str) for p in paths) else []
 
 
+def local_safetensors(name_or_dir: Any, revision: str | None = None) -> list[Path]:
+    """The safetensors files of a local folder, or of a hub model already in the local cache
+    (empty if none; nothing is downloaded)."""
+    path = Path(str(name_or_dir)).expanduser()
+    if path.is_dir():
+        return sorted(path.glob("*.safetensors"))
+    return _cached_files(str(name_or_dir), revision)
+
+
 def _from_hub(name: str, revision: str | None) -> tuple[TensorInfo, ...]:
     try:
         from huggingface_hub import get_safetensors_metadata

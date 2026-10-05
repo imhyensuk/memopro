@@ -20,6 +20,20 @@ On the CPU the weights are used where they are, in the runtime's memory. On Appl
 buffer per pinned weight, unified memory); a weight stays pinned until the GPU has finished with
 it (an MPS event recorded after torch let go of it), so the runtime never moves memory the GPU
 still reads.
+
+Faster lossless generation (G4 E4): a small int4 copy of a model with the same vocabulary stays
+in memory and proposes tokens; the streamed model checks several of them in one pass over its
+weights (Hugging Face assisted generation, greedy: every token kept is the streamed model's own
+choice).
+
+    draft = memopro.rt.torch.draft_model("Qwen/Qwen2.5-1.5B-Instruct", target=model)
+    out = memopro.rt.torch.generate(model, input_ids, draft=draft, max_new_tokens=64)
+
+``generate`` returns exactly the tokens of ``model.generate(input_ids, do_sample=False)``: a GPU
+computes a row of a matrix product with slightly different rounding depending on how many rows
+it gets, so checking several proposed tokens at once could break a near-tie differently
+(0141). It therefore computes every row after the prompt alone, as plain generation does, with
+each layer's weights pinned once for all of them (0142).
 """
 
 from __future__ import annotations
@@ -36,7 +50,9 @@ from memopro.rt import Runtime
 __all__ = [
     "StreamedWeights",
     "causal_lm_loss",
+    "draft_model",
     "enable_checkpointing",
+    "generate",
     "saved_weights",
     "stream_model",
 ]
@@ -57,13 +73,9 @@ _RT_DTYPE = {
 
 
 def _files(name_or_dir: str | Path, revision: str | None) -> list[Path]:
-    path = Path(name_or_dir).expanduser()
-    if path.is_dir():
-        files = sorted(path.glob("*.safetensors"))
-    else:
-        from memopro.access._info import _cached_files
+    from memopro.access._info import local_safetensors
 
-        files = _cached_files(str(name_or_dir), revision)
+    files = local_safetensors(name_or_dir, revision)
     if not files:
         raise ModeUnavailable(
             "memopro.rt.torch.stream_model",
@@ -114,11 +126,7 @@ class _MetalPins:
 
     def tensor(self, buf: Any, dtype: Any, numel: int) -> Any:
         """A 1-D MPS tensor of ``numel`` elements over the buffer's pinned bytes (a view)."""
-        import ctypes
-
-        import torch
-
-        from memopro.residency import _Device, _DType, _Managed
+        from memopro.residency import metal_tensor
 
         self.reap()
         record = self.shared.get(buf.id)
@@ -126,18 +134,8 @@ class _MetalPins:
             pin = self.pin(buf)
             length = -(-pin.nbytes // self.page) * self.page
             mtl = self.core.metal_wrap(pin.address, length)
-            shape = (ctypes.c_int64 * 1)(pin.nbytes)
-            managed = _Managed()
-            managed.dl_tensor.data = mtl
-            managed.dl_tensor.device = _Device(8, 0)  # kDLMetal
-            managed.dl_tensor.ndim = 1
-            managed.dl_tensor.dtype = _DType(1, 8, 1)  # uint8
-            managed.dl_tensor.shape = shape
-            new = ctypes.pythonapi.PyCapsule_New
-            new.restype = ctypes.py_object
-            new.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
-            base = torch.utils.dlpack.from_dlpack(new(ctypes.addressof(managed), b"dltensor", None))
-            record = {"pin": pin, "mtl": mtl, "base": base, "keep": (managed, shape), "gen": 0}
+            base, keep = metal_tensor(mtl, pin.nbytes)
+            record = {"pin": pin, "mtl": mtl, "base": base, "keep": keep, "gen": 0}
             self.shared[buf.id] = record
         record["gen"] += 1
         return record["base"].view(dtype)[:numel]
@@ -412,6 +410,196 @@ def stream_model(
         {"device": property(lambda self: where)},
     )
     return model
+
+
+def draft_model(
+    name_or_dir: str | Path,
+    *,
+    target: Any = None,
+    device: str = "mps",
+    revision: str | None = None,
+) -> Any:
+    """An int4 copy of a Hugging Face model that stays in device memory, to propose tokens for
+    ``target`` (a streamed model) through ``generate(assistant_model=...)`` (G4 E4, 0139).
+
+    Linear layers become torch's int4 kernel layers (``int4pack``, group 32); embeddings, norms
+    and the output head stay in bfloat16. Its size in bytes is ``memopro_draft_bytes``; it is
+    device memory outside the streamed model's budget. The draft never changes what greedy
+    generation returns, only how many passes over the streamed weights it takes."""
+    import gc
+
+    import torch
+    import transformers
+
+    from memopro.techniques.integrations import int4pack
+
+    if device != "mps":
+        raise ModeUnavailable(
+            "memopro.rt.torch.draft_model",
+            f"int4 drafts use torch's int4 kernel on Apple GPUs; not on {device!r}",
+            ("pass a smaller model loaded normally as assistant_model",),
+        )
+    reason = int4pack.works(device)
+    if reason:
+        raise ModeUnavailable("memopro.rt.torch.draft_model", reason, ("device='cpu' streaming",))
+    config = transformers.AutoConfig.from_pretrained(str(name_or_dir), revision=revision)
+    if target is not None and getattr(target.config, "vocab_size", None) != config.vocab_size:
+        raise InvalidArgument(
+            f"{name_or_dir}: vocabulary {config.vocab_size} differs from the target's "
+            f"{getattr(target.config, 'vocab_size', None)}; a draft must share the tokenizer"
+        )
+    # memory-mapped bf16 on the CPU, converted one layer at a time (0069)
+    model = transformers.AutoModelForCausalLM.from_pretrained(
+        str(name_or_dir), revision=revision, dtype=torch.bfloat16
+    )
+    int4pack.convert(model, device)
+    model.eval()
+    gc.collect()
+    torch.mps.empty_cache()
+    seen: set[int] = set()
+    size = 0
+    for t in [*model.parameters(), *model.buffers()]:
+        key = t.untyped_storage().data_ptr()
+        if key not in seen:
+            seen.add(key)
+            size += t.untyped_storage().nbytes()
+    model.memopro_draft_bytes = size
+    return model
+
+
+def _rows(t: Any, start: int, stop: int) -> Any:
+    return None if t is None else t[:, start:stop]
+
+
+@contextlib.contextmanager
+def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
+    """Inside this block, rows at positions >= ``prompt`` go through the decoder layers, the
+    final norm and the output head one at a time, exactly as in plain generation; earlier rows
+    keep the block shape of the prompt's own pass (0142)."""
+    import torch
+
+    base = getattr(model, getattr(model, "base_model_prefix", ""), None)
+    layers = getattr(base, "layers", None)
+    norm, head = getattr(base, "norm", None), model.get_output_embeddings()
+    if layers is None or norm is None or head is None:
+        raise ModeUnavailable(
+            "memopro.rt.torch.generate",
+            f"{type(model).__name__}: no decoder layers/norm/output head where Llama-like "
+            "models keep them",
+            ("model.generate(..., assistant_model=draft) (outputs may differ at near-ties)",),
+        )
+    weights = model.memopro_weights
+    state = {"before": 0}
+
+    def hold(module: Any) -> list[Any]:
+        """Pin the weights under ``module`` once for all rows (the tensors keep them pinned;
+        each leaf's own hooks then reuse the pinned memory)."""
+        return [
+            weights._tensor(id(p))
+            for m in module.modules()
+            if m in weights._own
+            for _, p in weights._own[m]
+        ]
+
+    def layer_forward(layer: Any, original: Any) -> Any:
+        def forward(hidden: Any, *args: Any, **kw: Any) -> Any:
+            cache = kw.get("past_key_values")
+            q = hidden.shape[1]
+            if args or cache is None or q == 1:
+                return original(hidden, *args, **kw)
+            before = cache.get_seq_length(layer.self_attn.layer_idx)
+            if layer is layers[0]:
+                state["before"] = before
+            block = max(0, min(q, prompt - before))
+            if block == q:
+                return original(hidden, **kw)
+            mask, pos, emb = (
+                kw.get("attention_mask"),
+                kw.get("position_ids"),
+                kw.get("position_embeddings"),
+            )
+            held = hold(layer)
+            try:
+                outs = []
+                if block:
+                    part = dict(kw)
+                    if mask is not None:
+                        part["attention_mask"] = mask[..., :block, : before + block]
+                    part["position_ids"] = _rows(pos, 0, block)
+                    if emb is not None:
+                        part["position_embeddings"] = tuple(_rows(e, 0, block) for e in emb)
+                    outs.append(original(hidden[:, :block], **part))
+                for i in range(block, q):
+                    one = dict(kw)
+                    one["attention_mask"] = None  # one row sees every cached key
+                    one["position_ids"] = _rows(pos, i, i + 1)
+                    if emb is not None:
+                        one["position_embeddings"] = tuple(_rows(e, i, i + 1) for e in emb)
+                    outs.append(original(hidden[:, i : i + 1], **one))
+            finally:
+                del held
+            return torch.cat(outs, dim=1)
+
+        return forward
+
+    def norm_forward(original: Any) -> Any:
+        def forward(hidden: Any) -> Any:
+            q = hidden.shape[1]
+            block = max(0, min(q, prompt - state["before"]))
+            if q == 1 or block == q:
+                return original(hidden)
+            parts = [original(hidden[:, :block])] if block else []
+            parts += [original(hidden[:, i : i + 1]) for i in range(block, q)]
+            return torch.cat(parts, dim=1)
+
+        return forward
+
+    def head_forward(original: Any) -> Any:
+        def forward(hidden: Any) -> Any:
+            if hidden.dim() < 3 or hidden.shape[1] == 1:
+                return original(hidden)
+            held = hold(head)
+            try:
+                return torch.cat(
+                    [original(hidden[:, i : i + 1]) for i in range(hidden.shape[1])], dim=1
+                )
+            finally:
+                del held
+
+        return forward
+
+    patched = [(layer, layer_forward(layer, layer.forward)) for layer in layers]
+    patched += [(norm, norm_forward(norm.forward)), (head, head_forward(head.forward))]
+    for module, forward in patched:
+        module.forward = forward
+    try:
+        yield
+    finally:
+        for module, _ in patched:
+            del module.forward
+
+
+def generate(model: Any, input_ids: Any, *, draft: Any = None, **kwargs: Any) -> Any:
+    """Greedy generation from a streamed model, with an optional resident ``draft``
+    (:func:`draft_model`) proposing tokens: returns exactly what
+    ``model.generate(input_ids, do_sample=False, **kwargs)`` returns, in fewer passes over the
+    streamed weights (G4 E4, 0142). One sequence at a time, no padding."""
+    import torch
+
+    if not hasattr(model, "memopro_weights"):
+        raise InvalidArgument("generate needs a model from memopro.rt.torch.stream_model")
+    if kwargs.get("do_sample"):
+        raise InvalidArgument("generate is greedy: sampling would not reproduce plain outputs")
+    if input_ids.dim() != 2 or input_ids.shape[0] != 1:
+        raise InvalidArgument("generate takes one sequence: input_ids of shape [1, length]")
+    mask = kwargs.get("attention_mask")
+    if mask is not None and not bool(mask.all()):
+        raise InvalidArgument("generate takes no padding (an attention_mask of all ones)")
+    kwargs["do_sample"] = False
+    if draft is not None:
+        kwargs["assistant_model"] = draft
+    with torch.no_grad(), _row_invariant(model, input_ids.shape[1]):
+        return model.generate(input_ids=input_ids, **kwargs)
 
 
 @contextlib.contextmanager

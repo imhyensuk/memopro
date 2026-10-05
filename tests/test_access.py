@@ -3,6 +3,7 @@ train_session. Tiny models on CPU; the device is pinned so results do not depend
 
 import copy
 import dataclasses
+import functools
 import json
 import math
 import os
@@ -18,6 +19,8 @@ from memopro.orchestrator.budget import compute_budget
 
 transformers = pytest.importorskip("transformers")
 
+import helpers
+
 
 @pytest.fixture(autouse=True)
 def isolated(monkeypatch):
@@ -30,20 +33,7 @@ def isolated(monkeypatch):
     reset_config()
 
 
-def gpt2(**overrides):
-    torch.manual_seed(0)
-    config = transformers.GPT2Config(
-        n_layer=2,
-        n_embd=64,
-        n_head=2,
-        vocab_size=500,
-        n_positions=64,
-        attn_pdrop=0.0,
-        resid_pdrop=0.0,
-        embd_pdrop=0.0,
-        **overrides,
-    )
-    return transformers.GPT2LMHeadModel(config)
+gpt2 = functools.partial(helpers.gpt2, dropout=False)
 
 
 @pytest.fixture(scope="module")

@@ -75,11 +75,31 @@ class _Managed(ctypes.Structure):
     ]
 
 
+def metal_tensor(buffer: int, nbytes: int) -> tuple[Any, Any]:
+    """A 1-D uint8 MPS tensor over ``nbytes`` of the ``id<MTLBuffer>`` ``buffer`` (no copy),
+    and the DLPack structures that must outlive it. The caller owns the buffer; torch never
+    frees it (no deleter). Import each buffer once: two torch tensors over one buffer crash
+    MPS (0136)."""
+    import torch
+
+    shape = (ctypes.c_int64 * 1)(nbytes)
+    managed = _Managed()
+    managed.dl_tensor.data = buffer
+    managed.dl_tensor.device = _Device(8, 0)  # kDLMetal, as torch exports MPS tensors
+    managed.dl_tensor.ndim = 1
+    managed.dl_tensor.dtype = _DType(1, 8, 1)  # uint8
+    managed.dl_tensor.shape = shape
+    new = ctypes.pythonapi.PyCapsule_New
+    new.restype = ctypes.py_object
+    new.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
+    tensor = torch.utils.dlpack.from_dlpack(new(ctypes.addressof(managed), b"dltensor", None))
+    return tensor, (managed, shape)
+
+
 class Mapping:
     """One file mapped read-only and seen by torch as a uint8 MPS tensor (no copy)."""
 
     def __init__(self, path: str) -> None:
-        import torch
 
         from memopro import _core
 
@@ -91,21 +111,8 @@ class Mapping:
             buffer = self.map.metal_buffer()
         except (NotImplementedError, OSError, RuntimeError) as e:
             raise _unavailable(f"no Metal buffer over the file: {e}") from None
-        shape = (ctypes.c_int64 * 1)(self.map.length)
-        managed = _Managed()
-        managed.dl_tensor.data = buffer
-        managed.dl_tensor.device = _Device(8, 0)  # kDLMetal, as torch exports MPS tensors
-        managed.dl_tensor.ndim = 1
-        managed.dl_tensor.dtype = _DType(1, 8, 1)  # uint8
-        managed.dl_tensor.shape = shape
-        # the struct must outlive the capsule's use; the mapping owns the buffer
-        self._keep = (managed, shape)
-        new = ctypes.pythonapi.PyCapsule_New
-        new.restype = ctypes.py_object
-        new.argtypes = [ctypes.c_void_p, ctypes.c_char_p, ctypes.c_void_p]
-        self.bytes = torch.utils.dlpack.from_dlpack(
-            new(ctypes.addressof(managed), b"dltensor", None)
-        )
+        # the mapping owns the buffer
+        self.bytes, self._keep = metal_tensor(buffer, self.map.length)
 
     def tensor(self, offset: int, nbytes: int, dtype: Any, shape: tuple[int, ...]) -> Any:
         return self.bytes[offset : offset + nbytes].view(dtype).reshape(shape)
@@ -160,20 +167,16 @@ def _finish(model: Any, keep: list[Mapping]) -> Any:
 
 # ---------------------------------------------------------------- stored: the original files
 def _safetensors_files(model_id: Any, revision: str | None) -> list[str]:
-    path = Path(str(model_id)).expanduser()
-    if path.is_dir():
-        files = sorted(glob.glob(str(path / "*.safetensors")))
-    else:
-        from memopro.access._info import _cached_files
+    from memopro.access._info import local_safetensors
 
-        files = [str(p) for p in _cached_files(str(model_id), revision)]
-        if not files:
-            from huggingface_hub import snapshot_download
+    files = [str(p) for p in local_safetensors(model_id, revision)]
+    if not files and not Path(str(model_id)).expanduser().is_dir():
+        from huggingface_hub import snapshot_download
 
-            root = snapshot_download(
-                str(model_id), revision=revision, allow_patterns=["*.safetensors", "*.json"]
-            )
-            files = sorted(glob.glob(str(Path(root) / "*.safetensors")))
+        root = snapshot_download(
+            str(model_id), revision=revision, allow_patterns=["*.safetensors", "*.json"]
+        )
+        files = sorted(glob.glob(str(Path(root) / "*.safetensors")))
     if not files:
         raise _unavailable(f"{model_id} has no safetensors files to map")
     return files

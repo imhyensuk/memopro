@@ -249,3 +249,126 @@ def test_loss_chunks_keep_float32_logits_under_the_mps_heap_threshold(tiny_gpt2,
 def test_checkpointing_needs_a_streamed_model():
     with pytest.raises(memopro.InvalidArgument):
         rtt.enable_checkpointing(torch.nn.Linear(2, 2))
+
+
+def _tiny_qwen(path, seed, vocab=8000):
+    """A small Qwen2 in bfloat16 (about 12 MB, tied embeddings) whose layers int4 can take."""
+    torch.manual_seed(seed)
+    cfg = transformers.Qwen2Config(
+        hidden_size=256,
+        intermediate_size=1024,
+        num_hidden_layers=4,
+        num_attention_heads=4,
+        num_key_value_heads=2,
+        vocab_size=vocab,
+        max_position_embeddings=256,
+        tie_word_embeddings=True,
+    )
+    model = transformers.Qwen2ForCausalLM(cfg).to(torch.bfloat16)
+    model.save_pretrained(path, safe_serialization=True)
+    return path
+
+
+@pytest.mark.parametrize("device", ["cpu", "mps"])
+def test_rows_after_the_prompt_are_computed_as_in_plain_generation(tmp_path, device):
+    """0142: inside `_row_invariant`, a pass over several new rows (a verification) gives the
+    same logits, bit for bit, as feeding those rows one at a time, and the prompt keeps its
+    block shape (the same logits as the prompt's own pass)."""
+    from memopro.env._torch import mps_usable
+
+    if device == "mps" and not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    m = rtt.stream_model(_tiny_qwen(tmp_path / "t", 0), budget="9MiB", device=device)
+    g = torch.Generator().manual_seed(6)
+    prompt = torch.randint(0, 8000, (1, 10), generator=g).to(device)
+    new = torch.randint(0, 8000, (1, 6), generator=g).to(device)
+    with torch.no_grad():
+        out = m(input_ids=prompt, use_cache=True)
+        first, cache = out.logits[:, -1], out.past_key_values
+        singles = []
+        for i in range(new.shape[1]):
+            out = m(input_ids=new[:, i : i + 1], past_key_values=cache, use_cache=True)
+            singles.append(out.logits[:, -1])
+            cache = out.past_key_values
+        with rtt._row_invariant(m, prompt.shape[1]):
+            both = m(input_ids=torch.cat([prompt, new], 1), use_cache=True).logits
+            out = m(input_ids=prompt, use_cache=True)
+            later = m(input_ids=new, past_key_values=out.past_key_values, use_cache=True).logits
+    assert torch.equal(both[:, prompt.shape[1] - 1], first)
+    for i, one in enumerate(singles):
+        assert torch.equal(both[:, prompt.shape[1] + i], one)
+        assert torch.equal(later[:, i], one)
+    assert m.memopro_weights.pinned == {} or device == "mps"
+    m.memopro_weights.finish()
+    assert m.memopro_runtime.stats()["pinned_bytes"] == 0
+
+
+def test_int4_draft_keeps_greedy_generation_of_the_streamed_model(tmp_path):
+    """G4 E4 (0139, 0142): with a resident int4 draft, `generate` returns exactly what the
+    streamed model's plain greedy `generate` returns (the draft only proposes)."""
+    from memopro.env._torch import mps_usable
+
+    if not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    pytest.importorskip("torchao")
+    target = _tiny_qwen(tmp_path / "target", 0)
+    m = rtt.stream_model(target, budget="9MiB", device="mps")
+    ids = torch.randint(0, 8000, (1, 12), generator=torch.Generator().manual_seed(3)).to("mps")
+    kw = {"max_new_tokens": 24, "pad_token_id": 0}
+    with torch.no_grad():
+        plain = m.generate(input_ids=ids, do_sample=False, **kw)
+    assert torch.equal(rtt.generate(m, ids, **kw), plain)
+    for draft_path in (target, _tiny_qwen(tmp_path / "other", 1)):
+        draft = rtt.draft_model(draft_path, target=m)
+        assert draft.memopro_draft_bytes > 0
+        assert any(type(x).__name__ == "Int4PackedLinear" for x in draft.modules())
+        assert torch.equal(rtt.generate(m, ids, draft=draft, **kw), plain)
+    m.memopro_weights.finish()
+    assert m.memopro_runtime.stats()["peak_used"] <= m.memopro_runtime.limit
+    with pytest.raises(memopro.InvalidArgument):
+        rtt.draft_model(_tiny_qwen(tmp_path / "vocab", 2, vocab=3000), target=m)
+    with pytest.raises(memopro.InvalidArgument):
+        rtt.generate(m, ids, do_sample=True)
+    with pytest.raises(memopro.InvalidArgument):
+        rtt.generate(m, ids.repeat(2, 1))
+
+
+def test_int4_drafts_need_an_apple_gpu(tmp_path):
+    with pytest.raises(memopro.ModeUnavailable):
+        rtt.draft_model(tmp_path, device="cpu")
+
+
+def test_one_line_finetune_and_generate(tmp_path):
+    """G4 E8 (0149): `memopro.finetune` trains PEFT LoRA adapters on streamed weights (loss falls,
+    base weights untouched, the adapter saves), and `memopro.generate` returns the same text as
+    plain greedy generation of the fine-tuned model, with or without a draft."""
+    pytest.importorskip("peft")
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    vocab = {f"w{i}": i for i in range(8000)}
+    core = tokenizers.Tokenizer(tokenizers.models.WordLevel(vocab, unk_token="w0"))
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(4)]
+    r = memopro.finetune(
+        path,
+        texts,
+        tokenizer=tok,
+        budget="9MiB",
+        device="cpu",
+        epochs=3,
+        seq_len=64,
+        lr=1e-2,
+        targets=("q_proj", "v_proj"),
+    )
+    assert r.losses[-1] < r.losses[0] and r.tokens > 0
+    assert all(not p.requires_grad for n, p in r.model.named_parameters() if "lora_" not in n)
+    r.adapter.save_pretrained(tmp_path / "adapter")
+    assert (tmp_path / "adapter" / "adapter_config.json").exists()
+    ids = tok("w2 w9 w16", return_tensors="pt").input_ids
+    with torch.no_grad():
+        plain = r.model.generate(input_ids=ids, max_new_tokens=8, do_sample=False, pad_token_id=1)
+    text = memopro.generate(r.model, "w2 w9 w16", tokenizer=tok, max_new_tokens=8, chat=False)
+    assert text == tok.decode(plain[0, ids.shape[1] :], skip_special_tokens=True)
+    s = r.model.memopro_runtime.stats()
+    assert s["peak_used"] <= r.model.memopro_runtime.limit and s["pinned_bytes"] == 0

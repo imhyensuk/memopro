@@ -1,6 +1,7 @@
 """E022 (Colab re-measurement, 0098) findings D8, D5, D9 and O1, fixed in 0099."""
 
 import dataclasses
+import functools
 import os
 
 import pytest
@@ -12,6 +13,8 @@ from memopro.orchestrator.budget import compute_budget
 
 torch = pytest.importorskip("torch")
 transformers = pytest.importorskip("transformers")
+
+import helpers
 
 GiB = 1 << 30
 
@@ -33,12 +36,7 @@ def env(usable=8 * GiB, free=10 * GiB):
     return Env("Test", "Test 1", "x86_64", "cpu", 8, host, Disk("/s", "/", 1, 1), (cuda,))
 
 
-def gpt2():
-    torch.manual_seed(0)
-    cfg = transformers.GPT2Config(
-        n_layer=2, n_embd=64, n_head=2, vocab_size=500, n_positions=64, resid_pdrop=0.0
-    )
-    return transformers.GPT2LMHeadModel(cfg)
+gpt2 = functools.partial(helpers.gpt2, resid_pdrop=0.0)
 
 
 # ---------------------------------------------------------------- D8: budgets
