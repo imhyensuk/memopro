@@ -1,0 +1,17 @@
+{
+ "completed": false,
+ "prompts": [
+  {
+   "returncode": 1,
+   "metal_oom": true,
+   "max_rss": 3434872832,
+   "peak_footprint": 97777088
+  }
+ ],
+ "max_rss": 3434872832,
+ "peak_footprint": 97777088,
+ "case": "LA",
+ "started": "2026-10-05T18:18:38",
+ "swap_before": 3309704314,
+ "swap_after": 3309704314
+}

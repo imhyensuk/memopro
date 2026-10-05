@@ -68,8 +68,29 @@ def _activation_estimate(config: Any, tokens: int) -> int:
     return 2 * tokens * (layers * h + 4 * (4 * h + 3 * i)) + 4 * chunk
 
 
-def _hold(m: Any, nbytes: int) -> None:
-    """Keep ``nbytes`` of the runtime's budget for the step's own memory, or say why not."""
+def _generation_estimate(config: Any, tokens: int) -> int:
+    """Bytes generation keeps outside the weights for ``tokens`` positions: the key/value cache,
+    one layer's prompt intermediates and the last row's float32 logits (bf16 elsewhere)."""
+    h, i, layers = config.hidden_size, config.intermediate_size, config.num_hidden_layers
+    heads = config.num_attention_heads
+    kv = getattr(config, "num_key_value_heads", None) or heads
+    head_dim = getattr(config, "head_dim", None) or h // heads
+    cache = 2 * layers * kv * head_dim * tokens * 2
+    return cache + 2 * tokens * (4 * h + 3 * i) + 4 * config.vocab_size * 4
+
+
+def _gpu_kept(m: Any) -> int:
+    """Apple GPU memory torch holds besides the wrapped streamed weights."""
+    import torch
+
+    return torch.mps.driver_allocated_memory() - m.memopro_weights.metal.held_bytes()
+
+
+def _hold(
+    m: Any, nbytes: int, what: str = "the step's activations", lower: str = "seq_len"
+) -> None:
+    """Keep ``nbytes`` of the runtime's budget for ``what`` (memory outside the weights), or
+    say why not."""
     from memopro._errors import BudgetExceeded
 
     weights, rt = m.memopro_weights, m.memopro_runtime
@@ -81,8 +102,7 @@ def _hold(m: Any, nbytes: int) -> None:
     if budget - stats["reserve"] - nbytes < largest:
         raise BudgetExceeded(
             f"a {budget >> 20} MiB budget cannot hold the largest weight ({largest >> 20} MiB) "
-            f"and the step's activations (about {nbytes >> 20} MiB); raise the budget or "
-            "lower seq_len"
+            f"and {what} (about {nbytes >> 20} MiB); raise the budget or lower {lower}"
         )
     rt.hold_back(nbytes)
 
@@ -172,7 +192,7 @@ def finetune(
             # what the step really kept on the GPU, weights excluded (the CPU has no such count:
             # there the estimate stays)
             if gpu:
-                kept = torch.mps.driver_allocated_memory() - m.memopro_weights.metal.held_bytes()
+                kept = _gpu_kept(m)
                 if kept > result.held_back:
                     result.held_back = kept
                     _hold(m, kept)
@@ -201,7 +221,12 @@ def generate(
     ``model`` is a name, a folder or a streamed model (reused as is). A string ``prompt`` goes
     through the chat template when the tokenizer has one and ``chat`` is true. ``draft`` (a
     name, folder or :func:`memopro.rt.torch.draft_model`) proposes tokens on Apple GPUs; the
-    text is the same with or without it."""
+    text is the same with or without it.
+
+    The budget covers the whole generation (0182): part of it is held back for the draft, the
+    key/value cache and the prompt's intermediates (estimated first; on Apple GPUs measured
+    after every pass and raised when more was kept), and budgets that cannot hold the largest
+    weight next to that are refused with ``BudgetExceeded``."""
     import memopro.rt.torch as rtt
 
     m = _streamed(model, budget, device)
@@ -217,11 +242,31 @@ def generate(
         ids = prompt
     if draft is not None and not hasattr(draft, "memopro_draft_bytes"):
         draft = rtt.draft_model(draft, target=m, device=m.device.type)
-    out = rtt.generate(
-        m,
-        ids.to(m.device),
-        draft=draft,
-        max_new_tokens=max_new_tokens,
-        pad_token_id=tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id,
+    tokens = ids.shape[1] + max_new_tokens
+    held = [int(_FIRST_STEP_MARGIN * _generation_estimate(m.config, tokens))]
+    if draft is not None:
+        held[0] += draft.memopro_draft_bytes
+    what = (
+        "the draft, cache and intermediates" if draft is not None else "the cache and intermediates"
     )
+    _hold(m, held[0], what, "max_new_tokens")
+
+    def measure(*_: Any) -> None:  # what generation really kept on the GPU
+        kept = _gpu_kept(m)
+        if kept > held[0]:
+            held[0] = kept
+            _hold(m, kept, what, "max_new_tokens")
+
+    hook = m.register_forward_hook(measure) if m.device.type == "mps" else None
+    try:
+        out = rtt.generate(
+            m,
+            ids.to(m.device),
+            draft=draft,
+            max_new_tokens=max_new_tokens,
+            pad_token_id=tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id,
+        )
+    finally:
+        if hook is not None:
+            hook.remove()
     return tok.decode(out[0, ids.shape[1] :], skip_special_tokens=True)

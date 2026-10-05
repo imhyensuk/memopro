@@ -1,0 +1,71 @@
+[
+ {
+  "name": "dataframe",
+  "peak": 1664970752,
+  "import_rss": 68722688,
+  "limit": 831520768,
+  "budget": 695689216,
+  "t1": false,
+  "t2": true,
+  "t3": false,
+  "pager": {},
+  "seconds": {
+   "1_plain": 4.671182627999997,
+   "2_plain_limited": null,
+   "3_memopro": null,
+   "4_plain_swap": 51.073998194
+  },
+  "returncodes": {
+   "1_plain": 0,
+   "2_plain_limited": -9,
+   "3_memopro": -9,
+   "4_plain_swap": 0
+  }
+ },
+ {
+  "name": "classify",
+  "peak": 2526253056,
+  "import_rss": 48214016,
+  "limit": 1262485504,
+  "budget": 1147162624,
+  "t1": false,
+  "t2": true,
+  "t3": false,
+  "pager": {},
+  "seconds": {
+   "1_plain": 9.833190747999993,
+   "2_plain_limited": null,
+   "3_memopro": null,
+   "4_plain_swap": 41.451789671
+  },
+  "returncodes": {
+   "1_plain": 0,
+   "2_plain_limited": -9,
+   "3_memopro": -9,
+   "4_plain_swap": 0
+  }
+ },
+ {
+  "name": "simulate",
+  "peak": 2315612160,
+  "import_rss": 31330304,
+  "limit": 1157627904,
+  "budget": 1059188736,
+  "t1": false,
+  "t2": true,
+  "t3": false,
+  "pager": {},
+  "seconds": {
+   "1_plain": 17.905789673000015,
+   "2_plain_limited": null,
+   "3_memopro": null,
+   "4_plain_swap": 109.53917249600005
+  },
+  "returncodes": {
+   "1_plain": 0,
+   "2_plain_limited": -9,
+   "3_memopro": -9,
+   "4_plain_swap": 0
+  }
+ }
+]
