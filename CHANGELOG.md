@@ -4,6 +4,13 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Changed: the `finetune` budget covers the step on the CPU too; streamed MPS models under `memopro run` (0175)
+- On the CPU `memopro.finetune` now holds back 1.5x the estimated activations as well (the CPU
+  has no allocator count to measure them, so the estimate stays); budgets that cannot hold the
+  largest weight next to it are refused as on MPS.
+- `memopro run` keeps its `PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1` for loaded models, but
+  `stream_model(device="mps")` now lowers it to 0.01 when `memopro run` (not the user) set it.
+
 ### Added: drafts for targets with a larger padded vocabulary (0170)
 - `draft_model(name, target=model)` accepts a draft whose vocabulary is smaller only by
   padding rows over the same tokenizer (Qwen2.5: 7B 152,064 rows, 1.5B 151,936) and pads its
