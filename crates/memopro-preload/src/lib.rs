@@ -9,6 +9,7 @@
 //! - `MEMOPRO_PRELOAD_PROCESS` bytes for the whole process: the pager's limit shrinks by what
 //!   the process holds outside it;
 //! - `MEMOPRO_PRELOAD_THRESHOLD` bytes;
+//! - `MEMOPRO_PRELOAD_CHUNK` bytes per pager chunk (default 1 MiB; a multiple of the page);
 //! - `MEMOPRO_PRELOAD_REPORT` a file for the pager's counters at exit (JSON);
 //! - `MEMOPRO_PRELOAD_REPORT_EVERY` seconds: also rewrite that file this often (a run killed
 //!   at a time limit gets no exit report).

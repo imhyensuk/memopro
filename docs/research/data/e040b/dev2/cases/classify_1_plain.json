@@ -1,0 +1,16 @@
+{
+ "case": "classify_1_plain",
+ "limit": null,
+ "swap": false,
+ "returncode": 0,
+ "wall_seconds": 11.727001873999825,
+ "result": {
+  "coef": "50aeb42249f560e4a08362abe475cb2c789c5aaf508b886f4625ffefd03bb168",
+  "accuracy": 0.9514175,
+  "nnz": 21699438,
+  "seconds": 11.299196368999901,
+  "import_rss_bytes": 48009216,
+  "maxrss_bytes": 2525646848
+ },
+ "stderr_tail": ""
+}

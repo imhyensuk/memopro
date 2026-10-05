@@ -8,7 +8,7 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-NOTEBOOKS = ("train", "infer", "multi", "remeasure", "remeasure2", "qlora")
+NOTEBOOKS = ("train", "infer", "multi", "remeasure", "remeasure2", "qlora", "suite")
 
 
 def build(tmp_path):
@@ -43,8 +43,9 @@ def test_notebook_builds_and_every_cell_compiles(tmp_path):
             for n in tree.body
             if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "WORKERS"
         )
-        for value in workers.value.values:
-            compile(value.value, "worker", "exec")  # the embedded worker sources compile
+        for key, value in zip(workers.value.keys, workers.value.values, strict=True):
+            if key.value.endswith(".py"):  # the embedded Python sources compile (C stays C)
+                compile(value.value, key.value, "exec")
     for name in NOTEBOOKS:
         assert (tmp_path / f"{name}.py").exists()
 

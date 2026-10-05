@@ -1,0 +1,84 @@
+[
+ {
+  "name": "dataframe",
+  "peak": 1665921024,
+  "limit": 832569344,
+  "t1": false,
+  "t2": true,
+  "t3": false,
+  "pager": {
+   "budget": 832569344,
+   "limit": 831520768,
+   "limit_low": 488807735,
+   "peak_used": 692475318,
+   "outside_peak": 275604169,
+   "faults": 310555,
+   "zero_fills": 3313,
+   "restores": 307242,
+   "restore_seconds": 286.1786416079882,
+   "evictions": 308666,
+   "compress_in": 323659759616,
+   "compress_out": 85768102769,
+   "compress_seconds": 570.1191384440032,
+   "incompressible": 0,
+   "overruns": 0,
+   "spurious": 0,
+   "paged_allocations": 52,
+   "paged_bytes": 3543088640,
+   "threshold": 4194304,
+   "seconds": 895.415004599
+  },
+  "maxrss_preload": null,
+  "seconds": {
+   "plain": 6.219857896000008,
+   "preload": null,
+   "swap": 45.29034914600015
+  },
+  "returncodes": {
+   "limited": -9,
+   "preload": "timeout",
+   "swap": 0
+  }
+ },
+ {
+  "name": "simulate",
+  "peak": 2315444224,
+  "limit": 1157627904,
+  "t1": false,
+  "t2": true,
+  "t3": false,
+  "pager": {
+   "budget": 1157627904,
+   "limit": 1156579328,
+   "limit_low": 999078848,
+   "peak_used": 1054038873,
+   "outside_peak": 90391616,
+   "faults": 453403,
+   "zero_fills": 34112,
+   "restores": 419291,
+   "restore_seconds": 293.05868565099985,
+   "evictions": 432133,
+   "compress_in": 453124292608,
+   "compress_out": 248674553387,
+   "compress_seconds": 544.1171908509957,
+   "incompressible": 0,
+   "overruns": 346071,
+   "spurious": 0,
+   "paged_allocations": 501,
+   "paged_bytes": 36171677696,
+   "threshold": 4194304,
+   "seconds": 895.371647011
+  },
+  "maxrss_preload": null,
+  "seconds": {
+   "plain": 11.472727321999855,
+   "preload": null,
+   "swap": 119.6004799719999
+  },
+  "returncodes": {
+   "limited": -9,
+   "preload": "timeout",
+   "swap": 0
+  }
+ }
+]

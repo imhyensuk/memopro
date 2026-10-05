@@ -1,7 +1,8 @@
 # ======================================================================================
 # memopro Colab T4 heavy validation: shared bootstrap (embedded in every cell by build.py)
 # Drive layout (DRIVE_ROOT, default /content/drive/MyDrive/memopro_colab):
-#   install/        put memopro-*.whl or memopro-*.tar.gz (sdist) here
+#   install/        put memopro-src.tar.gz (source bundle: memopro + memopro-preload, 0197),
+#                   or memopro-*.whl / memopro-*.tar.gz (sdist) here
 #   hf_cache/       Hugging Face cache (models and datasets persist across sessions)
 #   results/<cell>/<run_id>/   env.json, config.json, cases/*.json, logs/*.log,
 #                              timelines/*.csv, summary.md, summary.csv, progress.jsonl
@@ -51,8 +52,34 @@ def _pip(*args):
                           capture_output=True, text=True, check=False)
 
 
+def _rust():
+    cargo = os.path.expanduser("~/.cargo/bin")
+    if not os.path.exists(os.path.join(cargo, "cargo")):
+        subprocess.run("curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal",
+                       shell=True, check=True, capture_output=True)
+    os.environ["PATH"] = cargo + os.pathsep + os.environ["PATH"]
+
+
+def _build_source(src):
+    """memopro from a source tree (Rust core via maturin) and the Linux memopro-preload library."""
+    _rust()
+    _pip("maturin>=1.9,<2.0")
+    r = _pip("--force-reinstall", "--no-deps", src)
+    info = {"ok": r.returncode == 0, "stderr": r.stderr[-1500:] if r.returncode else ""}
+    b = subprocess.run(["cargo", "build", "-q", "--release", "-p", "memopro-preload"], cwd=src,
+                       capture_output=True, text=True, check=False)
+    lib = os.path.join(src, "target", "release", "libmemopro_preload.so")
+    if b.returncode == 0 and os.path.exists(lib):
+        os.environ["MP_PRELOAD_LIB"] = lib
+        info["preload"] = lib
+    else:
+        info["preload_error"] = b.stderr[-1000:]
+    return info
+
+
 def install_memopro(root):
-    """wheel in install/ > sdist in install/ (builds the Rust core) > GitHub with a Colab secret."""
+    """source bundle in install/ (memopro + memopro-preload) > wheel > sdist (builds the Rust
+    core) > GitHub with a Colab secret."""
     if LOCAL_SMOKE:
         import memopro  # noqa: PLC0415
 
@@ -65,18 +92,23 @@ def install_memopro(root):
     except ImportError:
         pass
     info = {}
+    bundles = sorted(glob.glob(os.path.join(root, "install", "memopro-src*.tar.gz")))
     wheels = sorted(glob.glob(os.path.join(root, "install", "memopro-*linux*.whl")))
     sdists = sorted(glob.glob(os.path.join(root, "install", "memopro-*.tar.gz")))
-    if wheels:
+    if bundles:
+        _log("building memopro and memopro-preload from the source bundle (~5-8 min the first time)")
+        src = "/content/memopro-src"
+        shutil.rmtree(src, ignore_errors=True)
+        os.makedirs(src)
+        subprocess.run(["tar", "-xzf", bundles[-1], "-C", src], check=True)
+        info = {"source": "source bundle", "file": os.path.basename(bundles[-1]),
+                **_build_source(src)}
+    elif wheels:
         r = _pip("--force-reinstall", "--no-deps", wheels[-1])
         info = {"source": "wheel", "file": os.path.basename(wheels[-1]), "ok": r.returncode == 0}
     elif sdists:
         _log("building memopro from the sdist (installs a Rust toolchain once, ~3-5 min)")
-        cargo = os.path.expanduser("~/.cargo/bin")
-        if not os.path.exists(os.path.join(cargo, "cargo")):
-            subprocess.run("curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal",
-                           shell=True, check=True, capture_output=True)
-        os.environ["PATH"] = cargo + os.pathsep + os.environ["PATH"]
+        _rust()
         _pip("maturin>=1.9,<2.0")
         r = _pip("--force-reinstall", "--no-deps", sdists[-1])
         info = {"source": "sdist", "file": os.path.basename(sdists[-1]), "ok": r.returncode == 0,
@@ -94,16 +126,16 @@ def install_memopro(root):
                 "no memopro package: put the sdist (memopro-*.tar.gz) or a Linux wheel in "
                 f"{os.path.join(root, 'install')}, or add a GITHUB_TOKEN Colab secret"
             )
-        cargo = os.path.expanduser("~/.cargo/bin")
-        if not os.path.exists(os.path.join(cargo, "cargo")):
-            subprocess.run("curl -sSf https://sh.rustup.rs | sh -s -- -y --profile minimal",
-                           shell=True, check=True, capture_output=True)
-        os.environ["PATH"] = cargo + os.pathsep + os.environ["PATH"]
-        _pip("maturin>=1.9,<2.0")
-        r = _pip("--force-reinstall", "--no-deps",
-                 f"git+https://{token}@github.com/imhyensuk/memopro.git@{GIT_REF}")
-        info = {"source": f"github@{GIT_REF}", "ok": r.returncode == 0,
-                "stderr": r.stderr[-800:].replace(token, "***") if r.returncode else ""}
+        src = "/content/memopro-src"
+        shutil.rmtree(src, ignore_errors=True)
+        c = subprocess.run(["git", "clone", "-q", "--depth", "1", "--branch", GIT_REF,
+                            f"https://{token}@github.com/imhyensuk/memopro.git", src],
+                           capture_output=True, text=True, check=False)
+        info = {"source": f"github@{GIT_REF}", "ok": False,
+                "stderr": c.stderr[-800:].replace(token, "***")}
+        if c.returncode == 0:
+            info.update(_build_source(src))
+            info["stderr"] = info.get("stderr", "").replace(token, "***")
     if not info.get("ok"):
         raise RuntimeError(f"memopro install failed: {info}")
     os.environ["MP_MEMOPRO_INSTALLED"] = "1"
@@ -169,6 +201,10 @@ def environment(install_info):
         env["build_has"]["0099_fixes"] = hasattr(C, "speed_hint") and hasattr(T, "even_micro")
         env["build_has"]["0100_fixes"] = hasattr(T, "optimizer_state_to_come")
         env["build_has"]["0103_fixes"] = hasattr(T, "release_cuda_cache")
+        import memopro.rt.torch as RT  # noqa: PLC0415
+
+        env["build_has"]["0195_cuda_stream"] = hasattr(RT, "_renamed")
+        env["preload_lib"] = os.environ.get("MP_PRELOAD_LIB")
     except Exception as e:  # noqa: BLE001
         env["build_has"] = f"unknown: {e}"
     return env
