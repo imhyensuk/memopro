@@ -27,6 +27,21 @@ def sync():
         torch.mps.synchronize()
 
 
+def peak_rss():
+    """This process's peak resident memory. On Linux from /proc/self/status (VmHWM): getrusage's
+    ru_maxrss survives execve, so a worker started from a large notebook kernel reported the
+    kernel's peak (5.19 GiB in every case of E042's first run, 0199)."""
+    try:
+        with open("/proc/self/status") as f:
+            for line in f:
+                if line.startswith("VmHWM:"):
+                    return int(line.split()[1]) * 1024
+    except OSError:
+        pass
+    rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
+    return rss if sys.platform == "darwin" else rss * 1024
+
+
 class DeviceMonitor:
     """Peak device memory in use (cudaMemGetInfo: includes the CUDA context and other processes'
     use, i.e. what nvidia-smi shows) sampled every 20 ms, plus the allocator's own peaks."""
@@ -50,8 +65,7 @@ class DeviceMonitor:
             torch.cuda.reset_peak_memory_stats()
 
     def snapshot(self):
-        rss = resource.getrusage(resource.RUSAGE_SELF).ru_maxrss
-        out = {"host_peak_rss_bytes": rss if sys.platform == "darwin" else rss * 1024}
+        out = {"host_peak_rss_bytes": peak_rss()}
         if DEVICE == "cuda":
             sync()
             free, total = torch.cuda.mem_get_info()
