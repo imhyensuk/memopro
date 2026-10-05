@@ -4,6 +4,15 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Changed: weights handed to the Apple GPU stay wrapped until room runs short (G4 E2, 0154, 0157)
+- A streamed weight used on MPS keeps its no-copy Metal buffer after use; buffers nobody holds
+  are given back together (one MPS event per batch) only when the runtime has less than a
+  quarter of its limit free. Fencing each buffer separately committed the GPU's work once per
+  layer: with the weights resident, a 1.5B LoRA step went from 4.1 to 3.2 s on an M1. Results
+  are unchanged.
+- `memopro.finetune(checkpointing=False)` skips layer checkpointing (one pass fewer over the
+  streamed weights) at the cost of activation memory and, on Apple GPUs, run-to-run differences.
+
 ### Added: one-line fine-tuning and generation (G4 E8, 0149)
 - `memopro.finetune(model, texts, budget=...)`: 16-bit LoRA (through PEFT) on a model whose
   weights stream from their files; returns the model, the PEFT adapter (`save_pretrained`),
