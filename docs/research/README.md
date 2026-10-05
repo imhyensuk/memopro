@@ -210,6 +210,9 @@
 | [0181](0181-e040-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E040: pandas(1,600만 행 판매 표)·scikit-learn(희소 TF-IDF SGD)·NumPy 열 확산 시뮬레이션을 고치지 않고 L = 피크/2에서 `memopro run --transparent`(Linux CI). 작업마다 E027의 T1~T3. 페이저는 압축만이라 압축 안 되는 데이터는 실패할 수 있음을 미리 적음 | 확정 |
 | [0182](0182-generation-budget.md) | 2026-10-05 | implementation | 생성도 예산이 덮음: `memopro.generate`가 초안 바이트 + 1.5 × (KV 캐시·프롬프트 중간값·로짓) 추정을 덜어 두고 MPS에서 forward마다 재서 올림, 가장 큰 가중치가 못 들어가면 거절 | 확정 |
 | [0183](0183-e041-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E041: 초안 붙은 생성 3B(2GiB)·7B(3GiB), 7B 2GiB 거절, 2,048토큰 학습 3B(2.5/2.25GiB)·7B(3.75/3.5GiB). 기준 K1 출력 동일, K2 손실 비트 동일, K3 footprint ≤ 예산 + 256MiB, K4 거절 | 확정 |
+| [0184](0184-e039-results.md) | 2026-10-05 | experiment | E039 결과: **S8·S9 통과**. 8GB M1 3B bf16에서 memopro+초안 1.09초/토큰·RSS 2.1GB(초안 없이 3.42초), llama.cpp는 GPU 설정 모두 Metal 메모리 부족·CPU 14.75초/토큰·3.3GB, AirLLM 일반 경로는 층 파일 5.7GB를 쓴 뒤 내부 오류. 채점표 III 5/19 → 7/19, 종합 45.8 → 48.4% | 확정 |
+| [0185](0185-e040-results.md) | 2026-10-05 | experiment + 진단 | E040 결과: **실패**. pandas·scikit-learn·시뮬레이션 모두 1/2에서 OOM(−9). 압축은 잘 됨(33~100%), 원인은 페이저 밖 메모리(0.4~1.1GB)와 무작위 접근의 되읽기(dataframe 76배 느림, simulate 30분 넘음). 선택지 A(투명 모드 확장)/B(명시적 연결)/C(한계로 기록) | 확정 |
+| [0186](0186-e041-results.md) | 2026-10-05 | experiment | E041 결과: **실패**. 생성은 출력 동일·footprint 예산 + 256MiB 안·7B 2GiB 거절 정상이나 스왑 +72/+262MiB. 2,048토큰 학습은 측정 활성값(3B 2,022·7B 3,214MiB)이 추정보다 커 첫 단계 뒤 거절, 빠진 항은 float32 어텐션 점수. 선택지 A(추정 보강 + E041b)/B/C | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 

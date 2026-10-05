@@ -1,0 +1,9 @@
+{
+ "case": "simulate_2_plain_limited",
+ "limit": 1157627904,
+ "swap": false,
+ "returncode": -9,
+ "wall_seconds": 8.202645738000001,
+ "result": null,
+ "stderr_tail": ""
+}

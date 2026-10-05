@@ -1,0 +1,9 @@
+{
+ "case": "dataframe_3_memopro",
+ "limit": 831520768,
+ "swap": false,
+ "returncode": -9,
+ "wall_seconds": 4.728924393,
+ "result": null,
+ "stderr_tail": ""
+}
