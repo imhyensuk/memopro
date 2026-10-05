@@ -1,0 +1,16 @@
+{
+ "case": "classify_3_preload",
+ "limit": 1262485504,
+ "swap": false,
+ "returncode": 0,
+ "wall_seconds": 40.80426185300007,
+ "result": {
+  "coef": "50aeb42249f560e4a08362abe475cb2c789c5aaf508b886f4625ffefd03bb168",
+  "accuracy": 0.9514175,
+  "nnz": 21699438,
+  "seconds": 40.30842127200003,
+  "import_rss_bytes": 48373760,
+  "maxrss_bytes": 1196019712
+ },
+ "stderr_tail": ""
+}
