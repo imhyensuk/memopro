@@ -110,8 +110,15 @@ class Runtime:
 
     @property
     def limit(self) -> int:
-        """Bytes buffers may occupy: the budget minus one compression piece of headroom."""
+        """Bytes buffers may occupy: the budget minus one compression piece of headroom and
+        what :meth:`hold_back` keeps."""
         return self._rt.limit()
+
+    def hold_back(self, nbytes: int) -> None:
+        """Keep ``nbytes`` of the budget for memory the runtime does not own (activations, say),
+        so buffers plus that memory stay within the budget. Gives up unpinned buffers to fit;
+        raises ``BudgetExceeded`` (changing nothing) when pinned ones do not fit (0165)."""
+        self._rt.hold_back(int(nbytes))
 
     def add_file(
         self,

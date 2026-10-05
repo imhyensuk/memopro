@@ -39,6 +39,7 @@ use crate::error::{Error, Result};
 use crate::spill::{Digest, digest};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
+use std::sync::atomic::{AtomicU64, Ordering};
 use std::sync::{Arc, Condvar, Mutex, MutexGuard};
 use std::thread::JoinHandle;
 use std::time::Instant;
@@ -186,6 +187,8 @@ impl Drop for Owner {
 struct Shared {
     config: Config,
     reserve: u64,
+    /// Bytes of the budget kept for memory the runtime does not own (see `hold_back`).
+    held: AtomicU64,
     state: Mutex<Inner>,
     cond: Condvar,
 }
@@ -439,6 +442,7 @@ impl Runtime {
         let shared = Arc::new(Shared {
             config,
             reserve,
+            held: AtomicU64::new(0),
             state: Mutex::new(Inner {
                 bufs: HashMap::new(),
                 next_id: 1,
@@ -485,9 +489,39 @@ impl Runtime {
         &self.shared.config
     }
 
-    /// Bytes buffers may occupy: the budget minus the compression headroom.
+    /// Bytes buffers may occupy: the budget minus the compression headroom and what is held
+    /// back for other memory.
     pub fn limit(&self) -> u64 {
         self.shared.limit()
+    }
+
+    /// Keep `bytes` of the budget for memory the runtime does not own (a caller's activations,
+    /// say), so that buffers plus that memory stay within the budget. Gives up buffers that are
+    /// not pinned until they fit the smaller limit; fails, changing nothing, when pinned ones do
+    /// not fit or when less than the runtime's own headroom would be left.
+    pub fn hold_back(&self, bytes: u64) -> Result<()> {
+        let sh = &self.shared;
+        if bytes.saturating_add(2 * sh.reserve) > sh.config.budget {
+            return Err(Error::Budget(format!(
+                "holding back {} leaves less than {} of a {} budget for buffers",
+                mib(bytes),
+                mib(sh.reserve),
+                mib(sh.config.budget)
+            )));
+        }
+        let old = sh.held.swap(bytes, Ordering::SeqCst);
+        let st = sh.lock();
+        match sh.make_room(st, 0, None, None) {
+            Ok(st) => {
+                drop(st);
+                sh.cond.notify_all();
+                Ok(())
+            }
+            Err(e) => {
+                sh.held.store(old, Ordering::SeqCst);
+                Err(e)
+            }
+        }
     }
 
     /// A new zero-filled buffer of `nbytes` in memory (no original file: it can only be
@@ -828,7 +862,7 @@ impl Runtime {
 
 impl Shared {
     fn limit(&self) -> u64 {
-        self.config.budget - self.reserve
+        self.config.budget - self.reserve - self.held.load(Ordering::SeqCst)
     }
 
     fn lock(&self) -> MutexGuard<'_, Inner> {

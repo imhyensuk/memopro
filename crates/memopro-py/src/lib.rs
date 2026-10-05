@@ -416,9 +416,15 @@ impl RtRuntime {
         })
     }
 
-    /// Bytes buffers may occupy (budget minus the compression headroom).
+    /// Bytes buffers may occupy (budget minus the compression headroom and what is held back).
     fn limit(&self) -> u64 {
         self.rt.limit()
+    }
+
+    /// Keep `nbytes` of the budget for memory the runtime does not own (0165).
+    fn hold_back(&self, py: Python<'_>, nbytes: u64) -> PyResult<()> {
+        let rt = self.rt.clone();
+        py.detach(move || rt.hold_back(nbytes)).map_err(rt_err)
     }
 
     fn alloc(&self, py: Python<'_>, nbytes: usize, elem: usize) -> PyResult<u64> {

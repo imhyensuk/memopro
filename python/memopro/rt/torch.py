@@ -111,8 +111,6 @@ class _MetalPins:
         self.core = _core
         self.page = mmap.PAGESIZE
         self._use_count = torch._C._storage_Use_Count
-        self.limit = runtime.limit
-        self.low = self.limit // 4
         # buffer id -> {"pin", "mtl", "base", "keep", "gen"}
         self.shared: dict[int, dict[str, Any]] = {}
         # (event, [(buffer id, generation at fencing)]) per fenced batch
@@ -162,7 +160,8 @@ class _MetalPins:
         fence every unused buffer first."""
         import torch
 
-        if block or self.limit - self.runtime._rt.stats()["used"] < self.low:
+        limit = self.runtime.limit  # changes when room is held back (0165)
+        if block or limit - self.runtime._rt.stats()["used"] < limit // 4:
             batch = [
                 (bid, r["gen"])
                 for bid, r in self.shared.items()
@@ -363,6 +362,14 @@ def _find(regions: dict[str, Any], name: str, prefix: str) -> Any:
     return None
 
 
+# torch's MPS allocator gives any 10-512 MiB request a 1 GiB heap unless its own allocations
+# pass a low watermark (this ratio of the recommended maximum); streamed weights are not its
+# allocations, so with the default ratio long sequences (activations over 10 MiB) took up to
+# 1 GiB more than the budget. 0.01 keeps the 3B LoRA step at seq 512 within budget + 512 MiB at
+# the same speed (0162); a value set by the user is kept.
+MPS_LOW_WATERMARK = "0.01"
+
+
 def stream_model(
     name_or_dir: str | Path,
     *,
@@ -387,8 +394,12 @@ def stream_model(
     if device not in ("cpu", "mps"):
         raise InvalidArgument(f"device must be 'cpu' or 'mps', not {device!r}")
     if device == "mps":
+        import os
+
         from memopro.env._torch import mps_usable
 
+        # before torch's MPS allocator starts (later it has no effect): see MPS_LOW_WATERMARK
+        os.environ.setdefault("PYTORCH_MPS_LOW_WATERMARK_RATIO", MPS_LOW_WATERMARK)
         if not mps_usable():
             raise ModeUnavailable(
                 "memopro.rt.torch.stream_model(device='mps')",
