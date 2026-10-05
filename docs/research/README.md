@@ -185,6 +185,8 @@
 | [0156](0156-e035-results.md) | 2026-10-05 | experiment | E035 결과: 관문 G4-E2 **실패**. S1 1.5B 학습 1.09배(기준 1.3), S3 1.5B 체크포인팅 끔 footprint +2,015MiB > 1,787, S4 손실 차이 2.8e-2. S5 생성 1.00배·같은 토큰 통과. 버퍼 유지·울타리 변경은 3B 손실 비트 동일(계산 불변). 체크포인팅을 끄면 MPS에서 첫 단계부터 수치가 다르고 반복끼리도 달라짐(비결정). 선택지 A(체크포인팅 항상 켬, E2 닫기)/B/C(MLX 백엔드) | 확정 |
 | [0157](0157-e2-closed.md) | 2026-10-05 | decision | 사용자 결정 A: E2 닫기. 버퍼 유지·한꺼번에 울타리는 남김(결과 동일), `finetune` 체크포인팅은 다시 항상 켬(`checkpointing=False`는 명시적 선택, 비결정 가능 문서화), 자동 측정 코드 삭제. 결론: 흘려 쓰기 학습 속도의 상한은 PyTorch MPS 계산 | 확정 |
 | [0158](0158-e036-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E036 = S1: Qwen2.5-7B-Instruct bf16(14.2GiB, 리비전 고정 내려받기)을 8GB M1에서 `memopro.finetune`으로 16비트 LoRA, 예산 2GiB·1.5GiB, 5단계 × 129토큰. K1 완주, K2 손실 비트 동일, K3 footprint ≤ 예산 + 512MiB·스왑 ≤ 64MiB | 확정 |
+| [0159](0159-e036-results-mps-matmul-bug.md) | 2026-10-05 | experiment | E036 결과: S1 **실패**. 7B 16비트 LoRA가 8GB M1에서 단계당 약 18초(6.4~7.3토큰/초)로 돌았지만 손실이 셋째 단계부터 NaN, K3 메모리 초과(+2,771/+2,275MiB, 기준점에 import 360MiB 포함). 원인: PyTorch MPS 행렬곱이 내부 차원 > 2^17(16,384 배수 아님)에서 NaN — 출력 머리 backward(어휘 151,936·152,064). memopro 없이도 재현. 우회책: MPS에서 head를 65,536행씩 잘라 계산 → 흘려 쓰기와 그냥 실행의 기울기 비트 동일 | 확정 |
+| [0160](0160-e036b-preregistration.md) | 2026-10-05 | experiment (사전 등록) | E036b = S1 다시: 같은 경우·기준, 우회책 적용, 기준 footprint는 import·MPS 시작 뒤(E028c와 같게), K2는 손실이 유한해야 통과 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
