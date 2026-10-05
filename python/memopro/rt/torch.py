@@ -111,8 +111,6 @@ class _MetalPins:
         self.core = _core
         self.page = mmap.PAGESIZE
         self._use_count = torch._C._storage_Use_Count
-        self.limit = runtime.limit
-        self.low = self.limit // 4
         # buffer id -> {"pin", "mtl", "base", "keep", "gen"}
         self.shared: dict[int, dict[str, Any]] = {}
         # (event, [(buffer id, generation at fencing)]) per fenced batch
@@ -162,7 +160,8 @@ class _MetalPins:
         fence every unused buffer first."""
         import torch
 
-        if block or self.limit - self.runtime._rt.stats()["used"] < self.low:
+        limit = self.runtime.limit  # changes when room is held back (0165)
+        if block or limit - self.runtime._rt.stats()["used"] < limit // 4:
             batch = [
                 (bid, r["gen"])
                 for bid, r in self.shared.items()
