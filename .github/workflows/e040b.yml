@@ -10,6 +10,10 @@ on:
         description: "comma-separated workloads (empty = all)"
         required: false
         default: ""
+      probe:
+        description: "development probe (0191) instead of the measurement"
+        required: false
+        default: ""
 
 permissions:
   contents: read
@@ -36,7 +40,13 @@ jobs:
           cat /proc/sys/vm/unprivileged_userfaultfd
           free -m
           swapon --show
+      - name: Probe
+        if: inputs.probe != ''
+        run: |
+          sudo apt-get install -y -q gdb > /dev/null
+          bash experiments/e040b_preload/probe.sh "$PWD/target/release/libmemopro_preload.so" "${{ runner.temp }}/e040b/probe"
       - name: E040b
+        if: inputs.probe == ''
         env:
           E040B_OUT: ${{ runner.temp }}/e040b
           E040B_ONLY: ${{ inputs.only }}
