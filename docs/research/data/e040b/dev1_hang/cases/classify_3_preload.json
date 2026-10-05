@@ -1,0 +1,9 @@
+{
+ "case": "classify_3_preload",
+ "limit": 1262485504,
+ "swap": false,
+ "returncode": "timeout",
+ "wall_seconds": 900.0204592350001,
+ "result": null,
+ "stderr_tail": ""
+}

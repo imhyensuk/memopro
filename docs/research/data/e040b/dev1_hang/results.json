@@ -1,0 +1,82 @@
+[
+ {
+  "name": "image",
+  "peak": 1654534144,
+  "limit": 826277888,
+  "t1": false,
+  "t2": true,
+  "t3": false,
+  "pager": {},
+  "maxrss_preload": null,
+  "seconds": {
+   "plain": 4.209445037999984,
+   "preload": null,
+   "swap": 144.85035602199991
+  },
+  "returncodes": {
+   "limited": -9,
+   "preload": "timeout",
+   "swap": 0
+  }
+ },
+ {
+  "name": "dataframe",
+  "peak": 1665851392,
+  "limit": 832569344,
+  "t1": false,
+  "t2": true,
+  "t3": false,
+  "pager": {},
+  "maxrss_preload": null,
+  "seconds": {
+   "plain": 6.509471376999954,
+   "preload": null,
+   "swap": 52.130059566
+  },
+  "returncodes": {
+   "limited": -9,
+   "preload": "timeout",
+   "swap": 0
+  }
+ },
+ {
+  "name": "classify",
+  "peak": 2526113792,
+  "limit": 1262485504,
+  "t1": false,
+  "t2": true,
+  "t3": false,
+  "pager": {},
+  "maxrss_preload": null,
+  "seconds": {
+   "plain": 8.88420420500006,
+   "preload": null,
+   "swap": 50.12028600900021
+  },
+  "returncodes": {
+   "limited": -9,
+   "preload": "timeout",
+   "swap": 0
+  }
+ },
+ {
+  "name": "simulate",
+  "peak": 2315513856,
+  "limit": 1157627904,
+  "t1": false,
+  "t2": true,
+  "t3": false,
+  "pager": {},
+  "maxrss_preload": null,
+  "seconds": {
+   "plain": 11.791419935000249,
+   "preload": null,
+   "swap": 146.0581031849997
+  },
+  "returncodes": {
+   "limited": -9,
+   "preload": "timeout",
+   "swap": 0
+  }
+ }
+]

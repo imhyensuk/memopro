@@ -1,0 +1,9 @@
+{
+ "case": "simulate_3_preload",
+ "limit": 1157627904,
+ "swap": false,
+ "returncode": "timeout",
+ "wall_seconds": 900.076015351,
+ "result": null,
+ "stderr_tail": ""
+}
