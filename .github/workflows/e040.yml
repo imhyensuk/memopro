@@ -7,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       diag:
-        description: "diagnosis after the failure (0184): memopro without a limit"
+        description: "diagnosis after the failure (0185): memopro without a limit"
         required: false
         default: ""
 

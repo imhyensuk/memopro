@@ -1,0 +1,9 @@
+{
+ "case": "classify_2_plain_limited",
+ "limit": 1262485504,
+ "swap": false,
+ "returncode": -9,
+ "wall_seconds": 7.068872461000012,
+ "result": null,
+ "stderr_tail": ""
+}

@@ -83,7 +83,7 @@ def workload(name: str) -> dict:
 
 
 def diagnose(name: str) -> dict:
-    """After the failure (0184): the same memopro case without a limit, to read the pager's report
+    """After the failure (0185): the same memopro case without a limit, to read the pager's report
     and the process peak (memory the pager does not hold = process peak - pager peak)."""
     py, script = sys.executable, str(HERE / f"{name}.py")
     plain = e027.case(f"diag_{name}_1_plain", [py, script], None, False).get("result") or {}

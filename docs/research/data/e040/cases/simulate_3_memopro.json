@@ -1,0 +1,9 @@
+{
+ "case": "simulate_3_memopro",
+ "limit": 1157627904,
+ "swap": false,
+ "returncode": -9,
+ "wall_seconds": 81.50526829400002,
+ "result": null,
+ "stderr_tail": ""
+}
