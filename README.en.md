@@ -28,7 +28,7 @@ print(memopro.generate(r.model, "Hello!", draft="Qwen/Qwen2.5-1.5B-Instruct"))
 
 ## Results
 
-All measured against criteria fixed in advance. Raw data and commands are in [`docs/research/`](https://github.com/imhyensuk/memopro/tree/main/docs/research).
+All measured against criteria fixed in advance. Raw data and environments are in [`docs/research/data/`](https://github.com/imhyensuk/memopro/tree/main/docs/research/data); the scripts are in [`experiments/`](https://github.com/imhyensuk/memopro/tree/main/experiments).
 
 ### Language models (MacBook Air M1, 8 GB)
 
@@ -208,7 +208,7 @@ VIRTUAL_ENV=$PWD/.venv .venv/bin/maturin develop --release
 cargo test -p memopro
 ```
 
-Design decisions, experiment designs, results and failures are recorded in order in [`docs/research/`](https://github.com/imhyensuk/memopro/tree/main/docs/research) (in Korean).
+Experiment scripts are in [`experiments/`](https://github.com/imhyensuk/memopro/tree/main/experiments), raw results and environments in [`docs/research/data/`](https://github.com/imhyensuk/memopro/tree/main/docs/research/data), design documents in [`docs/design/`](https://github.com/imhyensuk/memopro/tree/main/docs/design) (in Korean).
 
 ## Citation
 

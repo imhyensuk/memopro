@@ -28,7 +28,7 @@ print(memopro.generate(r.model, "안녕하세요", draft="Qwen/Qwen2.5-1.5B-Inst
 
 ## 주요 결과
 
-모두 사전에 정한 기준으로 측정했으며, 원시 데이터와 실행 명령은 [`docs/research/`](docs/research/)에 있습니다.
+모두 사전에 정한 기준으로 측정했으며, 원시 데이터와 실행 환경은 [`docs/research/data/`](docs/research/data/), 실험 스크립트는 [`experiments/`](experiments/)에 있습니다.
 
 ### 언어 모델 (MacBook Air M1, 메모리 8GB)
 
@@ -210,7 +210,7 @@ VIRTUAL_ENV=$PWD/.venv .venv/bin/maturin develop --release
 cargo test -p memopro
 ```
 
-연구 과정의 결정, 실험 설계, 결과, 실패 기록은 [`docs/research/`](docs/research/)에 번호순으로 정리되어 있습니다.
+실험 스크립트는 [`experiments/`](experiments/), 원시 결과와 실행 환경은 [`docs/research/data/`](docs/research/data/), 설계 문서는 [`docs/design/`](docs/design/)에 있습니다.
 
 ## 인용
 

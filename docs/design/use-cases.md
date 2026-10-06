@@ -1,8 +1,8 @@
 # memopro 활용 환경과 사용 시나리오
 
-- **버전**: v0.3.3 (2026-09-25, α 기각 반영 — 0021) / v0.3.1 — 대상 재정의 ([0012](../research/0012-revision-v03.md)), 검증 반영 ([0013](../research/0013-revision-v03-verification.md))
+- **버전**: v0.3.3 (2026-09-25, α 기각 반영 — 0021) / v0.3.1 — 대상 재정의 (0012), 검증 반영 (0013)
 - **대상**: PyTorch로 자기 프로젝트·서비스·개발·학습을 하는 개발자. 코드 없이 LLM 앱을 쓰려는 최종 사용자는 대상이 아니다.
-- **관련**: [architecture.md](architecture.md), [development-plan.md](development-plan.md), [0009](../research/0009-use-case-analysis.md)
+- **관련**: [architecture.md](architecture.md), [development-plan.md](development-plan.md), 0009
 - 모든 코드 예시는 **설계안**이며 아직 구현되지 않았다.
 - ⚠️ **α(`rfc`)는 0018 실험에서 기각되었다.** 아래에서 α를 언급한 시나리오는 기존 기법(활성값 체크포인팅·오프로드, `train_session`의 학습 후보 #1·#2)으로 대체된다 (0021).
 
