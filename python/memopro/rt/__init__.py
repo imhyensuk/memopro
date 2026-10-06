@@ -221,6 +221,16 @@ class Runtime:
         bid = self._rt.derive([b.id for b in inputs], nbytes, _elem(dtype), compute)
         return Buffer(self, bid, nbytes, dtype, shape)
 
+    def adopt(self, obj: Any, *, threshold: str | int = "1MiB") -> Any:
+        """Hand the tensors and NumPy arrays that ``obj`` holds (a tensor, module, optimizer, or
+        dict / list / tuple / object containing them, e.g. a KV cache) to this runtime (0205).
+        Use ``obj`` inside ``with handle:``; outside, its data sleeps in runtime buffers that are
+        compressed losslessly when room is needed (never written to disk). Tensors keep their
+        identity (only ``.data`` changes); arrays below ``threshold`` bytes stay as they are."""
+        from memopro.rt.adopt import adopt
+
+        return adopt(self, obj, threshold)
+
     def predict(self) -> dict[str, Any] | None:
         """Predicted cost of repeating the last recorded cycle of buffer uses (from the last use
         of the most recently used buffer to now): bytes that must come back per cycle under
