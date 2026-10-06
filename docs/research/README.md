@@ -236,6 +236,7 @@
 | [0208](0208-kv-decision-a.md) | 2026-10-06 | decision (사용자 선택) | 결정 A: KV 전용 압축(B)·손실 양자화(C)는 만들지 않음. KV는 생성 중 덜어 두기(0182)와 일반 `adopt`(0205)로. 근거 E044(0.67, 하한 근처)·E045(footprint 거의 그대로) | 확정 |
 | [0209](0209-evaluation-after-adopt.md) | 2026-10-06 | assessment | 완성도 다시 평가(채점표): 비교 포함 **51.3%**, 비교 제외 **56.0%**(0199 이후 조건 그대로). Colab 재실행으로 A14·U16·A16이 충족되면 53.4%/58.8%. 다음으로 크게 움직일 것: Colab 결과, 배포, 논문 초안 | 확정 |
 | [0210](0210-paper-venues-and-overlap.md) | 2026-10-06 | survey | 논문 후보별 중복성 검사와 발표처: P1(7B 16비트 LoRA)·P2(행 불변 검증)·P3(압축 전용 투명 페이징)은 주장을 좁혀 유지, KV 압축(SplitZip·DFloat11·ZipNN)·adopt·MPS 단독 보고(2609.22991)는 독립 논문 포기. 발표처 후보 KSC 2026(10/12 보도)·KCC 2027·워크숍·arXiv, JOSS는 공개 6개월 뒤 | 제안 |
+| [0211](0211-paper-targets-and-ksc-draft.md) | 2026-10-06 | decision | 발표처 세 곳 확정: KSC 2026 = P3(투명 페이징), 대한전자공학회 추계 = P2(행 불변 검증), MLSys 2027 = P1(16비트 LoRA). 저자 임현석(한신대). KSC 원고 초안 `docs/papers/ksc2026-p3/` | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
