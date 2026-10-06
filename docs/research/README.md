@@ -238,6 +238,7 @@
 | [0210](0210-paper-venues-and-overlap.md) | 2026-10-06 | survey | 논문 후보별 중복성 검사와 발표처: P1(7B 16비트 LoRA)·P2(행 불변 검증)·P3(압축 전용 투명 페이징)은 주장을 좁혀 유지, KV 압축(SplitZip·DFloat11·ZipNN)·adopt·MPS 단독 보고(2609.22991)는 독립 논문 포기. 발표처 후보 KSC 2026(10/12 보도)·KCC 2027·워크숍·arXiv, JOSS는 공개 6개월 뒤 | 제안 |
 | [0211](0211-paper-targets-and-ksc-draft.md) | 2026-10-06 | decision | 발표처 세 곳 확정: KSC 2026 = P3(투명 페이징), 대한전자공학회 추계 = P2(행 불변 검증), MLSys 2027 = P1(16비트 LoRA). 저자 임현석(한신대). KSC 원고 초안 `docs/papers/ksc2026-p3/` | 확정 |
 | [0212](0212-repo-public-and-license.md) | 2026-10-06 | decision | 저장소 공개(사용자 지시, 공개 전 점검 통과). 라이선스 검토: 라이선스는 아이디어를 지키지 못하고 우선권은 공개·arXiv·인용으로 지킨다 → MIT OR Apache-2.0 유지 제안 | 공개 확정, 라이선스 제안 |
+| [0213](0213-citation-cff.md) | 2026-10-06 | decision | `CITATION.cff` 추가(저자 임현석, MIT·Apache-2.0, cffconvert 검증 통과). 라이선스 유지 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
