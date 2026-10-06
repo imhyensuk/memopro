@@ -190,9 +190,14 @@ class Adopted:
                 self._adopt_tensor(t)
         for key in [k for k in self._arrays if k not in arrays]:
             self._arrays.pop(key).buf.free()
-        for key, (parent, k, a) in arrays.items():
+        del tensors
+        # one array at a time, dropping our reference to it right after its copy: the original
+        # is freed before the next one is copied, so adopting does not double the memory (0207)
+        for key in list(arrays):
+            parent, k, a = arrays.pop(key)
             if not isinstance(a, Asleep):  # sleeping ones are ours; any array here is new
                 self._adopt_array(parent, k, a)
+            del a
 
     def _wake(self) -> None:
         import numpy as np
