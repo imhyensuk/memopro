@@ -4,8 +4,9 @@ title: memopro
 abstract: "Run work that exceeds your machine's memory losslessly, within a guaranteed memory ceiling: 16-bit LLM fine-tuning and generation beyond device memory, and a budgeted runtime for large arrays (alpha)."
 type: software
 authors:
-  - family-names: "임"
-    given-names: "현석"
+  - family-names: "Im"
+    given-names: "Hyeonseok"
+    alias: "임현석"
     affiliation: "한신대학교 공공인재빅데이터융합학"
 version: 0.1.0a1
 license:
