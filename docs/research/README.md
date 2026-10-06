@@ -239,6 +239,7 @@
 | [0211](0211-paper-targets-and-ksc-draft.md) | 2026-10-06 | decision | 발표처 세 곳 확정: KSC 2026 = P3(투명 페이징), 대한전자공학회 추계 = P2(행 불변 검증), MLSys 2027 = P1(16비트 LoRA). 저자 임현석(한신대). KSC 원고 초안 `docs/papers/ksc2026-p3/` | 확정 |
 | [0212](0212-repo-public-and-license.md) | 2026-10-06 | decision | 저장소 공개(사용자 지시, 공개 전 점검 통과). 라이선스 검토: 라이선스는 아이디어를 지키지 못하고 우선권은 공개·arXiv·인용으로 지킨다 → MIT OR Apache-2.0 유지 제안 | 공개 확정, 라이선스 제안 |
 | [0213](0213-citation-cff.md) | 2026-10-06 | decision | `CITATION.cff` 추가(저자 임현석, MIT·Apache-2.0, cffconvert 검증 통과). 라이선스 유지 | 확정 |
+| [0214](0214-readme-rewrite.md) | 2026-10-06 | decision | 공개용 README 정리(한국어·영어 같은 구성): 결과 표·설치·사용법·구조·한계 중심, 단계·관문 이름과 개발 로드맵은 연구 기록으로 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
