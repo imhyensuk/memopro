@@ -240,6 +240,7 @@
 | [0212](0212-repo-public-and-license.md) | 2026-10-06 | decision | 저장소 공개(사용자 지시, 공개 전 점검 통과). 라이선스 검토: 라이선스는 아이디어를 지키지 못하고 우선권은 공개·arXiv·인용으로 지킨다 → MIT OR Apache-2.0 유지 제안 | 공개 확정, 라이선스 제안 |
 | [0213](0213-citation-cff.md) | 2026-10-06 | decision | `CITATION.cff` 추가(저자 임현석, MIT·Apache-2.0, cffconvert 검증 통과). 라이선스 유지 | 확정 |
 | [0214](0214-readme-rewrite.md) | 2026-10-06 | decision | 공개용 README 정리(한국어·영어 같은 구성): 결과 표·설치·사용법·구조·한계 중심, 단계·관문 이름과 개발 로드맵은 연구 기록으로 | 확정 |
+| [0215](0215-author-english-name.md) | 2026-10-06 | decision | 저자 영문 이름 Hyeonseok Im(여권 표기): CITATION.cff·KSC 출판용 원고·이 저장소의 git 이름. GitHub 계정 주소와 지난 커밋은 그대로 | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
