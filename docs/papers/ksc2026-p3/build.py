@@ -11,7 +11,7 @@ HERE = Path(__file__).parent
 CHROME = "/Applications/Google Chrome.app/Contents/MacOS/Google Chrome"
 KO = ('<div class="authors">임현석<sup>◦</sup><br>한신대학교 공공인재빅데이터융합학<br>'
       'sunlim0926@hs.ac.kr</div>')
-EN = '<div class="authors">Hyensuk Im<sup>◦</sup><br>Hanshin University</div>'  # 영문 표기 확인 필요
+EN = '<div class="authors">Hyeonseok Im<sup>◦</sup><br>Hanshin University</div>'  # 여권 표기 IM HYEONSEOK
 
 src = (HERE / "paper.html").read_text()
 for name, ko, en in (("review", "", ""), ("camera", KO, EN)):
