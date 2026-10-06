@@ -233,6 +233,7 @@
 | [0205](0205-adopt-api-design.md) | 2026-10-06 | decision + design + implementation | 사용자 지시: 작업이 붙잡은 버퍼를 런타임에 맡기는 일반 API `Runtime.adopt(obj)`(텐서·모듈·옵티마이저·KV 캐시, NumPy 배열이 든 dict/list/객체). `with h:` 안에서만 쓰고, 밖에서는 쉬며 예산에 따라 무손실 압축, 텐서는 정체성 유지(.data만 교체), 블록 안에서 생긴 새 텐서는 새로 맡김. 시험 6개 | 확정 |
 | [0206](0206-e045-preregistration.md) | 2026-10-06 | experiment (사전 등록) | E045: adopt 검증. K 대화 6개(1.5B, 1,500토큰) KV를 예산 224MiB(원래 약 270)로, D 데이터 세 묶음 608MiB를 448MiB로. 기준 K1·D1 결과 동일, K2·D2 최대 ≤ 예산 < 원래 합 | 확정 |
 | [0207](0207-e045-results.md) | 2026-10-06 | experiment + implementation | E045 결과: 관문 통과(토큰 18/18·통계 9/9 동일, 런타임 최대 ≤ 예산). 그러나 KV는 footprint 407 대 403MiB로 이득이 거의 없음(bf16 0.69, 복사본). 데이터는 맡기는 순간 +574MiB(원본 참조를 쥔 결함) → 고침, 고친 뒤 끝 상태 −464MiB(76% 절약), 일시 증가 +350MiB는 남음 | 확정 |
+| [0208](0208-kv-decision-a.md) | 2026-10-06 | decision (사용자 선택) | 결정 A: KV 전용 압축(B)·손실 양자화(C)는 만들지 않음. KV는 생성 중 덜어 두기(0182)와 일반 `adopt`(0205)로. 근거 E044(0.67, 하한 근처)·E045(footprint 거의 그대로) | 확정 |
 
 ## 연구 질문 (Research Questions) — 논문 A 기준 (0033)
 
