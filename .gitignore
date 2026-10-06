@@ -26,3 +26,10 @@ __pycache__/
 .idea/
 .vscode/
 experiments/e015_foundations/native/build/
+
+# Kept in the private repository imhyensuk/memopro-research (0216): research log, paper drafts,
+# agent instructions. Raw experiment data under docs/research/data/ stays public.
+/CLAUDE.md
+/docs/papers/
+/docs/research/*
+!/docs/research/data/
