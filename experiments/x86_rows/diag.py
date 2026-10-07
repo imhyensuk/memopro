@@ -233,7 +233,17 @@ def head_variants(m, calls, n):
         res["one_pin_clone_rows"] = [same(F.linear(x.clone(), w), y) for x, y in zip(xs, want)]
         del w
         res["pin_per_row"] = [same(F.linear(x, weights._tensor(pid)), y) for x, y in zip(xs, want)]
+        views = [torch.cat(xs, 1)[:, i : i + 1] for i in range(len(xs))]  # stride of all rows
+        w = weights._tensor(pid)
+        res["strided_rows"] = [same(F.linear(v, w), y) for v, y in zip(views, want)]
+        res["strided_rows_clone"] = [same(F.linear(v.clone(), w), y) for v, y in zip(views, want)]
+        res["strided_rows_contiguous_clone"] = [
+            same(F.linear(v.clone(memory_format=torch.contiguous_format), w), y)
+            for v, y in zip(views, want)
+        ]
+        del w
         wc = weights._tensor(pid).clone()
+        res["strided_rows_weight_copy"] = [same(F.linear(v, wc), y) for v, y in zip(views, want)]
         res["weight_copy"] = [same(F.linear(x, wc), y) for x, y in zip(xs, want)]
     weights.pinned.clear()
     return res
