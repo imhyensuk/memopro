@@ -57,7 +57,9 @@ def _parser() -> argparse.ArgumentParser:
     check.add_argument("--json", action="store_true", help="machine-readable output")
 
     run = sub.add_parser(
-        "run", help="run a script with memopro's loading policy, γ and census (no code changes)"
+        "run",
+        help="run a script within one memory ceiling (memopro.enable), with the loading policy, "
+        "γ and census (no code changes)",
     )
     run.add_argument("--budget", default=None, help=_BUDGET_HELP)
     run.add_argument(
@@ -84,8 +86,14 @@ def _parser() -> argparse.ArgumentParser:
         "--transparent",
         metavar="BUDGET",
         default=None,
-        help="Linux, macOS: page the script's NumPy arrays of 16 MiB or more within BUDGET, "
-        "losslessly and without writing to disk (userfaultfd 0124, signals 0229)",
+        help="earlier name for --budget (the ceiling; NumPy arrays are paged within it on Linux "
+        "and macOS by default since 0230)",
+    )
+    run.add_argument(
+        "--no-numpy", action="store_true", help="do not page the script's NumPy arrays"
+    )
+    run.add_argument(
+        "--no-torch", action="store_true", help="do not move PyTorch activations near the ceiling"
     )
     run.add_argument(
         "--report-json", metavar="PATH", default=None, help="write the report as JSON at the end"
@@ -165,6 +173,8 @@ def _run(args: argparse.Namespace) -> None:
         dry_run=args.dry_run,
         transparent=args.transparent,
         report_json=args.report_json,
+        numpy=not args.no_numpy,
+        torch=not args.no_torch,
     )
 
 

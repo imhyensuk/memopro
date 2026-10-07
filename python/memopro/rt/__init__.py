@@ -333,8 +333,8 @@ def transparent(
     (``pager.stats()``). Arrays made here keep using it after the block, until they are freed.
     ``process_budget`` as in :class:`Runtime`.
 
-    The kernel cannot fault chunks in: ``np.save``/``np.load`` are switched to their copying
-    path inside the block, but ``ndarray.tofile``, ``np.fromfile`` and ``file.readinto`` on a
+    The kernel cannot fault chunks in: ``np.save``/``np.load``/``np.fromfile`` are switched to
+    copying paths inside the block, but ``ndarray.tofile`` and ``file.readinto``/``write`` on a
     paged array may fail with ``OSError`` (EFAULT; never wrong data). Not available on Windows:
     use :class:`Runtime` buffers there (explicit pins)."""
     import numpy
@@ -364,13 +364,59 @@ def transparent(
     isfileobj = fmt.get("isfileobj")
     if isfileobj is not None:
         fmt["isfileobj"] = lambda f: False
+    fromfile = numpy.fromfile
+    numpy.fromfile = _fromfile_copying(fromfile)
     old = _core.numpy_set_handler(pager.numpy_handler())
     try:
         yield pager
     finally:
         _core.numpy_set_handler(old)
+        numpy.fromfile = fromfile
         if isfileobj is not None:
             fmt["isfileobj"] = isfileobj
+
+
+_BOUNCE = 4 << 20  # below the paging threshold: an ordinary buffer the kernel can fill
+
+
+def _fromfile_copying(fromfile: Any) -> Any:
+    """``np.fromfile`` that reads binary files through a small ordinary buffer, so the kernel
+    never writes into paged memory (it cannot fault it in); text mode and ``like=`` go to NumPy."""
+    import functools
+    import os
+
+    import numpy as np
+
+    @functools.wraps(fromfile)
+    def wrapper(
+        file: Any, dtype: Any = float, count: int = -1, sep: str = "", offset: int = 0, **kw: Any
+    ) -> Any:
+        if sep or kw:
+            return fromfile(file, dtype=dtype, count=count, sep=sep, offset=offset, **kw)
+        dt = np.dtype(dtype)
+        own = isinstance(file, (str, bytes, os.PathLike))
+        f = open(file, "rb") if own else file  # noqa: SIM115 - closed below when ours
+        try:
+            f.seek(offset, os.SEEK_CUR)
+            if count < 0:
+                left = os.fstat(f.fileno()).st_size - f.tell()
+                count = max(left, 0) // dt.itemsize
+            out = np.empty(count, dtype=dt)
+            raw = out.reshape(-1).view(np.uint8)
+            bounce = bytearray(min(_BOUNCE, raw.nbytes) or 1)
+            done = 0
+            while done < raw.nbytes:
+                n = f.readinto(memoryview(bounce)[: min(len(bounce), raw.nbytes - done)])
+                if not n:
+                    break
+                raw[done : done + n] = np.frombuffer(bounce, np.uint8, n)
+                done += n
+            return out[: done // dt.itemsize] if done < raw.nbytes else out
+        finally:
+            if own:
+                f.close()
+
+    return wrapper
 
 
 class Buffer:

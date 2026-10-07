@@ -88,7 +88,13 @@ def test_save_and_load_work_on_paged_arrays(tmp_path):
         np.save(tmp_path / "x.npy", x)
         y = np.load(tmp_path / "x.npy")
         assert np.array_equal(x, y)
+        (tmp_path / "x.raw").write_bytes(x.tobytes())
+        z = np.fromfile(tmp_path / "x.raw", dtype=np.float32)
+        assert np.array_equal(x, z)
+        with open(tmp_path / "x.raw", "rb") as f:  # a file object, an offset and a count
+            f.read(4)
+            assert np.array_equal(np.fromfile(f, np.float32, count=10, offset=4), x[2:12])
         assert pager.stats()["evictions"] > 0
-        del x, y
+        del x, y, z
     finally:
         ctx.__exit__(None, None, None)

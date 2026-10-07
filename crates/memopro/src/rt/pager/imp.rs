@@ -31,6 +31,12 @@ const HAS_COPY: u64 = 1 << 0x03;
 const HAS_WRITEPROTECT: u64 = 1 << 0x06;
 /// At most this many most recently faulted chunks count as in use and are not evicted.
 const HOT_CHUNKS: u64 = 16;
+/// Chunks the pager always keeps room for in memory, whatever the budget, a process budget and
+/// the compressed copies leave: with room for fewer, the two operands of one copy evicted each
+/// other forever (0230). Going over the budget to keep them is counted in `overruns`.
+const MIN_CHUNKS: u64 = 8;
+/// Milliseconds between looks at the process footprint when nothing faults (process budget).
+const TRIM_MS: libc::c_int = 10;
 
 thread_local! {
     static PAGER_THREAD: std::cell::Cell<bool> = const { std::cell::Cell::new(false) };
@@ -445,9 +451,13 @@ impl Shared {
                 },
             ];
             // SAFETY: two valid pollfd entries.
-            let r = unsafe { libc::poll(fds.as_mut_ptr(), 2, -1) };
+            let r = unsafe { libc::poll(fds.as_mut_ptr(), 2, self.tick()) };
             if r < 0 {
                 continue; // EINTR
+            }
+            if r == 0 {
+                self.trim();
+                continue;
             }
             if fds[1].revents != 0 {
                 return;
@@ -505,7 +515,9 @@ impl Shared {
             }
             return;
         }
-        self.make_room(st, chunk as u64, (start, ci));
+        if !self.make_room(st, chunk as u64, (start, ci)) {
+            st.stats.overruns += 1;
+        }
         let t0 = Instant::now();
         let mut scratch = std::mem::take(&mut st.scratch);
         scratch.resize(chunk, 0);
@@ -545,7 +557,26 @@ impl Shared {
         st.stats.restore_seconds += t0.elapsed().as_secs_f64();
     }
 
-    fn make_room(&self, st: &mut State, need: u64, exclude: (usize, usize)) {
+    /// How long the pager thread waits for faults before it looks at the process again: with a
+    /// process budget, memory outside the pager (a sort's scratch, a C extension's tables) can
+    /// grow while nothing faults, so every {TRIM_MS} ms it gives chunks up if the process is
+    /// over (0230); without one, it only wakes for faults.
+    fn tick(&self) -> libc::c_int {
+        if self.config.process_budget.is_some() {
+            TRIM_MS
+        } else {
+            -1
+        }
+    }
+
+    fn trim(&self) {
+        let mut st = self.lock();
+        let before = st.stats.evictions;
+        self.make_room(&mut st, 0, (usize::MAX, usize::MAX));
+        st.stats.trims += st.stats.evictions - before;
+    }
+
+    fn make_room(&self, st: &mut State, need: u64, exclude: (usize, usize)) -> bool {
         let mut limit = self.limit;
         if let Some(total) = self.config.process_budget {
             let outside = crate::rt::process_footprint()
@@ -555,23 +586,26 @@ impl Shared {
             st.stats.outside_peak = st.stats.outside_peak.max(outside);
             st.stats.limit_low = st.stats.limit_low.min(limit);
         }
+        let hard = limit;
+        let limit = limit.max(st.compressed + MIN_CHUNKS * self.config.chunk as u64);
         while st.resident + st.compressed + need > limit {
-            let Some((start, ci)) = self.choose(st, exclude) else {
-                st.stats.overruns += 1;
-                return;
+            let fits = (limit - st.compressed) / self.config.chunk as u64;
+            let Some((start, ci)) = self.choose(st, exclude, fits) else {
+                break;
             };
             self.evict(st, start, ci);
         }
+        st.resident + st.compressed + need <= hard
     }
 
     /// The chunk in memory whose next fault is predicted farthest, never one of the chunks
-    /// faulted in most recently: code works on them right now (two arrays read and written
-    /// in step ping-ponged chunk for chunk otherwise, and CI tests took hours, 0128). If only
-    /// such chunks are left, the one faulted in longest ago.
-    fn choose(&self, st: &State, exclude: (usize, usize)) -> Option<(usize, usize)> {
+    /// faulted in most recently (a quarter of the `fits` chunks there is room for, 2 to 16):
+    /// code works on them right now (two arrays read and written in step ping-ponged chunk for
+    /// chunk otherwise, and CI tests took hours, 0128). If only such chunks are left, the one
+    /// faulted in longest ago.
+    fn choose(&self, st: &State, exclude: (usize, usize), fits: u64) -> Option<(usize, usize)> {
         let now = st.clock as f64;
-        let fits = (self.limit / self.config.chunk as u64).max(1);
-        let hot = (fits / 4).clamp(1, HOT_CHUNKS) as f64;
+        let hot = (fits / 4).clamp(2, HOT_CHUNKS) as f64;
         let (sum, count) = st
             .regions
             .values()

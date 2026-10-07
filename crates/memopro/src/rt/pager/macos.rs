@@ -32,6 +32,12 @@ use std::time::Instant;
 
 /// At most this many most recently faulted chunks count as in use and are not evicted.
 const HOT_CHUNKS: u64 = 16;
+/// Chunks the pager always keeps room for in memory, whatever the budget, a process budget and
+/// the compressed copies leave: with room for fewer, the two operands of one copy evicted each
+/// other forever (0230). Going over the budget to keep them is counted in `overruns`.
+const MIN_CHUNKS: u64 = 8;
+/// Milliseconds between looks at the process footprint when nothing faults (process budget).
+const TRIM_MS: libc::c_int = 10;
 /// Address space each pager reserves for its regions (no memory until used).
 const ARENA: usize = 64 << 30;
 /// Pagers that can exist at once in a process.
@@ -573,8 +579,13 @@ impl Shared {
                 },
             ];
             // SAFETY: two valid pollfd entries.
-            if unsafe { libc::poll(fds.as_mut_ptr(), 2, -1) } < 0 {
+            let r = unsafe { libc::poll(fds.as_mut_ptr(), 2, self.tick()) };
+            if r < 0 {
                 continue; // EINTR
+            }
+            if r == 0 {
+                self.trim();
+                continue;
             }
             if fds[1].revents != 0 {
                 return;
@@ -613,7 +624,9 @@ impl Shared {
             }
             _ => {}
         }
-        self.make_room(st, chunk as u64, i);
+        if !self.make_room(st, chunk as u64, i) {
+            st.stats.overruns += 1;
+        }
         let t0 = Instant::now();
         let c = st.chunks.get_mut(&i).expect("checked above");
         let was = std::mem::replace(&mut c.data, Data::Resident);
@@ -705,7 +718,26 @@ impl Shared {
         moved
     }
 
-    fn make_room(&self, st: &mut State, need: u64, exclude: usize) {
+    /// How long the pager thread waits for faults before it looks at the process again: with a
+    /// process budget, memory outside the pager (a sort's scratch, a C extension's tables) can
+    /// grow while nothing faults, so every {TRIM_MS} ms it gives chunks up if the process is
+    /// over (0230); without one, it only wakes for faults.
+    fn tick(&self) -> libc::c_int {
+        if self.config.process_budget.is_some() {
+            TRIM_MS
+        } else {
+            -1
+        }
+    }
+
+    fn trim(&self) {
+        let mut st = self.lock();
+        let before = st.stats.evictions;
+        self.make_room(&mut st, 0, usize::MAX);
+        st.stats.trims += st.stats.evictions - before;
+    }
+
+    fn make_room(&self, st: &mut State, need: u64, exclude: usize) -> bool {
         let mut limit = self.limit;
         if let Some(total) = self.config.process_budget {
             let outside = crate::rt::process_footprint()
@@ -715,21 +747,23 @@ impl Shared {
             st.stats.outside_peak = st.stats.outside_peak.max(outside);
             st.stats.limit_low = st.stats.limit_low.min(limit);
         }
+        let hard = limit;
+        let limit = limit.max(st.compressed + MIN_CHUNKS * self.config.chunk as u64);
         while st.resident + st.compressed + need > limit {
-            let Some(i) = self.choose(st, exclude) else {
-                st.stats.overruns += 1;
-                return;
+            let fits = (limit - st.compressed) / self.config.chunk as u64;
+            let Some(i) = self.choose(st, exclude, fits) else {
+                break;
             };
             self.evict(st, i);
         }
+        st.resident + st.compressed + need <= hard
     }
 
     /// As on Linux: the resident chunk whose next fault is predicted farthest, never one of the
     /// most recently faulted (code works on them now); if only those are left, the oldest.
-    fn choose(&self, st: &State, exclude: usize) -> Option<usize> {
+    fn choose(&self, st: &State, exclude: usize, fits: u64) -> Option<usize> {
         let now = st.clock as f64;
-        let fits = (self.limit / self.config.chunk as u64).max(1);
-        let hot = (fits / 4).clamp(1, HOT_CHUNKS) as f64;
+        let hot = (fits / 4).clamp(2, HOT_CHUNKS) as f64;
         let (sum, count) = st
             .chunks
             .values()

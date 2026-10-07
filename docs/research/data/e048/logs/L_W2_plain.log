@@ -1,0 +1,2 @@
+$ /usr/bin/python3 /content/memopro_colab/worker_data.py passes.py --mib 1024 --passes 4
+RESULT {"status": "ok", "error": null, "result": {"mib": 1024, "passes": 4, "ceiling": null, "build_seconds": 6.088161413999956, "pass_seconds": [0.3617438839999636, 0.25595793499996944, 0.24326485099999218, 0.23894802600000276], "sums_sha256": "e3fc61b9dc7a84a627efc6ba9d7dea29d5a388cd4f936729246e2da330e82ce1", "maxrss_rusage_bytes": null, "maxrss_bytes": 1178075136}, "preloaded": false}
