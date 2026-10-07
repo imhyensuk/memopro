@@ -36,6 +36,8 @@ const HOT_CHUNKS: u64 = 16;
 /// the compressed copies leave: with room for fewer, the two operands of one copy evicted each
 /// other forever (0230). Going over the budget to keep them is counted in `overruns`.
 const MIN_CHUNKS: u64 = 8;
+/// Milliseconds between looks at the process footprint when nothing faults (process budget).
+const TRIM_MS: libc::c_int = 10;
 /// Address space each pager reserves for its regions (no memory until used).
 const ARENA: usize = 64 << 30;
 /// Pagers that can exist at once in a process.
@@ -577,8 +579,13 @@ impl Shared {
                 },
             ];
             // SAFETY: two valid pollfd entries.
-            if unsafe { libc::poll(fds.as_mut_ptr(), 2, -1) } < 0 {
+            let r = unsafe { libc::poll(fds.as_mut_ptr(), 2, self.tick()) };
+            if r < 0 {
                 continue; // EINTR
+            }
+            if r == 0 {
+                self.trim();
+                continue;
             }
             if fds[1].revents != 0 {
                 return;
@@ -617,7 +624,9 @@ impl Shared {
             }
             _ => {}
         }
-        self.make_room(st, chunk as u64, i);
+        if !self.make_room(st, chunk as u64, i) {
+            st.stats.overruns += 1;
+        }
         let t0 = Instant::now();
         let c = st.chunks.get_mut(&i).expect("checked above");
         let was = std::mem::replace(&mut c.data, Data::Resident);
@@ -709,7 +718,26 @@ impl Shared {
         moved
     }
 
-    fn make_room(&self, st: &mut State, need: u64, exclude: usize) {
+    /// How long the pager thread waits for faults before it looks at the process again: with a
+    /// process budget, memory outside the pager (a sort's scratch, a C extension's tables) can
+    /// grow while nothing faults, so every {TRIM_MS} ms it gives chunks up if the process is
+    /// over (0230); without one, it only wakes for faults.
+    fn tick(&self) -> libc::c_int {
+        if self.config.process_budget.is_some() {
+            TRIM_MS
+        } else {
+            -1
+        }
+    }
+
+    fn trim(&self) {
+        let mut st = self.lock();
+        let before = st.stats.evictions;
+        self.make_room(&mut st, 0, usize::MAX);
+        st.stats.trims += st.stats.evictions - before;
+    }
+
+    fn make_room(&self, st: &mut State, need: u64, exclude: usize) -> bool {
         let mut limit = self.limit;
         if let Some(total) = self.config.process_budget {
             let outside = crate::rt::process_footprint()
@@ -728,9 +756,7 @@ impl Shared {
             };
             self.evict(st, i);
         }
-        if st.resident + st.compressed + need > hard {
-            st.stats.overruns += 1;
-        }
+        st.resident + st.compressed + need <= hard
     }
 
     /// As on Linux: the resident chunk whose next fault is predicted farthest, never one of the
