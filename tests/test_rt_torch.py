@@ -597,3 +597,13 @@ def test_padded_draft_logits_keep_their_values_at_qwen_vocabulary_width(device):
     out = rtt._padded(lambda x: x, 128)(y)
     assert out.shape[-1] == 152064 and torch.equal(out[..., :151936], y)
     assert bool(torch.isneginf(out[..., 151936:]).all())
+
+
+def test_a_file_that_is_not_safetensors_is_named_not_a_memory_error(tmp_path):
+    """0220: a bad header length read as a size made `f.read` raise a bare MemoryError."""
+    from memopro.hibernate._source import read_header
+
+    bad = tmp_path / "model.safetensors"
+    bad.write_bytes((1 << 60).to_bytes(8, "little") + b"{}")
+    with pytest.raises(memopro.InvalidArgument, match="not a safetensors file"):
+        read_header(bad)
