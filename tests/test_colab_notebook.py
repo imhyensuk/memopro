@@ -20,6 +20,7 @@ NOTEBOOKS = (
     "suite_vision",
     "suite_speed",
     "suite_data",
+    "unsloth",
 )
 
 
