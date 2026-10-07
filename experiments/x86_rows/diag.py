@@ -101,10 +101,12 @@ class Recorder:
             if name not in self.calls:
                 self.calls[name] = []
                 self.order.append(name)
+            w = getattr(module, "weight", None)
             self.calls[name].append(
                 (
                     None if x is None else x.detach().clone(),
                     None if y is None else y.detach().clone(),
+                    w.data_ptr() % 4096 if isinstance(w, torch.Tensor) else None,
                 )
             )
 
@@ -145,23 +147,24 @@ def culprit(plain, order, both, step, prompt):
         if not b:
             continue
         if step == 0:
-            px, py = row(p[0][0], prompt - 1), row(p[0][1], prompt - 1)
-            bx, by = row(b[0][0], prompt - 1), row(b[0][1], prompt - 1)
+            px, py, pw = row(p[0][0], prompt - 1), row(p[0][1], prompt - 1), p[0][2]
+            bx, by, bw = row(b[0][0], prompt - 1), row(b[0][1], prompt - 1), b[0][2]
         elif len(p) == len(b):  # called once per row in both passes (inside the layers)
-            (px, py), (bx, by) = p[step], b[step]
+            (px, py, pw), (bx, by, bw) = p[step], b[step]
         elif len(b) == 1:  # called once on all rows of the pass (embedding, rotary, norm)
-            px, py = p[step]
-            bx, by = row(b[0][0], prompt + step - 1), row(b[0][1], prompt + step - 1)
+            px, py, pw = p[step]
+            bx, by, bw = row(b[0][0], prompt + step - 1), row(b[0][1], prompt + step - 1), b[0][2]
         elif len(b) == len(p) - 1 + prompt:  # the output head: one call per row
-            px, py = p[step]
-            bx, by = b[prompt + step - 1]
+            px, py, pw = p[step]
+            bx, by, bw = b[prompt + step - 1]
         else:
-            continue
+            raise AssertionError(f"{name}: {len(p)} plain calls, {len(b)} in the pass")
         if py is not None and not same(py, by):
             return {
                 "module": name,
                 "input_same": same(px, bx) if px is not None and px.is_floating_point() else None,
                 "max_diff": diff(py, by),
+                "weight_ptr_mod_4096": [pw, bw],
                 "shapes": [list(py.shape), list(by.shape) if by is not None else None],
             }
     return None
@@ -177,11 +180,12 @@ def model_check(path: Path, streamed: bool) -> dict:
     prompt = torch.randint(0, 8000, (1, 10), generator=g)
     new = torch.randint(0, 8000, (1, 6), generator=g)
     n = prompt.shape[1]
+    with torch.no_grad():  # as plain generate computes the prompt's last row
+        last_keep1 = m(input_ids=prompt, use_cache=True, logits_to_keep=1).logits[:, -1]
     rec = Recorder(m)
     with torch.no_grad():
         out = m(input_ids=prompt, use_cache=True)
         last, cache = out.logits[:, -1], out.past_key_values
-        last_keep1 = m(input_ids=prompt, use_cache=True, logits_to_keep=1).logits[:, -1]
         singles = []
         for i in range(new.shape[1]):
             out = m(input_ids=new[:, i : i + 1], past_key_values=cache, use_cache=True)
