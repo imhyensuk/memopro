@@ -1,0 +1,76 @@
+$ /usr/bin/python3 /content/memopro_colab/worker_pytest.py /content/memopro-src tests/test_enable.py tests/test_rt_transparent.py tests/test_rt_adopt.py tests/test_rt_torch.py
+.........s.....s.......s...Fss.....ss.ss.s..                             [100%]
+=================================== FAILURES ===================================
+_____ test_rows_after_the_prompt_are_computed_as_in_plain_generation[cpu] ______
+
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_rows_after_the_prompt_are0')
+device = 'cpu'
+
+    @pytest.mark.parametrize("device", ["cpu", "mps"])
+    def test_rows_after_the_prompt_are_computed_as_in_plain_generation(tmp_path, device):
+        """0142: inside `_row_invariant`, a pass over several new rows (a verification) gives the
+        same logits, bit for bit, as feeding those rows one at a time, and the prompt keeps its
+        block shape (the same logits as the prompt's own pass)."""
+        from memopro.env._torch import mps_usable
+    
+        if device == "mps" and not mps_usable():
+            pytest.skip("needs a usable Apple GPU")
+        m = rtt.stream_model(_tiny_qwen(tmp_path / "t", 0), budget="9MiB", device=device)
+        g = torch.Generator().manual_seed(6)
+        prompt = torch.randint(0, 8000, (1, 10), generator=g).to(device)
+        new = torch.randint(0, 8000, (1, 6), generator=g).to(device)
+        with torch.no_grad():
+            out = m(input_ids=prompt, use_cache=True)
+            first, cache = out.logits[:, -1], out.past_key_values
+            singles = []
+            for i in range(new.shape[1]):
+                out = m(input_ids=new[:, i : i + 1], past_key_values=cache, use_cache=True)
+                singles.append(out.logits[:, -1])
+                cache = out.past_key_values
+            with rtt._row_invariant(m, prompt.shape[1]):
+                both = m(input_ids=torch.cat([prompt, new], 1), use_cache=True).logits
+                out = m(input_ids=prompt, use_cache=True)
+                later = m(input_ids=new, past_key_values=out.past_key_values, use_cache=True).logits
+        assert torch.equal(both[:, prompt.shape[1] - 1], first)
+        for i, one in enumerate(singles):
+>           assert torch.equal(both[:, prompt.shape[1] + i], one)
+E           assert False
+E            +  where False = <built-in method equal of type object at 0x7a55d07f1000>(tensor([[ 0.0026, -0.1396,  0.5039,  ...,  0.0085,  0.5703,  0.2090]],\n       dtype=torch.bfloat16), tensor([[ 0.0026, -0.1396,  0.5039,  ...,  0.0085,  0.5703,  0.2090]],\n       dtype=torch.bfloat16))
+E            +    where <built-in method equal of type object at 0x7a55d07f1000> = torch.equal
+
+tests/test_rt_torch.py:299: AssertionError
+----------------------------- Captured stderr call -----------------------------
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s]
+Writing model shards: 100%|██████████| 1/1 [00:00<00:00, 87.41it/s]
+=============================== warnings summary ===============================
+tests/test_rt_torch.py::test_streamed_inference_is_bit_identical_within_the_budget
+  /usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py:292: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_new.cpp:1586.)
+    t = torch.frombuffer(pin, dtype=dtype, count=numel).view(shape)
+
+tests/test_rt_torch.py::test_lora_on_streamed_frozen_weights_trains_identically
+  /content/memopro-src/tests/test_rt_torch.py:105: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+  Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+    losses.append(float(loss))
+
+tests/test_rt_torch.py::test_loss_chunks_keep_float32_logits_under_the_mps_heap_threshold
+  /usr/local/lib/python3.13/dist-packages/torch/utils/checkpoint.py:232: UserWarning: None of the inputs have requires_grad=True. Gradients will be None
+    check_backward_validity(args)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_rt_torch.py::test_rows_after_the_prompt_are_computed_as_in_plain_generation[cpu]
+SKIPPED [1] tests/test_rt_transparent.py:74: elsewhere the refusal is checked
+SKIPPED [1] tests/test_rt_adopt.py:142: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:163: needs a usable Apple GPU (CI macOS VMs cannot allocate)
+SKIPPED [1] tests/test_rt_torch.py:280: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:312: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:476: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:501: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:529: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:567: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:595: needs a usable Apple GPU
+1 failed, 33 passed, 10 skipped, 3 warnings in 28.49s
+
+
+RESULT {"status": "failed", "returncode": 1, "counts": {"failed": 1, "passed": 33, "skipped": 10}, "failed": ["FAILED tests/test_rt_torch.py::test_rows_after_the_prompt_are_computed_as_in_plain_generation[cpu]"], "skipped": ["SKIPPED [1] tests/test_rt_transparent.py:74: elsewhere the refusal is checked", "SKIPPED [1] tests/test_rt_adopt.py:142: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:163: needs a usable Apple GPU (CI macOS VMs cannot allocate)", "SKIPPED [1] tests/test_rt_torch.py:280: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:312: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:476: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:501: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:529: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:567: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:595: needs a usable Apple GPU"], "files": ["tests/test_enable.py", "tests/test_rt_transparent.py", "tests/test_rt_adopt.py", "tests/test_rt_torch.py"]}

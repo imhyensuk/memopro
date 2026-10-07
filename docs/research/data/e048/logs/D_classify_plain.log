@@ -1,0 +1,2 @@
+$ /usr/bin/python3 /content/memopro_colab/worker_data.py classify.py
+RESULT {"status": "ok", "error": null, "result": {"coef": "a9b9ed86098f6946ac00bda1e9d6576ebac3caae9491182e2712f9130b5fbeb9", "accuracy": 0.9514175, "nnz": 21699438, "seconds": 17.60817440699975, "import_rss_bytes": 3191984128, "maxrss_bytes": 2556796928, "maxrss_rusage_bytes": 3191984128}, "preloaded": false}

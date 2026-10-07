@@ -1,0 +1,40 @@
+{
+ "TEST_FILES": [
+  "tests/test_enable.py",
+  "tests/test_rt_transparent.py",
+  "tests/test_rt_adopt.py",
+  "tests/test_rt_torch.py"
+ ],
+ "LM_MODELS": {
+  "Qwen/Qwen2.5-3B-Instruct": [
+   2147483648,
+   3221225472
+  ],
+  "Qwen/Qwen2.5-7B-Instruct": [
+   4294967296,
+   6442450944
+  ]
+ },
+ "LORA": {
+  "steps": 10,
+  "seq": 512
+ },
+ "UNSLOTH_4BIT": [
+  "Qwen/Qwen2.5-7B-Instruct"
+ ],
+ "VISION": {
+  "model": "facebook/dinov2-giant",
+  "budgets": [
+   1153433600,
+   2306867200
+  ],
+  "batch": 8,
+  "lora_steps": 5
+ },
+ "DATA_WORKLOADS": [
+  "image.py",
+  "classify.py",
+  "dataframe.py",
+  "simulate.py"
+ ]
+}
