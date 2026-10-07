@@ -88,7 +88,7 @@ class Recorder:
         self.calls: dict[str, list] = {}
         self.order: list[str] = []
         self.handles = [
-            m.register_forward_hook(self._hook(name), with_kwargs=True)
+            m.register_forward_hook(self._hook(name), with_kwargs=True, prepend=True)
             for name, m in model.named_modules()
             if name
         ]
@@ -106,7 +106,14 @@ class Recorder:
                 (
                     None if x is None else x.detach().clone(),
                     None if y is None else y.detach().clone(),
-                    w.data_ptr() % 4096 if isinstance(w, torch.Tensor) else None,
+                    {
+                        "w": w.detach().clone(),
+                        "w_ptr": w.data_ptr() % 4096,
+                        "x_ptr": first(args).data_ptr() % 4096,
+                        "x_stride": list(first(args).stride()),
+                    }
+                    if isinstance(w, torch.Tensor) and args and first(args) is not None
+                    else None,
                 )
             )
 
@@ -139,6 +146,15 @@ def diff(a, b) -> float | None:
     return float((a.float() - b.float()).abs().max())
 
 
+def recompute(name, x, plain_y, pass_y, w):
+    """The culprit linear once more on fresh copies of its input and weight: which pass does a
+    fresh computation agree with?"""
+    if w is None or x is None or not name.endswith(("proj", "lm_head")):
+        return {}
+    y = F.linear(x.clone(), w["w"].clone())
+    return {"fresh_eq_plain": same(y, plain_y), "fresh_eq_pass": same(y, pass_y)}
+
+
 def culprit(plain, order, passed, step, lead, blocks):
     """First module (plain call order) whose output at `step` differs; is its input the same?
     step 0 is the prompt's last row, step k >= 1 the k-th new row. `lead`: rows of the pass
@@ -165,7 +181,11 @@ def culprit(plain, order, passed, step, lead, blocks):
                 "module": name,
                 "input_same": same(px, bx) if px is not None and px.is_floating_point() else None,
                 "max_diff": diff(py, by),
-                "weight_ptr_mod_4096": [pw, bw],
+                "weight_ptr_mod_4096": [pw and pw["w_ptr"], bw and bw["w_ptr"]],
+                "input_ptr_mod_4096": [pw and pw["x_ptr"], bw and bw["x_ptr"]],
+                "input_stride": [pw and pw["x_stride"], bw and bw["x_stride"]],
+                "weight_same": pw is not None and bw is not None and same(pw["w"], bw["w"]),
+                **recompute(name, px, py, by, pw),
                 "shapes": [list(py.shape), list(by.shape) if by is not None else None],
             }
     return None
