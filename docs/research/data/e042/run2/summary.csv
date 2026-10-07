@@ -12,4 +12,4 @@ S-dinov2-giant,same output as plain; time <= the pre-registered limit (0202),fai
 D-image,same result; process peak <= half of the plain peak (+64 MiB); no overruns,pass,peak 0.71 GiB vs limit 0.77 GiB (plain 1.54 GiB); 10.5 -> 33.6 s; overruns 0
 D-dataframe,same result; process peak <= half of the plain peak (+64 MiB); no overruns,fail,peak - vs limit 0.83 GiB (plain 1.66 GiB); 16.0 -> - s; overruns 0
 D-classify,same result; process peak <= half of the plain peak (+64 MiB); no overruns,pass,peak 1.13 GiB vs limit 1.19 GiB (plain 2.38 GiB); 16.8 -> 60.7 s; overruns 0
-D-simulate,same result; process peak <= half of the plain peak (+64 MiB); no overruns,fail,peak - vs limit 0.00 GiB (plain 2.16 GiB); 45.9 -> - s; overruns None
+D-simulate,same result; process peak <= half of the plain peak (+64 MiB); no overruns,fail,peak - vs limit 1.08 GiB (plain 2.16 GiB); 45.9 -> - s; overruns 234270
