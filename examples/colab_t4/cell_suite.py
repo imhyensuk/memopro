@@ -22,6 +22,10 @@ VISION_LORA = {"model": "facebook/dinov2-giant", "steps": 5, "batch": 8}
 DATA_WORKLOADS = ["image.py", "dataframe.py", "classify.py", "simulate.py"]
 DATA_CHUNK = 1 << 20  # pager chunk bytes (memopro-preload)
 TIMEOUT_S = 60 * 60
+# Which parts this notebook runs. All parts share one run folder on Drive, so the split notebooks
+# (colab_t4_suite_*.ipynb) can be run one after another in separate sessions; finished cases are
+# skipped and summary.md covers every part done so far.
+PARTS = ["lm", "vision", "speed", "data"]
 MODEL_CACHE = "drive"  # "drive": keep downloaded models in Drive hf_cache/; "local": this session only
 # ==== (settings shared by all cells) ================================================
 DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"
@@ -55,7 +59,7 @@ def suite_body():
             f"this memopro build cannot stream to CUDA (build_has: {has}): put the new source "
             "bundle memopro-src.tar.gz in Drive memopro_colab/install/, restart, run again")
     # ---- LM
-    for model, budgets in LM_MODELS.items():
+    for model, budgets in (LM_MODELS if "lm" in PARTS else {}).items():
         free_local_models(keep=(local_name(model),))
         path = fetch_model(model)
         extra = {"MP_MODEL_PATH": path}
@@ -73,7 +77,7 @@ def suite_body():
                      ["lm_lora", model, "memopro", b, LORA["steps"], LORA["seq"]], TIMEOUT_S,
                      {**extra, **DETERMINISTIC})
     # ---- vision
-    for model, budgets in VISION_MODELS.items():
+    for model, budgets in (VISION_MODELS if "vision" in PARTS else {}).items():
         free_local_models(keep=(local_name(model),))
         path = fetch_model(model)
         extra = {"MP_MODEL_PATH": path}
@@ -93,7 +97,8 @@ def suite_body():
                          {**extra, **DETERMINISTIC})
     # ---- speed after the GPU cache and prefetch (E043, docs/research/0202): the same memopro
     # cases again under new keys, each model's largest budget
-    for model, budgets in {**LM_MODELS, **{VISION_LORA["model"]: VISION_MODELS[VISION_LORA["model"]]}}.items():
+    speed = {**LM_MODELS, **{VISION_LORA["model"]: VISION_MODELS[VISION_LORA["model"]]}}
+    for model, budgets in (speed if "speed" in PARTS else {}).items():
         free_local_models(keep=(local_name(model),))
         path = fetch_model(model)
         n, b = short(model), budgets[-1]
@@ -107,8 +112,8 @@ def suite_body():
     free_local_models()
     # ---- data programs (CPU), unchanged and under memopro-preload at half their memory
     lib = os.environ.get("MP_PRELOAD_LIB")
-    probe = preload_probe(run, lib)
-    for w in DATA_WORKLOADS:
+    probe = preload_probe(run, lib) if "data" in PARTS else (run.done("data__probe") or {})
+    for w in (DATA_WORKLOADS if "data" in PARTS else []):
         n = w.removesuffix(".py")
         for mode in ("plain", "preload"):  # measured before VmHWM (0199): measure again
             old = run.done(f"data__{n}__{mode}")
@@ -165,7 +170,9 @@ def summarize_suite(run, probe):
     recs = {r.get("case"): r for r in run.records()}
     rows = []
 
-    def check(name, criterion, result, detail):
+    def check(name, criterion, result, detail, keys=()):
+        if keys and not any(recs.get(k) for k in keys):
+            result, detail = None, "not run yet (its notebook part has not been run)"
         rows.append({"check": name, "criterion": criterion,
                      "result": "pass" if result is True else ("fail" if result is False else "n/a"),
                      "detail": detail})
@@ -182,18 +189,21 @@ def summarize_suite(run, probe):
         if ok(p):
             check(f"G-{n}", "streamed generation text = the model loaded normally (both budgets)",
                   done and all(m.get("texts") == p.get("texts") for m in ms),
-                  f"s/token plain {fmt(p.get('s_per_token'))}, memopro {[fmt(m.get('s_per_token')) for m in ms]}")
+                  f"s/token plain {fmt(p.get('s_per_token'))}, memopro {[fmt(m.get('s_per_token')) for m in ms]}",
+                  [f"lm_gen__{n}__memopro_{b // MIB}" for b in budgets])
         else:
             check(f"G-{n}", "plain does not fit the T4; streamed completes, same text at both budgets",
                   done and same, f"plain {p.get('status')}; memopro {[m.get('status') for m in ms]}, "
-                  f"s/token {[fmt(m.get('s_per_token')) for m in ms]}")
+                  f"s/token {[fmt(m.get('s_per_token')) for m in ms]}",
+                  [f"lm_gen__{n}__memopro_{b // MIB}" for b in budgets])
         p = recs.get(f"lm_lora__{n}__plain", {})
         ms = [recs.get(f"lm_lora__{n}__memopro_{b // MIB}", {}) for b in budgets]
         done = all(ok(m) and len(m.get("losses") or []) == LORA["steps"] for m in ms)
         check(f"L-{n}", "16-bit LoRA completes; losses bit-identical across budgets",
               done and ms[0].get("loss_bits") == ms[1].get("loss_bits"),
               f"plain {p.get('status')} {[round(x, 4) for x in p.get('losses') or []]}; memopro "
-              f"{[round(x, 4) for x in ms[0].get('losses') or []]}, step s {[fmt(sum(m.get('step_s') or [0]) / max(1, len(m.get('step_s') or [])), 1) for m in ms]}")
+              f"{[round(x, 4) for x in ms[0].get('losses') or []]}, step s {[fmt(sum(m.get('step_s') or [0]) / max(1, len(m.get('step_s') or [])), 1) for m in ms]}",
+              [f"lm_lora__{n}__memopro_{b // MIB}" for b in budgets])
     for model, budgets in VISION_MODELS.items():
         n = short(model)
         p = recs.get(f"vis_infer__{n}__plain", {})
@@ -201,7 +211,8 @@ def summarize_suite(run, probe):
         check(f"V-{n}", "streamed inference output = the model loaded normally (both budgets)",
               ok(p) and all(ok(m) and m.get("output_sha") == p.get("output_sha") for m in ms),
               f"plain {p.get('status')} {fmt(p.get('second_s'))} s; memopro "
-              f"{[(m.get('status'), fmt(m.get('second_s'))) for m in ms]}")
+              f"{[(m.get('status'), fmt(m.get('second_s'))) for m in ms]}",
+              [f"vis_infer__{n}__memopro_{b // MIB}" for b in budgets])
     n = short(VISION_LORA["model"])
     budgets = VISION_MODELS[VISION_LORA["model"]]
     ms = [recs.get(f"vis_lora__{n}__memopro_{b // MIB}", {}) for b in budgets]
@@ -209,7 +220,8 @@ def summarize_suite(run, probe):
     check(f"VL-{n}", "vision LoRA completes; losses bit-identical across budgets",
           all(ok(m) for m in ms) and ms[0].get("loss_bits") == ms[1].get("loss_bits"),
           f"plain {p.get('status')} {[round(x, 4) for x in p.get('losses') or []]}; memopro "
-          f"{[round(x, 4) for x in ms[0].get('losses') or []]}")
+          f"{[round(x, 4) for x in ms[0].get('losses') or []]}",
+          [f"vis_lora__{n}__memopro_{b // MIB}" for b in budgets])
     for model, budgets in {**LM_MODELS, **{VISION_LORA["model"]: VISION_MODELS[VISION_LORA["model"]]}}.items():
         n, b = short(model), budgets[-1]
         kind = "lm_gen" if model in LM_MODELS else "vis_infer"
@@ -224,10 +236,15 @@ def summarize_suite(run, probe):
         check(f"S-{n}", "same output as plain; time <= the pre-registered limit (0202)",
               ok(new) and same and z is not None and z <= limit,
               f"plain {fmt(ref)}, no cache {fmt(a)}, cache {fmt(z)} (limit {fmt(limit)}); "
-              f"copies {new.get('copy_stats') or '-'}")
+              f"copies {new.get('copy_stats') or '-'}",
+              [f"{kind}__{n}__memopro_{b // MIB}__cache"])
     for w in DATA_WORKLOADS:
         n = w.removesuffix(".py")
         p, m = recs.get(f"data__{n}__plain", {}), recs.get(f"data__{n}__preload", {})
+        if not recs.get(f"data__{n}__plain") and not recs.get(f"data__{n}__preload"):
+            check(f"D-{n}", "unchanged program at half memory under memopro-preload", None,
+                  "not run yet (its notebook part has not been run)")
+            continue
         if not probe.get("ok"):
             check(f"D-{n}", "unchanged program at half memory under memopro-preload", None,
                   f"userfaultfd probe: {probe.get('status')} {probe.get('why', '')}")

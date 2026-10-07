@@ -8,7 +8,19 @@ import sys
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
-NOTEBOOKS = ("train", "infer", "multi", "remeasure", "remeasure2", "qlora", "suite")
+NOTEBOOKS = (
+    "train",
+    "infer",
+    "multi",
+    "remeasure",
+    "remeasure2",
+    "qlora",
+    "suite",
+    "suite_lm",
+    "suite_vision",
+    "suite_speed",
+    "suite_data",
+)
 
 
 def build(tmp_path):
