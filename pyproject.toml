@@ -16,12 +16,15 @@ classifiers = [
     "Intended Audience :: Science/Research",
     "Programming Language :: Python :: 3",
     "Programming Language :: Rust",
+    "Operating System :: MacOS",
+    "Operating System :: POSIX :: Linux",
     "Topic :: Scientific/Engineering :: Artificial Intelligence",
 ]
 dynamic = ["version"]
 dependencies = []
 
 [project.optional-dependencies]
+numpy = ["numpy"]
 torch = ["torch>=2.4", "numpy"]
 hf = ["torch>=2.4", "numpy", "transformers", "accelerate", "safetensors"]
 llm = ["torch>=2.4", "numpy", "transformers", "accelerate", "safetensors", "peft", "torchao"]
