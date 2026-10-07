@@ -88,6 +88,8 @@ pub struct PagerStats {
     /// the chunks were held to.
     pub outside_peak: u64,
     pub limit_low: u64,
+    /// Chunks given up while nothing faulted because memory outside the pager grew (0230).
+    pub trims: u64,
 }
 
 #[cfg(target_os = "linux")]
