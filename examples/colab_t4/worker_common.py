@@ -82,6 +82,11 @@ class DeviceMonitor:
 
 
 MON = DeviceMonitor()
+if DEVICE == "cuda" and os.environ.get("MP_GPU_LIMIT"):  # a smaller GPU, emulated (E049, 0240)
+    _limit = int(os.environ["MP_GPU_LIMIT"])
+    torch.cuda.set_per_process_memory_fraction(
+        min(1.0, _limit / torch.cuda.get_device_properties(0).total_memory))
+    RESULT["gpu_limit"] = _limit
 
 
 def is_oom(e):

@@ -22,6 +22,7 @@ NOTEBOOKS = (
     "suite_data",
     "unsloth",
     "full",
+    "beat",
 )
 
 
