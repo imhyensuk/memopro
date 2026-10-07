@@ -139,6 +139,54 @@ Colab 7차(0093)에서 드러난 결함이 고쳐졌는지 **통합 셀 하나**
 }
 
 
+SUITE_PARTS = {  # split notebooks of the suite (one part each, same run folder)
+    'suite_lm': ('["lm"]', """# memopro Colab T4 통합 시험 ① 언어 모델 (docs/research/0197, E042)
+
+Qwen2.5-3B·7B의 생성과 16비트 LoRA를 그냥 GPU에 올리기 대 memopro(호스트 메모리에서 GPU로 흘려 쓰기)로 잰다. 7B는 T4(15GB)에 그냥은 안 들어간다.
+
+- 예상 시간: 약 40~70분(첫 실행은 모델 다운로드 약 21GB 포함)
+- 판정: G(생성 동일), L(LoRA 손실이 예산과 무관하게 비트 동일)
+
+**나눈 노트북 네 개**(①언어 모델 ②비전 ③속도 ④데이터)는 Drive의 **같은 결과 폴더**(`results/suite/`)를 쓴다. 아무 순서로 하나씩 실행하면 되고, 끝난 경우는 건너뛴다. 동시에 두 세션에서 돌리지 않는다. `summary.md`는 지금까지 끝난 부분을 모두 판정하고, 아직 안 돌린 부분은 `n/a (not run yet)`로 나온다.
+
+**준비**: 런타임 → 런타임 유형 변경 → **T4 GPU**. Drive `memopro_colab/install/`에 소스 묶음 `memopro-src.tar.gz`(첫 실행 때 빌드 5~8분). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한다.
+"""),
+    'suite_vision': ('["vision"]', """# memopro Colab T4 통합 시험 ② 비전 (docs/research/0197, E042)
+
+ResNet-152 추론, DINOv2-giant 추론과 LoRA를 예산 약 1/4·1/2에서 잰다.
+
+- 예상 시간: 약 20~40분(DINOv2 다운로드 약 4GB 포함)
+- 판정: V(추론 출력 동일), VL(LoRA 손실이 예산과 무관하게 비트 동일)
+
+**나눈 노트북 네 개**(①언어 모델 ②비전 ③속도 ④데이터)는 Drive의 **같은 결과 폴더**(`results/suite/`)를 쓴다. 아무 순서로 하나씩 실행하면 되고, 끝난 경우는 건너뛴다. 동시에 두 세션에서 돌리지 않는다. `summary.md`는 지금까지 끝난 부분을 모두 판정하고, 아직 안 돌린 부분은 `n/a (not run yet)`로 나온다.
+
+**준비**: 런타임 → 런타임 유형 변경 → **T4 GPU**. Drive `memopro_colab/install/`에 소스 묶음 `memopro-src.tar.gz`(첫 실행 때 빌드 5~8분). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한다.
+"""),
+    'suite_speed': ('["speed"]', """# memopro Colab T4 통합 시험 ③ 속도(GPU 캐시) (docs/research/0197, E042)
+
+GPU 캐시와 미리 복사(0201)를 켠 memopro로 3B·7B 생성과 DINOv2 추론 속도를 잰다. 같은 출력인지도 본다.
+
+- 예상 시간: 약 20~40분
+- 판정: S(출력 동일, 3B·DINOv2는 그냥의 2배 이내, 7B는 2.0초/토큰 이내, 0202)
+
+**나눈 노트북 네 개**(①언어 모델 ②비전 ③속도 ④데이터)는 Drive의 **같은 결과 폴더**(`results/suite/`)를 쓴다. 아무 순서로 하나씩 실행하면 되고, 끝난 경우는 건너뛴다. 동시에 두 세션에서 돌리지 않는다. `summary.md`는 지금까지 끝난 부분을 모두 판정하고, 아직 안 돌린 부분은 `n/a (not run yet)`로 나온다.
+
+**준비**: 런타임 → 런타임 유형 변경 → **T4 GPU**. Drive `memopro_colab/install/`에 소스 묶음 `memopro-src.tar.gz`(첫 실행 때 빌드 5~8분). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한다.
+"""),
+    'suite_data': ('["data"]', """# memopro Colab T4 통합 시험 ④ 데이터 프로그램 (docs/research/0197, E042)
+
+영상 묶음, pandas, scikit-learn, 열 확산 시뮬레이션을 코드 수정 없이 그냥 실행 대 `memopro-preload`로 메모리 절반에서 실행한다(CPU만 씀).
+
+- 예상 시간: 약 30~60분
+- 판정: D(같은 결과, 프로세스 최대 메모리 ≤ 절반 + 64MiB, overruns 0)
+
+**나눈 노트북 네 개**(①언어 모델 ②비전 ③속도 ④데이터)는 Drive의 **같은 결과 폴더**(`results/suite/`)를 쓴다. 아무 순서로 하나씩 실행하면 되고, 끝난 경우는 건너뛴다. 동시에 두 세션에서 돌리지 않는다. `summary.md`는 지금까지 끝난 부분을 모두 판정하고, 아직 안 돌린 부분은 `n/a (not run yet)`로 나온다.
+
+**준비**: 런타임 → 런타임 유형 변경 → **T4 GPU**. Drive `memopro_colab/install/`에 소스 묶음 `memopro-src.tar.gz`(첫 실행 때 빌드 5~8분). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한다.
+"""),
+}
+
+
 def commit():
     return subprocess.run(["git", "rev-parse", "--short", "HEAD"], cwd=ROOT, capture_output=True,
                           text=True, check=False).stdout.strip() or "unknown"
@@ -176,12 +224,19 @@ def notebook(title_md, src):
 def main():
     out_dir = Path(sys.argv[sys.argv.index("--out-dir") + 1]) if "--out-dir" in sys.argv else None
     nb_dir = Path(sys.argv[sys.argv.index("--nb-dir") + 1]) if "--nb-dir" in sys.argv else ROOT / "examples"
-    for name, (file, cell_file, head) in NOTEBOOKS.items():
-        src = compose(cell_file, EXTRA_WORKERS.get(name))
+    jobs = [(name, file, cell_file, head, None) for name, (file, cell_file, head) in NOTEBOOKS.items()]
+    jobs += [(name, f"colab_t4_{name}.ipynb", "cell_suite.py", head, parts)
+             for name, (parts, head) in SUITE_PARTS.items()]
+    for name, file, cell_file, head, parts in jobs:
+        src = compose(cell_file, EXTRA_WORKERS.get(name.split("_")[0] if parts else name))
+        if parts:
+            old = 'PARTS = ["lm", "vision", "speed", "data"]'
+            assert old in src
+            src = src.replace(old, f"PARTS = {parts}")
         if out_dir:
             out_dir.mkdir(parents=True, exist_ok=True)
             (out_dir / f"{name}.py").write_text(src, encoding="utf-8")
-        nb = notebook(head + COMMON_PREP.replace("{cell}", name), src)
+        nb = notebook(head + COMMON_PREP.replace("{cell}", "suite" if parts else name), src)
         out = nb_dir / file
         out.write_text(json.dumps(nb, indent=1, ensure_ascii=False) + "\n", encoding="utf-8")
         print(out, len(nb["cells"][1]["source"]), "lines")
