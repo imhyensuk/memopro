@@ -287,7 +287,7 @@ def _mps_heap() -> tuple[str, str] | None:
 
 
 def _numpy(s: Session, nbytes: int) -> None:
-    from memopro._errors import ModeUnavailable
+    from memopro._errors import MemoproError, ModeUnavailable
 
     if importlib.util.find_spec("numpy") is None:
         return
@@ -298,14 +298,23 @@ def _numpy(s: Session, nbytes: int) -> None:
     except ModeUnavailable as e:
         s._add("numpy", "skipped", f"no transparent paging here ({e.reason})")
         return
+    except MemoproError as e:  # a ceiling too small for the pager
+        s._add("numpy", "skipped", str(e))
+        return
     s._add("numpy", "applied", "arrays >= 16 MiB are paged within the ceiling (compressed)")
 
 
 def _torch(s: Session, nbytes: int) -> None:
+    from memopro._errors import MemoproError
     from memopro.rt import Runtime
     from memopro.rt.activations import PRESSURE, SavedActivations
 
-    saved = SavedActivations(Runtime(nbytes, process_budget=nbytes), nbytes)
+    try:
+        runtime = Runtime(nbytes, process_budget=nbytes)
+    except MemoproError as e:  # a ceiling too small for a runtime
+        s._add("torch", "skipped", str(e))
+        return
+    saved = SavedActivations(runtime, nbytes)
     s._stack.enter_context(saved.hooks())
     s.activations = saved
     s._add(
