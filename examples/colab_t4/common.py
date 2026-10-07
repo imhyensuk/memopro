@@ -366,7 +366,7 @@ def write_workers():
             f.write(source)
 
 
-def run_case(run, key, worker, args, timeout, env_extra=None):
+def run_case(run, key, worker, args, timeout, env_extra=None, python=None):
     """One case in a fresh process; stdout/stderr to logs/<key>.log; result JSON to cases/."""
     prev = run.done(key)
     if prev is not None:
@@ -378,7 +378,7 @@ def run_case(run, key, worker, args, timeout, env_extra=None):
     env.update({"HF_HOME": HF_HOME, "PYTHONUNBUFFERED": "1", "MP_OUT": out_json,
                 "TOKENIZERS_PARALLELISM": "false"})
     env.update(env_extra or {})
-    cmd = [sys.executable, os.path.join(WORK_DIR, worker), *[str(a) for a in args]]
+    cmd = [python or sys.executable, os.path.join(WORK_DIR, worker), *[str(a) for a in args]]
     _log(f"run {key}")
     tl = Timeline(run.path("timelines", key + ".csv"))
     t0 = time.time()
