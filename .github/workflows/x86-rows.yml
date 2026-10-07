@@ -19,9 +19,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        copy: [1, 2, 3, 4, 5, 6, 7, 8, 9, 10]
+        copy: [1, 2, 3, 4]
         # "" = latest; 2.11.0/5.18 = the E048 Colab run (0239)
-        versions: [{torch: "==2.11.0", transformers: "==5.18.0"}]
+        versions: [{torch: "", transformers: ""}, {torch: "==2.11.0", transformers: "==5.18.0"}]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -41,6 +41,9 @@ jobs:
           python -m experiments.x86_rows.diag --out out/default.json > /dev/null
           python -m experiments.x86_rows.diag --no-mkldnn --out out/no_mkldnn.json > /dev/null
           ONEDNN_MAX_CPU_ISA=AVX2 python -m experiments.x86_rows.diag --out out/onednn_avx2.json > /dev/null
+          # AVX-512 without bf16 instructions: the VMs where CI failed (0240)
+          ONEDNN_MAX_CPU_ISA=AVX512_CORE python -m experiments.x86_rows.diag --out out/onednn_avx512_core.json > /dev/null
+          ONEDNN_MAX_CPU_ISA=AVX512_CORE python -m experiments.x86_rows.diag --no-mkldnn --out out/onednn_avx512_core_no_mkldnn.json > /dev/null
           python - <<'EOF'
           import json, pathlib
           for f in sorted(pathlib.Path("out").glob("*.json")):
@@ -53,7 +56,8 @@ jobs:
                       print(f"  {kind} ok={c['ok']} keep1={c['prompt_last_keep1']}", [(b["module"], b["input_same"], b["max_diff"], b["weight_ptr_mod_4096"]) for b in bad])
           EOF
       - name: The test itself
-        run: pytest -q "tests/test_rt_torch.py::test_rows_after_the_prompt_are_computed_as_in_plain_generation" || true
+        run: ONEDNN_MAX_CPU_ISA=AVX512_CORE pytest -q "tests/test_rt_torch.py::test_rows_after_the_prompt_are_computed_as_in_plain_generation" || true
+      - run: pytest -q "tests/test_rt_torch.py::test_rows_after_the_prompt_are_computed_as_in_plain_generation" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
