@@ -31,6 +31,19 @@ EXTRA_WORKERS = {
         "worker_suite.py": HERE / "worker_suite.py",
         "worker_unsloth.py": HERE / "worker_unsloth.py",
     },
+    "full": {
+        "worker_suite.py": HERE / "worker_suite.py",
+        "worker_unsloth.py": HERE / "worker_unsloth.py",
+        "worker_data.py": HERE / "worker_data.py",
+        "worker_memopro_run.py": HERE / "worker_memopro_run.py",
+        "worker_pytest.py": HERE / "worker_pytest.py",
+        "image.py": ROOT / "experiments/e027_transparent/workload.py",
+        "passes.py": ROOT / "experiments/e047_enable/passes.py",
+        "common.py": ROOT / "experiments/e040_workloads/common.py",
+        "dataframe.py": ROOT / "experiments/e040_workloads/dataframe.py",
+        "classify.py": ROOT / "experiments/e040_workloads/classify.py",
+        "simulate.py": ROOT / "experiments/e040_workloads/simulate.py",
+    },
 }
 
 COMMON_PREP = """
@@ -152,6 +165,21 @@ Colab 7차(0093)에서 드러난 결함이 고쳐졌는지 **통합 셀 하나**
 
 - 예상 시간: 45~60분(Unsloth 설치 5~10분 포함)
 - 준비: 런타임 **T4 GPU**, Drive `memopro_colab/install/`에 소스 묶음 `memopro-src.tar.gz`(이미 있으면 그대로, 빌드는 Drive에 보관된 것을 다시 쓴다)
+"""),
+    "full": ("colab_t4_full.ipynb", "cell_full.py", """# memopro 통합 시험: 현재 코드 전체 (docs/research/0237, E048)
+
+현재 코드(`memopro.enable`, 프로세스 상한, 예측, 흘려 쓰기, Unsloth 비교)를 Colab T4 **셀 하나**로 잰다. **2시간 30분 안에 끝나도록** 셀 전체 예산을 135분으로 두고, 시간이 모자라면 뒤쪽 경우를 `skipped (time budget)`로 남기고 넘어간다(다시 실행하면 이어서 한다).
+
+| 순서 | 갈래 | 무엇을 보나 | 예상 시간 |
+|---|---|---|---|
+| ① | 단위 시험 | enable·투명 페이징·adopt·흘려 쓰기 시험을 T4에서(CUDA 포함) | 5분 |
+| ② | enable (Linux) | E047을 Linux에서: 영상 묶음·4패스 배열을 넉넉함/0.75/0.5 상한으로. 결과 동일, 상한, 오버헤드, 예측 | 5분 |
+| ③ | Unsloth 비교 | 같은 16비트 LoRA를 PEFT·memopro·Unsloth로(Qwen2.5-3B·7B) | 50~60분 |
+| ④ | DINOv2 | 비전 모델 흘려 쓰기 추론·LoRA | 10분 |
+| ⑤ | 데이터 | E027·E040 프로그램을 `memopro run --budget 절반`으로(경우당 최대 10분) | 25분 |
+
+- 준비: 런타임 **T4 GPU**. Drive `memopro_colab/install/`에 이번 소스 묶음 `memopro-src.tar.gz`를 **덮어쓰기**(현재 코드, 첫 실행 때 빌드 5~8분, 이후 Drive에 보관된 빌드 재사용). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**.
+- 결과: `MyDrive/memopro_colab/results/full/<실행 id>/summary.md`(판정 표), 같은 이름의 `.zip`.
 """),
 }
 
