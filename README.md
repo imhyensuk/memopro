@@ -48,6 +48,23 @@ print(memopro.generate(r.model, "안녕하세요", draft="Qwen/Qwen2.5-1.5B-Inst
 | 수정하지 않은 NumPy 영상 처리 | 결과 동일, 같은 한도의 OS 스왑보다 3.3배 빠름 |
 | 수정하지 않은 scikit-learn 분류 | 결과 동일 (그대로 실행하면 메모리 부족으로 종료) |
 
+### 한 줄 설정 `memopro.enable` / `memopro run` (MacBook Air M1, 프로세스 전체 상한)
+
+| 작업 | 결과 |
+|---|---|
+| 수정하지 않은 NumPy 영상 처리, 상한 = 필요량의 1/2 | 결과 동일, 최대 메모리가 상한 +1.8MiB 이내, 2.4배 시간 |
+| 1GiB 배열 4회 반복 계산, 상한 = 필요량의 1/2·3/4 | 결과 동일, 실행 전 예측한 추가 시간 3.81초 vs 실측 3.72초 (3/4: 1.73 vs 1.86초) |
+| 메모리가 넉넉할 때 켜 둔 비용 | 1.02~1.08배 |
+
+Linux(Colab)에서도 같은 상한 안에서 결과가 같았고(초과 0MiB), 예측 오차는 10% 이내였습니다. 메모리가 넉넉할 때 켜 둔 비용은 Linux에서 1.20배였습니다.
+
+### 비전 모델 (Colab T4, 가중치를 흘려 쓰는 추론)
+
+| 모델 | 결과 |
+|---|---|
+| ResNet-152 (CNN) | 예산 60·120MiB에서 출력이 그냥 실행과 비트 단위로 같음, 0.13 → 0.14초 |
+| DINOv2-giant (11억 파라미터, 4.5GB) | 예산 1.1·2.2GB에서 출력 동일, 1.57 → 1.65초 |
+
 무작위 접근이 많은 데이터프레임 작업과, 압축해도 한도보다 큰 데이터는 아직 1/2 한도에서 실용적인 속도로 돌지 않습니다([한계](#한계)).
 
 ---
@@ -71,6 +88,29 @@ pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"
 
 ## 사용법
 
+자세한 사용 안내: [docs/guide](docs/guide/README.md)
+
+### 0. 한 줄로 시작하기
+
+```python
+import memopro
+
+s = memopro.enable()               # 기기를 측정해 자동 설정 (지금 쓰는 양 + 여유 메모리)
+s = memopro.enable(budget="8GB")   # 또는 프로세스 전체 상한을 직접 지정 (16GB 기기에서 8GB만)
+
+print(s.estimate(sample, total="12GB", passes=3))  # 실행 전: 이 상한에서 얼마나 느려지는지 예측
+...                                                # 평소처럼 작성한 NumPy / PyTorch 코드
+print(s.measured())                                # 실행 후: memopro가 쓴 시간과 실제 배율
+```
+
+- 하드웨어(OS, 메모리, GPU)를 측정하고 **프로세스 전체**의 상한 하나를 정해, 이 플랫폼에서 쓸 수 있는 기능을 모두 켭니다. 무엇을 켰고 무엇을 못 켰는지는 반환값을 출력하면 보입니다.
+- 상한은 모든 부품이 함께 지킵니다. 각 런타임과 페이저는 프로세스가 자기 바깥에 쓰는 메모리(macOS physical footprint, Linux RSS)만큼 자기 몫을 줄입니다.
+- **NumPy**(Linux, macOS): 16 MiB 이상인 배열을 코드 수정 없이 상한 안에서 무손실 압축 페이징합니다.
+- **PyTorch**: 프로세스가 상한의 75%를 넘으면 역전파용으로 저장된 활성값을 런타임 버퍼로 옮깁니다. 바이트가 그대로 돌아오므로 기울기가 바뀌지 않습니다(CPU, MPS 확인).
+- `finetune`, `generate`, `load`, `train_session`, `memopro.rt`는 따로 지정하지 않으면 이 상한을 씁니다. Hugging Face `from_pretrained`는 모델이 그대로 들어가지 않을 때만 `memopro.load`처럼 불러옵니다.
+- `memopro.disable()`(또는 `with memopro.enable(...):`)로 되돌립니다.
+- 한계: 옮길 수 없는 메모리(인터프리터, 라이브러리, 작은 객체, 코드가 직접 불러온 모델 가중치)도 상한에 포함됩니다. 이것만으로 상한을 넘으면 페이저는 초과 횟수를 기록하고 런타임은 `BudgetExceeded`를 냅니다. 커널이 직접 읽고 쓰는 경우(`ndarray.tofile`, `np.fromfile`)에는 페이징된 배열에서 `OSError`가 날 수 있습니다. `np.save`와 `np.load`는 자동으로 우회합니다. 예측은 정해진 순서로 반복해서 읽는 작업을 가정합니다.
+
 ### 1. 메모리보다 큰 LLM 학습과 생성
 
 ```python
@@ -91,7 +131,24 @@ text = memopro.generate(r.model, "요약해 줘: ...", draft="Qwen/Qwen2.5-1.5B-
 - `draft`를 주면 작은 int4 초안 모델로 추측 디코딩을 합니다. 검증을 일반 생성과 같은 계산 경로로 하므로 출력이 바뀌지 않습니다.
 - Apple silicon(MPS), NVIDIA CUDA(Colab T4), CPU에서 검증했습니다.
 
-### 2. 큰 배열을 예산 안에서
+### 2. 로컬 모델 실행 (비전·언어 모델, 추론)
+
+Hugging Face 형식(safetensors)으로 받아 둔 모델이면, 메모리보다 커도 그대로 불러와 추론할 수 있습니다.
+
+```python
+import transformers
+import memopro.rt.torch as rtt
+
+m = rtt.stream_model("facebook/dinov2-giant", budget="1GB", device="cuda",   # "mps", "cpu"
+                     model_class=transformers.Dinov2Model)
+features = m(pixel_values=images).last_hidden_state        # 그냥 불러온 모델과 같은 출력
+```
+
+- 가중치는 원본 파일에 그대로 두고, 층을 계산할 때마다 예산 안으로 읽어 옵니다. 모델은 미리 내려받아 두어야 합니다(`huggingface-cli download ...`).
+- 언어 모델은 `memopro.generate`, LoRA 학습은 `memopro.finetune`(1절)을 씁니다. 메모리에 들어가는 모델이면 `memopro.load`가 예산에 맞는 형식(필요하면 양자화)을 골라 줍니다.
+- 직접 만든 PyTorch 모델의 학습은 `memopro.enable()`이 역전파용 활성값을 상한 안으로 옮깁니다. 가중치 자체를 흘려 쓰는 것은 Hugging Face 모델만 지원합니다.
+
+### 3. 큰 배열을 예산 안에서
 
 ```python
 from memopro.rt import Runtime
@@ -113,15 +170,15 @@ with h:                # 블록 안에서는 평소처럼 사용
     step(state)
 ```
 
-### 3. 코드 수정 없이 실행
+### 4. 코드 수정 없이 실행
 
 ```bash
 memopro run --budget 6GB train.py          # 들어가지 않는 from_pretrained를 예산에 맞춰 불러옴
-memopro run --transparent 1GB analysis.py  # Linux: 큰 NumPy 배열을 디스크 쓰기 없이 압축 페이징
+memopro run --transparent 1GB analysis.py  # Linux·macOS: 큰 NumPy 배열을 디스크 쓰기 없이 압축 페이징
 memopro run --dry-run train.py             # 무엇을 할지만 출력
 ```
 
-### 4. 예산에 맞춰 불러오고 학습하기
+### 5. 예산에 맞춰 불러오고 학습하기
 
 ```python
 model, tok = memopro.load("Qwen/Qwen2.5-7B-Instruct", tokenizer=True, quality="high")
@@ -184,9 +241,9 @@ Rust 런타임     버퍼마다 실측 비용으로 선택:
 
 | 환경 | 상태 |
 |---|---|
-| macOS, Apple silicon (MPS) | 주 개발 환경. LLM 학습·생성 검증 |
-| Linux, NVIDIA GPU (CUDA) | Colab T4에서 생성, LoRA 학습, 비전 추론 검증 |
-| Linux, CPU | CI에서 검증. 투명 페이징은 Linux 전용 |
+| macOS, Apple silicon (MPS) | 주 개발 환경. LLM 학습·생성 검증. 투명 페이징(신호 기반) |
+| Linux, NVIDIA GPU (CUDA) | Colab T4에서 생성, LoRA 학습, 비전 추론(ResNet·DINOv2), enable 상한·예측 검증 |
+| Linux, CPU | CI에서 검증. 투명 페이징(userfaultfd) |
 | Windows | CI에서 기본 기능만 확인 |
 
 Python 3.11 이상, PyTorch 2.4 이상.
@@ -195,9 +252,9 @@ Python 3.11 이상, PyTorch 2.4 이상.
 
 ## 한계
 
-- **속도**: 메모리를 아끼는 대신 시간이 듭니다. 7B 학습은 8GB Mac에서 스텝당 약 18초(129토큰)입니다. 메모리에 다 들어가는 모델은 기존 도구가 더 빠릅니다.
-- **투명 페이징**: 무작위 접근이 많은 작업(정렬·그룹 집계)과 압축해도 한도보다 큰 데이터에서는 실용적인 속도가 나지 않습니다. Linux에서만 동작합니다.
-- **모델 범위**: LLM 경로는 주로 Qwen2.5 계열(1.5B~7B)로 검증했습니다.
+- **속도**: 메모리를 아끼는 대신 시간이 듭니다. 7B 학습은 8GB Mac에서 스텝당 약 18초(129토큰)입니다. 메모리에 다 들어가는 모델은 기존 도구가 더 빠릅니다. 예를 들어 Colab T4에서 Unsloth(fp16)는 3B·7B 16비트 LoRA를 memopro(bf16 그대로)보다 10~33배 빠르게 학습했습니다. memopro가 필요한 곳은 모델이 GPU·기기 메모리보다 커서 그냥은 돌지 않는 경우입니다.
+- **투명 페이징**: 무작위 접근이 많은 작업(정렬·그룹 집계)과 압축해도 한도보다 큰 데이터에서는 실용적인 속도가 나지 않습니다. Linux와 macOS에서 동작합니다(Windows 미지원).
+- **모델 범위**: LLM 경로는 주로 Qwen2.5 계열(1.5B~7B), 비전은 ResNet-152와 DINOv2로 검증했습니다. 확산 모델·음성 모델은 시험하지 않았습니다.
 - **알파 버전**: API가 바뀔 수 있습니다.
 
 ---

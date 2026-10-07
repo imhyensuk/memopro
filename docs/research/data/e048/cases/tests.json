@@ -1,0 +1,34 @@
+{
+ "status": "failed",
+ "returncode": 1,
+ "counts": {
+  "failed": 1,
+  "passed": 33,
+  "skipped": 10
+ },
+ "failed": [
+  "FAILED tests/test_rt_torch.py::test_rows_after_the_prompt_are_computed_as_in_plain_generation[cpu]"
+ ],
+ "skipped": [
+  "SKIPPED [1] tests/test_rt_transparent.py:74: elsewhere the refusal is checked",
+  "SKIPPED [1] tests/test_rt_adopt.py:142: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:163: needs a usable Apple GPU (CI macOS VMs cannot allocate)",
+  "SKIPPED [1] tests/test_rt_torch.py:280: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:312: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:476: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:501: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:529: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:567: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:595: needs a usable Apple GPU"
+ ],
+ "files": [
+  "tests/test_enable.py",
+  "tests/test_rt_transparent.py",
+  "tests/test_rt_adopt.py",
+  "tests/test_rt_torch.py"
+ ],
+ "case": "tests",
+ "wall_s": 39.2,
+ "timeline_peak_gpu_used_bytes": 110100480,
+ "timeline_peak_host_used_bytes": 2901372928
+}

@@ -24,11 +24,13 @@
 //! work (reading, compressing, decompressing, re-computing) runs outside the lock with the buffer
 //! marked busy, so other threads keep going; they wait only for that buffer.
 
+mod footprint;
 pub mod pager;
 mod predict;
 mod region;
 mod source;
 
+pub use footprint::process_footprint;
 pub use pager::{Pager, PagerConfig, PagerStats, in_pager_thread};
 pub use predict::Prediction;
 pub use region::{Region, page_size, round_to_pages};
@@ -74,6 +76,11 @@ pub struct Config {
     pub prefetch: bool,
     /// Bytes to bring back ahead of use (at least one buffer).
     pub lookahead: u64,
+    /// Bytes the whole process may occupy (0229): when set, the buffers' limit also shrinks by
+    /// the memory the process holds outside this runtime ([`process_footprint`] minus the
+    /// runtime's own bytes), measured whenever room is made. Several runtimes and pagers with the
+    /// same process budget each see the others as outside, so together they keep within it.
+    pub process_budget: Option<u64>,
 }
 
 impl Config {
@@ -85,6 +92,7 @@ impl Config {
             policy: Policy::ReuseDistance,
             prefetch: true,
             lookahead: 64 << 20,
+            process_budget: None,
         }
     }
 }
@@ -154,6 +162,10 @@ pub struct Stats {
     pub prefetch_skipped: u64,
     /// Always 0: the runtime never writes to disk (0110 N1).
     pub written_bytes: u64,
+    /// With a process budget: the most memory seen outside the runtime, and the lowest limit the
+    /// buffers were held to (0 without one).
+    pub outside_peak: u64,
+    pub limit_low: u64,
 }
 
 /// The runtime. Cloning shares it; the service thread stops when the last clone is dropped
@@ -865,6 +877,26 @@ impl Shared {
         self.config.budget - self.reserve - self.held.load(Ordering::SeqCst)
     }
 
+    /// The limit now, and the bytes held outside the runtime when a process budget applies.
+    fn limit_now(&self, st: &mut Inner) -> (u64, Option<u64>) {
+        let limit = self.limit();
+        let Some(total) = self.config.process_budget else {
+            return (limit, None);
+        };
+        let Some(footprint) = process_footprint() else {
+            return (limit, None);
+        };
+        let outside = footprint.saturating_sub(st.used);
+        let limit = limit.min(total.saturating_sub(outside + self.reserve));
+        st.stats.outside_peak = st.stats.outside_peak.max(outside);
+        st.stats.limit_low = if st.stats.limit_low == 0 {
+            limit
+        } else {
+            st.stats.limit_low.min(limit)
+        };
+        (limit, Some(outside))
+    }
+
     fn lock(&self) -> MutexGuard<'_, Inner> {
         self.state.lock().unwrap_or_else(|e| e.into_inner())
     }
@@ -1152,17 +1184,27 @@ impl Shared {
         exclude: Option<BufferId>,
         bound: Option<f64>,
     ) -> Result<MutexGuard<'a, Inner>> {
-        let limit = self.limit();
+        let (limit, outside) = self.limit_now(&mut st);
         if need > limit {
             if bound.is_none() {
                 st.stats.refusals += 1;
             }
-            return Err(Error::Budget(format!(
-                "one buffer needs {}, more than the budget {} minus the runtime's {} headroom",
-                mib(need),
-                mib(self.config.budget),
-                mib(self.reserve)
-            )));
+            return Err(Error::Budget(match outside {
+                Some(o) => format!(
+                    "one buffer needs {}, more than the {} left of the process budget {}: the \
+                     process holds {} outside the runtime",
+                    mib(need),
+                    mib(limit),
+                    mib(self.config.process_budget.unwrap_or_default()),
+                    mib(o)
+                ),
+                None => format!(
+                    "one buffer needs {}, more than the budget {} minus the runtime's {} headroom",
+                    mib(need),
+                    mib(self.config.budget),
+                    mib(self.reserve)
+                ),
+            }));
         }
         loop {
             if st.used + need <= limit {

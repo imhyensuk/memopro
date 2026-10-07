@@ -21,6 +21,8 @@ NOTEBOOKS = (
     "suite_speed",
     "suite_data",
     "unsloth",
+    "full",
+    "beat",
 )
 
 
