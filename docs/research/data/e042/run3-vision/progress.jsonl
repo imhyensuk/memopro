@@ -1,0 +1,9 @@
+{"t": 1791339465.7829885, "case": "vis_infer__resnet-152__plain", "status": "ok", "seconds": 18.0}
+{"t": 1791339477.0838325, "case": "vis_infer__resnet-152__memopro_60", "status": "ok", "seconds": 11.3}
+{"t": 1791339487.4864948, "case": "vis_infer__resnet-152__memopro_120", "status": "ok", "seconds": 10.4}
+{"t": 1791339606.1389453, "case": "vis_infer__dinov2-giant__plain", "status": "ok", "seconds": 38.4}
+{"t": 1791339620.0955029, "case": "vis_infer__dinov2-giant__memopro_1100", "status": "error", "seconds": 13.9}
+{"t": 1791339633.0183034, "case": "vis_infer__dinov2-giant__memopro_2200", "status": "error", "seconds": 12.9}
+{"t": 1791339682.8681853, "case": "vis_lora__dinov2-giant__plain", "status": "ok", "seconds": 49.8}
+{"t": 1791339696.3963895, "case": "vis_lora__dinov2-giant__memopro_1100", "status": "error", "seconds": 13.5}
+{"t": 1791339709.3736336, "case": "vis_lora__dinov2-giant__memopro_2200", "status": "error", "seconds": 12.9}

@@ -607,3 +607,31 @@ def test_a_file_that_is_not_safetensors_is_named_not_a_memory_error(tmp_path):
     bad.write_bytes((1 << 60).to_bytes(8, "little") + b"{}")
     with pytest.raises(memopro.InvalidArgument, match="not a safetensors file"):
         read_header(bad)
+
+
+def test_dinov2_swiglu_rows_split_on_loading_stream_like_from_pretrained(tmp_path):
+    """0221: transformers 5.18 splits DINOv2's `mlp.weights_in` into `gate_proj` + `up_proj` on
+    loading; the streamer serves each part as a byte range of the file."""
+    transformers = pytest.importorskip("transformers")
+    from transformers.conversion_mapping import get_model_conversion_mapping
+
+    import memopro.rt.torch as rtt
+
+    torch.manual_seed(0)
+    cfg = transformers.Dinov2Config(
+        hidden_size=64,
+        num_hidden_layers=2,
+        num_attention_heads=4,
+        intermediate_size=256,
+        use_swiglu_ffn=True,
+        image_size=56,
+        patch_size=14,
+    )
+    model = transformers.Dinov2Model(cfg).eval()
+    if not any(rtt._row_split_targets(c) for c in get_model_conversion_mapping(model) or []):
+        pytest.skip("this transformers keeps DINOv2's checkpoint names")
+    model.save_pretrained(tmp_path)
+    x = torch.randn(2, 3, 56, 56)
+    want = transformers.Dinov2Model.from_pretrained(tmp_path).eval()(pixel_values=x).pooler_output
+    streamed = rtt.stream_model(tmp_path, budget=64 << 20, model_class=transformers.Dinov2Model)
+    assert torch.equal(streamed(pixel_values=x).pooler_output, want)
