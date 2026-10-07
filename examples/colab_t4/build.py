@@ -27,6 +27,10 @@ EXTRA_WORKERS = {
         "simulate.py": ROOT / "experiments/e040_workloads/simulate.py",
         "preload_smoke.c": ROOT / "crates/memopro-preload/tests/smoke.c",
     },
+    "unsloth": {
+        "worker_suite.py": HERE / "worker_suite.py",
+        "worker_unsloth.py": HERE / "worker_unsloth.py",
+    },
 }
 
 COMMON_PREP = """
@@ -135,6 +139,19 @@ Colab 7차(0093)에서 드러난 결함이 고쳐졌는지 **통합 셀 하나**
 4. 셀을 실행한다. 예상 시간 2~3시간(첫 다운로드 포함).
 
 결과 요약(`summary.md`) 맨 위에 판정 표(pass/fail)가 나온다. 판정 기준은 docs/research/0197에 미리 정해 두었다.
+"""),
+    "unsloth": ("colab_t4_unsloth.ipynb", "cell_unsloth.py", """# memopro 대 Unsloth: 같은 16비트 LoRA (docs/research/0227, E046)
+
+같은 T4에서 같은 작업(WikiText-2, 512토큰, 배치 1, 10단계, LoRA r 8 q/k/v/o, AdamW 2e-4)을 세 방식으로 잰다: Hugging Face PEFT(그냥), memopro(가중치 흘려 쓰기), Unsloth(별도 가상환경). 모델은 Qwen2.5-3B와 7B. 7B는 16비트로 T4에 들어가지 않는다.
+
+| 확인 | 기준(0227) |
+|---|---|
+| U1 (관문) | 7B 16비트: Unsloth는 완주 못 하고 memopro는 두 예산 모두 완주 |
+| U2 (관문) | memopro 손실이 예산과 무관하게 비트 동일 |
+| U3·U4·U5 | 3B 속도·메모리, 7B Unsloth 4비트 대 memopro 16비트, 손실 차이(보고) |
+
+- 예상 시간: 45~60분(Unsloth 설치 5~10분 포함)
+- 준비: 런타임 **T4 GPU**, Drive `memopro_colab/install/`에 소스 묶음 `memopro-src.tar.gz`(이미 있으면 그대로, 빌드는 Drive에 보관된 것을 다시 쓴다)
 """),
 }
 
