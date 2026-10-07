@@ -40,7 +40,7 @@ from typing import Any
 from memopro._errors import InvalidArgument
 from memopro._units import format_size, parse_size
 
-__all__ = ["Buffer", "Runtime", "resolve_budget", "transparent"]
+__all__ = ["Buffer", "Runtime", "process_footprint", "resolve_budget", "transparent"]
 
 # element sizes the codec shuffles by; bfloat16 has no NumPy dtype, it is viewed as uint16
 _BFLOAT16 = "bfloat16"
@@ -56,17 +56,40 @@ def _itemsize(dtype: str) -> int:
     return 2 if dtype == _BFLOAT16 else _np_dtype(dtype).itemsize
 
 
+# set by `memopro.enable` (0228, 0229): what "auto" means while a session is on, and the
+# ceiling on the whole process that every runtime and pager made in it keeps to
+_default_budget: int | None = None
+_process_budget: int | None = None
+_session_runtimes: Any = None  # a WeakSet the session reads its runtimes' counters from
+
+
 def resolve_budget(budget: str | float) -> int:
     """Bytes for a budget: a size (``"2GB"``, bytes), a fraction of the memory available now
-    (``0.5``), or ``"auto"`` = half of the conservatively available host memory (0035)."""
+    (``0.5``), or ``"auto"`` = the `memopro.enable` budget, else half of the conservatively
+    available host memory (0035)."""
     if isinstance(budget, str) and budget.strip().lower() == "auto":
-        return _available() // 2
+        return _default_budget if _default_budget is not None else _available() // 2
     if isinstance(budget, float) and 0.0 < budget <= 1.0:
         return int(_available() * budget)
     size = parse_size(budget)
     if size <= 0:
         raise InvalidArgument(f"budget must be positive: {budget!r}")
     return size
+
+
+def _process(value: str | int | bool | None) -> int | None:
+    """``None``: the session's ceiling (if any); ``False``: none; else a size."""
+    if value is False:
+        return None
+    return _process_budget if value is None else parse_size(value)
+
+
+def process_footprint() -> int | None:
+    """Bytes this process occupies now (macOS physical footprint, as Activity Monitor shows it;
+    Linux resident set); None where it cannot be measured."""
+    from memopro import _core
+
+    return _core.process_footprint()
 
 
 def _available() -> int:
@@ -84,6 +107,11 @@ class Runtime:
     ``prefetch`` (default on): a background thread learns which buffer follows which and brings
     the next ones back (up to ``lookahead`` bytes) while you compute, never evicting anything
     needed sooner (0115).
+
+    ``process_budget``: bytes the whole process may occupy (0229). The buffers' limit then also
+    shrinks by what the process holds outside this runtime (macOS physical footprint, Linux
+    resident set), so runtimes and pagers sharing one process budget keep within it together.
+    Default: the `memopro.enable` ceiling while a session is on, else none; ``False``: none.
     """
 
     def __init__(
@@ -95,10 +123,12 @@ class Runtime:
         policy: str = "reuse",
         prefetch: bool = True,
         lookahead: str | int = "64MiB",
+        process_budget: str | int | bool | None = None,
     ) -> None:
         from memopro import _core
 
         self.budget = resolve_budget(budget)
+        self.process_budget = _process(process_budget)
         self._rt = _core.RtRuntime(
             self.budget,
             compress_level,
@@ -106,7 +136,10 @@ class Runtime:
             policy,
             prefetch,
             parse_size(lookahead),
+            self.process_budget,
         )
+        if _session_runtimes is not None and self.process_budget is not None:
+            _session_runtimes.add(self)
 
     @property
     def limit(self) -> int:
@@ -288,25 +321,36 @@ def transparent(
     threshold: str | int = "16MiB",
     chunk: str | int = "1MiB",
     elem: int = 4,
+    process_budget: str | int | bool | None = None,
 ) -> Iterator[Any]:
     """NumPy arrays of ``threshold`` bytes or more made inside this block live in memory that
-    memopro pages within ``budget`` (Linux userfaultfd, 0124); the code using them is unchanged.
+    memopro pages within ``budget`` (Linux userfaultfd 0124, macOS signals 0229); the code using
+    them is unchanged.
 
     The arrays start absent; a touched chunk comes into memory, and when the chunks in memory
     would exceed the budget one is compressed losslessly in memory and its pages go back to the
     OS until it is touched again. Nothing is written to disk. Yields the pager
     (``pager.stats()``). Arrays made here keep using it after the block, until they are freed.
+    ``process_budget`` as in :class:`Runtime`.
 
-    Not available where the OS has no userfaultfd (macOS, Windows): use :class:`Runtime` buffers
-    there (explicit pins)."""
-    import numpy  # noqa: F401 - NumPy must be loaded before its handler can be set
+    The kernel cannot fault chunks in: ``np.save``/``np.load``/``np.fromfile`` are switched to
+    copying paths inside the block, but ``ndarray.tofile`` and ``file.readinto``/``write`` on a
+    paged array may fail with ``OSError`` (EFAULT; never wrong data). Not available on Windows:
+    use :class:`Runtime` buffers there (explicit pins)."""
+    import numpy
 
     from memopro import _core
     from memopro._errors import ModeUnavailable
 
     try:
         pager = _core.RtPager(
-            resolve_budget(budget), parse_size(chunk), elem, 1, 0.15, parse_size(threshold)
+            resolve_budget(budget),
+            parse_size(chunk),
+            elem,
+            1,
+            0.15,
+            parse_size(threshold),
+            _process(process_budget),
         )
     except NotImplementedError as e:  # memopro::Error::Unsupported
         raise ModeUnavailable(
@@ -314,11 +358,65 @@ def transparent(
             str(e),
             ("memopro.rt.Runtime buffers (explicit pins)",),
         ) from None
+    # np.save/np.load hand real files to the kernel (tofile/fromfile); their other path copies
+    # in user space, where faults are served
+    fmt = numpy.lib.format.write_array.__globals__
+    isfileobj = fmt.get("isfileobj")
+    if isfileobj is not None:
+        fmt["isfileobj"] = lambda f: False
+    fromfile = numpy.fromfile
+    numpy.fromfile = _fromfile_copying(fromfile)
     old = _core.numpy_set_handler(pager.numpy_handler())
     try:
         yield pager
     finally:
         _core.numpy_set_handler(old)
+        numpy.fromfile = fromfile
+        if isfileobj is not None:
+            fmt["isfileobj"] = isfileobj
+
+
+_BOUNCE = 4 << 20  # below the paging threshold: an ordinary buffer the kernel can fill
+
+
+def _fromfile_copying(fromfile: Any) -> Any:
+    """``np.fromfile`` that reads binary files through a small ordinary buffer, so the kernel
+    never writes into paged memory (it cannot fault it in); text mode and ``like=`` go to NumPy."""
+    import functools
+    import os
+
+    import numpy as np
+
+    @functools.wraps(fromfile)
+    def wrapper(
+        file: Any, dtype: Any = float, count: int = -1, sep: str = "", offset: int = 0, **kw: Any
+    ) -> Any:
+        if sep or kw:
+            return fromfile(file, dtype=dtype, count=count, sep=sep, offset=offset, **kw)
+        dt = np.dtype(dtype)
+        own = isinstance(file, (str, bytes, os.PathLike))
+        f = open(file, "rb") if own else file  # noqa: SIM115 - closed below when ours
+        try:
+            f.seek(offset, os.SEEK_CUR)
+            if count < 0:
+                left = os.fstat(f.fileno()).st_size - f.tell()
+                count = max(left, 0) // dt.itemsize
+            out = np.empty(count, dtype=dt)
+            raw = out.reshape(-1).view(np.uint8)
+            bounce = bytearray(min(_BOUNCE, raw.nbytes) or 1)
+            done = 0
+            while done < raw.nbytes:
+                n = f.readinto(memoryview(bounce)[: min(len(bounce), raw.nbytes - done)])
+                if not n:
+                    break
+                raw[done : done + n] = np.frombuffer(bounce, np.uint8, n)
+                done += n
+            return out[: done // dt.itemsize] if done < raw.nbytes else out
+        finally:
+            if own:
+                f.close()
+
+    return wrapper
 
 
 class Buffer:

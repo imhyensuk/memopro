@@ -1,0 +1,78 @@
+{
+ "report": {
+  "entries": [
+   {
+    "technique": "elastic",
+    "action": "skipped",
+    "detail": "\u03b3 is off by default (experimental): the macOS pressure level marks pressure, not the stalls a user feels (E013a/0088), and Linux PSI rose above 'warning' from the I/O of loading a model, halving budgets so the loading policy stood aside (E021/0093); --elastic turns it on",
+    "reclaimed_bytes": null,
+    "timestamp": 1791384832.6897953
+   },
+   {
+    "technique": "enable.rt",
+    "action": "applied",
+    "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+    "reclaimed_bytes": null,
+    "timestamp": 1791384832.794425
+   },
+   {
+    "technique": "enable.numpy",
+    "action": "applied",
+    "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+    "reclaimed_bytes": null,
+    "timestamp": 1791384832.7944303
+   },
+   {
+    "technique": "enable.transformers",
+    "action": "applied",
+    "detail": "from_pretrained loads models that do not fit as memopro.load",
+    "reclaimed_bytes": null,
+    "timestamp": 1791384832.7944324
+   },
+   {
+    "technique": "transparent",
+    "action": "applied",
+    "detail": "budget 7.45 GiB, peak 768.00 MiB; 768 faults, 0 chunks compressed (0 B to 0 B), 0 brought back, 0 over budget; nothing written",
+    "reclaimed_bytes": null,
+    "timestamp": 1791384838.8270879
+   }
+  ]
+ },
+ "transparent": {
+  "budget": 8000000000,
+  "limit": 7998951424,
+  "used": 0,
+  "peak_used": 805306368,
+  "regions": 0,
+  "mapped_bytes": 0,
+  "resident_bytes": 0,
+  "compressed_bytes": 0,
+  "faults": 768,
+  "zero_fills": 768,
+  "restores": 0,
+  "restore_seconds": 0.3255500420000004,
+  "evictions": 0,
+  "compress_in": 0,
+  "compress_out": 0,
+  "compress_seconds": 0.0,
+  "incompressible": 0,
+  "overruns": 0,
+  "spurious": 0,
+  "outside_peak": 49192960,
+  "limit_low": 7949758464,
+  "trims": 0,
+  "written_bytes": 0
+ },
+ "session": {
+  "elapsed_seconds": 6.122583171000031,
+  "memopro_seconds": 0.3255500420000004,
+  "slowdown": 1.0561580440814484,
+  "ceiling": 8000000000,
+  "footprint": 40538112,
+  "overruns": 0,
+  "activations_moved": 0,
+  "runtimes": [],
+  "predictions": []
+ },
+ "ceiling": 8000000000
+}

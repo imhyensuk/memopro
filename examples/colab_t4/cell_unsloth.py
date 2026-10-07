@@ -19,36 +19,6 @@ STAGE_TO_LOCAL = True  # copy models from the Drive cache to the local disk befo
 # ==== END OF SETTINGS ================================================================
 # @@COMMON@@
 # ---------------------------------------------------------------- body
-MIB = 1 << 20
-DETERMINISTIC = {"CUBLAS_WORKSPACE_CONFIG": ":4096:8"}
-VENV = "/content/venv-unsloth"
-
-
-def unsloth_python(run):
-    """Unsloth in its own virtual environment, so its pinned packages do not change the
-    notebook's torch/transformers that memopro and PEFT run with."""
-    py = os.path.join(VENV, "bin", "python")
-    if not os.path.exists(py):
-        _log("installing Unsloth into its own virtual environment (~5-10 min)")
-        subprocess.run([sys.executable, "-m", "venv", VENV], check=True)
-        r = subprocess.run([py, "-m", "pip", "install", "-q", "unsloth", "datasets"],
-                           capture_output=True, text=True, check=False)
-        if r.returncode:
-            _log("Unsloth install failed: " + r.stderr[-1500:])
-    v = subprocess.run([py, "-c", "import unsloth, torch, transformers; print(unsloth.__version__, "
-                        "torch.__version__, transformers.__version__)"],
-                       capture_output=True, text=True, check=False)
-    info = {"versions": v.stdout.strip(), "error": v.stderr[-1500:] if v.returncode else ""}
-    with open(run.path("unsloth_env.json"), "w") as f:
-        json.dump(info, f, indent=1)
-    _log(f"Unsloth environment: {info['versions'] or info['error'][-300:]}")
-    return py
-
-
-def short(model):
-    return model.split("/")[-1]
-
-
 def unsloth_body():
     config = {"MODELS": MODELS, "LORA": LORA, "UNSLOTH_4BIT": UNSLOTH_4BIT}
     run, env = bootstrap("unsloth", config)

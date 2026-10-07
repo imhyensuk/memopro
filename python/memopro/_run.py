@@ -1,6 +1,8 @@
 """``memopro run script.py``: memopro's process-level features without changing code (v0.3, L0).
 
-What it does (architecture §4.2, 0052 E7), and all of it is listed in ``report()``:
+Since 0230 the script runs inside a `memopro.enable` session: the configured budget is the ceiling
+on the whole process, NumPy arrays are paged within it, PyTorch activations move into runtime
+buffers near it. What it does besides (architecture §4.2, 0052 E7), all listed in ``report()``:
 
 1. **Loading policy** for Hugging Face ``from_pretrained``. It applies only when the script chose
    none of ``device_map``, ``dtype``, ``quantization_config``, ``max_memory`` (and passed no
@@ -51,14 +53,16 @@ class _Loader(importlib.abc.Loader):
 
 
 class _PatchOnImport(importlib.abc.MetaPathFinder):
-    """Run ``after(module)`` once ``TARGET`` has been imported, however the script imports it."""
+    """Run ``after(module)`` once ``target`` (default ``TARGET``) has been imported, however the
+    script imports it."""
 
-    def __init__(self, after: Callable[[Any], None]) -> None:
+    def __init__(self, after: Callable[[Any], None], target: str = TARGET) -> None:
         self.after = after
+        self.target = target
         self._busy = False
 
     def find_spec(self, fullname: str, path: Any, target: Any = None) -> Any:
-        if fullname != TARGET or self._busy:
+        if fullname != self.target or self._busy:
             return None
         self._busy = True
         try:
@@ -171,6 +175,9 @@ def plan_text(script: str, *, elastic: bool, census: bool) -> str:
             f"(device {device}, host {format_size(s.budget.host)})"
         ),
         f"  quality        {cfg.quality}, prefer {cfg.prefer}, disk writes {cfg.disk_writes}",
+        "  ceiling        the budget bounds the whole process (memopro.enable, 0230)",
+        "  numpy          arrays >= 16 MiB paged within it (Linux userfaultfd, macOS signals)",
+        "  torch          saved activations move into runtime buffers above 75% of it",
         "  from_pretrained  only when the script chose no placement or precision and the model",
         "                   does not fit as stored: loaded as memopro.load would (P4 exception)",
         f"  elastic        {'on: memory pressure is watched (experimental)' if elastic else 'off'}"
@@ -217,28 +224,40 @@ def run(
     dry_run: bool = False,
     transparent: str | None = None,
     report_json: str | None = None,
+    numpy: bool = True,
+    torch: bool = True,
 ) -> None:
-    """Run ``script`` with memopro's process-level features (settings come from `configure`).
+    """Run ``script`` inside a `memopro.enable` session (0230; settings come from `configure`).
 
-    ``elastic=None`` takes the platform default (`default_elastic`). ``transparent`` (a budget,
-    Linux) pages the script's large NumPy arrays within that budget (`memopro.rt.transparent`,
-    0124). ``report_json`` writes the report (and the pager's counters) to that file at the end."""
+    The configured budget is the ceiling on the whole process: NumPy arrays are paged within it
+    (Linux, macOS), PyTorch activations move into runtime buffers near it, and the loading policy
+    applies to ``from_pretrained``. ``elastic=None`` takes the platform default
+    (`default_elastic`). ``transparent`` is the earlier name for the ceiling (used only when no
+    budget is configured). ``report_json`` writes the report, the pager's counters and the
+    session's measurements to that file at the end."""
+    from memopro._enable import enable
+    from memopro.config import configure, get_config
+
     default = elastic is None
     if default:
         elastic = default_elastic()
     path = Path(script)
     if not path.is_file():
         raise InvalidArgument(f"no such script: {script}")
+    if transparent is not None:
+        if get_config().budget == "auto":
+            configure(budget=transparent)
+            report().add("run", "applied", f"--transparent {transparent}: the process ceiling")
+        else:
+            report().add("run", "skipped", "--transparent ignored: --budget sets the ceiling")
     if dry_run:
         print(plan_text(script, elastic=elastic, census=census))
         return
     if default and not elastic:
         report().add("elastic", "skipped", ELASTIC_OFF_NOTE)
-    policy = _LoadingPolicy()
-    hook = _PatchOnImport(policy.install)
-    if TARGET in sys.modules:
-        policy.install(sys.modules[TARGET])
-    sys.meta_path.insert(0, hook)
+    session = enable(numpy=numpy, torch=torch, transformers=True)
+    for part, status, detail in session.done:
+        report().add(f"enable.{part}", status, detail)
     if elastic:
         from memopro import elastic as gamma
 
@@ -247,35 +266,32 @@ def run(
     sys.argv = [str(path), *argv]
     sys.path.insert(0, str(path.resolve().parent))
     recorder = None
-    pager = None
+    measured = None
     try:
         with contextlib.ExitStack() as stack:
-            if transparent is not None:
-                from memopro.rt import transparent as paged
-
-                pager = stack.enter_context(paged(transparent))
             if census:
                 from memopro.census import record
 
                 recorder = stack.enter_context(record())
             runpy.run_path(str(path), run_name="__main__")
     finally:
-        if pager is not None:
-            _report_pager(pager)
+        measured = session.measured()
+        if session.pager is not None:
+            _report_pager(session.pager)
+        session.disable()
         if report_json is not None:
             import json
 
             data = {
                 "report": report().to_dict(),
-                "transparent": None if pager is None else dict(pager.stats()),
+                "transparent": measured["pager"],
+                "session": {k: v for k, v in measured.items() if k != "pager"},
+                "ceiling": session.budget,
             }
-            Path(report_json).write_text(json.dumps(data, indent=1), encoding="utf-8")
+            Path(report_json).write_text(json.dumps(data, indent=1, default=str), encoding="utf-8")
         sys.argv = saved_argv
         if sys.path and sys.path[0] == str(path.resolve().parent) and saved_path0 != sys.path[0]:
             sys.path.pop(0)
-        if hook in sys.meta_path:
-            sys.meta_path.remove(hook)
-        policy.remove()
         if elastic:
             from memopro import elastic as gamma
 
