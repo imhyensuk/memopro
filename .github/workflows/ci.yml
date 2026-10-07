@@ -1,8 +1,8 @@
 name: CI
 
-# Minimal-usage policy (docs/research/0043): pull requests run on Linux only; macOS and Windows
-# run once per push to main or on manual dispatch, because private-repository macOS minutes count
-# 10x and Windows minutes 2x.
+# Usage policy (docs/research/0043, 0230): pull requests run Linux and macOS (the repository is
+# public since 0212, so macOS minutes are free, and the macOS pager must be tested before merge);
+# Windows runs once per push to main or on manual dispatch.
 # Documentation-only changes skip CI. A newer run on the same ref cancels the older one.
 on:
   push:
@@ -90,9 +90,8 @@ jobs:
           cargo test -p memopro -- --ignored cgroup_limit_matches_container
 
   macos:
-    # One macOS job (Rust tests + Python 3.14), only outside pull requests.
+    # One macOS job (Rust tests + Python 3.14), on pull requests too (0230).
     name: macOS (Rust + Python 3.14)
-    if: github.event_name != 'pull_request'
     runs-on: macos-14
     steps:
       - uses: actions/checkout@v4
