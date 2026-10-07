@@ -79,6 +79,8 @@ pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"
 
 ## 사용법
 
+자세한 사용 안내: [docs/guide](docs/guide/README.md)
+
 ### 0. 한 줄로 시작하기
 
 ```python
