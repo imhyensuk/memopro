@@ -273,7 +273,9 @@ def _tiny_qwen(path, seed, vocab=8000):
 def test_rows_after_the_prompt_are_computed_as_in_plain_generation(tmp_path, device):
     """0142: inside `_row_invariant`, a pass over several new rows (a verification) gives the
     same logits, bit for bit, as feeding those rows one at a time, and the prompt keeps its
-    block shape (the same logits as the prompt's own pass)."""
+    block shape (the same logits as the prompt's own pass). The head sees one row, as in plain
+    generation (`logits_to_keep=1`): on x86 CPUs with AVX-512 oneDNN's bf16 GEMM gives a row
+    other bits among 10 rows than alone (0240)."""
     from memopro.env._torch import mps_usable
 
     if device == "mps" and not mps_usable():
@@ -283,7 +285,7 @@ def test_rows_after_the_prompt_are_computed_as_in_plain_generation(tmp_path, dev
     prompt = torch.randint(0, 8000, (1, 10), generator=g).to(device)
     new = torch.randint(0, 8000, (1, 6), generator=g).to(device)
     with torch.no_grad():
-        out = m(input_ids=prompt, use_cache=True)
+        out = m(input_ids=prompt, use_cache=True, logits_to_keep=1)
         first, cache = out.logits[:, -1], out.past_key_values
         singles = []
         for i in range(new.shape[1]):
