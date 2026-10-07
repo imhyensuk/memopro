@@ -32,6 +32,7 @@ DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"
 GIT_REF = "main"
 EXPECTED_COMMIT = "@@COMMIT@@"
 NEW_RUN = False  # False: resume the last run of this cell if its settings did not change
+RESUME_RUN = ""  # a run id (e.g. "20261006-052622") to continue that run instead of the last one
 RETRY_FAILED = True  # on resume, run crashed/timed-out cases again
 STAGE_TO_LOCAL = True  # copy models from the Drive cache to the local disk before loading
 # ==== END OF SETTINGS ================================================================

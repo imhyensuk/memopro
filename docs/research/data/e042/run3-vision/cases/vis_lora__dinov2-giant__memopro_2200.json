@@ -23,8 +23,8 @@
   {
    "name": "model.safetensors",
    "real": "/content/models/facebook--dinov2-giant/model.safetensors",
-   "size": 4546005432,
-   "head": "b0410100000000007b225f5f6d657461"
+   "size": 79,
+   "head": "2e2e2f2e2e2f626c6f62732f39642f39"
   },
   {
    "name": "preprocessor_config.json",
@@ -33,11 +33,11 @@
    "head": "7b0a20202263726f705f73697a65223a"
   }
  ],
- "error": "InvalidArgument: no weights in the files for ['encoder.layer.0.mlp.gate_proj.weight', 'encoder.layer.0.mlp.gate_proj.bias', 'encoder.layer.0.mlp.up_proj.weight', 'encoder.layer.0.mlp.up_proj.bias', 'encoder.layer.1.mlp.gate_proj.weight']",
- "trace": "Traceback (most recent call last):\n  File \"/content/memopro_colab/worker_common.py\", line 131, in guarded\n    main()\n    ~~~~^^\n  File \"/content/memopro_colab/worker_suite.py\", line 250, in main\n    fn(model_id, mode, int(budget), *map(int, rest))\n    ~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_suite.py\", line 208, in vis_lora\n    m, _ = load(\"vision\", model_id, mode, budget)\n           ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_suite.py\", line 74, in load\n    m = rtt.stream_model(path, budget=budget, device=DEVICE, model_class=cls)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 541, in stream_model\n    weights = StreamedWeights(model, rt, regions, device=device)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 242, in __init__\n    raise InvalidArgument(f\"no weights in the files for {missing[:5]}\")\nmemopro._errors.InvalidArgument: no weights in the files for ['encoder.layer.0.mlp.gate_proj.weight', 'encoder.layer.0.mlp.gate_proj.bias', 'encoder.layer.0.mlp.up_proj.weight', 'encoder.layer.0.mlp.up_proj.bias', 'encoder.layer.1.mlp.gate_proj.weight']\n",
- "worker_s": 9.9,
+ "error": "InvalidArgument: /content/models/facebook--dinov2-giant/model.safetensors: not a safetensors file (header length 7809856579203706414 > file size 79)",
+ "trace": "Traceback (most recent call last):\n  File \"/content/memopro_colab/worker_common.py\", line 131, in guarded\n    main()\n    ~~~~^^\n  File \"/content/memopro_colab/worker_suite.py\", line 250, in main\n    fn(model_id, mode, int(budget), *map(int, rest))\n    ~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_suite.py\", line 208, in vis_lora\n    m, _ = load(\"vision\", model_id, mode, budget)\n           ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_suite.py\", line 74, in load\n    m = rtt.stream_model(path, budget=budget, device=DEVICE, model_class=cls)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 518, in stream_model\n    regions.update(read_header(f))\n                   ~~~~~~~~~~~^^^\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/hibernate/_source.py\", line 58, in read_header\n    raise InvalidArgument(\n        f\"{path}: not a safetensors file (header length {length} > file size {st.st_size})\"\n    )\nmemopro._errors.InvalidArgument: /content/models/facebook--dinov2-giant/model.safetensors: not a safetensors file (header length 7809856579203706414 > file size 79)\n",
+ "worker_s": 8.3,
  "memory_end": {
-  "host_peak_rss_bytes": 1060134912,
+  "host_peak_rss_bytes": 1005539328,
   "allocated_bytes": 0,
   "reserved_bytes": 0,
   "peak_allocated_bytes": 0,
@@ -47,7 +47,7 @@
  },
  "memopro_report": [],
  "case": "vis_lora__dinov2-giant__memopro_2200",
- "wall_s": 12.9,
+ "wall_s": 11.7,
  "timeline_peak_gpu_used_bytes": 110100480,
- "timeline_peak_host_used_bytes": 2760540160
+ "timeline_peak_host_used_bytes": 2695446528
 }
