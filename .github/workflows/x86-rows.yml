@@ -14,12 +14,14 @@ permissions:
 
 jobs:
   diag:
-    name: x86 rows ${{ matrix.copy }}
+    name: x86 rows ${{ matrix.copy }} torch${{ matrix.versions.torch }}
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
         copy: [1, 2, 3, 4, 5, 6]
+        # "" = latest; 2.11.0/5.18 = the E048 Colab run (0239)
+        versions: [{torch: "", transformers: ""}, {torch: "==2.11.0", transformers: "==5.18.0"}]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
@@ -28,8 +30,8 @@ jobs:
         with:
           python-version: "3.11"
       - run: python -m pip install --upgrade pip maturin pytest
-      - run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-      - run: python -m pip install numpy transformers accelerate
+      - run: python -m pip install "torch${{ matrix.versions.torch }}" --index-url https://download.pytorch.org/whl/cpu
+      - run: python -m pip install numpy "transformers${{ matrix.versions.transformers }}" accelerate
       - run: maturin build --release --out dist
       - run: python -m pip install --no-index --find-links dist memopro
       - run: lscpu | grep -E "Model name|^CPU\(s\)|Flags" | cut -c1-200
@@ -37,9 +39,7 @@ jobs:
         run: |
           mkdir -p out
           python -m experiments.x86_rows.diag --out out/default.json > /dev/null
-          python -m experiments.x86_rows.diag --threads 1 --out out/threads1.json > /dev/null
           python -m experiments.x86_rows.diag --no-mkldnn --out out/no_mkldnn.json > /dev/null
-          ATEN_CPU_CAPABILITY=avx2 python -m experiments.x86_rows.diag --out out/aten_avx2.json > /dev/null
           ONEDNN_MAX_CPU_ISA=AVX2 python -m experiments.x86_rows.diag --out out/onednn_avx2.json > /dev/null
           python - <<'EOF'
           import json, pathlib
@@ -50,12 +50,12 @@ jobs:
               for kind in ("streamed", "plain_hf"):
                   for c in r[kind]:
                       bad = [x for x in [c.get("prompt_culprit")] + c["rows"] if x not in (None, True)]
-                      print(f"  {kind} ok={c['ok']}", [(b["module"], b["input_same"], b["max_diff"]) for b in bad])
+                      print(f"  {kind} ok={c['ok']} keep1={c['prompt_last_keep1']}", [(b["module"], b["input_same"], b["max_diff"]) for b in bad])
           EOF
       - name: The test itself
         run: pytest -q "tests/test_rt_torch.py::test_rows_after_the_prompt_are_computed_as_in_plain_generation" || true
       - uses: actions/upload-artifact@v4
         if: always()
         with:
-          name: x86-rows-${{ matrix.copy }}
+          name: x86-rows-${{ matrix.copy }}-torch${{ matrix.versions.torch }}
           path: out/

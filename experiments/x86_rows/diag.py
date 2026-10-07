@@ -181,6 +181,7 @@ def model_check(path: Path, streamed: bool) -> dict:
     with torch.no_grad():
         out = m(input_ids=prompt, use_cache=True)
         last, cache = out.logits[:, -1], out.past_key_values
+        last_keep1 = m(input_ids=prompt, use_cache=True, logits_to_keep=1).logits[:, -1]
         singles = []
         for i in range(new.shape[1]):
             out = m(input_ids=new[:, i : i + 1], past_key_values=cache, use_cache=True)
@@ -191,7 +192,11 @@ def model_check(path: Path, streamed: bool) -> dict:
             both_logits = m(input_ids=torch.cat([prompt, new], 1), use_cache=True).logits
         both, _ = rec.take()
     rec.remove()
-    result = {"prompt_last": same(both_logits[:, n - 1], last), "rows": []}
+    result = {
+        "prompt_last": same(both_logits[:, n - 1], last),
+        "prompt_last_keep1": same(both_logits[:, n - 1], last_keep1),  # as plain generate
+        "rows": [],
+    }
     if not result["prompt_last"]:
         result["prompt_culprit"] = culprit(plain, order, both, 0, n)
     for i, one in enumerate(singles):
