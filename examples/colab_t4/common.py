@@ -444,8 +444,17 @@ def fetch_model(repo):
              "downloading to the local disk instead")
         shutil.rmtree(local, ignore_errors=True)
         t = time.time()
-        snapshot_download(repo, local_dir=local, allow_patterns=PATTERNS)
-        _log(f"downloaded {repo} to local disk ({time.time() - t:.0f}s)")
+        # a fresh download, with a cache on the local disk: given local_dir alone, the hub reused
+        # the broken Drive cache and "downloaded" the 79-byte file again in 1 s (0226)
+        snapshot_download(repo, local_dir=local, allow_patterns=PATTERNS, force_download=True,
+                          cache_dir="/content/hf_fresh")
+        still = [n for n in os.listdir(local)
+                 if os.path.isfile(os.path.join(local, n)) and _link_text(os.path.join(local, n))]
+        if still:
+            raise RuntimeError(f"{repo}: {still} are still link text after a fresh download")
+        size = sum(os.path.getsize(os.path.join(local, n)) for n in os.listdir(local)
+                   if os.path.isfile(os.path.join(local, n)))
+        _log(f"downloaded {repo} to local disk ({size / 2**30:.1f} GiB, {time.time() - t:.0f}s)")
         return local
     if os.path.isdir(local) and all(
             os.path.exists(os.path.join(local, n))
