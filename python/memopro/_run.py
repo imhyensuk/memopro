@@ -53,14 +53,16 @@ class _Loader(importlib.abc.Loader):
 
 
 class _PatchOnImport(importlib.abc.MetaPathFinder):
-    """Run ``after(module)`` once ``TARGET`` has been imported, however the script imports it."""
+    """Run ``after(module)`` once ``target`` (default ``TARGET``) has been imported, however the
+    script imports it."""
 
-    def __init__(self, after: Callable[[Any], None]) -> None:
+    def __init__(self, after: Callable[[Any], None], target: str = TARGET) -> None:
         self.after = after
+        self.target = target
         self._busy = False
 
     def find_spec(self, fullname: str, path: Any, target: Any = None) -> Any:
-        if fullname != TARGET or self._busy:
+        if fullname != self.target or self._busy:
             return None
         self._busy = True
         try:

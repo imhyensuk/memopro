@@ -32,6 +32,10 @@ use std::time::Instant;
 
 /// At most this many most recently faulted chunks count as in use and are not evicted.
 const HOT_CHUNKS: u64 = 16;
+/// Chunks the pager always keeps room for in memory, whatever the budget, a process budget and
+/// the compressed copies leave: with room for fewer, the two operands of one copy evicted each
+/// other forever (0230). Going over the budget to keep them is counted in `overruns`.
+const MIN_CHUNKS: u64 = 8;
 /// Address space each pager reserves for its regions (no memory until used).
 const ARENA: usize = 64 << 30;
 /// Pagers that can exist at once in a process.
@@ -715,21 +719,25 @@ impl Shared {
             st.stats.outside_peak = st.stats.outside_peak.max(outside);
             st.stats.limit_low = st.stats.limit_low.min(limit);
         }
+        let hard = limit;
+        let limit = limit.max(st.compressed + MIN_CHUNKS * self.config.chunk as u64);
         while st.resident + st.compressed + need > limit {
-            let Some(i) = self.choose(st, exclude) else {
-                st.stats.overruns += 1;
-                return;
+            let fits = (limit - st.compressed) / self.config.chunk as u64;
+            let Some(i) = self.choose(st, exclude, fits) else {
+                break;
             };
             self.evict(st, i);
+        }
+        if st.resident + st.compressed + need > hard {
+            st.stats.overruns += 1;
         }
     }
 
     /// As on Linux: the resident chunk whose next fault is predicted farthest, never one of the
     /// most recently faulted (code works on them now); if only those are left, the oldest.
-    fn choose(&self, st: &State, exclude: usize) -> Option<usize> {
+    fn choose(&self, st: &State, exclude: usize, fits: u64) -> Option<usize> {
         let now = st.clock as f64;
-        let fits = (self.limit / self.config.chunk as u64).max(1);
-        let hot = (fits / 4).clamp(1, HOT_CHUNKS) as f64;
+        let hot = (fits / 4).clamp(2, HOT_CHUNKS) as f64;
         let (sum, count) = st
             .chunks
             .values()

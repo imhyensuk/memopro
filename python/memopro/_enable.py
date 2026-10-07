@@ -194,7 +194,9 @@ def enable(
     try:
         cfg = cfgmod.get_config()
         torch_here = importlib.util.find_spec("torch") is not None
-        env = detect(devices=torch_here, config=cfg)
+        # importing torch only to look for a GPU costs ~100 MB: devices are measured when the
+        # code has imported torch already (the torch part waits for its import otherwise)
+        env = detect(devices="torch" in sys.modules, config=cfg)
         held = process_footprint()
         # what the process holds already counts: the ceiling is for all of it (0229)
         b = compute_budget(env, cfg, resident_host=held or 0)
@@ -306,6 +308,7 @@ def _numpy(s: Session, nbytes: int) -> None:
 
 def _torch(s: Session, nbytes: int) -> None:
     from memopro._errors import MemoproError
+    from memopro._run import _PatchOnImport
     from memopro.rt import Runtime
     from memopro.rt.activations import PRESSURE, SavedActivations
 
@@ -315,13 +318,27 @@ def _torch(s: Session, nbytes: int) -> None:
         s._add("torch", "skipped", str(e))
         return
     saved = SavedActivations(runtime, nbytes)
-    s._stack.enter_context(saved.hooks())
     s.activations = saved
+    done = s._stack
+
+    def install(_module: Any = None) -> None:
+        hooks = saved.hooks()  # in the thread that imports torch (the hooks are per thread)
+        hooks.__enter__()
+        done.callback(hooks.__exit__, None, None, None)
+
+    when = "now"
+    if "torch" in sys.modules:
+        install()
+    else:
+        hook = _PatchOnImport(install, "torch")
+        sys.meta_path.insert(0, hook)
+        s._stack.callback(lambda: hook in sys.meta_path and sys.meta_path.remove(hook))
+        when = "when torch is imported"
     s._add(
         "torch",
         "applied",
         f"activations saved for backward move into runtime buffers above {PRESSURE:.0%} of "
-        "the ceiling (this thread)",
+        f"the ceiling (this thread, {when})",
     )
 
 
