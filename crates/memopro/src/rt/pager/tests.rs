@@ -1,4 +1,4 @@
-//! Pager tests (Linux): data larger than the budget comes back bit for bit through plain loads
+//! Pager tests (Linux, macOS): data larger than the budget comes back bit for bit through plain loads
 //! and stores, from one thread or several, and incompressible data is kept (and counted).
 
 use super::*;
@@ -166,6 +166,186 @@ fn two_arrays_used_in_step_do_not_ping_pong() {
             .step_by(1009)
             .all(|(i, &w)| w == pattern(i) + 1)
     );
+    // SAFETY: done with both.
+    unsafe {
+        p.unmap(src).unwrap();
+        p.unmap(dst).unwrap();
+    }
+}
+
+/// The process footprint, or `None` (said on stderr) where it cannot be measured.
+fn footprint() -> Option<u64> {
+    let f = crate::rt::process_footprint();
+    if f.is_none() {
+        eprintln!("skipping: no process footprint here");
+    }
+    f
+}
+
+#[test]
+#[ignore = "measures the whole process: run with --ignored --test-threads=1"]
+fn evicted_chunks_leave_the_process() {
+    // tests run in parallel threads of one process: allow other tests' memory as slack
+    let Some(p) = pager(8) else { return };
+    let Some(start) = footprint() else { return };
+    let len = 96 * MIB;
+    let ptr = p.map(len).unwrap();
+    // SAFETY: a fresh region.
+    let words = unsafe { std::slice::from_raw_parts_mut(ptr as *mut u32, len / 4) };
+    for (i, w) in words.iter_mut().enumerate() {
+        *w = pattern(i);
+    }
+    let grown = footprint().unwrap().saturating_sub(start);
+    assert!(
+        grown < 48 * MIB as u64,
+        "footprint grew {grown} for 96 MiB under 8 MiB"
+    );
+    assert!(
+        words
+            .iter()
+            .enumerate()
+            .step_by(997)
+            .all(|(i, &w)| w == pattern(i))
+    );
+    // SAFETY: done with it.
+    unsafe { p.unmap(ptr) }.unwrap();
+}
+
+#[test]
+#[ignore = "measures the whole process: run with --ignored --test-threads=1"]
+fn a_process_budget_counts_memory_outside_the_pager() {
+    let Some(now) = footprint() else { return };
+    let config = PagerConfig {
+        chunk: 256 * 1024,
+        process_budget: Some(now + 24 * MIB as u64),
+        ..PagerConfig::new(64 << 20)
+    };
+    let p = match Pager::new(config) {
+        Ok(p) => p,
+        Err(Error::Unsupported(why)) => return eprintln!("skipping: {why}"),
+        Err(e) => panic!("{e}"),
+    };
+    let outside = vec![7u8; 16 * MIB]; // memory the pager does not own, touched
+    let len = 32 * MIB;
+    let ptr = p.map(len).unwrap();
+    // SAFETY: a fresh region.
+    let words = unsafe { std::slice::from_raw_parts_mut(ptr as *mut u32, len / 4) };
+    for (i, w) in words.iter_mut().enumerate() {
+        *w = pattern(i);
+    }
+    assert!(
+        words
+            .iter()
+            .enumerate()
+            .step_by(991)
+            .all(|(i, &w)| w == pattern(i))
+    );
+    let s = p.stats();
+    // a 64 MiB budget alone would have kept all 32 MiB; the process budget left far less
+    assert!(s.evictions > 0, "{s:?}");
+    assert!(s.limit_low < 24 * MIB as u64, "{s:?}");
+    assert!(s.outside_peak >= 16 * MIB as u64, "{s:?}");
+    std::hint::black_box(&outside);
+    // SAFETY: done with it.
+    unsafe { p.unmap(ptr) }.unwrap();
+}
+
+#[test]
+fn several_pagers_serve_their_own_faults() {
+    let (Some(a), Some(b)) = (pager(4), pager(4)) else {
+        return;
+    };
+    let len = 12 * MIB;
+    let (pa, pb) = (a.map(len).unwrap() as usize, b.map(len).unwrap() as usize);
+    std::thread::scope(|s| {
+        for (ptr, add) in [(pa, 1u32), (pb, 2u32)] {
+            s.spawn(move || {
+                // SAFETY: each thread uses its own region.
+                let w = unsafe { std::slice::from_raw_parts_mut(ptr as *mut u32, len / 4) };
+                for (i, x) in w.iter_mut().enumerate() {
+                    *x = pattern(i) + add;
+                }
+                for _ in 0..2 {
+                    assert!(w.iter().enumerate().all(|(i, &x)| x == pattern(i) + add));
+                }
+            });
+        }
+    });
+    assert!(a.stats().restores > 0 && b.stats().restores > 0);
+    // SAFETY: done with both.
+    unsafe {
+        a.unmap(pa as *mut u8).unwrap();
+        b.unmap(pb as *mut u8).unwrap();
+    }
+}
+
+#[test]
+fn a_process_budget_with_no_room_left_still_makes_progress() {
+    // the process already holds more than its budget: the pager keeps a few chunks anyway
+    // (counted as overruns) instead of letting a copy's two operands evict each other forever
+    let config = PagerConfig {
+        chunk: 256 * 1024,
+        process_budget: Some(1),
+        ..PagerConfig::new(64 << 20)
+    };
+    let p = match Pager::new(config) {
+        Ok(p) => p,
+        Err(Error::Unsupported(why)) => return eprintln!("skipping: {why}"),
+        Err(e) => panic!("{e}"),
+    };
+    let len = 8 * MIB;
+    let (src, dst) = (p.map(len).unwrap(), p.map(len).unwrap());
+    // SAFETY: two fresh regions, used only here.
+    let (a, b) = unsafe {
+        (
+            std::slice::from_raw_parts_mut(src as *mut u32, len / 4),
+            std::slice::from_raw_parts_mut(dst as *mut u32, len / 4),
+        )
+    };
+    for (i, w) in a.iter_mut().enumerate() {
+        *w = pattern(i);
+    }
+    b.copy_from_slice(a);
+    assert!(
+        b.iter()
+            .enumerate()
+            .step_by(331)
+            .all(|(i, &w)| w == pattern(i))
+    );
+    let s = p.stats();
+    assert!(s.overruns > 0, "{s:?}");
+    // SAFETY: done with both.
+    unsafe {
+        p.unmap(src).unwrap();
+        p.unmap(dst).unwrap();
+    }
+}
+
+#[test]
+fn compressed_copies_filling_the_budget_do_not_stop_a_copy() {
+    // data that compresses to more than the budget: the compressed copies alone fill it, and
+    // a copy between two regions still finishes (over budget, counted) instead of ping-ponging
+    let Some(p) = pager(2) else { return };
+    let len = 16 * MIB;
+    let (src, dst) = (p.map(len).unwrap(), p.map(len).unwrap());
+    // SAFETY: two fresh regions, used only here.
+    let (a, b) = unsafe {
+        (
+            std::slice::from_raw_parts_mut(src as *mut u32, len / 4),
+            std::slice::from_raw_parts_mut(dst as *mut u32, len / 4),
+        )
+    };
+    let mut x = 0x2545_F491_4F6C_DD1Du64;
+    for w in a.iter_mut() {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *w = (x as u32) & 0xFFFF_0000; // like bf16 widened to f32: about half compresses away
+    }
+    let expect: u64 = a.iter().map(|&w| u64::from(w)).sum();
+    b.copy_from_slice(a);
+    assert_eq!(b.iter().map(|&w| u64::from(w)).sum::<u64>(), expect);
+    assert!(p.stats().overruns > 0);
     // SAFETY: done with both.
     unsafe {
         p.unmap(src).unwrap();

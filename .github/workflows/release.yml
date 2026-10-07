@@ -60,9 +60,27 @@ jobs:
           /tmp/smoke/bin/memopro --version
           /tmp/smoke/bin/memopro doctor --no-devices --json > /dev/null
           /tmp/smoke/bin/python -c "import sys, memopro; assert memopro.__version__ == '${{ needs.version.outputs.pep440 }}'; assert 'torch' not in sys.modules"
+          /tmp/smoke/bin/python -c "import memopro; s = memopro.enable('512MB!'); print(s); s.disable()"
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-x86_64-unknown-linux-gnu
+          path: dist
+
+  wheel-linux-arm:
+    # Linux on ARM (Jetson, Raspberry Pi 5, Graviton), cross-built in a manylinux image (0230)
+    name: Wheel (aarch64-unknown-linux-gnu)
+    needs: version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: aarch64-unknown-linux-gnu
+          args: --release --out dist
+          manylinux: auto
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-aarch64-unknown-linux-gnu
           path: dist
 
   wheel-macos:
@@ -84,6 +102,7 @@ jobs:
           /tmp/smoke/bin/memopro --version
           /tmp/smoke/bin/memopro doctor --no-devices --json > /dev/null
           /tmp/smoke/bin/python -c "import sys, memopro; assert memopro.__version__ == '${{ needs.version.outputs.pep440 }}'; assert 'torch' not in sys.modules"
+          /tmp/smoke/bin/python -c "import memopro; s = memopro.enable('512MB!'); print(s); s.disable()"
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-aarch64-apple-darwin
@@ -104,7 +123,7 @@ jobs:
           path: dist
 
   publish-pypi:
-    needs: [wheel-linux, wheel-macos, sdist]
+    needs: [wheel-linux, wheel-linux-arm, wheel-macos, sdist]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: pypi

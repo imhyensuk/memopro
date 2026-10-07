@@ -2,7 +2,7 @@
 scikit-learn / simulation) in this process, unchanged; started with or without LD_PRELOAD by the
 cell. Its JSON line becomes the case's result.
 
-    worker_data.py <workload.py>
+    worker_data.py <workload.py> [workload arguments]
 """
 
 import contextlib
@@ -14,7 +14,7 @@ import sys
 
 script = os.path.join(os.path.dirname(os.path.abspath(__file__)), sys.argv[1])
 sys.path.insert(0, os.path.dirname(script))
-sys.argv = [script]
+sys.argv = [script, *sys.argv[2:]]  # the workload's own arguments (E048)
 out = io.StringIO()
 status, error = "ok", None
 try:

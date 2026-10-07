@@ -13,14 +13,14 @@
 //! stay in memory never fault, so they look overdue and stay; the chunk just brought in by a scan
 //! is the one that goes (MRU), which keeps a budget's worth of a repeated scan.
 //!
-//! Limits: only Linux has userfaultfd (kernel 5.7 or newer for write-protecting anonymous
-//! memory; unprivileged use needs `UFFD_USER_MODE_ONLY`, 5.11, or `vm.unprivileged_userfaultfd`).
-//! Elsewhere [`Pager::new`] returns [`Error::Unsupported`] and the explicit
-//! [`Runtime`](super::Runtime) is the way. Kernel accesses (e.g. `read(2)` into a managed buffer)
+//! Limits: Linux uses userfaultfd (kernel 5.7 or newer for write-protecting anonymous memory;
+//! unprivileged use needs `UFFD_USER_MODE_ONLY`, 5.11, or `vm.unprivileged_userfaultfd`); macOS
+//! serves the same faults through signals (0229, `pager/macos.rs`). Elsewhere [`Pager::new`]
+//! returns [`Error::Unsupported`] and the explicit [`Runtime`](super::Runtime) is the way. Kernel accesses (e.g. `read(2)` into a managed buffer)
 //! are not served in user-mode-only mode and fail with `EFAULT`; incompressible data cannot be
 //! evicted, so a budget full of it is overrun and counted (`overruns`), not refused.
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 use crate::error::{Error, Result};
 
 /// Settings of a [`Pager`].
@@ -88,6 +88,8 @@ pub struct PagerStats {
     /// the chunks were held to.
     pub outside_peak: u64,
     pub limit_low: u64,
+    /// Chunks given up while nothing faulted because memory outside the pager grew (0230).
+    pub trims: u64,
 }
 
 #[cfg(target_os = "linux")]
@@ -96,19 +98,25 @@ mod imp;
 #[cfg(target_os = "linux")]
 pub use imp::{Pager, in_pager_thread};
 
+#[cfg(target_os = "macos")]
+mod macos;
+
+#[cfg(target_os = "macos")]
+pub use macos::{Pager, in_pager_thread};
+
 /// Whether the calling thread is a pager's own (always false where there is no pager).
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub fn in_pager_thread() -> bool {
     false
 }
 
 /// Transparent paging is only built on Linux (userfaultfd).
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 pub struct Pager {
     _never: std::convert::Infallible,
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 fn unsupported() -> Error {
     Error::Unsupported(
         "transparent paging needs Linux userfaultfd; on this system use rt::Runtime buffers \
@@ -117,7 +125,7 @@ fn unsupported() -> Error {
     )
 }
 
-#[cfg(not(target_os = "linux"))]
+#[cfg(not(any(target_os = "linux", target_os = "macos")))]
 impl Pager {
     pub fn new(_config: PagerConfig) -> Result<Pager> {
         Err(unsupported())
@@ -151,17 +159,17 @@ impl Pager {
 }
 
 #[cfg(test)]
-#[cfg(target_os = "linux")]
+#[cfg(any(target_os = "linux", target_os = "macos"))]
 mod tests;
 
 #[cfg(test)]
 mod portable_tests {
     use super::*;
-    #[cfg(target_os = "linux")]
+    #[cfg(any(target_os = "linux", target_os = "macos"))]
     use crate::error::Error;
 
     #[test]
-    #[cfg(not(target_os = "linux"))]
+    #[cfg(not(any(target_os = "linux", target_os = "macos")))]
     fn other_systems_say_why() {
         let e = Pager::new(PagerConfig::new(64 << 20)).err().unwrap();
         assert!(e.to_string().contains("userfaultfd"), "{e}");

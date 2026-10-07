@@ -386,7 +386,7 @@ impl RtRuntime {
     #[new]
     #[pyo3(signature = (
         budget, compress_level=1, min_saving=0.15, policy="reuse", prefetch=true,
-        lookahead=64 << 20
+        lookahead=64 << 20, process_budget=None
     ))]
     fn new(
         budget: u64,
@@ -395,8 +395,10 @@ impl RtRuntime {
         policy: &str,
         prefetch: bool,
         lookahead: u64,
+        process_budget: Option<u64>,
     ) -> PyResult<Self> {
         let mut config = memopro::rt::Config::new(budget);
+        config.process_budget = process_budget;
         config.compress_level = compress_level;
         config.min_saving = min_saving;
         config.prefetch = prefetch;
@@ -606,6 +608,8 @@ impl RtRuntime {
         d.set_item("prefetch_wasted", s.prefetch_wasted)?;
         d.set_item("prefetch_skipped", s.prefetch_skipped)?;
         d.set_item("written_bytes", s.written_bytes)?;
+        d.set_item("outside_peak", s.outside_peak)?;
+        d.set_item("limit_low", s.limit_low)?;
         Ok(d)
     }
 }
@@ -847,7 +851,8 @@ unsafe extern "C" fn free_handler(capsule: *mut ffi::PyObject) {
     }
 }
 
-/// Transparent paging of large NumPy arrays (Linux userfaultfd, `memopro.rt.transparent`).
+/// Transparent paging of large NumPy arrays (Linux userfaultfd, macOS signals;
+/// `memopro.rt.transparent`).
 #[pyclass(module = "memopro._core", name = "RtPager", frozen)]
 struct RtPager {
     pager: std::sync::Arc<memopro::rt::Pager>,
@@ -857,7 +862,10 @@ struct RtPager {
 #[pymethods]
 impl RtPager {
     #[new]
-    #[pyo3(signature = (budget, chunk=1 << 20, elem=4, compress_level=1, min_saving=0.15, threshold=16 << 20))]
+    #[pyo3(signature = (
+        budget, chunk=1 << 20, elem=4, compress_level=1, min_saving=0.15, threshold=16 << 20,
+        process_budget=None
+    ))]
     fn new(
         budget: u64,
         chunk: usize,
@@ -865,6 +873,7 @@ impl RtPager {
         compress_level: i32,
         min_saving: f64,
         threshold: usize,
+        process_budget: Option<u64>,
     ) -> PyResult<Self> {
         let config = memopro::rt::PagerConfig {
             budget,
@@ -872,7 +881,7 @@ impl RtPager {
             elem,
             compress_level,
             min_saving,
-            process_budget: None,
+            process_budget,
         };
         let pager = memopro::rt::Pager::new(config).map_err(rt_err)?;
         Ok(RtPager {
@@ -924,6 +933,7 @@ impl RtPager {
         d.set_item("spurious", s.spurious)?;
         d.set_item("outside_peak", s.outside_peak)?;
         d.set_item("limit_low", s.limit_low)?;
+        d.set_item("trims", s.trims)?;
         d.set_item("written_bytes", 0u64)?;
         Ok(d)
     }
@@ -976,6 +986,12 @@ impl RtPager {
         // SAFETY: a new reference we own.
         Ok(unsafe { Bound::from_owned_ptr(py, capsule) }.unbind())
     }
+}
+
+/// Bytes this process occupies (macOS physical footprint, Linux resident set), or None.
+#[pyfunction]
+fn process_footprint() -> Option<u64> {
+    memopro::rt::process_footprint()
 }
 
 /// Make `handler` (a `mem_handler` capsule, or None for NumPy's default) NumPy's memory
@@ -1040,6 +1056,7 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<RtRuntime>()?;
     m.add_class::<RtPin>()?;
     m.add_class::<RtPager>()?;
+    m.add_function(wrap_pyfunction!(process_footprint, m)?)?;
     m.add_function(wrap_pyfunction!(numpy_set_handler, m)?)?;
     Ok(())
 }
