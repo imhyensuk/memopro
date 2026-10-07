@@ -718,7 +718,9 @@ def draft_model(
 
 
 def _rows(t: Any, start: int, stop: int) -> Any:
-    return None if t is None else t[:, start:stop]
+    """Rows ``start:stop`` as a tensor of their own: a view would keep the strides of all rows,
+    and on x86 CPUs oneDNN's bf16 GEMM can round a row differently by strides alone (0240)."""
+    return None if t is None else t[:, start:stop].clone()
 
 
 @contextlib.contextmanager
@@ -778,14 +780,14 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
                     part["position_ids"] = _rows(pos, 0, block)
                     if emb is not None:
                         part["position_embeddings"] = tuple(_rows(e, 0, block) for e in emb)
-                    outs.append(original(hidden[:, :block], **part))
+                    outs.append(original(_rows(hidden, 0, block), **part))
                 for i in range(block, q):
                     one = dict(kw)
                     one["attention_mask"] = None  # one row sees every cached key
                     one["position_ids"] = _rows(pos, i, i + 1)
                     if emb is not None:
                         one["position_embeddings"] = tuple(_rows(e, i, i + 1) for e in emb)
-                    outs.append(original(hidden[:, i : i + 1], **one))
+                    outs.append(original(_rows(hidden, i, i + 1), **one))
             finally:
                 del held
             return torch.cat(outs, dim=1)
@@ -798,8 +800,8 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
             block = max(0, min(q, prompt - state["before"]))
             if q == 1 or block == q:
                 return original(hidden)
-            parts = [original(hidden[:, :block])] if block else []
-            parts += [original(hidden[:, i : i + 1]) for i in range(block, q)]
+            parts = [original(_rows(hidden, 0, block))] if block else []
+            parts += [original(_rows(hidden, i, i + 1)) for i in range(block, q)]
             return torch.cat(parts, dim=1)
 
         return forward
@@ -811,7 +813,7 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
             held = hold(head)
             try:
                 return torch.cat(
-                    [original(hidden[:, i : i + 1]) for i in range(hidden.shape[1])], dim=1
+                    [original(_rows(hidden, i, i + 1)) for i in range(hidden.shape[1])], dim=1
                 )
             finally:
                 del held
