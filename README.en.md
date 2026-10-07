@@ -79,6 +79,8 @@ pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"
 
 ## Usage
 
+Full guide: [docs/guide](https://github.com/imhyensuk/memopro/blob/main/docs/guide/README.en.md)
+
 ### 0. One line
 
 ```python
