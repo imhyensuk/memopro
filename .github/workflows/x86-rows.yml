@@ -54,7 +54,7 @@ jobs:
               for kind in ("streamed", "plain_hf"):
                   for c in r[kind]:
                       bad = [x for x in [c.get("prompt_culprit")] + c["rows"] + c["later"] if x not in (None, True)]
-                      print(f"  {kind} ok={c['ok']} keep1={c['prompt_last_keep1']}", [(b["module"], b["input_same"], b["max_diff"], b["weight_ptr_mod_4096"]) for b in bad])
+                      print(f"  {kind} ok={c['ok']} keep1={c['prompt_last_keep1']}", [{k: v for k, v in b.items() if k != "shapes"} for b in bad])
           EOF
       - name: The test itself
         run: ONEDNN_MAX_CPU_ISA=AVX512_CORE pytest -q "tests/test_rt_torch.py::test_rows_after_the_prompt_are_computed_as_in_plain_generation" || true
