@@ -1,0 +1,32 @@
+{
+ "status": "timeout",
+ "exit": "timeout",
+ "log_tail": "$ /usr/bin/python3 /content/memopro_colab/worker_data.py simulate.py\n",
+ "case": "data__simulate__preload",
+ "wall_s": 900.4,
+ "timeline_peak_gpu_used_bytes": 3145728,
+ "timeline_peak_host_used_bytes": 3221217280,
+ "pager": {
+  "budget": 1157679104,
+  "limit": 1156630528,
+  "limit_low": 1002028813,
+  "peak_used": 1053818880,
+  "outside_peak": 87492851,
+  "faults": 305727,
+  "zero_fills": 35285,
+  "restores": 270442,
+  "restore_seconds": 306.6086122149947,
+  "evictions": 278730,
+  "compress_in": 292269588480,
+  "compress_out": 127000557860,
+  "compress_seconds": 516.106164546001,
+  "incompressible": 0,
+  "overruns": 234270,
+  "spurious": 0,
+  "paged_allocations": 519,
+  "paged_bytes": 37379637248,
+  "threshold": 4194304,
+  "seconds": 897.441990055
+ },
+ "limit": 1157679104
+}
