@@ -19,9 +19,9 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        copy: [1, 2, 3, 4]
+        copy: [1, 2, 3, 4, 5, 6]
         # "" = latest; 2.11.0/5.18 = the E048 Colab run (0239)
-        versions: [{torch: "", transformers: ""}, {torch: "==2.11.0", transformers: "==5.18.0"}]
+        versions: [{torch: "==2.11.0", transformers: "==5.18.0"}]
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
