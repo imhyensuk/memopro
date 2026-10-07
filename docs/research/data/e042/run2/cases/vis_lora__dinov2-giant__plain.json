@@ -1,0 +1,67 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "vis_lora",
+  "facebook/dinov2-giant",
+  "plain",
+  "0",
+  "5",
+  "8"
+ ],
+ "kind": "vis_lora",
+ "model": "facebook/dinov2-giant",
+ "mode": "plain",
+ "budget": 0,
+ "load_s": 14.1,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 5196902400,
+  "allocated_bytes": 4545923072,
+  "reserved_bytes": 4722786304,
+  "peak_allocated_bytes": 4545923072,
+  "peak_reserved_bytes": 4722786304,
+  "device_used_bytes": 4849532928,
+  "peak_device_used_bytes": 4849532928
+ },
+ "losses": [
+  2.4393532276153564,
+  2.1939902305603027,
+  1.8742462396621704,
+  1.4957057237625122,
+  1.3329988718032837
+ ],
+ "loss_bits": [
+  "0x1.383cba0000000p+1",
+  "0x1.18d4ac0000000p+1",
+  "0x1.dfce9a0000000p+0",
+  "0x1.7ee6920000000p+0",
+  "0x1.553f6a0000000p+0"
+ ],
+ "step_s": [
+  3.835524797439575,
+  3.161093235015869,
+  3.1872761249542236,
+  3.216867685317993,
+  3.236973762512207
+ ],
+ "targets": [
+  "q_proj",
+  "v_proj"
+ ],
+ "rt": null,
+ "worker_s": 39.4,
+ "memory_end": {
+  "host_peak_rss_bytes": 5196902400,
+  "allocated_bytes": 4655309312,
+  "reserved_bytes": 13633585152,
+  "peak_allocated_bytes": 12351173120,
+  "peak_reserved_bytes": 13633585152,
+  "device_used_bytes": 13831634944,
+  "peak_device_used_bytes": 13831634944
+ },
+ "memopro_report": [],
+ "case": "vis_lora__dinov2-giant__plain",
+ "wall_s": 43.1,
+ "timeline_peak_gpu_used_bytes": 13831766016,
+ "timeline_peak_host_used_bytes": 2971820032
+}

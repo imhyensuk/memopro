@@ -1,0 +1,41 @@
+{
+ "LM_MODELS": {
+  "Qwen/Qwen2.5-3B-Instruct": [
+   2147483648,
+   3221225472
+  ],
+  "Qwen/Qwen2.5-7B-Instruct": [
+   4294967296,
+   6442450944
+  ]
+ },
+ "GEN_TOKENS": 32,
+ "LORA": {
+  "steps": 5,
+  "seq": 512
+ },
+ "VISION_MODELS": {
+  "microsoft/resnet-152": [
+   62914560,
+   125829120
+  ],
+  "facebook/dinov2-giant": [
+   1153433600,
+   2306867200
+  ]
+ },
+ "VISION_BATCH": 8,
+ "VISION_LORA": {
+  "model": "facebook/dinov2-giant",
+  "steps": 5,
+  "batch": 8
+ },
+ "DATA_WORKLOADS": [
+  "image.py",
+  "dataframe.py",
+  "classify.py",
+  "simulate.py"
+ ],
+ "DATA_CHUNK": 1048576,
+ "MODEL_CACHE": "drive"
+}
