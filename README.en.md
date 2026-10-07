@@ -56,6 +56,15 @@ All measured against criteria fixed in advance. Raw data and environments are in
 | 1 GiB array, 4 passes, ceiling = 1/2 and 3/4 of what it needs | Identical results; extra time predicted before running 3.81 s vs 3.72 s measured (3/4: 1.73 vs 1.86 s) |
 | Cost of leaving it on when memory is ample | 1.02-1.08x |
 
+On Linux (Colab) the results were identical as well, the ceiling held (0 MiB over) and the estimate was within 10%. Keeping it on when memory was ample cost 1.20x on Linux.
+
+### Vision models (Colab T4, inference with streamed weights)
+
+| Model | Result |
+|---|---|
+| ResNet-152 (CNN) | Output bit-identical to a plain run at 60 and 120 MiB budgets, 0.13 -> 0.14 s |
+| DINOv2-giant (1.1B parameters, 4.5 GB) | Identical output at 1.1 and 2.2 GB budgets, 1.57 -> 1.65 s |
+
 Dataframe workloads with heavy random access, and data that is still larger than the limit after compression, do not yet run at a practical speed at 1/2 ([Limitations](#limitations)).
 
 ---
@@ -122,7 +131,24 @@ text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Inst
 - With `draft`, a small int4 draft model speculates; verification follows the same computation path as plain generation, so the output does not change.
 - Verified on Apple silicon (MPS), NVIDIA CUDA (Colab T4) and CPU.
 
-### 2. Large arrays within a budget
+### 2. Run local models (vision and language models, inference)
+
+Any model downloaded in Hugging Face format (safetensors) can be loaded and run as is, even if it is larger than memory.
+
+```python
+import transformers
+import memopro.rt.torch as rtt
+
+m = rtt.stream_model("facebook/dinov2-giant", budget="1GB", device="cuda",   # "mps", "cpu"
+                     model_class=transformers.Dinov2Model)
+features = m(pixel_values=images).last_hidden_state        # same output as the model loaded normally
+```
+
+- Weights stay in their files and are read within the budget as each layer computes. Download the model first (`huggingface-cli download ...`).
+- For language models use `memopro.generate`, for LoRA training `memopro.finetune` (section 1). For models that fit, `memopro.load` picks a form within the budget (quantized if needed).
+- Training your own PyTorch models: `memopro.enable()` moves saved activations within the ceiling. Streaming the weights themselves is supported for Hugging Face models only.
+
+### 3. Large arrays within a budget
 
 ```python
 from memopro.rt import Runtime
@@ -144,7 +170,7 @@ with h:                # used as usual inside the block
     step(state)
 ```
 
-### 3. Run scripts without changing them
+### 4. Run scripts without changing them
 
 ```bash
 memopro run --budget 6GB train.py          # loads from_pretrained models that do not fit within the budget
@@ -152,7 +178,7 @@ memopro run --transparent 1GB analysis.py  # Linux, macOS: pages large NumPy arr
 memopro run --dry-run train.py             # show what it would do
 ```
 
-### 4. Load and train within a budget
+### 5. Load and train within a budget
 
 ```python
 model, tok = memopro.load("Qwen/Qwen2.5-7B-Instruct", tokenizer=True, quality="high")
@@ -214,7 +240,7 @@ Platform        zero-copy Apple GPU buffers · asynchronous CUDA copies · Linux
 | Platform | Status |
 |---|---|
 | macOS, Apple silicon (MPS) | Primary platform; LLM training and generation verified; transparent paging (signals) |
-| Linux, NVIDIA GPU (CUDA) | Generation, LoRA training and vision inference verified on a Colab T4 |
+| Linux, NVIDIA GPU (CUDA) | Generation, LoRA training, vision inference (ResNet, DINOv2), enable ceiling and estimate verified on a Colab T4 |
 | Linux, CPU | Verified in CI; transparent paging (userfaultfd) |
 | Windows | Basic features checked in CI |
 
@@ -224,9 +250,9 @@ Python 3.11+, PyTorch 2.4+.
 
 ## Limitations
 
-- **Speed**: memory is saved at the cost of time. 7B training on an 8 GB Mac takes about 18 s per 129-token step. Models that fit in memory run faster with existing tools.
+- **Speed**: memory is saved at the cost of time. 7B training on an 8 GB Mac takes about 18 s per 129-token step. Models that fit in memory run faster with existing tools: on a Colab T4, Unsloth (fp16) trained 3B and 7B 16-bit LoRA 10-33x faster than memopro (stored bf16). memopro is for models larger than the GPU or device memory, which do not run otherwise.
 - **Transparent paging**: workloads with heavy random access (sorting, group-by) and data still larger than the limit after compression do not run at a practical speed. Linux and macOS (not Windows).
-- **Model coverage**: the LLM path is verified mainly on the Qwen2.5 family (1.5B-7B).
+- **Model coverage**: the LLM path is verified mainly on the Qwen2.5 family (1.5B-7B), vision on ResNet-152 and DINOv2. Diffusion and speech models are not tested.
 - **Alpha**: APIs may change.
 
 ---
