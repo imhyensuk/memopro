@@ -34,9 +34,9 @@
  ],
  "error": "InvalidArgument: /content/models/facebook--dinov2-giant/model.safetensors: not a safetensors file (header length 7809856579203706414 > file size 79)",
  "trace": "Traceback (most recent call last):\n  File \"/content/memopro_colab/worker_common.py\", line 131, in guarded\n    main()\n    ~~~~^^\n  File \"/content/memopro_colab/worker_suite.py\", line 250, in main\n    fn(model_id, mode, int(budget), *map(int, rest))\n    ~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_suite.py\", line 185, in vis_infer\n    m, _ = load(\"vision\", model_id, mode, budget)\n           ~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_suite.py\", line 74, in load\n    m = rtt.stream_model(path, budget=budget, device=DEVICE, model_class=cls)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 518, in stream_model\n    regions.update(read_header(f))\n                   ~~~~~~~~~~~^^^\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/hibernate/_source.py\", line 58, in read_header\n    raise InvalidArgument(\n        f\"{path}: not a safetensors file (header length {length} > file size {st.st_size})\"\n    )\nmemopro._errors.InvalidArgument: /content/models/facebook--dinov2-giant/model.safetensors: not a safetensors file (header length 7809856579203706414 > file size 79)\n",
- "worker_s": 6.9,
+ "worker_s": 7.1,
  "memory_end": {
-  "host_peak_rss_bytes": 960868352,
+  "host_peak_rss_bytes": 960249856,
   "allocated_bytes": 0,
   "reserved_bytes": 0,
   "peak_allocated_bytes": 0,
@@ -46,7 +46,7 @@
  },
  "memopro_report": [],
  "case": "vis_infer__dinov2-giant__memopro_1100",
- "wall_s": 13.1,
+ "wall_s": 13.8,
  "timeline_peak_gpu_used_bytes": 110100480,
- "timeline_peak_host_used_bytes": 2650419200
+ "timeline_peak_host_used_bytes": 2746224640
 }
