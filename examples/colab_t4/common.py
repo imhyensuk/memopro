@@ -10,6 +10,7 @@
 import csv
 import datetime
 import glob
+import hashlib
 import json
 import os
 import shutil
@@ -60,18 +61,35 @@ def _rust():
     os.environ["PATH"] = cargo + os.pathsep + os.environ["PATH"]
 
 
-def _build_source(src):
-    """memopro from a source tree (Rust core via maturin) and the Linux memopro-preload library."""
+def _build_source(src, cache):
+    """memopro from a source tree (Rust core via maturin) and the Linux memopro-preload library.
+    The built wheel and library are kept in ``cache`` (Drive, per bundle) so later sessions skip
+    the 5-8 minute build (0224)."""
+    lib_name = "libmemopro_preload.so"
+    wheels = sorted(glob.glob(os.path.join(cache, "memopro-*.whl")))
+    if wheels and os.path.exists(os.path.join(cache, lib_name)):
+        r = _pip("--force-reinstall", "--no-deps", wheels[-1])
+        lib = os.path.join("/content", lib_name)
+        shutil.copyfile(os.path.join(cache, lib_name), lib)
+        os.environ["MP_PRELOAD_LIB"] = lib
+        return {"ok": r.returncode == 0, "stderr": r.stderr[-1500:] if r.returncode else "",
+                "preload": lib, "cached_build": cache}
     _rust()
     _pip("maturin>=1.9,<2.0")
-    r = _pip("--force-reinstall", "--no-deps", src)
-    info = {"ok": r.returncode == 0, "stderr": r.stderr[-1500:] if r.returncode else ""}
+    os.makedirs(cache, exist_ok=True)
+    w = subprocess.run([sys.executable, "-m", "pip", "wheel", "-q", "--no-deps", src, "-w", cache],
+                       capture_output=True, text=True, check=False)
+    wheels = sorted(glob.glob(os.path.join(cache, "memopro-*.whl")))
+    r = _pip("--force-reinstall", "--no-deps", wheels[-1]) if wheels else w
+    info = {"ok": bool(wheels) and r.returncode == 0,
+            "stderr": (w.stderr + r.stderr)[-1500:] if r.returncode or not wheels else ""}
     b = subprocess.run(["cargo", "build", "-q", "--release", "-p", "memopro-preload"], cwd=src,
                        capture_output=True, text=True, check=False)
-    lib = os.path.join(src, "target", "release", "libmemopro_preload.so")
+    lib = os.path.join(src, "target", "release", lib_name)
     if b.returncode == 0 and os.path.exists(lib):
         os.environ["MP_PRELOAD_LIB"] = lib
         info["preload"] = lib
+        shutil.copyfile(lib, os.path.join(cache, lib_name))
     else:
         info["preload_error"] = b.stderr[-1000:]
     return info
@@ -101,8 +119,10 @@ def install_memopro(root):
         shutil.rmtree(src, ignore_errors=True)
         os.makedirs(src)
         subprocess.run(["tar", "-xzf", bundles[-1], "-C", src], check=True)
+        with open(bundles[-1], "rb") as f:
+            key = hashlib.sha256(f.read()).hexdigest()[:12]
         info = {"source": "source bundle", "file": os.path.basename(bundles[-1]),
-                **_build_source(src)}
+                **_build_source(src, os.path.join(root, "install", f"built-{key}"))}
     elif wheels:
         r = _pip("--force-reinstall", "--no-deps", wheels[-1])
         info = {"source": "wheel", "file": os.path.basename(wheels[-1]), "ok": r.returncode == 0}
