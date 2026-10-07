@@ -29,62 +29,6 @@ STAGE_TO_LOCAL = True  # copy models from the Drive cache to the local disk befo
 # ==== END OF SETTINGS ================================================================
 # @@COMMON@@
 # ---------------------------------------------------------------- body
-MIB = 1 << 20
-DETERMINISTIC = {"CUBLAS_WORKSPACE_CONFIG": ":4096:8"}
-VENV = "/content/venv-unsloth"
-T_START = time.time()
-
-
-def left():
-    return TIME_LIMIT_S - (time.time() - T_START)
-
-
-def case(run, key, expected_s, worker, args, timeout, env_extra=None, python=None):
-    """run_case, unless the case would end after the time limit (then recorded as skipped)."""
-    prev = run.done(key)
-    if prev is not None and prev.get("status") != "skipped":  # finished: run_case skips it
-        return run_case(run, key, worker, args, timeout, env_extra, python)
-    if prev is not None:  # skipped for time last session: try again now
-        os.remove(run.path("cases", key + ".json"))
-    if expected_s > left():
-        rec = {"case": key, "status": "skipped", "why": f"time budget: {left() / 60:.0f} min left, "
-               f"case expects {expected_s / 60:.0f} min"}
-        run.save(key, rec)
-        _log(f"skip {key}: {rec['why']}")
-        return rec
-    # never past the limit by more than 5 minutes, even if the case hangs
-    timeout = min(timeout, int(max(expected_s, left())) + 300)
-    return run_case(run, key, worker, args, timeout, env_extra, python)
-
-
-def short(model):
-    return model.split("/")[-1]
-
-
-def unsloth_python(run):
-    py = os.path.join(VENV, "bin", "python")
-    if not os.path.exists(py):
-        # uv, not `python -m venv`: Colab's Python has no ensurepip, so venv failed (0238)
-        _log("installing Unsloth into its own virtual environment with uv (~3-6 min)")
-        steps = [[sys.executable, "-m", "pip", "install", "-q", "uv"],
-                 [sys.executable, "-m", "uv", "venv", "-q", VENV],
-                 [sys.executable, "-m", "uv", "pip", "install", "-q", "--python", py, "unsloth",
-                  "datasets"]]
-        for cmd in steps:
-            r = subprocess.run(cmd, capture_output=True, text=True, check=False)
-            if r.returncode:
-                _log(f"Unsloth install failed at {cmd[2:5]}: {(r.stdout + r.stderr)[-1500:]}")
-                break
-    v = subprocess.run([py, "-c", "import unsloth, torch, transformers; print(unsloth.__version__, "
-                        "torch.__version__, transformers.__version__)"],
-                       capture_output=True, text=True, check=False)
-    info = {"versions": v.stdout.strip(), "error": v.stderr[-1500:] if v.returncode else ""}
-    with open(run.path("unsloth_env.json"), "w") as f:
-        json.dump(info, f, indent=1)
-    _log(f"Unsloth environment: {info['versions'] or info['error'][-300:]}")
-    return py
-
-
 def peak(rec):
     return ((rec.get("result") or {}).get("maxrss_bytes")) or 0
 
