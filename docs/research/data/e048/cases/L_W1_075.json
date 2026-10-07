@@ -1,0 +1,100 @@
+{
+ "status": "ok",
+ "error": null,
+ "result": {
+  "images": 1024,
+  "means_sha256": "b861a4784dbc9750534a825b502ea0d9efa11ff143561a7bd0d481bd500cf28d",
+  "counts_sha256": "8d39ee60d44d19ffb1222003fc927446e2a1d993da991bd2f7d85fbf4b24f84f",
+  "total": 232319114517,
+  "max": 1780,
+  "stack_sha256": "8bb0fe82b1bf12c3aa9547008331b8c507988148a6dac54e78b628ce3918e319",
+  "build_seconds": 3.1012446959999806,
+  "seconds": 11.008969527000033,
+  "maxrss_bytes": 636313600,
+  "maxrss_rusage_bytes": 1031614464
+ },
+ "preloaded": false,
+ "case": "L_W1_075",
+ "wall_s": 11.3,
+ "timeline_peak_gpu_used_bytes": 3145728,
+ "timeline_peak_host_used_bytes": 2681622528,
+ "report": {
+  "report": {
+   "entries": [
+    {
+     "technique": "elastic",
+     "action": "skipped",
+     "detail": "\u03b3 is off by default (experimental): the macOS pressure level marks pressure, not the stalls a user feels (E013a/0088), and Linux PSI rose above 'warning' from the I/O of loading a model, halving budgets so the loading policy stood aside (E021/0093); --elastic turns it on",
+     "reclaimed_bytes": null,
+     "timestamp": 1791384847.359492
+    },
+    {
+     "technique": "enable.rt",
+     "action": "applied",
+     "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+     "reclaimed_bytes": null,
+     "timestamp": 1791384847.4509997
+    },
+    {
+     "technique": "enable.numpy",
+     "action": "applied",
+     "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+     "reclaimed_bytes": null,
+     "timestamp": 1791384847.4510043
+    },
+    {
+     "technique": "enable.transformers",
+     "action": "applied",
+     "detail": "from_pretrained loads models that do not fit as memopro.load",
+     "reclaimed_bytes": null,
+     "timestamp": 1791384847.4510062
+    },
+    {
+     "technique": "transparent",
+     "action": "applied",
+     "detail": "budget 605.51 MiB, peak 561.04 MiB; 2012 faults, 1425 chunks compressed (1.39 GiB to 745.81 MiB), 1244 brought back, 0 over budget; nothing written",
+     "reclaimed_bytes": null,
+     "timestamp": 1791384858.5195742
+    }
+   ]
+  },
+  "transparent": {
+   "budget": 634927104,
+   "limit": 633878528,
+   "used": 0,
+   "peak_used": 588295925,
+   "regions": 0,
+   "mapped_bytes": 0,
+   "resident_bytes": 0,
+   "compressed_bytes": 0,
+   "faults": 2012,
+   "zero_fills": 768,
+   "restores": 1244,
+   "restore_seconds": 2.057883503000002,
+   "evictions": 1425,
+   "compress_in": 1494220800,
+   "compress_out": 782040101,
+   "compress_seconds": 2.6087691159999933,
+   "incompressible": 0,
+   "overruns": 0,
+   "spurious": 0,
+   "outside_peak": 189634477,
+   "limit_low": 444244051,
+   "trims": 0,
+   "written_bytes": 0
+  },
+  "session": {
+   "elapsed_seconds": 11.148040272999935,
+   "memopro_seconds": 4.666652618999995,
+   "slowdown": 1.7200082556580312,
+   "ceiling": 634927104,
+   "footprint": 172560384,
+   "overruns": 0,
+   "activations_moved": 0,
+   "runtimes": [],
+   "predictions": []
+  },
+  "ceiling": 634927104
+ },
+ "budget": 634927104
+}

@@ -31,6 +31,23 @@ EXTRA_WORKERS = {
         "worker_suite.py": HERE / "worker_suite.py",
         "worker_unsloth.py": HERE / "worker_unsloth.py",
     },
+    "beat": {
+        "worker_suite.py": HERE / "worker_suite.py",
+        "worker_unsloth.py": HERE / "worker_unsloth.py",
+    },
+    "full": {
+        "worker_suite.py": HERE / "worker_suite.py",
+        "worker_unsloth.py": HERE / "worker_unsloth.py",
+        "worker_data.py": HERE / "worker_data.py",
+        "worker_memopro_run.py": HERE / "worker_memopro_run.py",
+        "worker_pytest.py": HERE / "worker_pytest.py",
+        "image.py": ROOT / "experiments/e027_transparent/workload.py",
+        "passes.py": ROOT / "experiments/e047_enable/passes.py",
+        "common.py": ROOT / "experiments/e040_workloads/common.py",
+        "dataframe.py": ROOT / "experiments/e040_workloads/dataframe.py",
+        "classify.py": ROOT / "experiments/e040_workloads/classify.py",
+        "simulate.py": ROOT / "experiments/e040_workloads/simulate.py",
+    },
 }
 
 COMMON_PREP = """
@@ -152,6 +169,35 @@ Colab 7차(0093)에서 드러난 결함이 고쳐졌는지 **통합 셀 하나**
 
 - 예상 시간: 45~60분(Unsloth 설치 5~10분 포함)
 - 준비: 런타임 **T4 GPU**, Drive `memopro_colab/install/`에 소스 묶음 `memopro-src.tar.gz`(이미 있으면 그대로, 빌드는 Drive에 보관된 것을 다시 쓴다)
+"""),
+    "full": ("colab_t4_full.ipynb", "cell_full.py", """# memopro 통합 시험: 현재 코드 전체 (docs/research/0237, E048)
+
+현재 코드(`memopro.enable`, 프로세스 상한, 예측, 흘려 쓰기, Unsloth 비교)를 Colab T4 **셀 하나**로 잰다. **2시간 30분 안에 끝나도록** 셀 전체 예산을 135분으로 두고, 시간이 모자라면 뒤쪽 경우를 `skipped (time budget)`로 남기고 넘어간다(다시 실행하면 이어서 한다).
+
+| 순서 | 갈래 | 무엇을 보나 | 예상 시간 |
+|---|---|---|---|
+| ① | 단위 시험 | enable·투명 페이징·adopt·흘려 쓰기 시험을 T4에서(CUDA 포함) | 5분 |
+| ② | enable (Linux) | E047을 Linux에서: 영상 묶음·4패스 배열을 넉넉함/0.75/0.5 상한으로. 결과 동일, 상한, 오버헤드, 예측 | 5분 |
+| ③ | Unsloth 비교 | 같은 16비트 LoRA를 PEFT·memopro·Unsloth로(Qwen2.5-3B·7B) | 50~60분 |
+| ④ | DINOv2 | 비전 모델 흘려 쓰기 추론·LoRA | 10분 |
+| ⑤ | 데이터 | E027·E040 프로그램을 `memopro run --budget 절반`으로(경우당 최대 10분) | 25분 |
+
+- 준비: 런타임 **T4 GPU**. Drive `memopro_colab/install/`에 이번 소스 묶음 `memopro-src.tar.gz`를 **덮어쓰기**(현재 코드, 첫 실행 때 빌드 5~8분, 이후 Drive에 보관된 빌드 재사용). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**.
+- 결과: `MyDrive/memopro_colab/results/full/<실행 id>/summary.md`(판정 표), 같은 이름의 `.zip`.
+"""),
+    "beat": ("colab_t4_beat.ipynb", "cell_beat.py", """# memopro가 Unsloth보다 나은 곳 (docs/research/0240, E049)
+
+E048에서 Unsloth는 T4에 들어가는 크기(3B·7B 16비트)를 memopro보다 10~33배 빠르게 학습했다. 이 노트북은 **GPU가 모델보다 작을 때**를 잰다. 같은 작업(WikiText-2, 512토큰, LoRA r 8 q/k/v/o).
+
+| 갈래 | 경우 | 기준(0240) |
+|---|---|---|
+| W1 | Qwen2.5-14B(약 29.5GB) 16비트, 전체 T4: Unsloth 16비트·4비트 대 memopro | B1: Unsloth 16비트 실패, memopro 완주 |
+| W2 | 7B, GPU 한도 12·8·4GiB(작은 GPU 흉내) | B2: Unsloth 16비트가 실패한 한도에서 memopro 완주 |
+| W3 | 3B, GPU 한도 6·4GiB | B3: memopro 손실이 GPU 한도와 무관하게 비트 동일 |
+
+- 예상 시간 약 2시간(셀 예산 135분, 넘으면 뒤가 건너뛰어진다; 다시 실행하면 이어서 한다).
+- **로컬 디스크 약 35GB 필요**(14B는 Drive가 아니라 로컬 디스크로 바로 받는다).
+- 준비: 런타임 **T4 GPU**, Drive `install/`의 소스 묶음은 그대로(이미 올린 현재 코드).
 """),
 }
 

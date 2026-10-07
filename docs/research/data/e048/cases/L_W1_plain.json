@@ -1,0 +1,21 @@
+{
+ "status": "ok",
+ "error": null,
+ "result": {
+  "images": 1024,
+  "means_sha256": "b861a4784dbc9750534a825b502ea0d9efa11ff143561a7bd0d481bd500cf28d",
+  "counts_sha256": "8d39ee60d44d19ffb1222003fc927446e2a1d993da991bd2f7d85fbf4b24f84f",
+  "total": 232319114517,
+  "max": 1780,
+  "stack_sha256": "8bb0fe82b1bf12c3aa9547008331b8c507988148a6dac54e78b628ce3918e319",
+  "build_seconds": 2.711225763000016,
+  "seconds": 5.007601534999992,
+  "maxrss_bytes": 846569472,
+  "maxrss_rusage_bytes": 1031614464
+ },
+ "preloaded": false,
+ "case": "L_W1_plain",
+ "wall_s": 5.2,
+ "timeline_peak_gpu_used_bytes": 3145728,
+ "timeline_peak_host_used_bytes": 2881748992
+}

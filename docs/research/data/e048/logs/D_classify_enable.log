@@ -1,0 +1,8 @@
+$ /usr/bin/python3 /content/memopro_colab/worker_memopro_run.py run --budget 1278398464 --no-torch --report-json /content/drive/MyDrive/memopro_colab/results/full/20261007-145257/reports/D_classify_enable.json /content/memopro_colab/worker_data.py classify.py
+RESULT {"status": "ok", "error": null, "result": {"coef": "a9b9ed86098f6946ac00bda1e9d6576ebac3caae9491182e2712f9130b5fbeb9", "accuracy": 0.9514175, "nnz": 21699438, "seconds": 61.67660205300035, "import_rss_bytes": 3191984128, "maxrss_bytes": 1278541824, "maxrss_rusage_bytes": 3191984128}, "preloaded": false}
+memopro report:
+  [skipped] elastic - γ is off by default (experimental): the macOS pressure level marks pressure, not the stalls a user feels (E013a/0088), and Linux PSI rose above 'warning' from the I/O of loading a model, halving budgets so the loading policy stood aside (E021/0093); --elastic turns it on
+  [applied] enable.rt - runtimes and pagers share the ceiling; budget="auto" (finetune, generate, stream_model, Runtime) means it
+  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)
+  [applied] enable.transformers - from_pretrained loads models that do not fit as memopro.load
+  [applied] transparent - budget 1.19 GiB, peak 1.02 GiB; 10109 faults, 7907 chunks compressed (7.72 GiB to 1.59 GiB), 5210 brought back, 0 over budget; nothing written
