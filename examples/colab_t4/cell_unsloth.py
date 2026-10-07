@@ -29,12 +29,17 @@ def unsloth_python(run):
     notebook's torch/transformers that memopro and PEFT run with."""
     py = os.path.join(VENV, "bin", "python")
     if not os.path.exists(py):
-        _log("installing Unsloth into its own virtual environment (~5-10 min)")
-        subprocess.run([sys.executable, "-m", "venv", VENV], check=True)
-        r = subprocess.run([py, "-m", "pip", "install", "-q", "unsloth", "datasets"],
-                           capture_output=True, text=True, check=False)
-        if r.returncode:
-            _log("Unsloth install failed: " + r.stderr[-1500:])
+        # uv, not `python -m venv`: Colab's Python has no ensurepip, so venv failed (0238)
+        _log("installing Unsloth into its own virtual environment with uv (~3-6 min)")
+        steps = [[sys.executable, "-m", "pip", "install", "-q", "uv"],
+                 [sys.executable, "-m", "uv", "venv", "-q", VENV],
+                 [sys.executable, "-m", "uv", "pip", "install", "-q", "--python", py, "unsloth",
+                  "datasets"]]
+        for cmd in steps:
+            r = subprocess.run(cmd, capture_output=True, text=True, check=False)
+            if r.returncode:
+                _log(f"Unsloth install failed at {cmd[2:5]}: {(r.stdout + r.stderr)[-1500:]}")
+                break
     v = subprocess.run([py, "-c", "import unsloth, torch, transformers; print(unsloth.__version__, "
                         "torch.__version__, transformers.__version__)"],
                        capture_output=True, text=True, check=False)
