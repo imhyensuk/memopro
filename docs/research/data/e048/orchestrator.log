@@ -1,0 +1,89 @@
+[14:53:00] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[14:53:00] time left after setup: 132 min
+[14:53:00] run tests
+[14:53:39]   -> failed (39.2s)
+[14:53:39] run L_W1_plain
+[14:53:45]   -> ok (5.2s)
+[14:53:45] run L_W2_plain
+[14:53:52]   -> ok (7.4s)
+[14:53:52] run L_W1_ample
+[14:53:58]   -> ok (6.3s)
+[14:53:58] run L_W2_ample
+[14:54:07]   -> ok (8.3s)
+[14:54:07] run L_W1_075
+[14:54:18]   -> ok (11.3s)
+[14:54:18] run L_W2_075
+[14:54:35]   -> ok (16.9s)
+[14:54:35] run L_W1_05
+[14:54:52]   -> ok (17.0s)
+[14:54:52] run L_W2_05
+[14:55:14]   -> ok (22.1s)
+[14:55:14] installing Unsloth into its own virtual environment (~5-10 min)
+[15:00:42] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[15:00:42] time left after setup: 134 min
+[15:00:43] skip tests: already failed (resume)
+[15:00:43] skip L_W1_plain: already ok (resume)
+[15:00:44] skip L_W2_plain: already ok (resume)
+[15:00:44] skip L_W1_ample: already ok (resume)
+[15:00:45] skip L_W2_ample: already ok (resume)
+[15:00:46] skip L_W1_075: already ok (resume)
+[15:00:47] skip L_W2_075: already ok (resume)
+[15:00:47] skip L_W1_05: already ok (resume)
+[15:00:48] skip L_W2_05: already ok (resume)
+[15:00:48] installing Unsloth into its own virtual environment with uv (~3-6 min)
+[15:03:08] Unsloth environment: 🦥 Unsloth: Will patch your computer to enable 2x faster free finetuning.
+🦥 Unsloth Zoo will now patch everything to make training faster!
+2026.10.2 2.14.1+cu130 5.17.0
+[15:03:14] model Qwen/Qwen2.5-3B-Instruct on Drive (6s)
+[15:05:46] staged Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 150s)
+[15:05:46] run Qwen2.5-3B-Instruct__P
+[15:07:40]   -> ok (112.9s)
+[15:07:40] run Qwen2.5-3B-Instruct__M_2048
+[15:09:35]   -> ok (114.9s)
+[15:09:35] run Qwen2.5-3B-Instruct__M_3072
+[15:11:33]   -> ok (118.1s)
+[15:11:33] run Qwen2.5-3B-Instruct__U16
+[15:13:02]   -> ok (89.6s)
+[15:13:06] model Qwen/Qwen2.5-7B-Instruct on Drive (3s)
+[15:18:35] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 329s)
+[15:18:35] run Qwen2.5-7B-Instruct__P
+[15:20:11]   -> oom (95.7s)
+[15:20:11] run Qwen2.5-7B-Instruct__M_4096
+[15:29:00]   -> ok (528.2s)
+[15:29:00] run Qwen2.5-7B-Instruct__M_6144
+[15:37:56]   -> ok (536.1s)
+[15:37:56] run Qwen2.5-7B-Instruct__U16
+[15:40:21]   -> ok (145.3s)
+[15:40:21] run Qwen2.5-7B-Instruct__U4
+[15:42:30]   -> ok (129.2s)
+[15:42:33] model facebook/dinov2-giant on Drive (3s)
+[15:42:34] facebook/dinov2-giant: Drive cache entries ['model.safetensors'] are link text without their blob; downloading to the local disk instead
+[15:44:40] downloaded facebook/dinov2-giant to local disk (4.2 GiB, 125s)
+[15:44:40] run V_dinov2-giant__plain
+[15:45:18]   -> ok (38.1s)
+[15:45:18] run V_dinov2-giant__memopro_1100
+[15:45:51]   -> ok (33.4s)
+[15:45:51] run V_dinov2-giant__memopro_2200
+[15:46:15]   -> ok (24.0s)
+[15:46:15] run VL_dinov2-giant__plain
+[15:46:51]   -> ok (36.2s)
+[15:46:51] run VL_dinov2-giant__memopro_1100
+[15:47:31]   -> ok (39.1s)
+[15:47:31] run VL_dinov2-giant__memopro_2200
+[15:48:09]   -> ok (38.2s)
+[15:48:09] run D_image_plain
+[15:48:21]   -> ok (12.3s)
+[15:48:21] run D_image_enable
+[15:48:54]   -> ok (32.7s)
+[15:48:54] run D_classify_plain
+[15:49:12]   -> ok (18.2s)
+[15:49:12] run D_classify_enable
+[15:50:15]   -> ok (62.4s)
+[15:50:15] run D_dataframe_plain
+[15:50:33]   -> ok (18.3s)
+[15:50:33] run D_dataframe_enable
+[16:00:33]   -> timeout (600.1s)
+[16:00:33] run D_simulate_plain
+[16:01:23]   -> ok (50.4s)
+[16:01:23] run D_simulate_enable
+[16:08:56]   -> ok (452.2s)
