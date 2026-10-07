@@ -1,0 +1,449 @@
+{
+ "env": {
+  "cpu": "AMD EPYC 9V45 96-Core Processor",
+  "machine": "x86_64",
+  "flags": [
+   "avx2",
+   "avx512_bf16",
+   "avx512_vnni",
+   "avx512f",
+   "avx_vnni"
+  ],
+  "python": "3.11.17",
+  "torch": "2.14.1+cpu",
+  "transformers": "5.19.0",
+  "capability": "AVX512",
+  "mkldnn": true,
+  "threads": 2,
+  "env": {
+   "ATEN_CPU_CAPABILITY": null,
+   "ONEDNN_MAX_CPU_ISA": "AVX512_CORE"
+  }
+ },
+ "linear_bad_m": {
+  "256x256": [],
+  "128x256": [],
+  "1024x256": [
+   4,
+   5,
+   6,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16
+  ],
+  "256x1024": [],
+  "8000x256": [
+   4,
+   5,
+   6,
+   7,
+   8,
+   9,
+   10,
+   11,
+   12,
+   13,
+   14,
+   15,
+   16
+  ]
+ },
+ "linear_bad_offset": {
+  "8000x256": {
+   "input": [],
+   "weight": []
+  },
+  "1024x256": {
+   "input": [],
+   "weight": []
+  },
+  "256x1024": {
+   "input": [],
+   "weight": []
+  }
+ },
+ "sdpa": {
+  "11": {
+   "mask_vs_none": true
+  },
+  "16": {
+   "mask_vs_none": true
+  }
+ },
+ "streamed": [
+  {
+   "prompt_last": false,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "prompt_culprit": {
+    "module": "lm_head",
+    "input_same": true,
+    "max_diff": 2.384185791015625e-07,
+    "weight_ptr_mod_4096": [
+     0,
+     0
+    ],
+    "input_ptr_mod_4096": [
+     64,
+     1728
+    ],
+    "input_stride": [
+     [
+      2560,
+      256,
+      1
+     ],
+     [
+      4096,
+      256,
+      1
+     ]
+    ],
+    "weight_same": true,
+    "fresh_eq_plain": false,
+    "fresh_eq_pass": true,
+    "shapes": [
+     [
+      1,
+      1,
+      8000
+     ],
+     [
+      1,
+      1,
+      8000
+     ]
+    ]
+   },
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "prompt_last": false,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "prompt_culprit": {
+    "module": "lm_head",
+    "input_same": true,
+    "max_diff": 2.384185791015625e-07,
+    "weight_ptr_mod_4096": [
+     0,
+     0
+    ],
+    "input_ptr_mod_4096": [
+     2304,
+     2432
+    ],
+    "input_stride": [
+     [
+      2560,
+      256,
+      1
+     ],
+     [
+      4096,
+      256,
+      1
+     ]
+    ],
+    "weight_same": true,
+    "fresh_eq_plain": false,
+    "fresh_eq_pass": true,
+    "shapes": [
+     [
+      1,
+      1,
+      8000
+     ],
+     [
+      1,
+      1,
+      8000
+     ]
+    ]
+   },
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "prompt_last": false,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "prompt_culprit": {
+    "module": "lm_head",
+    "input_same": true,
+    "max_diff": 2.384185791015625e-07,
+    "weight_ptr_mod_4096": [
+     0,
+     0
+    ],
+    "input_ptr_mod_4096": [
+     448,
+     3328
+    ],
+    "input_stride": [
+     [
+      2560,
+      256,
+      1
+     ],
+     [
+      4096,
+      256,
+      1
+     ]
+    ],
+    "weight_same": true,
+    "fresh_eq_plain": false,
+    "fresh_eq_pass": true,
+    "shapes": [
+     [
+      1,
+      1,
+      8000
+     ],
+     [
+      1,
+      1,
+      8000
+     ]
+    ]
+   },
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  }
+ ],
+ "plain_hf": [
+  {
+   "prompt_last": false,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "prompt_culprit": {
+    "module": "lm_head",
+    "input_same": true,
+    "max_diff": 2.384185791015625e-07,
+    "weight_ptr_mod_4096": [
+     1272,
+     1272
+    ],
+    "input_ptr_mod_4096": [
+     768,
+     2880
+    ],
+    "input_stride": [
+     [
+      2560,
+      256,
+      1
+     ],
+     [
+      4096,
+      256,
+      1
+     ]
+    ],
+    "weight_same": true,
+    "fresh_eq_plain": false,
+    "fresh_eq_pass": true,
+    "shapes": [
+     [
+      1,
+      1,
+      8000
+     ],
+     [
+      1,
+      1,
+      8000
+     ]
+    ]
+   },
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "prompt_last": false,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "prompt_culprit": {
+    "module": "lm_head",
+    "input_same": true,
+    "max_diff": 2.384185791015625e-07,
+    "weight_ptr_mod_4096": [
+     1272,
+     1272
+    ],
+    "input_ptr_mod_4096": [
+     4032,
+     2688
+    ],
+    "input_stride": [
+     [
+      2560,
+      256,
+      1
+     ],
+     [
+      4096,
+      256,
+      1
+     ]
+    ],
+    "weight_same": true,
+    "fresh_eq_plain": false,
+    "fresh_eq_pass": true,
+    "shapes": [
+     [
+      1,
+      1,
+      8000
+     ],
+     [
+      1,
+      1,
+      8000
+     ]
+    ]
+   },
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "prompt_last": false,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "prompt_culprit": {
+    "module": "lm_head",
+    "input_same": true,
+    "max_diff": 2.384185791015625e-07,
+    "weight_ptr_mod_4096": [
+     1272,
+     1272
+    ],
+    "input_ptr_mod_4096": [
+     2112,
+     4032
+    ],
+    "input_stride": [
+     [
+      2560,
+      256,
+      1
+     ],
+     [
+      4096,
+      256,
+      1
+     ]
+    ],
+    "weight_same": true,
+    "fresh_eq_plain": false,
+    "fresh_eq_pass": true,
+    "shapes": [
+     [
+      1,
+      1,
+      8000
+     ],
+     [
+      1,
+      1,
+      8000
+     ]
+    ]
+   },
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  }
+ ]
+}

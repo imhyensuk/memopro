@@ -1,0 +1,430 @@
+{
+ "env": {
+  "cpu": "AMD EPYC 9V74 80-Core Processor",
+  "machine": "x86_64",
+  "flags": [
+   "avx2",
+   "avx512_bf16",
+   "avx512_vnni",
+   "avx512f"
+  ],
+  "python": "3.11.16",
+  "torch": "2.11.0+cpu",
+  "transformers": "5.18.0",
+  "capability": "AVX512",
+  "mkldnn": true,
+  "threads": 2,
+  "env": {
+   "ATEN_CPU_CAPABILITY": null,
+   "ONEDNN_MAX_CPU_ISA": "AVX2"
+  }
+ },
+ "linear_bad_m": {
+  "256x256": [],
+  "128x256": [],
+  "1024x256": [],
+  "256x1024": [],
+  "8000x256": []
+ },
+ "linear_bad_offset": {
+  "8000x256": {
+   "input": [],
+   "weight": []
+  },
+  "1024x256": {
+   "input": [],
+   "weight": []
+  },
+  "256x1024": {
+   "input": [],
+   "weight": []
+  }
+ },
+ "sdpa": {
+  "11": {
+   "mask_vs_none": true
+  },
+  "16": {
+   "mask_vs_none": true
+  }
+ },
+ "streamed": [
+  {
+   "head_variants": {
+    "module_call_each_row": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "row_invariant_head": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "one_pin_all_rows": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "one_pin_clone_rows": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "pin_per_row": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows_clone": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows_contiguous_clone": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows_weight_copy": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "weight_copy": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ]
+   },
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "head_variants": {
+    "module_call_each_row": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "row_invariant_head": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "one_pin_all_rows": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "one_pin_clone_rows": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "pin_per_row": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows_clone": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows_contiguous_clone": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows_weight_copy": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "weight_copy": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ]
+   },
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "head_variants": {
+    "module_call_each_row": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "row_invariant_head": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "one_pin_all_rows": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "one_pin_clone_rows": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "pin_per_row": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows_clone": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows_contiguous_clone": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "strided_rows_weight_copy": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ],
+    "weight_copy": [
+     true,
+     true,
+     true,
+     true,
+     true,
+     true
+    ]
+   },
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  }
+ ],
+ "plain_hf": [
+  {
+   "head_variants": null,
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "head_variants": null,
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "head_variants": null,
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "later": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  }
+ ]
+}

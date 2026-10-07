@@ -718,7 +718,12 @@ def draft_model(
 
 
 def _rows(t: Any, start: int, stop: int) -> Any:
-    return None if t is None else t[:, start:stop]
+    """Rows ``start:stop`` as a tensor of their own, with the strides plain generation's tensors
+    have: a view (or a plain ``clone``) keeps the batch stride of all rows, and on x86 CPUs
+    oneDNN's bf16 GEMM can round a row differently by strides alone (0243)."""
+    import torch
+
+    return None if t is None else t[:, start:stop].clone(memory_format=torch.contiguous_format)
 
 
 @contextlib.contextmanager
@@ -739,7 +744,7 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
             ("model.generate(..., assistant_model=draft) (outputs may differ at near-ties)",),
         )
     weights = model.memopro_weights
-    state = {"before": 0}
+    state = {"before": 0, "rows": 0}  # the cache length before this pass, its rows
 
     def hold(module: Any) -> list[Any]:
         """Pin the weights under ``module`` once for all rows (the tensors keep them pinned;
@@ -755,11 +760,14 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
         def forward(hidden: Any, *args: Any, **kw: Any) -> Any:
             cache = kw.get("past_key_values")
             q = hidden.shape[1]
+            if layer is layers[0]:
+                state["rows"] = q
+                state["before"] = (
+                    0 if cache is None else cache.get_seq_length(layer.self_attn.layer_idx)
+                )
             if args or cache is None or q == 1:
                 return original(hidden, *args, **kw)
             before = cache.get_seq_length(layer.self_attn.layer_idx)
-            if layer is layers[0]:
-                state["before"] = before
             block = max(0, min(q, prompt - before))
             if block == q:
                 return original(hidden, **kw)
@@ -778,14 +786,14 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
                     part["position_ids"] = _rows(pos, 0, block)
                     if emb is not None:
                         part["position_embeddings"] = tuple(_rows(e, 0, block) for e in emb)
-                    outs.append(original(hidden[:, :block], **part))
+                    outs.append(original(_rows(hidden, 0, block), **part))
                 for i in range(block, q):
                     one = dict(kw)
                     one["attention_mask"] = None  # one row sees every cached key
                     one["position_ids"] = _rows(pos, i, i + 1)
                     if emb is not None:
                         one["position_embeddings"] = tuple(_rows(e, i, i + 1) for e in emb)
-                    outs.append(original(hidden[:, i : i + 1], **one))
+                    outs.append(original(_rows(hidden, i, i + 1), **one))
             finally:
                 del held
             return torch.cat(outs, dim=1)
@@ -798,20 +806,32 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
             block = max(0, min(q, prompt - state["before"]))
             if q == 1 or block == q:
                 return original(hidden)
-            parts = [original(hidden[:, :block])] if block else []
-            parts += [original(hidden[:, i : i + 1]) for i in range(block, q)]
+            parts = [original(_rows(hidden, 0, block))] if block else []
+            parts += [original(_rows(hidden, i, i + 1)) for i in range(block, q)]
             return torch.cat(parts, dim=1)
 
         return forward
 
     def head_forward(original: Any) -> Any:
         def forward(hidden: Any) -> Any:
-            if hidden.dim() < 3 or hidden.shape[1] == 1:
+            q = hidden.shape[1] if hidden.dim() == 3 else 1
+            if q == 1:
                 return original(hidden)
+            # the prompt's last row (if this pass has it) as plain generation's prompt pass gives
+            # it to the head: the last row of the prompt's block, a view with the block's strides
+            last = prompt - 1 - state["before"] - (state["rows"] - q)
             held = hold(head)
             try:
                 return torch.cat(
-                    [original(hidden[:, i : i + 1]) for i in range(hidden.shape[1])], dim=1
+                    [
+                        original(
+                            _rows(hidden, 0, i + 1)[:, -1:]
+                            if i == last
+                            else _rows(hidden, i, i + 1)
+                        )
+                        for i in range(q)
+                    ],
+                    dim=1,
                 )
             finally:
                 del held
