@@ -1,0 +1,12 @@
+  Using cached torch-2.14.1%2Bcpu-cp311-cp311-manylinux_2_28_x86_64.whl.metadata (37 kB)
+Using cached torch-2.14.1%2Bcpu-cp311-cp311-manylinux_2_28_x86_64.whl (196.2 MB)
+Successfully installed MarkupSafe-3.0.3 filelock-3.32.3 fsspec-2026.7.0 jinja2-3.1.6 mpmath-1.3.0 networkx-3.6.1 sympy-1.14.0 torch-2.14.1+cpu typing-extensions-4.16.0
+  Using cached transformers-5.19.0-py3-none-any.whl.metadata (32 kB)
+Using cached transformers-5.19.0-py3-none-any.whl (12.6 MB)
+Successfully installed accelerate-1.15.0 annotated-doc-0.0.5 anyio-4.15.1 asttokens-3.0.2 certifi-2026.7.22 click-8.5.0 executing-2.2.1 h11-0.16.0 hf-xet-1.7.0 httpcore-1.0.9 httpx-0.28.1 huggingface-hub-1.33.0 idna-3.20 ipython-9.17.1 ipython-pygments-lexers-1.1.1 jedi-0.20.0 markdown-it-py-4.2.0 matplotlib-inline-0.2.2 mdurl-0.1.2 numpy-2.4.6 parso-0.8.7 pexpect-4.9.0 prompt_toolkit-3.0.53 psutil-7.2.2 ptyprocess-0.7.0 pure-eval-0.2.4 pyyaml-6.0.3 regex-2026.9.29 rich-15.0.0 safetensors-0.8.0 shellingham-1.5.4 stack_data-0.6.3 tokenizers-0.23.2 tqdm-4.70.1 traitlets-5.16.1 transformers-5.19.0 typer-0.27.3 wcwidth-0.9.2
+E       assert False
+E        +  where False = <built-in method equal of type object at 0x7fd30fdcf140>(tensor([[ 0.0938, -0.2080,  0.3828,  ..., -0.1113,  0.6328,  0.1992]],\n       dtype=torch.bfloat16), tensor([[ 0.0938, -0.2080,  0.3828,  ..., -0.1113,  0.6328,  0.1992]],\n       dtype=torch.bfloat16))
+E        +    where <built-in method equal of type object at 0x7fd30fdcf140> = torch.equal
+tests/test_rt_torch.py:297: AssertionError
+tests/test_rt_torch.py::test_streamed_inference_is_bit_identical_within_the_budget
+tests/test_rt_torch.py::test_loss_chunks_keep_float32_logits_under_the_mps_heap_threshold

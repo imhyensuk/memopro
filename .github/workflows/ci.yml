@@ -74,6 +74,8 @@ jobs:
       - run: maturin build --release --out dist
       - run: python -m pip install --no-index --find-links dist memopro
       - run: pytest -q -rs
+      - name: Row invariance on oneDNN's AVX-512 path without bf16 instructions (0243)
+        run: ONEDNN_MAX_CPU_ISA=AVX512_CORE pytest -q tests/test_rt_torch.py -k rows_after_the_prompt
 
   cgroup:
     # hwinfo must report the container memory limit (A1a completion condition, 0035).

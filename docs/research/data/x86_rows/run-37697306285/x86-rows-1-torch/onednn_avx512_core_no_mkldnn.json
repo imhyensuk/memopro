@@ -1,0 +1,116 @@
+{
+ "env": {
+  "cpu": "AMD EPYC 7763 64-Core Processor",
+  "machine": "x86_64",
+  "flags": [
+   "avx2"
+  ],
+  "python": "3.11.16",
+  "torch": "2.14.1+cpu",
+  "transformers": "5.19.0",
+  "capability": "AVX2",
+  "mkldnn": false,
+  "threads": 2,
+  "env": {
+   "ATEN_CPU_CAPABILITY": null,
+   "ONEDNN_MAX_CPU_ISA": "AVX512_CORE"
+  }
+ },
+ "linear_bad_m": {
+  "256x256": [],
+  "128x256": [],
+  "1024x256": [],
+  "256x1024": [],
+  "8000x256": []
+ },
+ "sdpa": {
+  "11": {
+   "mask_vs_none": true
+  },
+  "16": {
+   "mask_vs_none": true
+  }
+ },
+ "streamed": [
+  {
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  }
+ ],
+ "plain_hf": [
+  {
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  },
+  {
+   "prompt_last": true,
+   "prompt_last_keep1": true,
+   "rows": [
+    true,
+    true,
+    true,
+    true,
+    true,
+    true
+   ],
+   "ok": true
+  }
+ ]
+}

@@ -1,13 +1,10 @@
 name: x86 row invariance
 
-# Row invariance of `_row_invariant` (0142) on x86 CPUs: experiments/x86_rows/diag.py on several
+# Row invariance of `_row_invariant` (0142, 0243) on x86 CPUs: experiments/x86_rows/diag.py on several
 # runners at once (hosted runners differ in CPU model), each under the kernel settings that may
 # change a bf16 row's bits. Manual only; results are uploaded as `x86-rows-*` artifacts.
 on:
   workflow_dispatch:
-  push:
-    branches: [fix/rt-torch-x86-row-invariant]
-    paths: [".github/workflows/x86-rows.yml", "experiments/x86_rows/**", "python/memopro/rt/torch.py"]
 
 permissions:
   contents: read
@@ -41,7 +38,7 @@ jobs:
           python -m experiments.x86_rows.diag --out out/default.json > /dev/null
           python -m experiments.x86_rows.diag --no-mkldnn --out out/no_mkldnn.json > /dev/null
           ONEDNN_MAX_CPU_ISA=AVX2 python -m experiments.x86_rows.diag --out out/onednn_avx2.json > /dev/null
-          # AVX-512 without bf16 instructions: the VMs where CI failed (0240)
+          # AVX-512 without bf16 instructions: the VMs where CI failed (0243)
           ONEDNN_MAX_CPU_ISA=AVX512_CORE python -m experiments.x86_rows.diag --out out/onednn_avx512_core.json > /dev/null
           ONEDNN_MAX_CPU_ISA=AVX512_CORE python -m experiments.x86_rows.diag --no-mkldnn --out out/onednn_avx512_core_no_mkldnn.json > /dev/null
           python - <<'EOF'

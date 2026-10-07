@@ -720,7 +720,7 @@ def draft_model(
 def _rows(t: Any, start: int, stop: int) -> Any:
     """Rows ``start:stop`` as a tensor of their own, with the strides plain generation's tensors
     have: a view (or a plain ``clone``) keeps the batch stride of all rows, and on x86 CPUs
-    oneDNN's bf16 GEMM can round a row differently by strides alone (0240)."""
+    oneDNN's bf16 GEMM can round a row differently by strides alone (0243)."""
     import torch
 
     return None if t is None else t[:, start:stop].clone(memory_format=torch.contiguous_format)
