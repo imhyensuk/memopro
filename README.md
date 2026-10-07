@@ -76,14 +76,21 @@ pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"
 ```python
 import memopro
 
-memopro.enable()               # 기기를 측정해 남은 메모리에 맞춰 자동 설정
-memopro.enable(budget="8GB")   # 또는 상한을 직접 지정 (16GB 기기에서 8GB만 사용)
+s = memopro.enable()               # 기기를 측정해 자동 설정 (지금 쓰는 양 + 여유 메모리)
+s = memopro.enable(budget="8GB")   # 또는 프로세스 전체 상한을 직접 지정 (16GB 기기에서 8GB만)
+
+print(s.estimate(sample, total="12GB", passes=3))  # 실행 전: 이 상한에서 얼마나 느려지는지 예측
+...                                                # 평소처럼 작성한 NumPy / PyTorch 코드
+print(s.measured())                                # 실행 후: memopro가 쓴 시간과 실제 배율
 ```
 
-- 하드웨어(OS, 메모리, GPU)를 측정하고 예산 하나를 정해, 이 플랫폼에서 쓸 수 있는 기능을 모두 켭니다. 무엇을 켰고 무엇을 못 켰는지는 반환값을 출력하면 보입니다.
-- 이후의 `finetune`, `generate`, `load`, `train_session`, `memopro.rt`는 따로 지정하지 않으면 이 예산을 씁니다. Hugging Face `from_pretrained`는 모델이 그대로 들어가지 않을 때만 `memopro.load`처럼 불러옵니다. Linux에서는 16 MiB 이상의 NumPy 배열도 예산 안에서 페이징합니다.
+- 하드웨어(OS, 메모리, GPU)를 측정하고 **프로세스 전체**의 상한 하나를 정해, 이 플랫폼에서 쓸 수 있는 기능을 모두 켭니다. 무엇을 켰고 무엇을 못 켰는지는 반환값을 출력하면 보입니다.
+- 상한은 모든 부품이 함께 지킵니다. 각 런타임과 페이저는 프로세스가 자기 바깥에 쓰는 메모리(macOS physical footprint, Linux RSS)만큼 자기 몫을 줄입니다.
+- **NumPy**(Linux, macOS): 16 MiB 이상인 배열을 코드 수정 없이 상한 안에서 무손실 압축 페이징합니다.
+- **PyTorch**: 프로세스가 상한의 75%를 넘으면 역전파용으로 저장된 활성값을 런타임 버퍼로 옮깁니다. 바이트가 그대로 돌아오므로 기울기가 바뀌지 않습니다(CPU, MPS 확인).
+- `finetune`, `generate`, `load`, `train_session`, `memopro.rt`는 따로 지정하지 않으면 이 상한을 씁니다. Hugging Face `from_pretrained`는 모델이 그대로 들어가지 않을 때만 `memopro.load`처럼 불러옵니다.
 - `memopro.disable()`(또는 `with memopro.enable(...):`)로 되돌립니다.
-- 한계: 예산은 각 기능이 따로 지킵니다. 작은 객체나 C 확장이 쓰는 메모리는 세지 않으므로 아직 프로세스 전체의 상한은 아닙니다. macOS에서는 일반 NumPy 코드를 자동으로 페이징하지 않습니다(`memopro.rt.Runtime`을 쓰세요).
+- 한계: 옮길 수 없는 메모리(인터프리터, 라이브러리, 작은 객체, 코드가 직접 불러온 모델 가중치)도 상한에 포함됩니다. 이것만으로 상한을 넘으면 페이저는 초과 횟수를 기록하고 런타임은 `BudgetExceeded`를 냅니다. 커널이 직접 읽고 쓰는 경우(`ndarray.tofile`, `np.fromfile`)에는 페이징된 배열에서 `OSError`가 날 수 있습니다. `np.save`와 `np.load`는 자동으로 우회합니다. 예측은 정해진 순서로 반복해서 읽는 작업을 가정합니다.
 
 ### 1. 메모리보다 큰 LLM 학습과 생성
 
@@ -131,7 +138,7 @@ with h:                # 블록 안에서는 평소처럼 사용
 
 ```bash
 memopro run --budget 6GB train.py          # 들어가지 않는 from_pretrained를 예산에 맞춰 불러옴
-memopro run --transparent 1GB analysis.py  # Linux: 큰 NumPy 배열을 디스크 쓰기 없이 압축 페이징
+memopro run --transparent 1GB analysis.py  # Linux·macOS: 큰 NumPy 배열을 디스크 쓰기 없이 압축 페이징
 memopro run --dry-run train.py             # 무엇을 할지만 출력
 ```
 
@@ -198,9 +205,9 @@ Rust 런타임     버퍼마다 실측 비용으로 선택:
 
 | 환경 | 상태 |
 |---|---|
-| macOS, Apple silicon (MPS) | 주 개발 환경. LLM 학습·생성 검증 |
+| macOS, Apple silicon (MPS) | 주 개발 환경. LLM 학습·생성 검증. 투명 페이징(신호 기반) |
 | Linux, NVIDIA GPU (CUDA) | Colab T4에서 생성, LoRA 학습, 비전 추론 검증 |
-| Linux, CPU | CI에서 검증. 투명 페이징은 Linux 전용 |
+| Linux, CPU | CI에서 검증. 투명 페이징(userfaultfd) |
 | Windows | CI에서 기본 기능만 확인 |
 
 Python 3.11 이상, PyTorch 2.4 이상.
@@ -210,7 +217,7 @@ Python 3.11 이상, PyTorch 2.4 이상.
 ## 한계
 
 - **속도**: 메모리를 아끼는 대신 시간이 듭니다. 7B 학습은 8GB Mac에서 스텝당 약 18초(129토큰)입니다. 메모리에 다 들어가는 모델은 기존 도구가 더 빠릅니다.
-- **투명 페이징**: 무작위 접근이 많은 작업(정렬·그룹 집계)과 압축해도 한도보다 큰 데이터에서는 실용적인 속도가 나지 않습니다. Linux에서만 동작합니다.
+- **투명 페이징**: 무작위 접근이 많은 작업(정렬·그룹 집계)과 압축해도 한도보다 큰 데이터에서는 실용적인 속도가 나지 않습니다. Linux와 macOS에서 동작합니다(Windows 미지원).
 - **모델 범위**: LLM 경로는 주로 Qwen2.5 계열(1.5B~7B)로 검증했습니다.
 - **알파 버전**: API가 바뀔 수 있습니다.
 

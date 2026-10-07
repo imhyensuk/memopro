@@ -42,14 +42,6 @@ pub fn in_pager_thread() -> bool {
     PAGER_THREAD.with(|c| c.get())
 }
 
-/// Resident bytes of this process (`/proc/self/statm`).
-fn resident_set() -> u64 {
-    std::fs::read_to_string("/proc/self/statm")
-        .ok()
-        .and_then(|s| s.split_whitespace().nth(1)?.parse::<u64>().ok())
-        .map_or(0, |pages| pages * page_size() as u64)
-}
-
 #[repr(C)]
 struct UffdioApi {
     api: u64,
@@ -556,7 +548,9 @@ impl Shared {
     fn make_room(&self, st: &mut State, need: u64, exclude: (usize, usize)) {
         let mut limit = self.limit;
         if let Some(total) = self.config.process_budget {
-            let outside = resident_set().saturating_sub(st.resident + st.compressed);
+            let outside = crate::rt::process_footprint()
+                .unwrap_or(0)
+                .saturating_sub(st.resident + st.compressed);
             limit = limit.min(total.saturating_sub(outside + self.config.chunk as u64));
             st.stats.outside_peak = st.stats.outside_peak.max(outside);
             st.stats.limit_low = st.stats.limit_low.min(limit);
