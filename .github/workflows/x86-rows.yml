@@ -50,6 +50,7 @@ jobs:
               r = json.loads(f.read_text())
               print(f.stem, r["env"]["cpu"], r["env"]["capability"], r["env"]["flags"])
               print("  linear bad M:", r["linear_bad_m"], "sdpa:", r["sdpa"])
+              print("  linear bad offset:", r["linear_bad_offset"])
               for kind in ("streamed", "plain_hf"):
                   for c in r[kind]:
                       bad = [x for x in [c.get("prompt_culprit")] + c["rows"] + c["later"] if x not in (None, True)]
