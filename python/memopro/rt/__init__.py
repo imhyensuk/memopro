@@ -56,11 +56,16 @@ def _itemsize(dtype: str) -> int:
     return 2 if dtype == _BFLOAT16 else _np_dtype(dtype).itemsize
 
 
+# set by `memopro.enable` (0228): what "auto" means while a session is on
+_default_budget: int | None = None
+
+
 def resolve_budget(budget: str | float) -> int:
     """Bytes for a budget: a size (``"2GB"``, bytes), a fraction of the memory available now
-    (``0.5``), or ``"auto"`` = half of the conservatively available host memory (0035)."""
+    (``0.5``), or ``"auto"`` = the `memopro.enable` budget, else half of the conservatively
+    available host memory (0035)."""
     if isinstance(budget, str) and budget.strip().lower() == "auto":
-        return _available() // 2
+        return _default_budget if _default_budget is not None else _available() // 2
     if isinstance(budget, float) and 0.0 < budget <= 1.0:
         return int(_available() * budget)
     size = parse_size(budget)

@@ -71,6 +71,20 @@ pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"
 
 ## Usage
 
+### 0. One line
+
+```python
+import memopro
+
+memopro.enable()               # measure this machine and fit to the memory that is free
+memopro.enable(budget="8GB")   # or set the ceiling yourself (use 8GB of a 16GB machine)
+```
+
+- Measures the hardware (OS, memory, GPU), sets one budget and turns on what this platform supports; print the returned session to see what was applied or skipped.
+- Afterwards `finetune`, `generate`, `load`, `train_session` and `memopro.rt` use that budget unless told otherwise. Hugging Face `from_pretrained` loads like `memopro.load` only when the model does not fit as stored. On Linux, NumPy arrays of 16 MiB or more are paged within the budget.
+- `memopro.disable()` (or `with memopro.enable(...):`) undoes it.
+- Limits: each part keeps to the budget on its own; small objects and C extensions are not counted, so it is not yet a ceiling on the whole process. macOS does not page ordinary NumPy code automatically (use `memopro.rt.Runtime`).
+
 ### 1. Train and generate with LLMs larger than memory
 
 ```python

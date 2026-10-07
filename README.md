@@ -71,6 +71,20 @@ pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"
 
 ## 사용법
 
+### 0. 한 줄로 시작하기
+
+```python
+import memopro
+
+memopro.enable()               # 기기를 측정해 남은 메모리에 맞춰 자동 설정
+memopro.enable(budget="8GB")   # 또는 상한을 직접 지정 (16GB 기기에서 8GB만 사용)
+```
+
+- 하드웨어(OS, 메모리, GPU)를 측정하고 예산 하나를 정해, 이 플랫폼에서 쓸 수 있는 기능을 모두 켭니다. 무엇을 켰고 무엇을 못 켰는지는 반환값을 출력하면 보입니다.
+- 이후의 `finetune`, `generate`, `load`, `train_session`, `memopro.rt`는 따로 지정하지 않으면 이 예산을 씁니다. Hugging Face `from_pretrained`는 모델이 그대로 들어가지 않을 때만 `memopro.load`처럼 불러옵니다. Linux에서는 16 MiB 이상의 NumPy 배열도 예산 안에서 페이징합니다.
+- `memopro.disable()`(또는 `with memopro.enable(...):`)로 되돌립니다.
+- 한계: 예산은 각 기능이 따로 지킵니다. 작은 객체나 C 확장이 쓰는 메모리는 세지 않으므로 아직 프로세스 전체의 상한은 아닙니다. macOS에서는 일반 NumPy 코드를 자동으로 페이징하지 않습니다(`memopro.rt.Runtime`을 쓰세요).
+
 ### 1. 메모리보다 큰 LLM 학습과 생성
 
 ```python
