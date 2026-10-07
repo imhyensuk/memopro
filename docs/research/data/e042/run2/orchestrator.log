@@ -196,3 +196,58 @@
 [01:56:57]   -> error (12.4s)
 [01:56:58] run vis_lora__dinov2-giant__memopro_2200
 [01:57:09]   -> error (10.9s)
+[01:57:42] summary: /content/drive/MyDrive/memopro_colab/results/suite/20261006-052622/summary.md
+archive to share: /content/drive/MyDrive/memopro_colab/results/suite/20261006-052622.zip
+[03:28:18] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[03:28:19] skip data__image__plain: already ok (resume)
+[03:28:19] skip data__image__preload: already ok (resume)
+[03:28:20] skip data__dataframe__plain: already ok (resume)
+[03:28:20] run data__dataframe__preload
+[03:56:10] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[03:56:10] skip data__image__plain: already ok (resume)
+[03:56:10] skip data__image__preload: already ok (resume)
+[03:56:10] skip data__dataframe__plain: already ok (resume)
+[03:56:10] run data__dataframe__preload
+[04:04:25] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[04:04:25] skip data__image__plain: already ok (resume)
+[04:04:25] skip data__image__preload: already ok (resume)
+[04:04:25] skip data__dataframe__plain: already ok (resume)
+[04:04:25] run data__dataframe__preload
+[05:04:25]   -> timeout (3600.0s)
+[05:04:26] skip data__classify__plain: already ok (resume)
+[05:04:26] skip data__classify__preload: already ok (resume)
+[05:04:27] skip data__simulate__plain: already ok (resume)
+[05:04:27] run data__simulate__preload
+[05:38:26] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[05:38:35] model microsoft/resnet-152 on Drive (8s)
+[05:38:36] microsoft/resnet-152: Drive cache entries ['model.safetensors'] are link text without their blob; downloading to the local disk instead
+[05:38:38] downloaded microsoft/resnet-152 to local disk (1s)
+[05:38:39] skip vis_infer__resnet-152__plain: already ok (resume)
+[05:38:40] skip vis_infer__resnet-152__memopro_60: already ok (resume)
+[05:38:41] skip vis_infer__resnet-152__memopro_120: already ok (resume)
+[05:38:45] model facebook/dinov2-giant on Drive (5s)
+[05:38:47] facebook/dinov2-giant: Drive cache entries ['model.safetensors'] are link text without their blob; downloading to the local disk instead
+[05:38:48] downloaded facebook/dinov2-giant to local disk (1s)
+[05:38:49] skip vis_infer__dinov2-giant__plain: already ok (resume)
+[05:38:50] run vis_infer__dinov2-giant__memopro_1100
+[05:39:02]   -> error (11.5s)
+[05:39:03] run vis_infer__dinov2-giant__memopro_2200
+[05:39:12]   -> error (8.8s)
+[05:39:13] skip vis_lora__dinov2-giant__plain: already ok (resume)
+[05:39:14] run vis_lora__dinov2-giant__memopro_1100
+[05:39:24]   -> error (10.6s)
+[05:39:25] run vis_lora__dinov2-giant__memopro_2200
+[05:39:36]   -> error (11.2s)
+[05:40:47] summary: /content/drive/MyDrive/memopro_colab/results/suite/20261006-052622/summary.md
+archive to share: /content/drive/MyDrive/memopro_colab/results/suite/20261006-052622.zip
+[05:49:51] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[05:49:53] skip data__image__plain: already ok (resume)
+[05:49:53] skip data__image__preload: already ok (resume)
+[05:49:55] skip data__dataframe__plain: already ok (resume)
+[05:49:55] run data__dataframe__preload
+[06:04:56]   -> timeout (900.8s)
+[06:04:57] skip data__classify__plain: already ok (resume)
+[06:04:57] skip data__classify__preload: already ok (resume)
+[06:04:57] skip data__simulate__plain: already ok (resume)
+[06:04:57] run data__simulate__preload
+[06:19:58]   -> timeout (900.4s)

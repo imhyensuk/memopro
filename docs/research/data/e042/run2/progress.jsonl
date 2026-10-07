@@ -49,3 +49,13 @@
 {"t": 1791338201.105893, "case": "vis_infer__dinov2-giant__memopro_2200", "status": "error", "seconds": 9.0}
 {"t": 1791338217.634242, "case": "vis_lora__dinov2-giant__memopro_1100", "status": "error", "seconds": 12.4}
 {"t": 1791338229.0517507, "case": "vis_lora__dinov2-giant__memopro_2200", "status": "error", "seconds": 10.9}
+{"t": 1791349465.4995897, "case": "data__dataframe__preload", "status": "timeout", "seconds": 3600.0}
+{"t": 1791349465.8340642, "case": "data__dataframe__preload", "status": "timeout", "seconds": 3600.0}
+{"t": 1791351541.8917294, "case": "vis_infer__dinov2-giant__memopro_1100", "status": "error", "seconds": 11.5}
+{"t": 1791351552.3293715, "case": "vis_infer__dinov2-giant__memopro_2200", "status": "error", "seconds": 8.8}
+{"t": 1791351564.6172135, "case": "vis_lora__dinov2-giant__memopro_1100", "status": "error", "seconds": 10.6}
+{"t": 1791351576.666274, "case": "vis_lora__dinov2-giant__memopro_2200", "status": "error", "seconds": 11.2}
+{"t": 1791353095.9447472, "case": "data__dataframe__preload", "status": "timeout", "seconds": 900.8}
+{"t": 1791353096.4777436, "case": "data__dataframe__preload", "status": "timeout", "seconds": 900.8}
+{"t": 1791353998.4096243, "case": "data__simulate__preload", "status": "timeout", "seconds": 900.4}
+{"t": 1791353998.4219751, "case": "data__simulate__preload", "status": "timeout", "seconds": 900.4}

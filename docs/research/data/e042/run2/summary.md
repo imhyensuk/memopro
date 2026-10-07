@@ -17,7 +17,7 @@ run `20261006-052622`, cell `suite`
 | D-image | same result; process peak <= half of the plain peak (+64 MiB); no overruns | pass | peak 0.71 GiB vs limit 0.77 GiB (plain 1.54 GiB); 10.5 -> 33.6 s; overruns 0 |
 | D-dataframe | same result; process peak <= half of the plain peak (+64 MiB); no overruns | fail | peak - vs limit 0.83 GiB (plain 1.66 GiB); 16.0 -> - s; overruns 0 |
 | D-classify | same result; process peak <= half of the plain peak (+64 MiB); no overruns | pass | peak 1.13 GiB vs limit 1.19 GiB (plain 2.38 GiB); 16.8 -> 60.7 s; overruns 0 |
-| D-simulate | same result; process peak <= half of the plain peak (+64 MiB); no overruns | fail | peak - vs limit 0.00 GiB (plain 2.16 GiB); 45.9 -> - s; overruns None |
+| D-simulate | same result; process peak <= half of the plain peak (+64 MiB); no overruns | fail | peak - vs limit 1.08 GiB (plain 2.16 GiB); 45.9 -> - s; overruns 234270 |
 
 Pre-registered criteria: docs/research/0197.
 
@@ -33,6 +33,7 @@ Pre-registered criteria: docs/research/0197.
 | data__image__preload | ok | - | - | 0.00 GiB |
 | data__probe | ok | - | - | - |
 | data__simulate__plain | ok | - | - | 0.00 GiB |
+| data__simulate__preload | timeout | - | - | 0.00 GiB |
 | lm_gen__Qwen2.5-3B-Instruct__memopro_2048 | ok | 0.7 | 3.47 GiB | 6.15 GiB |
 | lm_gen__Qwen2.5-3B-Instruct__memopro_3072 | ok | 0.7 | 4.36 GiB | 6.15 GiB |
 | lm_gen__Qwen2.5-3B-Instruct__memopro_3072__cache | ok | 0.6 | 4.35 GiB | 6.15 GiB |
@@ -61,9 +62,10 @@ Pre-registered criteria: docs/research/0197.
 ## Errors
 
 - `data__dataframe__preload` (timeout): timeout
+- `data__simulate__preload` (timeout): timeout
 - `lm_lora__Qwen2.5-7B-Instruct__plain` (oom): OutOfMemoryError: CUDA out of memory. Tried to allocate 20.00 MiB. GPU 0 has a total capacity of 14.56 GiB of which 7.81 MiB is free. Including non-PyTorch memory, this process has 14.55 GiB memory in use. Of the allocated memory 14.29 GiB is allocated by PyTorch, and 119.36 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=
-- `vis_infer__dinov2-giant__memopro_1100` (error): MemoryError: 
-- `vis_infer__dinov2-giant__memopro_2200` (error): MemoryError: 
+- `vis_infer__dinov2-giant__memopro_1100` (error): InvalidArgument: /content/models/facebook--dinov2-giant/model.safetensors: not a safetensors file (header length 7809856579203706414 > file size 79)
+- `vis_infer__dinov2-giant__memopro_2200` (error): InvalidArgument: /content/models/facebook--dinov2-giant/model.safetensors: not a safetensors file (header length 7809856579203706414 > file size 79)
 - `vis_infer__dinov2-giant__memopro_2200__cache` (error): MemoryError: 
-- `vis_lora__dinov2-giant__memopro_1100` (error): MemoryError: 
-- `vis_lora__dinov2-giant__memopro_2200` (error): MemoryError: 
+- `vis_lora__dinov2-giant__memopro_1100` (error): InvalidArgument: /content/models/facebook--dinov2-giant/model.safetensors: not a safetensors file (header length 7809856579203706414 > file size 79)
+- `vis_lora__dinov2-giant__memopro_2200` (error): InvalidArgument: /content/models/facebook--dinov2-giant/model.safetensors: not a safetensors file (header length 7809856579203706414 > file size 79)
