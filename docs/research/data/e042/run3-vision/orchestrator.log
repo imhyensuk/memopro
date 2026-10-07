@@ -50,3 +50,23 @@ archive to share: /content/drive/MyDrive/memopro_colab/results/suite/20261007-02
 [02:44:29]   -> error (11.9s)
 [02:44:29] run vis_lora__dinov2-giant__memopro_2200
 [02:44:41]   -> error (11.7s)
+[02:45:05] summary: /content/drive/MyDrive/memopro_colab/results/suite/20261007-021718/summary.md
+archive to share: /content/drive/MyDrive/memopro_colab/results/suite/20261007-021718.zip
+[03:22:04] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[03:22:09] model microsoft/resnet-152 on Drive (4s)
+[03:22:11] staged microsoft/resnet-152 to local disk (0.0 GiB, 0s)
+[03:22:11] skip vis_infer__resnet-152__plain: already ok (resume)
+[03:22:12] skip vis_infer__resnet-152__memopro_60: already ok (resume)
+[03:22:12] skip vis_infer__resnet-152__memopro_120: already ok (resume)
+[03:22:15] model facebook/dinov2-giant on Drive (3s)
+[03:22:16] staged facebook/dinov2-giant to local disk (0.0 GiB, 0s)
+[03:22:17] skip vis_infer__dinov2-giant__plain: already ok (resume)
+[03:22:17] run vis_infer__dinov2-giant__memopro_1100
+[03:22:31]   -> error (13.8s)
+[03:22:32] run vis_infer__dinov2-giant__memopro_2200
+[03:22:42]   -> error (10.1s)
+[03:22:42] skip vis_lora__dinov2-giant__plain: already ok (resume)
+[03:22:43] run vis_lora__dinov2-giant__memopro_1100
+[03:22:55]   -> error (12.3s)
+[03:22:56] run vis_lora__dinov2-giant__memopro_2200
+[03:23:07]   -> error (11.4s)
