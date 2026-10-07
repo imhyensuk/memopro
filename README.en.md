@@ -48,6 +48,14 @@ All measured against criteria fixed in advance. Raw data and environments are in
 | Unmodified NumPy image processing | Same result, 3.3x faster than OS swap at the same limit |
 | Unmodified scikit-learn classification | Same result (a plain run is killed for lack of memory) |
 
+### One-line setup `memopro.enable` / `memopro run` (MacBook Air M1, whole-process ceiling)
+
+| Task | Result |
+|---|---|
+| Unmodified NumPy image processing, ceiling = 1/2 of what it needs | Identical results, peak within ceiling + 1.8 MiB, 2.4x the time |
+| 1 GiB array, 4 passes, ceiling = 1/2 and 3/4 of what it needs | Identical results; extra time predicted before running 3.81 s vs 3.72 s measured (3/4: 1.73 vs 1.86 s) |
+| Cost of leaving it on when memory is ample | 1.02-1.08x |
+
 Dataframe workloads with heavy random access, and data that is still larger than the limit after compression, do not yet run at a practical speed at 1/2 ([Limitations](#limitations)).
 
 ---
