@@ -240,6 +240,31 @@ def linear_rows() -> dict:
     return out
 
 
+def align_probe() -> dict:
+    """One row of a bf16 linear whose input (or weight) starts `off` bytes past a 4096-byte
+    boundary: the offsets whose result differs from offset 0."""
+    g = torch.Generator().manual_seed(3)
+    out = {}
+    for n_out, n_in in ((8000, 256), (1024, 256), (256, 1024)):
+        w = (torch.randn(n_out, n_in, generator=g) * 0.05).to(torch.bfloat16)
+        x = torch.randn(1, n_in, generator=g).to(torch.bfloat16)
+
+        def at(t, off):
+            buf = torch.empty(t.numel() + 4096, dtype=torch.bfloat16)
+            start = (-buf.data_ptr() % 4096 + off) // 2
+            v = buf[start : start + t.numel()].view(t.shape)
+            v.copy_(t)
+            return v
+
+        offsets = list(range(0, 128, 2)) + list(range(128, 4096, 64))
+        ref = F.linear(at(x, 0), at(w, 0))
+        out[f"{n_out}x{n_in}"] = {
+            "input": [o for o in offsets if not torch.equal(F.linear(at(x, o), w), ref)],
+            "weight": [o for o in offsets if not torch.equal(F.linear(x, at(w, o)), ref)],
+        }
+    return out
+
+
 def sdpa_rows() -> dict:
     """One query row against L keys: no mask vs an all-true mask vs the math backend."""
     g = torch.Generator().manual_seed(2)
@@ -265,7 +290,12 @@ def main() -> None:
         torch.set_num_threads(a.threads)
     if a.no_mkldnn:
         torch.backends.mkldnn.enabled = False
-    report = {"env": env(), "linear_bad_m": linear_rows(), "sdpa": sdpa_rows()}
+    report = {
+        "env": env(),
+        "linear_bad_m": linear_rows(),
+        "linear_bad_offset": align_probe(),
+        "sdpa": sdpa_rows(),
+    }
     with tempfile.TemporaryDirectory() as d:
         path = tiny_qwen(Path(d) / "t")
         report["streamed"] = [model_check(path, True) for _ in range(a.repeat)]
