@@ -228,7 +228,15 @@ class Run:
         os.makedirs(base, exist_ok=True)
         latest = os.path.join(base, "LATEST")
         rid = None
-        if not new_run and os.path.exists(latest):
+        wanted = globals().get("RESUME_RUN") or ""
+        if wanted:  # a run chosen by id (0222): it must exist and have the same settings
+            prev = os.path.join(base, wanted, "config.json")
+            if not os.path.exists(prev) or json.load(open(prev)) != config:
+                raise RuntimeError(f"RESUME_RUN {wanted!r}: no such run of {cell} with these settings")
+            rid = wanted
+            with open(latest, "w") as f:
+                f.write(rid)
+        elif not new_run and os.path.exists(latest):
             rid = open(latest).read().strip()
             prev = os.path.join(base, rid, "config.json")
             if not os.path.exists(prev) or json.load(open(prev)) != config:
@@ -395,9 +403,13 @@ def fetch_model(repo):
     _log(f"model {repo} on Drive ({time.time() - t:.0f}s)")
     if not STAGE_TO_LOCAL:
         return path
-    size = sum(os.path.getsize(os.path.realpath(p)) for p in glob.glob(os.path.join(path, "*")))
+    files = {os.path.basename(p): _blob(p) for p in glob.glob(os.path.join(path, "*"))}
+    size = sum(os.path.getsize(p) for p in files.values())
     local = os.path.join("/content/models", local_name(repo))
-    if os.path.isdir(local):
+    if os.path.isdir(local) and all(
+            os.path.exists(os.path.join(local, n))
+            and os.path.getsize(os.path.join(local, n)) == os.path.getsize(p)
+            for n, p in files.items()):
         return local
     free = shutil.disk_usage("/content").free
     if free < size + 10 * 2**30:
@@ -407,10 +419,28 @@ def fetch_model(repo):
     t = time.time()
     partial = local + ".partial"  # a copy cut short (disconnect) must not look complete (0100)
     shutil.rmtree(partial, ignore_errors=True)
-    shutil.copytree(path, partial, symlinks=False)
+    shutil.rmtree(local, ignore_errors=True)
+    os.makedirs(partial)
+    for name, src in files.items():  # the blobs themselves, not what Drive made of the links
+        shutil.copyfile(src, os.path.join(partial, name))
     os.rename(partial, local)
     _log(f"staged {repo} to local disk ({size / 2**30:.1f} GiB, {time.time() - t:.0f}s)")
     return local
+
+
+def _blob(p):
+    """The file a Hugging Face snapshot entry stands for. On Google Drive the cache's relative
+    symlinks can turn into small text files holding the link ("../../blobs/<hash>"): a 79-byte
+    "model.safetensors" was staged instead of DINOv2-giant's 4.5 GB (0222)."""
+    real = os.path.realpath(p)
+    if os.path.getsize(real) < 512:
+        with open(real, "rb") as f:
+            text = f.read().decode("utf-8", "replace").strip()
+        if text.startswith("../../blobs/"):
+            target = os.path.normpath(os.path.join(os.path.dirname(p), text))
+            if os.path.exists(target):
+                return target
+    return real
 
 
 def local_name(repo):
