@@ -120,7 +120,8 @@ def suite_body():
         n = w.removesuffix(".py")
         for mode in ("plain", "preload"):  # measured before VmHWM (0199): measure again
             old = run.done(f"data__{n}__{mode}")
-            if old is not None and "maxrss_rusage_bytes" not in (old.get("result") or {}):
+            if (old is not None and old.get("status") == "ok"  # (a timeout has no result, 0225)
+                    and "maxrss_rusage_bytes" not in (old.get("result") or {})):
                 os.remove(run.path("cases", f"data__{n}__{mode}.json"))
         plain = run_case(run, f"data__{n}__plain", "worker_data.py", [w], DATA_TIMEOUT_S,
                          {"MP_DEVICE": "cpu"})

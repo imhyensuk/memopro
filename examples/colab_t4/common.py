@@ -386,19 +386,30 @@ def run_case(run, key, worker, args, timeout, env_extra=None):
     with open(log_path, "w") as log:
         log.write("$ " + " ".join(cmd) + "\n")
         log.flush()
+        # own process group: on timeout the whole group is killed, and we wait for it only a
+        # minute (subprocess.run waits forever for a process that does not die, 0225)
+        proc = subprocess.Popen(cmd, stdout=log, stderr=subprocess.STDOUT, env=env,
+                                start_new_session=True)
         try:
-            proc = subprocess.run(cmd, stdout=log, stderr=subprocess.STDOUT, env=env,
-                                  timeout=timeout, check=False)
-            status = None if proc.returncode == 0 else f"crashed (exit {proc.returncode})"
+            code = proc.wait(timeout=timeout)
+            status = None if code == 0 else f"crashed (exit {code})"
         except subprocess.TimeoutExpired:
             status = "timeout"
+            try:
+                os.killpg(proc.pid, 9)
+            except ProcessLookupError:
+                pass
+            try:
+                proc.wait(timeout=60)
+            except subprocess.TimeoutExpired:
+                status = "timeout (the process did not exit after SIGKILL)"
     extra = tl.close()
     rec = {}
     if os.path.exists(out_json):
         rec = json.load(open(out_json))
         os.remove(out_json)
     if status and not rec.get("status"):
-        rec["status"] = "timeout" if status == "timeout" else "crashed"
+        rec["status"] = "timeout" if status.startswith("timeout") else "crashed"
         rec["exit"] = status
         with open(log_path) as f:
             rec["log_tail"] = f.read()[-3000:]
