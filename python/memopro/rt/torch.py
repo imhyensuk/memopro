@@ -744,7 +744,7 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
             ("model.generate(..., assistant_model=draft) (outputs may differ at near-ties)",),
         )
     weights = model.memopro_weights
-    state = {"before": 0}
+    state = {"before": 0, "rows": 0}  # the cache length before this pass, its rows
 
     def hold(module: Any) -> list[Any]:
         """Pin the weights under ``module`` once for all rows (the tensors keep them pinned;
@@ -760,11 +760,14 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
         def forward(hidden: Any, *args: Any, **kw: Any) -> Any:
             cache = kw.get("past_key_values")
             q = hidden.shape[1]
+            if layer is layers[0]:
+                state["rows"] = q
+                state["before"] = (
+                    0 if cache is None else cache.get_seq_length(layer.self_attn.layer_idx)
+                )
             if args or cache is None or q == 1:
                 return original(hidden, *args, **kw)
             before = cache.get_seq_length(layer.self_attn.layer_idx)
-            if layer is layers[0]:
-                state["before"] = before
             block = max(0, min(q, prompt - before))
             if block == q:
                 return original(hidden, **kw)
@@ -811,12 +814,24 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
 
     def head_forward(original: Any) -> Any:
         def forward(hidden: Any) -> Any:
-            if hidden.dim() < 3 or hidden.shape[1] == 1:
+            q = hidden.shape[1] if hidden.dim() == 3 else 1
+            if q == 1:
                 return original(hidden)
+            # the prompt's last row (if this pass has it) as plain generation's prompt pass gives
+            # it to the head: the last row of the prompt's block, a view with the block's strides
+            last = prompt - 1 - state["before"] - (state["rows"] - q)
             held = hold(head)
             try:
                 return torch.cat(
-                    [original(_rows(hidden, i, i + 1)) for i in range(hidden.shape[1])], dim=1
+                    [
+                        original(
+                            _rows(hidden, 0, i + 1)[:, -1:]
+                            if i == last
+                            else _rows(hidden, i, i + 1)
+                        )
+                        for i in range(q)
+                    ],
+                    dim=1,
                 )
             finally:
                 del held
