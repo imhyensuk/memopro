@@ -1,0 +1,15 @@
+check,criterion,result,detail
+G-Qwen2.5-3B-Instruct,"plain does not fit the T4; streamed completes, same text at both budgets",n/a,not run yet (its notebook part has not been run)
+L-Qwen2.5-3B-Instruct,16-bit LoRA completes; losses bit-identical across budgets,n/a,not run yet (its notebook part has not been run)
+G-Qwen2.5-7B-Instruct,"plain does not fit the T4; streamed completes, same text at both budgets",n/a,not run yet (its notebook part has not been run)
+L-Qwen2.5-7B-Instruct,16-bit LoRA completes; losses bit-identical across budgets,n/a,not run yet (its notebook part has not been run)
+V-resnet-152,streamed inference output = the model loaded normally (both budgets),pass,"plain ok 0.19 s; memopro [('ok', '0.17'), ('ok', '0.14')]"
+V-dinov2-giant,streamed inference output = the model loaded normally (both budgets),fail,"plain ok 1.53 s; memopro [('error', '-'), ('error', '-')]"
+VL-dinov2-giant,vision LoRA completes; losses bit-identical across budgets,fail,"plain ok [2.4394, 2.194, 1.8742, 1.4957, 1.333]; memopro []"
+S-Qwen2.5-3B-Instruct,same output as plain; time <= the pre-registered limit (0202),n/a,not run yet (its notebook part has not been run)
+S-Qwen2.5-7B-Instruct,same output as plain; time <= the pre-registered limit (0202),n/a,not run yet (its notebook part has not been run)
+S-dinov2-giant,same output as plain; time <= the pre-registered limit (0202),n/a,not run yet (its notebook part has not been run)
+D-image,unchanged program at half memory under memopro-preload,n/a,not run yet (its notebook part has not been run)
+D-dataframe,unchanged program at half memory under memopro-preload,n/a,not run yet (its notebook part has not been run)
+D-classify,unchanged program at half memory under memopro-preload,n/a,not run yet (its notebook part has not been run)
+D-simulate,unchanged program at half memory under memopro-preload,n/a,not run yet (its notebook part has not been run)
