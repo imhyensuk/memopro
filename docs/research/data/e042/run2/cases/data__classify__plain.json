@@ -1,0 +1,18 @@
+{
+ "status": "ok",
+ "error": null,
+ "result": {
+  "coef": "a9b9ed86098f6946ac00bda1e9d6576ebac3caae9491182e2712f9130b5fbeb9",
+  "accuracy": 0.9514175,
+  "nnz": 21699438,
+  "seconds": 16.77428955400046,
+  "import_rss_bytes": 3231981568,
+  "maxrss_bytes": 2557980672,
+  "maxrss_rusage_bytes": 3231981568
+ },
+ "preloaded": false,
+ "case": "data__classify__plain",
+ "wall_s": 17.4,
+ "timeline_peak_gpu_used_bytes": 3145728,
+ "timeline_peak_host_used_bytes": 4082778112
+}

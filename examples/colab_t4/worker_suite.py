@@ -9,7 +9,9 @@
 `budget_bytes` (memopro.rt.torch.stream_model(device="cuda"), 0195).
 """
 
+import glob
 import hashlib
+import os
 import sys
 import time
 
@@ -45,6 +47,17 @@ def vision_class(model_id):
     return transformers.AutoModel
 
 
+def model_files(path):
+    """Name, size and first 16 bytes of each file in a model folder."""
+    out = []
+    for f in sorted(glob.glob(os.path.join(path, "*"))):
+        with open(f, "rb") as fh:
+            head = fh.read(16)
+        out.append({"name": os.path.basename(f), "real": os.path.realpath(f),
+                    "size": os.path.getsize(f), "head": head.hex()})
+    return out
+
+
 def load(kind, model_id, mode, budget):
     import transformers
 
@@ -57,7 +70,11 @@ def load(kind, model_id, mode, budget):
         dtype = torch.bfloat16 if kind == "lm" else None
         m = cls.from_pretrained(path, dtype=dtype).to(DEVICE).eval()
     else:
-        m = rtt.stream_model(path, budget=budget, device=DEVICE, model_class=cls)
+        try:
+            m = rtt.stream_model(path, budget=budget, device=DEVICE, model_class=cls)
+        except Exception:
+            RESULT["files"] = model_files(path)  # what the streamer saw (DINOv2, 0220)
+            raise
     sync()
     RESULT["load_s"] = round(time.time() - t, 1)
     RESULT["memory_after_load"] = MON.snapshot()

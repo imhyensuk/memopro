@@ -1,0 +1,15 @@
+check,criterion,result,detail
+G-Qwen2.5-3B-Instruct,streamed generation text = the model loaded normally (both budgets),pass,"s/token plain 0.10, memopro ['0.47', '0.45']"
+L-Qwen2.5-3B-Instruct,16-bit LoRA completes; losses bit-identical across budgets,pass,"plain ok [2.6548, 3.0293, 3.1205, 2.915, 2.9474]; memopro [2.6548, 3.0282, 3.1224, 2.9169, 2.9425], step s ['9.2', '8.1']"
+G-Qwen2.5-7B-Instruct,streamed generation text = the model loaded normally (both budgets),pass,"s/token plain 0.08, memopro ['1.47', '1.51']"
+L-Qwen2.5-7B-Instruct,16-bit LoRA completes; losses bit-identical across budgets,pass,"plain oom []; memopro [2.5411, 3.0155, 3.0426, 2.8188, 2.9649], step s ['54.1', '54.5']"
+V-resnet-152,streamed inference output = the model loaded normally (both budgets),pass,"plain ok 0.13 s; memopro [('ok', '0.14'), ('ok', '0.14')]"
+V-dinov2-giant,streamed inference output = the model loaded normally (both budgets),fail,"plain ok 1.60 s; memopro [('error', '-'), ('error', '-')]"
+VL-dinov2-giant,vision LoRA completes; losses bit-identical across budgets,fail,"plain ok [2.4394, 2.194, 1.8742, 1.4957, 1.333]; memopro []"
+S-Qwen2.5-3B-Instruct,same output as plain; time <= the pre-registered limit (0202),fail,"plain 0.10, no cache 0.45, cache 0.46 (limit 0.20); copies {'copies': 434, 'copy_bytes': 6171877376, 'hits': 27406, 'prefetched': 0, 'gpu_budget': 13179456717, 'gpu_cache_bytes': 6171877376}"
+S-Qwen2.5-7B-Instruct,same output as plain; time <= the pre-registered limit (0202),pass,"plain 0.08, no cache 1.51, cache 1.55 (limit 2.00); copies {'copies': 906, 'copy_bytes': 145403030528, 'hits': 20790, 'prefetched': 567, 'gpu_budget': 13179456717, 'gpu_cache_bytes': 13165014016}"
+S-dinov2-giant,same output as plain; time <= the pre-registered limit (0202),fail,"plain 1.60, no cache -, cache - (limit 3.21); copies -"
+D-image,same result; process peak <= half of the plain peak (+64 MiB); no overruns,pass,peak 0.71 GiB vs limit 0.77 GiB (plain 1.54 GiB); 10.5 -> 33.6 s; overruns 0
+D-dataframe,same result; process peak <= half of the plain peak (+64 MiB); no overruns,fail,peak - vs limit 0.83 GiB (plain 1.66 GiB); 16.0 -> - s; overruns 0
+D-classify,same result; process peak <= half of the plain peak (+64 MiB); no overruns,pass,peak 1.13 GiB vs limit 1.19 GiB (plain 2.38 GiB); 16.8 -> 60.7 s; overruns 0
+D-simulate,same result; process peak <= half of the plain peak (+64 MiB); no overruns,fail,peak - vs limit 0.00 GiB (plain 2.16 GiB); 45.9 -> - s; overruns None
