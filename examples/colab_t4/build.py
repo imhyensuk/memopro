@@ -31,6 +31,10 @@ EXTRA_WORKERS = {
         "worker_suite.py": HERE / "worker_suite.py",
         "worker_unsloth.py": HERE / "worker_unsloth.py",
     },
+    "beat": {
+        "worker_suite.py": HERE / "worker_suite.py",
+        "worker_unsloth.py": HERE / "worker_unsloth.py",
+    },
     "full": {
         "worker_suite.py": HERE / "worker_suite.py",
         "worker_unsloth.py": HERE / "worker_unsloth.py",
@@ -180,6 +184,20 @@ Colab 7차(0093)에서 드러난 결함이 고쳐졌는지 **통합 셀 하나**
 
 - 준비: 런타임 **T4 GPU**. Drive `memopro_colab/install/`에 이번 소스 묶음 `memopro-src.tar.gz`를 **덮어쓰기**(현재 코드, 첫 실행 때 빌드 5~8분, 이후 Drive에 보관된 빌드 재사용). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**.
 - 결과: `MyDrive/memopro_colab/results/full/<실행 id>/summary.md`(판정 표), 같은 이름의 `.zip`.
+"""),
+    "beat": ("colab_t4_beat.ipynb", "cell_beat.py", """# memopro가 Unsloth보다 나은 곳 (docs/research/0240, E049)
+
+E048에서 Unsloth는 T4에 들어가는 크기(3B·7B 16비트)를 memopro보다 10~33배 빠르게 학습했다. 이 노트북은 **GPU가 모델보다 작을 때**를 잰다. 같은 작업(WikiText-2, 512토큰, LoRA r 8 q/k/v/o).
+
+| 갈래 | 경우 | 기준(0240) |
+|---|---|---|
+| W1 | Qwen2.5-14B(약 29.5GB) 16비트, 전체 T4: Unsloth 16비트·4비트 대 memopro | B1: Unsloth 16비트 실패, memopro 완주 |
+| W2 | 7B, GPU 한도 12·8·4GiB(작은 GPU 흉내) | B2: Unsloth 16비트가 실패한 한도에서 memopro 완주 |
+| W3 | 3B, GPU 한도 6·4GiB | B3: memopro 손실이 GPU 한도와 무관하게 비트 동일 |
+
+- 예상 시간 약 2시간(셀 예산 135분, 넘으면 뒤가 건너뛰어진다; 다시 실행하면 이어서 한다).
+- **로컬 디스크 약 35GB 필요**(14B는 Drive가 아니라 로컬 디스크로 바로 받는다).
+- 준비: 런타임 **T4 GPU**, Drive `install/`의 소스 묶음은 그대로(이미 올린 현재 코드).
 """),
 }
 

@@ -40,12 +40,6 @@ STAGE_TO_LOCAL = True  # copy models from the Drive cache to the local disk befo
 # ==== END OF SETTINGS ================================================================
 # @@COMMON@@
 # ---------------------------------------------------------------- body
-MIB = 1 << 20
-DETERMINISTIC = {"CUBLAS_WORKSPACE_CONFIG": ":4096:8"}
-
-
-def short(model):
-    return model.split("/")[-1]
 
 
 def suite_body():

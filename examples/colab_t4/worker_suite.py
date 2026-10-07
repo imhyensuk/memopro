@@ -71,7 +71,9 @@ def load(kind, model_id, mode, budget):
         m = cls.from_pretrained(path, dtype=dtype).to(DEVICE).eval()
     else:
         try:
-            m = rtt.stream_model(path, budget=budget, device=DEVICE, model_class=cls)
+            gpu = os.environ.get("MP_GPU_BUDGET")  # with an emulated smaller GPU (E049)
+            m = rtt.stream_model(path, budget=budget, device=DEVICE, model_class=cls,
+                                 **({"gpu_budget": int(gpu)} if gpu else {}))
         except Exception:
             RESULT["files"] = model_files(path)  # what the streamer saw (DINOv2, 0220)
             raise
