@@ -139,24 +139,25 @@ def diff(a, b) -> float | None:
     return float((a.float() - b.float()).abs().max())
 
 
-def culprit(plain, order, both, step, prompt):
+def culprit(plain, order, passed, step, lead, blocks):
     """First module (plain call order) whose output at `step` differs; is its input the same?
-    step 0 is the prompt's last row, step k >= 1 the k-th new row."""
+    step 0 is the prompt's last row, step k >= 1 the k-th new row. `lead`: rows of the pass
+    before the first new row; `blocks`: calls inside a layer before it (the prompt block)."""
     for name in order:
-        p, b = plain[name], both.get(name)
+        p, b = plain[name], passed.get(name)
         if not b:
             continue
         if step == 0:
-            px, py, pw = row(p[0][0], prompt - 1), row(p[0][1], prompt - 1), p[0][2]
-            bx, by, bw = row(b[0][0], prompt - 1), row(b[0][1], prompt - 1), b[0][2]
-        elif len(p) == len(b):  # called once per row in both passes (inside the layers)
-            (px, py, pw), (bx, by, bw) = p[step], b[step]
-        elif len(b) == 1:  # called once on all rows of the pass (embedding, rotary, norm)
+            px, py, pw = row(p[0][0], lead - 1), row(p[0][1], lead - 1), p[0][2]
+            bx, by, bw = row(b[0][0], lead - 1), row(b[0][1], lead - 1), b[0][2]
+        elif len(b) == len(p) - 1 + blocks:  # once per row inside the layers
+            (px, py, pw), (bx, by, bw) = p[step], b[step - 1 + blocks]
+        elif len(b) == 1:  # once on all rows of the pass (embedding, rotary, norm)
             px, py, pw = p[step]
-            bx, by, bw = row(b[0][0], prompt + step - 1), row(b[0][1], prompt + step - 1), b[0][2]
-        elif len(b) == len(p) - 1 + prompt:  # the output head: one call per row
+            bx, by, bw = row(b[0][0], lead + step - 1), row(b[0][1], lead + step - 1), b[0][2]
+        elif len(b) == len(p) - 1 + lead:  # the output head: one call per row
             px, py, pw = p[step]
-            bx, by, bw = b[prompt + step - 1]
+            bx, by, bw = b[lead + step - 1]
         else:
             raise AssertionError(f"{name}: {len(p)} plain calls, {len(b)} in the pass")
         if py is not None and not same(py, by):
@@ -194,7 +195,13 @@ def model_check(path: Path, streamed: bool) -> dict:
         plain, order = rec.take()
         with rtt._row_invariant(m, n):
             both_logits = m(input_ids=torch.cat([prompt, new], 1), use_cache=True).logits
-        both, _ = rec.take()
+            both, _ = rec.take()
+            out = m(input_ids=prompt, use_cache=True)
+            rec.take()
+            later_logits = m(
+                input_ids=new, past_key_values=out.past_key_values, use_cache=True
+            ).logits
+            later, _ = rec.take()
     rec.remove()
     result = {
         "prompt_last": same(both_logits[:, n - 1], last),
@@ -202,11 +209,16 @@ def model_check(path: Path, streamed: bool) -> dict:
         "rows": [],
     }
     if not result["prompt_last"]:
-        result["prompt_culprit"] = culprit(plain, order, both, 0, n)
+        result["prompt_culprit"] = culprit(plain, order, both, 0, n, 1)
+    result["later"] = []  # the new rows in one pass after the prompt's cache
     for i, one in enumerate(singles):
         ok = same(both_logits[:, n + i], one)
-        result["rows"].append(ok if ok else culprit(plain, order, both, i + 1, n))
-    result["ok"] = result["prompt_last"] and all(r is True for r in result["rows"])
+        result["rows"].append(ok if ok else culprit(plain, order, both, i + 1, n, 1))
+        ok = same(later_logits[:, i], one)
+        result["later"].append(ok if ok else culprit(plain, order, later, i + 1, 0, 0))
+    result["ok"] = result["prompt_last_keep1"] and all(
+        r is True for r in result["rows"] + result["later"]
+    )
     return result
 
 
