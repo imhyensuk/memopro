@@ -214,6 +214,31 @@ def culprit(plain, order, passed, step, lead, blocks):
     return None
 
 
+def head_variants(m, calls, n):
+    """The output head alone on the inputs of the plain decoding steps, computed the ways the
+    row-invariant pass and plain generation compute it: which ones give plain's logits?"""
+    head = m.get_output_embeddings()
+    xs = [x for x, _, _ in calls]
+    want = [y for _, y, _ in calls]
+    weights = m.memopro_weights
+    pid = id(weights._own[head][0][1])
+    res = {}
+    with torch.no_grad():
+        res["module_call_each_row"] = [same(head(x), y) for x, y in zip(xs, want)]
+        with rtt._row_invariant(m, n):
+            ys = head(torch.cat(xs, 1))
+        res["row_invariant_head"] = [same(ys[:, i : i + 1], y) for i, y in enumerate(want)]
+        w = weights._tensor(pid)  # one pin held over all rows, as `hold` does
+        res["one_pin_all_rows"] = [same(F.linear(x, w), y) for x, y in zip(xs, want)]
+        res["one_pin_clone_rows"] = [same(F.linear(x.clone(), w), y) for x, y in zip(xs, want)]
+        del w
+        res["pin_per_row"] = [same(F.linear(x, weights._tensor(pid)), y) for x, y in zip(xs, want)]
+        wc = weights._tensor(pid).clone()
+        res["weight_copy"] = [same(F.linear(x, wc), y) for x, y in zip(xs, want)]
+    weights.pinned.clear()
+    return res
+
+
 def model_check(path: Path, streamed: bool) -> dict:
     if streamed:
         m = rtt.stream_model(path, budget="9MiB", device="cpu")
@@ -246,7 +271,9 @@ def model_check(path: Path, streamed: bool) -> dict:
             ).logits
             later, _ = rec.take()
     rec.remove()
+    variants = head_variants(m, plain["lm_head"][1:], n) if streamed else None
     result = {
+        "head_variants": variants,
         "prompt_last": same(both_logits[:, n - 1], last),
         "prompt_last_keep1": same(both_logits[:, n - 1], last_keep1),  # as plain generate
         "rows": [],
