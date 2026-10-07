@@ -146,13 +146,36 @@ def diff(a, b) -> float | None:
     return float((a.float() - b.float()).abs().max())
 
 
+def at(t, off):
+    """A copy of bf16 `t` starting `off` bytes past a 4096-byte boundary."""
+    buf = torch.empty(t.numel() + 4096, dtype=torch.bfloat16)
+    start = (-buf.data_ptr() % 4096 + off) // 2
+    v = buf[start : start + t.numel()].view(t.shape)
+    v.copy_(t)
+    return v
+
+
 def recompute(name, x, plain_y, pass_y, w):
     """The culprit linear once more on fresh copies of its input and weight: which pass does a
     fresh computation agree with?"""
     if w is None or x is None or not name.endswith(("proj", "lm_head")):
         return {}
     y = F.linear(x.clone(), w["w"].clone())
-    return {"fresh_eq_plain": same(y, plain_y), "fresh_eq_pass": same(y, pass_y)}
+    out = {"fresh_eq_plain": same(y, plain_y), "fresh_eq_pass": same(y, pass_y)}
+    offsets = range(0, 4096, 64)
+    for what in ("input", "weight"):
+        ys = {
+            o: F.linear(at(x, o), w["w"]) if what == "input" else F.linear(x, at(w["w"], o))
+            for o in offsets
+        }
+        out[f"{what}_offsets_giving_pass"] = [o for o, v in ys.items() if same(v, pass_y)]
+        out[f"{what}_offsets_giving_plain"] = [o for o, v in ys.items() if same(v, plain_y)]
+    threads = torch.get_num_threads()
+    torch.set_num_threads(1)
+    y1 = F.linear(x.clone(), w["w"].clone())
+    torch.set_num_threads(threads)
+    out["one_thread_eq"] = ["plain"] * same(y1, plain_y) + ["pass"] * same(y1, pass_y)
+    return out
 
 
 def culprit(plain, order, passed, step, lead, blocks):
@@ -268,13 +291,6 @@ def align_probe() -> dict:
     for n_out, n_in in ((8000, 256), (1024, 256), (256, 1024)):
         w = (torch.randn(n_out, n_in, generator=g) * 0.05).to(torch.bfloat16)
         x = torch.randn(1, n_in, generator=g).to(torch.bfloat16)
-
-        def at(t, off):
-            buf = torch.empty(t.numel() + 4096, dtype=torch.bfloat16)
-            start = (-buf.data_ptr() % 4096 + off) // 2
-            v = buf[start : start + t.numel()].view(t.shape)
-            v.copy_(t)
-            return v
 
         offsets = list(range(0, 128, 2)) + list(range(128, 4096, 64))
         ref = F.linear(at(x, 0), at(w, 0))
