@@ -22,6 +22,8 @@ VISION_LORA = {"model": "facebook/dinov2-giant", "steps": 5, "batch": 8}
 DATA_WORKLOADS = ["image.py", "dataframe.py", "classify.py", "simulate.py"]
 DATA_CHUNK = 1 << 20  # pager chunk bytes (memopro-preload)
 TIMEOUT_S = 60 * 60
+DATA_TIMEOUT_S = 15 * 60  # data programs: plain runs take under 1 min, OS swap under 2 min; the
+#                          same limit as E040b (0196). A preload case that cannot finish ends here.
 # Which parts this notebook runs. All parts share one run folder on Drive, so the split notebooks
 # (colab_t4_suite_*.ipynb) can be run one after another in separate sessions; finished cases are
 # skipped and summary.md covers every part done so far.
@@ -120,14 +122,14 @@ def suite_body():
             old = run.done(f"data__{n}__{mode}")
             if old is not None and "maxrss_rusage_bytes" not in (old.get("result") or {}):
                 os.remove(run.path("cases", f"data__{n}__{mode}.json"))
-        plain = run_case(run, f"data__{n}__plain", "worker_data.py", [w], TIMEOUT_S,
+        plain = run_case(run, f"data__{n}__plain", "worker_data.py", [w], DATA_TIMEOUT_S,
                          {"MP_DEVICE": "cpu"})
         peak = ((plain.get("result") or {}).get("maxrss_bytes")) or 0
         if not (probe.get("ok") and peak):
             continue
         limit = peak // 2
         report = run.path("reports", f"data__{n}__preload.json")
-        rec = run_case(run, f"data__{n}__preload", "worker_data.py", [w], TIMEOUT_S, {
+        rec = run_case(run, f"data__{n}__preload", "worker_data.py", [w], DATA_TIMEOUT_S, {
             "MP_DEVICE": "cpu", "LD_PRELOAD": lib, "MEMOPRO_PRELOAD_BUDGET": str(limit),
             "MEMOPRO_PRELOAD_PROCESS": str(limit - 64 * MIB),
             "MEMOPRO_PRELOAD_CHUNK": str(DATA_CHUNK), "MEMOPRO_PRELOAD_REPORT": report,
