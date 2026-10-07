@@ -1,0 +1,61 @@
+name: x86 row invariance
+
+# Row invariance of `_row_invariant` (0142) on x86 CPUs: experiments/x86_rows/diag.py on several
+# runners at once (hosted runners differ in CPU model), each under the kernel settings that may
+# change a bf16 row's bits. Manual only; results are uploaded as `x86-rows-*` artifacts.
+on:
+  workflow_dispatch:
+  push:
+    branches: [fix/rt-torch-x86-row-invariant]
+    paths: [".github/workflows/x86-rows.yml", "experiments/x86_rows/**", "python/memopro/rt/torch.py"]
+
+permissions:
+  contents: read
+
+jobs:
+  diag:
+    name: x86 rows ${{ matrix.copy }}
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        copy: [1, 2, 3, 4, 5, 6]
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - run: python -m pip install --upgrade pip maturin pytest
+      - run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
+      - run: python -m pip install numpy transformers accelerate
+      - run: maturin build --release --out dist
+      - run: python -m pip install --no-index --find-links dist memopro
+      - run: lscpu | grep -E "Model name|^CPU\(s\)|Flags" | cut -c1-200
+      - name: Diagnose under each setting
+        run: |
+          mkdir -p out
+          python -m experiments.x86_rows.diag --out out/default.json > /dev/null
+          python -m experiments.x86_rows.diag --threads 1 --out out/threads1.json > /dev/null
+          python -m experiments.x86_rows.diag --no-mkldnn --out out/no_mkldnn.json > /dev/null
+          ATEN_CPU_CAPABILITY=avx2 python -m experiments.x86_rows.diag --out out/aten_avx2.json > /dev/null
+          ONEDNN_MAX_CPU_ISA=AVX2 python -m experiments.x86_rows.diag --out out/onednn_avx2.json > /dev/null
+          python - <<'EOF'
+          import json, pathlib
+          for f in sorted(pathlib.Path("out").glob("*.json")):
+              r = json.loads(f.read_text())
+              print(f.stem, r["env"]["cpu"], r["env"]["capability"], r["env"]["flags"])
+              print("  linear bad M:", r["linear_bad_m"], "sdpa:", r["sdpa"])
+              for kind in ("streamed", "plain_hf"):
+                  for c in r[kind]:
+                      bad = [x for x in [c.get("prompt_culprit")] + c["rows"] if x not in (None, True)]
+                      print(f"  {kind} ok={c['ok']}", [(b["module"], b["input_same"], b["max_diff"]) for b in bad])
+          EOF
+      - name: The test itself
+        run: pytest -q "tests/test_rt_torch.py::test_rows_after_the_prompt_are_computed_as_in_plain_generation" || true
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: x86-rows-${{ matrix.copy }}
+          path: out/
