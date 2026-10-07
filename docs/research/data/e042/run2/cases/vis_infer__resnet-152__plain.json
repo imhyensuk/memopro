@@ -1,0 +1,50 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "vis_infer",
+  "microsoft/resnet-152",
+  "plain",
+  "0",
+  "8"
+ ],
+ "kind": "vis_infer",
+ "model": "microsoft/resnet-152",
+ "mode": "plain",
+ "budget": 0,
+ "load_s": 0.7,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 1195601920,
+  "allocated_bytes": 241463808,
+  "reserved_bytes": 276824064,
+  "peak_allocated_bytes": 241463808,
+  "peak_reserved_bytes": 276824064,
+  "device_used_bytes": 386793472,
+  "peak_device_used_bytes": 386793472
+ },
+ "output_sha": "f16180516870450e",
+ "same_twice": true,
+ "shape": [
+  8,
+  1000
+ ],
+ "first_s": 1.4325008392333984,
+ "second_s": 0.13479876518249512,
+ "rt": null,
+ "copy_stats": null,
+ "worker_s": 14.9,
+ "memory_end": {
+  "host_peak_rss_bytes": 1400193024,
+  "allocated_bytes": 255913472,
+  "reserved_bytes": 452984832,
+  "peak_allocated_bytes": 359559168,
+  "peak_reserved_bytes": 452984832,
+  "device_used_bytes": 592314368,
+  "peak_device_used_bytes": 592314368
+ },
+ "memopro_report": [],
+ "case": "vis_infer__resnet-152__plain",
+ "wall_s": 21.5,
+ "timeline_peak_gpu_used_bytes": 579862528,
+ "timeline_peak_host_used_bytes": 2738053120
+}

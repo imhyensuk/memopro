@@ -10,7 +10,7 @@
 
 memopro is an open-source library for memory-limited machines: 8-16 GB laptops and Macs, and small GPUs. The core is written in Rust and the interface in Python.
 
-- **Lossless**: no quantization or approximation. Outputs and training losses are bit-identical to a plain run.
+- **Lossless**: no quantization or approximation. Generation and inference outputs are bit-identical to a plain run; training losses are bit-identical whatever the budget.
 - **Guaranteed ceiling**: memory use stays within the budget you set. A budget that cannot work is refused before anything runs.
 - **No disk writes**: model weights are re-read from their original files and data created in memory is compressed losslessly. No swap or cache files are created.
 
@@ -38,6 +38,7 @@ All measured against criteria fixed in advance. Raw data and environments are in
 | Qwen2.5-3B bf16 LoRA, same setup as mlx-tune | mlx-tune runs out of memory before step 1; memopro trains at 20.0 tokens/s with a 1 GiB budget |
 | Qwen2.5-7B lossless generation (int4 draft + row-invariant verification) | Same output as plain generation, 8.95 → 2.37 s/token (3.8x) |
 | Qwen2.5-3B bf16 inference (CPU) at 1/4 of the memory it needs | Same output, about 5x faster than OS paging |
+| Qwen2.5-7B bf16 LoRA training on a Colab T4 (15 GB) | Plain training runs out of GPU memory; memopro completes with a 4 GiB budget, losses identical across budgets |
 | Qwen2.5-3B bf16 generation vs. other tools | memopro 1.09 s/token (2.1 GB process); llama.cpp CPU 14.75 s/token (3.3 GB); llama.cpp Metal runs out of memory |
 
 ### Ordinary programs (Linux, limit = 1/2 of the memory they need)
@@ -88,7 +89,7 @@ text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Inst
 - 16-bit weights stream layer by layer from the original safetensors files, handed to the Apple GPU without copies.
 - Activation memory is planned inside the budget; a budget that cannot hold one step is refused before training starts.
 - With `draft`, a small int4 draft model speculates; verification follows the same computation path as plain generation, so the output does not change.
-- Verified on Apple silicon (MPS) and CPU; on NVIDIA CUDA, generation is verified.
+- Verified on Apple silicon (MPS), NVIDIA CUDA (Colab T4) and CPU.
 
 ### 2. Large arrays within a budget
 
@@ -182,7 +183,7 @@ Platform        zero-copy Apple GPU buffers · asynchronous CUDA copies · Linux
 | Platform | Status |
 |---|---|
 | macOS, Apple silicon (MPS) | Primary platform; LLM training and generation verified |
-| Linux, NVIDIA GPU (CUDA) | Generation and vision inference verified on a Colab T4 |
+| Linux, NVIDIA GPU (CUDA) | Generation, LoRA training and vision inference verified on a Colab T4 |
 | Linux, CPU | Verified in CI; transparent paging is Linux-only |
 | Windows | Basic features checked in CI |
 

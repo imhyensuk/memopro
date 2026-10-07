@@ -21,6 +21,8 @@ from pathlib import Path
 
 import torch
 
+from memopro._errors import InvalidArgument
+
 _DTYPES = {
     "F64": torch.float64,
     "F32": torch.float32,
@@ -52,6 +54,10 @@ def read_header(path: str | os.PathLike[str]) -> dict[str, Region]:
     st = os.stat(path)
     with open(path, "rb") as f:
         (length,) = struct.unpack("<Q", f.read(8))
+        if length > st.st_size - 8:  # not a safetensors file (or cut short): say so clearly
+            raise InvalidArgument(
+                f"{path}: not a safetensors file (header length {length} > file size {st.st_size})"
+            )
         header = json.loads(f.read(length))
     base = 8 + length
     out = {}

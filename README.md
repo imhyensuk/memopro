@@ -10,7 +10,7 @@
 
 memopro는 8~16GB 노트북·Mac이나 작은 GPU처럼 메모리가 부족한 기기를 위한 오픈 소스 라이브러리입니다. 코어는 Rust로, 인터페이스는 Python으로 작성했습니다.
 
-- **무손실**: 양자화나 근사를 쓰지 않습니다. 출력과 학습 손실은 일반 실행과 비트 단위로 같습니다.
+- **무손실**: 양자화나 근사를 쓰지 않습니다. 생성·추론 출력은 일반 실행과 비트 단위로 같고, 학습 손실은 예산을 바꿔도 비트 단위로 같습니다.
 - **메모리 상한 보장**: 사용자가 정한 예산을 넘지 않습니다. 감당할 수 없는 예산이면 실행 전에 거절합니다.
 - **디스크 쓰기 없음**: 모델 가중치는 원본 파일에서 다시 읽고, 메모리에서 만든 데이터는 무손실 압축합니다. 스왑 파일이나 캐시 파일을 만들지 않습니다.
 
@@ -38,6 +38,7 @@ print(memopro.generate(r.model, "안녕하세요", draft="Qwen/Qwen2.5-1.5B-Inst
 | Qwen2.5-3B bf16 LoRA 학습, mlx-tune과 같은 설정 | mlx-tune은 첫 스텝 전에 메모리 부족으로 실패. memopro는 1GiB 예산으로 20.0 토큰/초 |
 | Qwen2.5-7B 무손실 생성 (int4 초안 + 행 불변 검증) | 일반 생성과 출력 동일, 8.95 → 2.37초/토큰 (3.8배) |
 | Qwen2.5-3B bf16 추론 (CPU), 필요 메모리의 1/4 예산 | 출력 동일, OS 페이징보다 약 5배 빠름 |
+| Qwen2.5-7B bf16 LoRA 학습, Colab T4(15GB) | 그냥은 GPU 메모리 부족. memopro는 예산 4GiB로 완주, 예산이 달라도 손실 동일 |
 | Qwen2.5-3B bf16 생성, 다른 도구와 비교 | memopro 1.09초/토큰 (프로세스 2.1GB). llama.cpp CPU 14.75초/토큰 (3.3GB). llama.cpp Metal은 메모리 부족 |
 
 ### 일반 프로그램 (Linux, 원래 필요 메모리의 1/2 한도)
@@ -88,7 +89,7 @@ text = memopro.generate(r.model, "요약해 줘: ...", draft="Qwen/Qwen2.5-1.5B-
 - 16비트 가중치를 원본 safetensors 파일에서 층 단위로 흘려 쓰며, Apple GPU에는 복사 없이 넘깁니다.
 - 활성값 메모리도 예산에 포함해 계획합니다. 한 스텝을 감당할 수 없는 예산은 시작 전에 거절합니다.
 - `draft`를 주면 작은 int4 초안 모델로 추측 디코딩을 합니다. 검증을 일반 생성과 같은 계산 경로로 하므로 출력이 바뀌지 않습니다.
-- Apple silicon(MPS)과 CPU에서 검증했습니다. NVIDIA CUDA는 생성까지 검증했습니다.
+- Apple silicon(MPS), NVIDIA CUDA(Colab T4), CPU에서 검증했습니다.
 
 ### 2. 큰 배열을 예산 안에서
 
@@ -184,7 +185,7 @@ Rust 런타임     버퍼마다 실측 비용으로 선택:
 | 환경 | 상태 |
 |---|---|
 | macOS, Apple silicon (MPS) | 주 개발 환경. LLM 학습·생성 검증 |
-| Linux, NVIDIA GPU (CUDA) | Colab T4에서 생성·비전 추론 검증 |
+| Linux, NVIDIA GPU (CUDA) | Colab T4에서 생성, LoRA 학습, 비전 추론 검증 |
 | Linux, CPU | CI에서 검증. 투명 페이징은 Linux 전용 |
 | Windows | CI에서 기본 기능만 확인 |
 

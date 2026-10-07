@@ -254,8 +254,9 @@ class Run:
         if not os.path.exists(p):
             return None
         rec = json.load(open(p))
-        if RETRY_FAILED and rec.get("status") in ("crashed", "timeout", "error"):
-            return None  # try a crashed, timed-out or failed case again on resume (0200)
+        if RETRY_FAILED and rec.get("status") in ("crashed", "error"):
+            return None  # try a crashed or failed case again on resume (0200); a timeout is a
+            # result (it re-ran a known 1-hour timeout in every session, 0220)
         return rec
 
     def save(self, key, rec):

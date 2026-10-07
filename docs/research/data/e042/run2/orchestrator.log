@@ -1,0 +1,198 @@
+[05:26:25] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[05:26:29] model Qwen/Qwen2.5-3B-Instruct on Drive (3s)
+[05:28:47] staged Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 138s)
+[05:28:47] run lm_gen__Qwen2.5-3B-Instruct__plain
+[05:29:30]   -> ok (43.5s)
+[05:29:30] run lm_gen__Qwen2.5-3B-Instruct__memopro_2048
+[05:30:16]   -> ok (45.4s)
+[05:30:16] run lm_gen__Qwen2.5-3B-Instruct__memopro_3072
+[05:31:01]   -> ok (44.8s)
+[05:31:01] run lm_lora__Qwen2.5-3B-Instruct__plain
+[05:32:08]   -> ok (67.9s)
+[05:32:08] run lm_lora__Qwen2.5-3B-Instruct__memopro_2048
+[05:33:20]   -> ok (71.5s)
+[05:33:20] run lm_lora__Qwen2.5-3B-Instruct__memopro_3072
+[05:34:28]   -> ok (68.2s)
+[05:34:31] model Qwen/Qwen2.5-7B-Instruct on Drive (3s)
+[05:39:54] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 323s)
+[05:39:54] run lm_gen__Qwen2.5-7B-Instruct__plain
+[05:41:10]   -> ok (75.8s)
+[05:41:10] run lm_gen__Qwen2.5-7B-Instruct__memopro_4096
+[05:42:58]   -> ok (107.4s)
+[05:42:58] run lm_gen__Qwen2.5-7B-Instruct__memopro_6144
+[05:44:51]   -> ok (113.5s)
+[05:44:51] run lm_lora__Qwen2.5-7B-Instruct__plain
+[05:46:24]   -> oom (92.5s)
+[05:46:24] run lm_lora__Qwen2.5-7B-Instruct__memopro_4096
+[05:51:32]   -> ok (308.7s)
+[05:51:32] run lm_lora__Qwen2.5-7B-Instruct__memopro_6144
+[05:56:44]   -> ok (311.2s)
+[05:56:48] model microsoft/resnet-152 on Drive (4s)
+[05:56:52] staged microsoft/resnet-152 to local disk (0.2 GiB, 4s)
+[05:56:52] run vis_infer__resnet-152__plain
+[05:57:13]   -> ok (21.5s)
+[05:57:13] run vis_infer__resnet-152__memopro_60
+[05:57:25]   -> ok (11.7s)
+[05:57:25] run vis_infer__resnet-152__memopro_120
+[05:57:37]   -> ok (11.8s)
+[05:58:08] model facebook/dinov2-giant on Drive (31s)
+[05:58:52] staged facebook/dinov2-giant to local disk (4.2 GiB, 44s)
+[05:58:52] run vis_infer__dinov2-giant__plain
+[05:59:32]   -> ok (39.4s)
+[05:59:32] run vis_infer__dinov2-giant__memopro_1100
+[05:59:48]   -> error (15.7s)
+[05:59:48] run vis_infer__dinov2-giant__memopro_2200
+[05:59:58]   -> error (10.9s)
+[05:59:58] run vis_lora__dinov2-giant__plain
+[06:00:42]   -> ok (43.1s)
+[06:00:42] run vis_lora__dinov2-giant__memopro_1100
+[06:00:56]   -> error (14.1s)
+[06:00:56] run vis_lora__dinov2-giant__memopro_2200
+[06:01:09]   -> error (13.0s)
+[06:01:11] model Qwen/Qwen2.5-3B-Instruct on Drive (1s)
+[06:04:01] staged Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 170s)
+[06:04:01] run lm_gen__Qwen2.5-3B-Instruct__memopro_3072__cache
+[06:04:45]   -> ok (44.8s)
+[06:04:47] model Qwen/Qwen2.5-7B-Instruct on Drive (2s)
+[06:10:33] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 346s)
+[06:10:33] run lm_gen__Qwen2.5-7B-Instruct__memopro_6144__cache
+[06:12:32]   -> ok (117.8s)
+[06:12:32] model facebook/dinov2-giant on Drive (1s)
+[06:12:33] staged facebook/dinov2-giant to local disk (0.0 GiB, 1s)
+[06:12:33] run vis_infer__dinov2-giant__memopro_2200__cache
+[06:12:48]   -> error (14.9s)
+[06:12:50] preload probe: ok 
+[06:12:50] run data__image__plain
+[06:13:01]   -> ok (10.8s)
+[06:13:01] run data__image__preload
+[06:13:34]   -> ok (33.8s)
+[06:13:34] run data__dataframe__plain
+[06:13:51]   -> ok (16.6s)
+[06:13:51] run data__dataframe__preload
+[07:13:51]   -> timeout (3600.1s)
+[07:13:51] run data__classify__plain
+[07:14:09]   -> ok (17.4s)
+[07:14:09] run data__classify__preload
+[07:15:10]   -> ok (61.4s)
+[07:15:10] run data__simulate__plain
+[07:15:56]   -> ok (46.2s)
+[07:15:56] run data__simulate__preload
+[07:32:23] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[07:32:25] model Qwen/Qwen2.5-3B-Instruct on Drive (2s)
+[07:36:58] staged Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 273s)
+[07:36:59] skip lm_gen__Qwen2.5-3B-Instruct__plain: already ok (resume)
+[07:36:59] skip lm_gen__Qwen2.5-3B-Instruct__memopro_2048: already ok (resume)
+[07:36:59] skip lm_gen__Qwen2.5-3B-Instruct__memopro_3072: already ok (resume)
+[07:37:00] skip lm_lora__Qwen2.5-3B-Instruct__plain: already ok (resume)
+[07:37:00] skip lm_lora__Qwen2.5-3B-Instruct__memopro_2048: already ok (resume)
+[07:37:00] skip lm_lora__Qwen2.5-3B-Instruct__memopro_3072: already ok (resume)
+[07:37:02] model Qwen/Qwen2.5-7B-Instruct on Drive (1s)
+[07:44:37] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 455s)
+[07:44:38] skip lm_gen__Qwen2.5-7B-Instruct__plain: already ok (resume)
+[07:44:38] skip lm_gen__Qwen2.5-7B-Instruct__memopro_4096: already ok (resume)
+[07:44:38] skip lm_gen__Qwen2.5-7B-Instruct__memopro_6144: already ok (resume)
+[07:44:39] skip lm_lora__Qwen2.5-7B-Instruct__plain: already oom (resume)
+[07:44:39] skip lm_lora__Qwen2.5-7B-Instruct__memopro_4096: already ok (resume)
+[07:44:40] skip lm_lora__Qwen2.5-7B-Instruct__memopro_6144: already ok (resume)
+[07:44:41] model microsoft/resnet-152 on Drive (1s)
+[07:44:42] staged microsoft/resnet-152 to local disk (0.0 GiB, 1s)
+[07:44:43] skip vis_infer__resnet-152__plain: already ok (resume)
+[07:44:43] skip vis_infer__resnet-152__memopro_60: already ok (resume)
+[07:44:43] skip vis_infer__resnet-152__memopro_120: already ok (resume)
+[07:44:46] model facebook/dinov2-giant on Drive (3s)
+[07:44:47] staged facebook/dinov2-giant to local disk (0.0 GiB, 1s)
+[07:44:48] skip vis_infer__dinov2-giant__plain: already ok (resume)
+[07:44:48] run vis_infer__dinov2-giant__memopro_1100
+[07:45:02]   -> error (13.6s)
+[07:45:02] run vis_infer__dinov2-giant__memopro_2200
+[07:45:13]   -> error (10.7s)
+[07:45:13] skip vis_lora__dinov2-giant__plain: already ok (resume)
+[07:45:14] run vis_lora__dinov2-giant__memopro_1100
+[07:45:27]   -> error (13.0s)
+[07:45:27] run vis_lora__dinov2-giant__memopro_2200
+[07:45:39]   -> error (12.4s)
+[07:45:43] model Qwen/Qwen2.5-3B-Instruct on Drive (3s)
+[07:47:42] staged Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 119s)
+[07:47:42] skip lm_gen__Qwen2.5-3B-Instruct__memopro_3072__cache: already ok (resume)
+[07:47:43] model Qwen/Qwen2.5-7B-Instruct on Drive (1s)
+[07:54:16] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 393s)
+[07:54:17] skip lm_gen__Qwen2.5-7B-Instruct__memopro_6144__cache: already ok (resume)
+[07:54:18] model facebook/dinov2-giant on Drive (1s)
+[07:54:19] staged facebook/dinov2-giant to local disk (0.0 GiB, 1s)
+[07:54:20] run vis_infer__dinov2-giant__memopro_2200__cache
+[07:54:31]   -> error (11.1s)
+[07:54:32] skip data__image__plain: already ok (resume)
+[07:54:32] skip data__image__preload: already ok (resume)
+[07:54:33] skip data__dataframe__plain: already ok (resume)
+[07:54:33] run data__dataframe__preload
+[08:54:33]   -> timeout (3600.3s)
+[08:54:34] skip data__classify__plain: already ok (resume)
+[08:54:34] skip data__classify__preload: already ok (resume)
+[08:54:34] skip data__simulate__plain: already ok (resume)
+[08:54:34] run data__simulate__preload
+[00:34:20] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[00:34:27] model Qwen/Qwen2.5-3B-Instruct on Drive (6s)
+[00:37:26] staged Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 180s)
+[00:37:28] skip lm_gen__Qwen2.5-3B-Instruct__plain: already ok (resume)
+[00:37:29] skip lm_gen__Qwen2.5-3B-Instruct__memopro_2048: already ok (resume)
+[00:37:30] skip lm_gen__Qwen2.5-3B-Instruct__memopro_3072: already ok (resume)
+[00:37:31] skip lm_lora__Qwen2.5-3B-Instruct__plain: already ok (resume)
+[00:37:32] skip lm_lora__Qwen2.5-3B-Instruct__memopro_2048: already ok (resume)
+[00:37:32] skip lm_lora__Qwen2.5-3B-Instruct__memopro_3072: already ok (resume)
+[00:37:38] model Qwen/Qwen2.5-7B-Instruct on Drive (6s)
+[00:46:14] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 515s)
+[00:46:15] skip lm_gen__Qwen2.5-7B-Instruct__plain: already ok (resume)
+[00:46:16] skip lm_gen__Qwen2.5-7B-Instruct__memopro_4096: already ok (resume)
+[00:46:17] skip lm_gen__Qwen2.5-7B-Instruct__memopro_6144: already ok (resume)
+[00:46:17] skip lm_lora__Qwen2.5-7B-Instruct__plain: already oom (resume)
+[00:46:19] skip lm_lora__Qwen2.5-7B-Instruct__memopro_4096: already ok (resume)
+[00:46:20] skip lm_lora__Qwen2.5-7B-Instruct__memopro_6144: already ok (resume)
+[00:46:29] model microsoft/resnet-152 on Drive (8s)
+[00:46:31] staged microsoft/resnet-152 to local disk (0.0 GiB, 3s)
+[00:46:32] skip vis_infer__resnet-152__plain: already ok (resume)
+[00:46:33] skip vis_infer__resnet-152__memopro_60: already ok (resume)
+[00:46:34] skip vis_infer__resnet-152__memopro_120: already ok (resume)
+[00:46:39] model facebook/dinov2-giant on Drive (5s)
+[00:46:41] staged facebook/dinov2-giant to local disk (0.0 GiB, 2s)
+[00:46:42] skip vis_infer__dinov2-giant__plain: already ok (resume)
+[00:46:43] run vis_infer__dinov2-giant__memopro_1100
+[00:47:00]   -> error (15.9s)
+[00:47:00] run vis_infer__dinov2-giant__memopro_2200
+[00:47:10]   -> error (9.2s)
+[00:47:10] skip vis_lora__dinov2-giant__plain: already ok (resume)
+[00:47:11] run vis_lora__dinov2-giant__memopro_1100
+[00:47:23]   -> error (12.0s)
+[00:47:24] run vis_lora__dinov2-giant__memopro_2200
+[00:47:36]   -> error (12.1s)
+[00:47:38] model Qwen/Qwen2.5-3B-Instruct on Drive (2s)
+[00:50:06] staged Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 147s)
+[00:50:07] skip lm_gen__Qwen2.5-3B-Instruct__memopro_3072__cache: already ok (resume)
+[00:50:09] model Qwen/Qwen2.5-7B-Instruct on Drive (2s)
+[00:55:19] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 310s)
+[00:55:21] skip lm_gen__Qwen2.5-7B-Instruct__memopro_6144__cache: already ok (resume)
+[00:55:23] model facebook/dinov2-giant on Drive (2s)
+[00:55:26] staged facebook/dinov2-giant to local disk (0.0 GiB, 2s)
+[00:55:26] run vis_infer__dinov2-giant__memopro_2200__cache
+[00:55:38]   -> error (11.1s)
+[00:55:40] skip data__image__plain: already ok (resume)
+[00:55:40] skip data__image__preload: already ok (resume)
+[00:55:42] skip data__dataframe__plain: already ok (resume)
+[00:55:42] run data__dataframe__preload
+[01:56:07] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[01:56:11] model microsoft/resnet-152 on Drive (3s)
+[01:56:12] staged microsoft/resnet-152 to local disk (0.0 GiB, 1s)
+[01:56:13] skip vis_infer__resnet-152__plain: already ok (resume)
+[01:56:13] skip vis_infer__resnet-152__memopro_60: already ok (resume)
+[01:56:13] skip vis_infer__resnet-152__memopro_120: already ok (resume)
+[01:56:16] model facebook/dinov2-giant on Drive (2s)
+[01:56:17] staged facebook/dinov2-giant to local disk (0.0 GiB, 1s)
+[01:56:17] skip vis_infer__dinov2-giant__plain: already ok (resume)
+[01:56:19] run vis_infer__dinov2-giant__memopro_1100
+[01:56:31]   -> error (11.9s)
+[01:56:32] run vis_infer__dinov2-giant__memopro_2200
+[01:56:41]   -> error (9.0s)
+[01:56:41] skip vis_lora__dinov2-giant__plain: already ok (resume)
+[01:56:45] run vis_lora__dinov2-giant__memopro_1100
+[01:56:57]   -> error (12.4s)
+[01:56:58] run vis_lora__dinov2-giant__memopro_2200
+[01:57:09]   -> error (10.9s)
