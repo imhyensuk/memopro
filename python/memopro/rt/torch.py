@@ -568,8 +568,12 @@ def _gpu_budget(value: str | int, device: Any) -> int:
 def _renamed(regions: dict[str, Any], model: Any) -> dict[str, Any]:
     """Checkpoint names as the model names them: transformers renames some on loading (ViT in
     transformers 5: ``encoder.layer.N.attention.attention.query`` -> ``layers.N.attention.q_proj``,
-    0195). Pure renames only; a key that would need merging or splitting keeps its name, and the
-    model then reports the weight as missing."""
+    0195). Pure renames, and splits of one tensor into equal row blocks (DINOv2 in transformers
+    5.18: ``mlp.weights_in`` -> ``mlp.gate_proj`` + ``mlp.up_proj``, 0221), whose parts are
+    contiguous byte ranges of the file. A key that would need merging or another operation keeps
+    its name, and the model then reports the weight as missing."""
+    import dataclasses
+
     try:
         from transformers.conversion_mapping import get_model_conversion_mapping
         from transformers.core_model_loading import WeightRenaming, rename_source_key
@@ -583,9 +587,38 @@ def _renamed(regions: dict[str, Any], model: Any) -> dict[str, Any]:
     meta = model.state_dict()
     out = {}
     for key, region in regions.items():
-        new, converter = rename_source_key(key, renames, others, model.base_model_prefix, meta)
-        out[key if converter is not None else new] = region
+        new, matched = rename_source_key(key, renames, others, model.base_model_prefix, meta)
+        if matched is None:
+            out[new] = region
+            continue
+        conv = next((c for c in others if matched in c.source_patterns), None)
+        targets = _row_split_targets(conv)
+        if not targets or not region.shape or region.shape[0] % len(targets):
+            out[key] = region
+            continue
+        part = region.nbytes // len(targets)
+        shape = (region.shape[0] // len(targets), *region.shape[1:])
+        for i, t in enumerate(targets):
+            name = new.replace(targets[0], t, 1) if i else new
+            out[name] = dataclasses.replace(
+                region, offset=region.offset + i * part, nbytes=part, shape=shape
+            )
     return out
+
+
+def _row_split_targets(conv: Any) -> list[str] | None:
+    """The target patterns of a converter that only splits one tensor into equal blocks of rows
+    (transformers ``Chunk(dim=0)``), else None."""
+    if conv is None or len(conv.source_patterns) != 1 or len(conv.target_patterns) < 2:
+        return None
+    ops = getattr(conv, "operations", None) or []
+    ok = all(
+        type(op).__name__ == "Chunk"
+        and getattr(op, "dim", None) == 0
+        and getattr(op, "num_shards_attribute", None) is None
+        for op in ops
+    )
+    return list(conv.target_patterns) if ops and ok else None
 
 
 def _padded(forward: Any, pad: int) -> Any:
