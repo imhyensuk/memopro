@@ -1,0 +1,9 @@
+{
+ "status": "timeout",
+ "exit": "timeout",
+ "log_tail": "$ /usr/bin/python3 /content/memopro_colab/worker_memopro_run.py run --budget 893372416 --no-torch --report-json /content/drive/MyDrive/memopro_colab/results/full/20261007-145257/reports/D_dataframe_enable.json /content/memopro_colab/worker_data.py dataframe.py\n",
+ "case": "D_dataframe_enable",
+ "wall_s": 600.1,
+ "timeline_peak_gpu_used_bytes": 3145728,
+ "timeline_peak_host_used_bytes": 3401269248
+}
