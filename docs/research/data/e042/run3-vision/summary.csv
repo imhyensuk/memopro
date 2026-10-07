@@ -9,7 +9,7 @@ VL-dinov2-giant,vision LoRA completes; losses bit-identical across budgets,fail,
 S-Qwen2.5-3B-Instruct,same output as plain; time <= the pre-registered limit (0202),n/a,not run yet (its notebook part has not been run)
 S-Qwen2.5-7B-Instruct,same output as plain; time <= the pre-registered limit (0202),n/a,not run yet (its notebook part has not been run)
 S-dinov2-giant,same output as plain; time <= the pre-registered limit (0202),n/a,not run yet (its notebook part has not been run)
-D-image,unchanged program at half memory under memopro-preload,n/a,not run yet (its notebook part has not been run)
-D-dataframe,unchanged program at half memory under memopro-preload,n/a,not run yet (its notebook part has not been run)
+D-image,same result; process peak <= half of the plain peak (+64 MiB); no overruns,pass,peak 0.71 GiB vs limit 0.77 GiB (plain 1.54 GiB); 10.8 -> 31.4 s; overruns 0
+D-dataframe,same result; process peak <= half of the plain peak (+64 MiB); no overruns,fail,peak - vs limit 0.00 GiB (plain 1.67 GiB); 13.3 -> - s; overruns None
 D-classify,unchanged program at half memory under memopro-preload,n/a,not run yet (its notebook part has not been run)
 D-simulate,unchanged program at half memory under memopro-preload,n/a,not run yet (its notebook part has not been run)

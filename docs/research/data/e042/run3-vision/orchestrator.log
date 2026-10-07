@@ -21,3 +21,32 @@
 [02:21:36]   -> error (13.5s)
 [02:21:36] run vis_lora__dinov2-giant__memopro_2200
 [02:21:49]   -> error (12.9s)
+[02:21:49] summary: /content/drive/MyDrive/memopro_colab/results/suite/20261007-021718/summary.md
+archive to share: /content/drive/MyDrive/memopro_colab/results/suite/20261007-021718.zip
+[02:29:27] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[02:29:29] preload probe: ok 
+[02:29:29] run data__image__plain
+[02:29:40]   -> ok (11.3s)
+[02:29:41] run data__image__preload
+[02:30:12]   -> ok (31.8s)
+[02:30:12] run data__dataframe__plain
+[02:30:26]   -> ok (13.9s)
+[02:30:26] run data__dataframe__preload
+[02:43:30] {"memopro": "0.1.0a1", "torch": "2.11.0+cu130", "transformers": "5.18.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0085_quality_note": true, "0081_mps_heap_note": true, "0089_elastic_default": true, "0094_fixes": true, "0099_fixes": true, "0100_fixes": true, "0103_fixes": true, "0195_cuda_stream": true}}
+[02:43:37] model microsoft/resnet-152 on Drive (6s)
+[02:43:40] staged microsoft/resnet-152 to local disk (0.0 GiB, 3s)
+[02:43:41] skip vis_infer__resnet-152__plain: already ok (resume)
+[02:43:42] skip vis_infer__resnet-152__memopro_60: already ok (resume)
+[02:43:42] skip vis_infer__resnet-152__memopro_120: already ok (resume)
+[02:43:47] model facebook/dinov2-giant on Drive (4s)
+[02:43:49] staged facebook/dinov2-giant to local disk (0.0 GiB, 2s)
+[02:43:49] skip vis_infer__dinov2-giant__plain: already ok (resume)
+[02:43:50] run vis_infer__dinov2-giant__memopro_1100
+[02:44:04]   -> error (13.1s)
+[02:44:05] run vis_infer__dinov2-giant__memopro_2200
+[02:44:15]   -> error (10.4s)
+[02:44:16] skip vis_lora__dinov2-giant__plain: already ok (resume)
+[02:44:17] run vis_lora__dinov2-giant__memopro_1100
+[02:44:29]   -> error (11.9s)
+[02:44:29] run vis_lora__dinov2-giant__memopro_2200
+[02:44:41]   -> error (11.7s)
