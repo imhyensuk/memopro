@@ -76,14 +76,21 @@ pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"
 ```python
 import memopro
 
-memopro.enable()               # measure this machine and fit to the memory that is free
-memopro.enable(budget="8GB")   # or set the ceiling yourself (use 8GB of a 16GB machine)
+s = memopro.enable()               # measure this machine: ceiling = in use + free, minus headroom
+s = memopro.enable(budget="8GB")   # or set the whole-process ceiling (8GB of a 16GB machine)
+
+print(s.estimate(sample, total="12GB", passes=3))  # before running: predicted slowdown
+...                                                # ordinary NumPy / PyTorch code
+print(s.measured())                                # afterwards: time memopro took, real slowdown
 ```
 
-- Measures the hardware (OS, memory, GPU), sets one budget and turns on what this platform supports; print the returned session to see what was applied or skipped.
-- Afterwards `finetune`, `generate`, `load`, `train_session` and `memopro.rt` use that budget unless told otherwise. Hugging Face `from_pretrained` loads like `memopro.load` only when the model does not fit as stored. On Linux, NumPy arrays of 16 MiB or more are paged within the budget.
+- Measures the hardware (OS, memory, GPU), sets one ceiling for the **whole process** and turns on what this platform supports; print the returned session to see what was applied or skipped.
+- Every part keeps to the ceiling together: each runtime and pager shrinks its share by the memory the process holds outside it (macOS physical footprint, Linux RSS).
+- **NumPy** (Linux, macOS): arrays of 16 MiB or more are paged within the ceiling, losslessly compressed, without code changes.
+- **PyTorch**: once the process passes 75% of the ceiling, activations saved for backward move into runtime buffers; the bytes come back unchanged, so gradients do not change (checked on CPU and MPS).
+- `finetune`, `generate`, `load`, `train_session` and `memopro.rt` use the ceiling unless told otherwise. Hugging Face `from_pretrained` loads like `memopro.load` only when the model does not fit as stored.
 - `memopro.disable()` (or `with memopro.enable(...):`) undoes it.
-- Limits: each part keeps to the budget on its own; small objects and C extensions are not counted, so it is not yet a ceiling on the whole process. macOS does not page ordinary NumPy code automatically (use `memopro.rt.Runtime`).
+- Limits: memory nothing can move (the interpreter, libraries, small objects, model weights the code loaded itself) counts too; when it alone passes the ceiling, the pager records overruns and runtimes raise `BudgetExceeded`. Kernel I/O on paged arrays (`ndarray.tofile`, `np.fromfile`) may raise `OSError`; `np.save`/`np.load` are routed around it. Predictions assume passes in a fixed order.
 
 ### 1. Train and generate with LLMs larger than memory
 
@@ -131,7 +138,7 @@ with h:                # used as usual inside the block
 
 ```bash
 memopro run --budget 6GB train.py          # loads from_pretrained models that do not fit within the budget
-memopro run --transparent 1GB analysis.py  # Linux: pages large NumPy arrays with compression, no disk writes
+memopro run --transparent 1GB analysis.py  # Linux, macOS: pages large NumPy arrays with compression, no disk writes
 memopro run --dry-run train.py             # show what it would do
 ```
 
@@ -196,9 +203,9 @@ Platform        zero-copy Apple GPU buffers · asynchronous CUDA copies · Linux
 
 | Platform | Status |
 |---|---|
-| macOS, Apple silicon (MPS) | Primary platform; LLM training and generation verified |
+| macOS, Apple silicon (MPS) | Primary platform; LLM training and generation verified; transparent paging (signals) |
 | Linux, NVIDIA GPU (CUDA) | Generation, LoRA training and vision inference verified on a Colab T4 |
-| Linux, CPU | Verified in CI; transparent paging is Linux-only |
+| Linux, CPU | Verified in CI; transparent paging (userfaultfd) |
 | Windows | Basic features checked in CI |
 
 Python 3.11+, PyTorch 2.4+.
@@ -208,7 +215,7 @@ Python 3.11+, PyTorch 2.4+.
 ## Limitations
 
 - **Speed**: memory is saved at the cost of time. 7B training on an 8 GB Mac takes about 18 s per 129-token step. Models that fit in memory run faster with existing tools.
-- **Transparent paging**: workloads with heavy random access (sorting, group-by) and data still larger than the limit after compression do not run at a practical speed. Linux only.
+- **Transparent paging**: workloads with heavy random access (sorting, group-by) and data still larger than the limit after compression do not run at a practical speed. Linux and macOS (not Windows).
 - **Model coverage**: the LLM path is verified mainly on the Qwen2.5 family (1.5B-7B).
 - **Alpha**: APIs may change.
 

@@ -84,8 +84,8 @@ def _parser() -> argparse.ArgumentParser:
         "--transparent",
         metavar="BUDGET",
         default=None,
-        help="Linux: page the script's NumPy arrays of 16 MiB or more within BUDGET, losslessly "
-        "and without writing to disk (userfaultfd, 0124)",
+        help="Linux, macOS: page the script's NumPy arrays of 16 MiB or more within BUDGET, "
+        "losslessly and without writing to disk (userfaultfd 0124, signals 0229)",
     )
     run.add_argument(
         "--report-json", metavar="PATH", default=None, help="write the report as JSON at the end"

@@ -645,3 +645,37 @@ fn holding_back_shrinks_the_limit_and_gives_up_unpinned_buffers() {
     // never more than the budget minus the runtime's own headroom
     assert!(rt.hold_back(32 * MIB as u64).is_err());
 }
+
+#[test]
+#[ignore = "measures the whole process: run with --ignored --test-threads=1"]
+#[cfg(any(target_os = "macos", target_os = "linux"))]
+fn a_process_budget_counts_memory_outside_the_runtime() {
+    let outside = vec![7u8; 16 * MIB]; // memory the runtime does not own, touched
+    let data = widened(MIB, 3); // 4 MiB that compress well
+    let now = process_footprint().unwrap();
+    let mut c = Config::new(64 * MIB as u64);
+    c.prefetch = false;
+    c.process_budget = Some(now + 28 * MIB as u64);
+    let rt = Runtime::new(c).unwrap();
+    let ids: Vec<_> = (0..8)
+        .map(|_| {
+            let id = rt.alloc(4 * MIB, 4).unwrap();
+            rt.pin(id, true)
+                .unwrap()
+                .as_mut_slice()
+                .unwrap()
+                .copy_from_slice(&data);
+            id
+        })
+        .collect();
+    for &id in &ids {
+        assert_eq!(rt.pin(id, false).unwrap().as_slice(), &data[..]);
+    }
+    let s = rt.stats();
+    // 32 MiB of buffers fit the 64 MiB budget alone; 28 MiB left in the process made them
+    // compress
+    assert!(s.compressions > 0, "{s:?}");
+    assert!(s.outside_peak >= 20 * MIB as u64, "{s:?}");
+    assert!(s.limit_low < 28 * MIB as u64, "{s:?}");
+    std::hint::black_box(&outside);
+}

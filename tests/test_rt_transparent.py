@@ -1,5 +1,6 @@
-"""memopro.rt.transparent (0124): NumPy arrays larger than the budget, paged by userfaultfd,
-computed on by unchanged NumPy code with exact results (Linux; elsewhere a clear refusal)."""
+"""memopro.rt.transparent (0124, 0229): NumPy arrays larger than the budget, paged by userfaultfd
+(Linux) or signals (macOS), computed on by unchanged NumPy code with exact results (elsewhere a
+clear refusal)."""
 
 import sys
 
@@ -11,7 +12,7 @@ np = pytest.importorskip("numpy")
 rt = pytest.importorskip("memopro.rt")
 
 MIB = 1 << 20
-linux = sys.platform.startswith("linux")
+paged = sys.platform.startswith("linux") or sys.platform == "darwin"
 
 
 def expected_sum(n: int, period: int) -> int:
@@ -26,7 +27,7 @@ def enter(ctx):
         pytest.skip(f"userfaultfd not usable here: {e}")
 
 
-@pytest.mark.skipif(not linux, reason="userfaultfd is Linux-only")
+@pytest.mark.skipif(not paged, reason="transparent paging needs Linux or macOS")
 def test_arrays_larger_than_the_budget_compute_exactly():
     ctx = rt.transparent("16MiB", threshold="1MiB", chunk="256KiB")
     pager = enter(ctx)
@@ -50,7 +51,7 @@ def test_arrays_larger_than_the_budget_compute_exactly():
     assert pager.stats()["regions"] == 0
 
 
-@pytest.mark.skipif(not linux, reason="userfaultfd is Linux-only")
+@pytest.mark.skipif(not paged, reason="transparent paging needs Linux or macOS")
 def test_small_arrays_stay_with_numpy_and_growing_works():
     ctx = rt.transparent("16MiB", threshold="4MiB", chunk="256KiB")
     pager = enter(ctx)
@@ -70,8 +71,24 @@ def test_small_arrays_stay_with_numpy_and_growing_works():
         ctx.__exit__(None, None, None)
 
 
-@pytest.mark.skipif(linux, reason="elsewhere the refusal is checked")
+@pytest.mark.skipif(paged, reason="elsewhere the refusal is checked")
 def test_other_systems_get_a_clear_refusal():
     with pytest.raises(memopro.ModeUnavailable) as err, rt.transparent("64MiB"):
         pass
     assert "userfaultfd" in str(err.value)
+
+
+@pytest.mark.skipif(not paged, reason="transparent paging needs Linux or macOS")
+def test_save_and_load_work_on_paged_arrays(tmp_path):
+    # the kernel cannot fault paged memory in: np.save/np.load must take their copying path
+    ctx = rt.transparent("16MiB", threshold="1MiB", chunk="256KiB")
+    pager = enter(ctx)
+    try:
+        x = np.arange(12 * MIB // 4, dtype=np.float32) % 251  # 3x the budget
+        np.save(tmp_path / "x.npy", x)
+        y = np.load(tmp_path / "x.npy")
+        assert np.array_equal(x, y)
+        assert pager.stats()["evictions"] > 0
+        del x, y
+    finally:
+        ctx.__exit__(None, None, None)

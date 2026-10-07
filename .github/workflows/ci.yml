@@ -32,6 +32,8 @@ jobs:
       - run: cargo fmt --all --check
       - run: cargo clippy --workspace --all-targets -- -D warnings
       - run: cargo test -p memopro
+      - name: Whole-process budget tests, one at a time (0229)
+        run: cargo test -p memopro --lib -- --ignored --test-threads=1 process evicted_chunks
       - run: cargo test -p memopro-c
       - name: C ABI smoke test (include/memopro.h)
         run: |
@@ -97,6 +99,8 @@ jobs:
       - uses: dtolnay/rust-toolchain@stable
       - uses: Swatinem/rust-cache@v2
       - run: cargo test -p memopro
+      - name: Whole-process budget tests, one at a time (0229)
+        run: cargo test -p memopro --lib -- --ignored --test-threads=1 process evicted_chunks
       - uses: actions/setup-python@v5
         with:
           python-version: "3.14"
