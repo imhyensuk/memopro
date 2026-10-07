@@ -37,6 +37,7 @@ fn imp() -> Option<u64> {
 mod tests {
     #[test]
     #[cfg(any(target_os = "macos", target_os = "linux"))]
+    #[ignore = "measures the whole process: run with --ignored --test-threads=1"]
     fn footprint_grows_with_touched_memory() {
         let before = super::process_footprint().unwrap();
         let v = vec![1u8; 64 << 20];
