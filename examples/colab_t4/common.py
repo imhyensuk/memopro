@@ -390,6 +390,9 @@ def run_case(run, key, worker, args, timeout, env_extra=None):
 
 
 # ------------------------------------------------------------------ models on Drive / local disk
+PATTERNS = ["*.json", "*.safetensors", "*.model", "*.txt", "tokenizer*", "*.tiktoken"]
+
+
 def fetch_model(repo):
     """Download once into the Drive cache; copy to local disk for fast loading when it fits."""
     if LOCAL_SMOKE:
@@ -397,15 +400,22 @@ def fetch_model(repo):
     from huggingface_hub import snapshot_download  # noqa: PLC0415
 
     t = time.time()
-    path = snapshot_download(repo, cache_dir=os.path.join(HF_HOME, "hub"),
-                             allow_patterns=["*.json", "*.safetensors", "*.model", "*.txt",
-                                             "tokenizer*", "*.tiktoken"])
+    path = snapshot_download(repo, cache_dir=os.path.join(HF_HOME, "hub"), allow_patterns=PATTERNS)
     _log(f"model {repo} on Drive ({time.time() - t:.0f}s)")
     if not STAGE_TO_LOCAL:
         return path
     files = {os.path.basename(p): _blob(p) for p in glob.glob(os.path.join(path, "*"))}
     size = sum(os.path.getsize(p) for p in files.values())
     local = os.path.join("/content/models", local_name(repo))
+    broken = [n for n, p in files.items() if _link_text(p)]
+    if broken:  # the Drive cache lost the files behind its links: download straight to local
+        _log(f"{repo}: Drive cache entries {broken} are link text without their blob; "
+             "downloading to the local disk instead")
+        shutil.rmtree(local, ignore_errors=True)
+        t = time.time()
+        snapshot_download(repo, local_dir=local, allow_patterns=PATTERNS)
+        _log(f"downloaded {repo} to local disk ({time.time() - t:.0f}s)")
+        return local
     if os.path.isdir(local) and all(
             os.path.exists(os.path.join(local, n))
             and os.path.getsize(os.path.join(local, n)) == os.path.getsize(p)
@@ -428,18 +438,26 @@ def fetch_model(repo):
     return local
 
 
+def _link_text(p):
+    """The link target written in a small file, if that is what ``p`` is ("../../blobs/...")."""
+    if os.path.getsize(p) >= 512:
+        return None
+    with open(p, "rb") as f:
+        text = f.read().decode("utf-8", "replace").strip()
+    return text if text.startswith("../../blobs/") else None
+
+
 def _blob(p):
     """The file a Hugging Face snapshot entry stands for. On Google Drive the cache's relative
-    symlinks can turn into small text files holding the link ("../../blobs/<hash>"): a 79-byte
-    "model.safetensors" was staged instead of DINOv2-giant's 4.5 GB (0222)."""
+    symlinks can turn into small text files holding the link ("../../blobs/..."): a 79-byte
+    "model.safetensors" was staged instead of DINOv2-giant's 4.5 GB (0222). Follow such a text
+    when its target exists; otherwise the text file itself is returned (and caught as broken)."""
     real = os.path.realpath(p)
-    if os.path.getsize(real) < 512:
-        with open(real, "rb") as f:
-            text = f.read().decode("utf-8", "replace").strip()
-        if text.startswith("../../blobs/"):
-            target = os.path.normpath(os.path.join(os.path.dirname(p), text))
-            if os.path.exists(target):
-                return target
+    text = _link_text(real)
+    if text:
+        target = os.path.normpath(os.path.join(os.path.dirname(p), text))
+        if os.path.exists(target):
+            return target
     return real
 
 

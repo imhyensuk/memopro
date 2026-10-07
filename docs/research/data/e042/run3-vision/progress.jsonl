@@ -16,3 +16,7 @@
 {"t": 1791341055.884321, "case": "vis_infer__dinov2-giant__memopro_2200", "status": "error", "seconds": 10.4}
 {"t": 1791341069.0567892, "case": "vis_lora__dinov2-giant__memopro_1100", "status": "error", "seconds": 11.9}
 {"t": 1791341081.4096026, "case": "vis_lora__dinov2-giant__memopro_2200", "status": "error", "seconds": 11.7}
+{"t": 1791343351.442674, "case": "vis_infer__dinov2-giant__memopro_1100", "status": "error", "seconds": 13.8}
+{"t": 1791343362.4584231, "case": "vis_infer__dinov2-giant__memopro_2200", "status": "error", "seconds": 10.1}
+{"t": 1791343375.767487, "case": "vis_lora__dinov2-giant__memopro_1100", "status": "error", "seconds": 12.3}
+{"t": 1791343387.8063805, "case": "vis_lora__dinov2-giant__memopro_2200", "status": "error", "seconds": 11.4}
