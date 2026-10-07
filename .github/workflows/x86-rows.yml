@@ -52,7 +52,7 @@ jobs:
               print("  linear bad M:", r["linear_bad_m"], "sdpa:", r["sdpa"])
               for kind in ("streamed", "plain_hf"):
                   for c in r[kind]:
-                      bad = [x for x in [c.get("prompt_culprit")] + c["rows"] if x not in (None, True)]
+                      bad = [x for x in [c.get("prompt_culprit")] + c["rows"] + c["later"] if x not in (None, True)]
                       print(f"  {kind} ok={c['ok']} keep1={c['prompt_last_keep1']}", [(b["module"], b["input_same"], b["max_diff"], b["weight_ptr_mod_4096"]) for b in bad])
           EOF
       - name: The test itself
