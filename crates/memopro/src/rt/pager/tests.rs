@@ -278,3 +278,77 @@ fn several_pagers_serve_their_own_faults() {
         b.unmap(pb as *mut u8).unwrap();
     }
 }
+
+#[test]
+fn a_process_budget_with_no_room_left_still_makes_progress() {
+    // the process already holds more than its budget: the pager keeps a few chunks anyway
+    // (counted as overruns) instead of letting a copy's two operands evict each other forever
+    let config = PagerConfig {
+        chunk: 256 * 1024,
+        process_budget: Some(1),
+        ..PagerConfig::new(64 << 20)
+    };
+    let p = match Pager::new(config) {
+        Ok(p) => p,
+        Err(Error::Unsupported(why)) => return eprintln!("skipping: {why}"),
+        Err(e) => panic!("{e}"),
+    };
+    let len = 8 * MIB;
+    let (src, dst) = (p.map(len).unwrap(), p.map(len).unwrap());
+    // SAFETY: two fresh regions, used only here.
+    let (a, b) = unsafe {
+        (
+            std::slice::from_raw_parts_mut(src as *mut u32, len / 4),
+            std::slice::from_raw_parts_mut(dst as *mut u32, len / 4),
+        )
+    };
+    for (i, w) in a.iter_mut().enumerate() {
+        *w = pattern(i);
+    }
+    b.copy_from_slice(a);
+    assert!(
+        b.iter()
+            .enumerate()
+            .step_by(331)
+            .all(|(i, &w)| w == pattern(i))
+    );
+    let s = p.stats();
+    assert!(s.overruns > 0, "{s:?}");
+    // SAFETY: done with both.
+    unsafe {
+        p.unmap(src).unwrap();
+        p.unmap(dst).unwrap();
+    }
+}
+
+#[test]
+fn compressed_copies_filling_the_budget_do_not_stop_a_copy() {
+    // data that compresses to more than the budget: the compressed copies alone fill it, and
+    // a copy between two regions still finishes (over budget, counted) instead of ping-ponging
+    let Some(p) = pager(2) else { return };
+    let len = 16 * MIB;
+    let (src, dst) = (p.map(len).unwrap(), p.map(len).unwrap());
+    // SAFETY: two fresh regions, used only here.
+    let (a, b) = unsafe {
+        (
+            std::slice::from_raw_parts_mut(src as *mut u32, len / 4),
+            std::slice::from_raw_parts_mut(dst as *mut u32, len / 4),
+        )
+    };
+    let mut x = 0x2545_F491_4F6C_DD1Du64;
+    for w in a.iter_mut() {
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        *w = (x as u32) & 0xFFFF_0000; // like bf16 widened to f32: about half compresses away
+    }
+    let expect: u64 = a.iter().map(|&w| u64::from(w)).sum();
+    b.copy_from_slice(a);
+    assert_eq!(b.iter().map(|&w| u64::from(w)).sum::<u64>(), expect);
+    assert!(p.stats().overruns > 0);
+    // SAFETY: done with both.
+    unsafe {
+        p.unmap(src).unwrap();
+        p.unmap(dst).unwrap();
+    }
+}
