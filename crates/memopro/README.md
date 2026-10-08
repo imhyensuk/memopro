@@ -1,11 +1,12 @@
-# memopro (Rust core)
+# memopro
 
-The Rust core of [memopro](https://github.com/imhyensuk/memopro): run work that needs more memory
-than the machine has, losslessly, within a guaranteed memory ceiling. "Memory" means hardware
-memory (GPU/RAM), not agent or conversation memory.
+**Keep large buffers within a hard memory ceiling — losslessly, without writing to disk.**
 
-**Status: alpha (0.1.0); the API may change.** Verified on 8-16 GB machines (Apple
-silicon, Linux, Colab T4); the design does not depend on the memory size.
+The Rust core of [memopro](https://github.com/imhyensuk/memopro). Use it to run work whose data is
+larger than the memory you want it to use: you set a budget, register your large buffers, and pin
+them while you use them. Buffers that do not fit come back bit for bit when you need them again.
+
+**Status: alpha (0.1.0); the API may change.**
 
 ```rust
 use memopro::rt::{Config, Runtime};
@@ -17,26 +18,33 @@ println!("{:?}", rt.stats());                     // what was kept, compressed, 
 # Ok::<(), memopro::Error>(())
 ```
 
-## Modules
+## Features
 
-- `rt`: the budgeted runtime. Each large buffer has a recipe (a verified region of a source file,
-  or a computation from other buffers) and a state; under the budget the runtime keeps it,
-  compresses it losslessly in memory, drops it and re-reads its source (bypassing the page cache,
-  digest-checked) or recomputes it, choosing by measured cost and predicted reuse. A service
-  thread prefetches in the learned order; `predict` estimates the slowdown before running. The
-  runtime never writes to disk.
-- `rt::pager` (Linux, macOS): transparent paging of anonymous memory for unchanged programs,
-  compressed in memory. Linux serves the page faults with userfaultfd, macOS with signals; other
-  systems get `Error::Unsupported` and use `rt::Runtime` buffers.
-- `codec`: byte shuffle + zstd, the lossless in-memory compression.
-- `spill`: re-reads of unchanged data from its original files with digest checks; spill files
-  are written only when the caller's policy allows it (off unless the user agrees).
-- `residency` (Unix): read-only file-backed mappings that the OS drops without writing, and on
-  macOS no-copy Apple GPU buffers.
-- `hwinfo`, `pressure`, `ledger`: host memory, container limits and disk capacity; the OS
-  memory-pressure signal; bookkeeping of hibernated buffers and bytes written.
+- **Budgeted runtime (`rt::Runtime`).** Allocate buffers, map regions of existing files
+  (`add_file`) or define buffers computed from others (`derive`). Total memory stays within the
+  budget; a request that cannot fit is refused instead of overrunning.
+- **Lossless.** Data that does not fit is compressed in memory, re-read from its file (checked
+  against a digest) or recomputed. What you read back is always exactly what you wrote.
+- **No disk writes.** The runtime never creates swap or cache files.
+- **Prefetching and prediction.** Buffers used in a repeating order are brought back ahead of
+  time; `predict` estimates the extra work of a pass before you run it.
+- **Transparent paging (`rt::Pager`, Linux and macOS).** Hand out ordinary memory that plain loads
+  and stores can use, kept within the budget without any changes to the code that touches it.
+- **Utilities.** Fast lossless compression for numeric data (`codec`), host memory, container
+  limits and disk capacity (`hwinfo`), the OS memory-pressure signal (`pressure`), and read-only
+  file mappings (`residency`, Unix).
 
-The C ABI (`mp_*`, `include/memopro.h`) lives in `memopro-c`; the Python package is
-[`memopro` on PyPI](https://pypi.org/project/memopro/), built from `memopro-py`.
+## Also available
 
-License: MIT OR Apache-2.0.
+- **Python:** [`pip install memopro`](https://pypi.org/project/memopro/) — LLM fine-tuning and
+  generation beyond device memory, NumPy and PyTorch integration, and a CLI.
+- **C:** a C ABI (`mp_*` functions, `include/memopro.h`) in the
+  [repository](https://github.com/imhyensuk/memopro).
+
+## Platforms
+
+Linux and macOS; Windows for the runtime without transparent paging. Rust 1.85+.
+
+## License
+
+MIT OR Apache-2.0.

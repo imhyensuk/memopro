@@ -1,6 +1,6 @@
 [package]
 name = "memopro"
-description = "Budgeted memory runtime: keep, losslessly compress, re-read from verified source files or recompute large buffers so work runs within a guaranteed memory ceiling (alpha)."
+description = "Keep large buffers within a hard memory ceiling, losslessly and without disk writes: a budgeted runtime with in-memory compression, verified file re-reads and transparent paging (alpha)."
 version.workspace = true
 edition.workspace = true
 rust-version.workspace = true

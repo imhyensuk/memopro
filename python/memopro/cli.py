@@ -25,7 +25,8 @@ _BASIS_HELP = "what the host budget starts from: conservative (default), os, or 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="memopro", description="Memory relief and redundancy diagnostics for PyTorch."
+        prog="memopro",
+        description="Run work larger than memory within a ceiling you choose, with unchanged results.",
     )
     parser.add_argument("--version", action="version", version=f"memopro {memopro.__version__}")
     sub = parser.add_subparsers(dest="command", required=True)

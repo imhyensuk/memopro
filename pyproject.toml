@@ -4,7 +4,7 @@ build-backend = "maturin"
 
 [project]
 name = "memopro"
-description = "Run work that exceeds your machine's memory losslessly, within a guaranteed memory ceiling: 16-bit LLM fine-tuning and generation beyond device memory, and a budgeted runtime for large arrays (alpha)."
+description = "Run models and data larger than your memory with unchanged results, inside a memory ceiling you choose: LLM fine-tuning and generation, large NumPy arrays, unchanged scripts (alpha)."
 readme = "README.en.md"
 requires-python = ">=3.11"
 license = "MIT OR Apache-2.0"

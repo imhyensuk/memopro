@@ -1,18 +1,21 @@
 # memopro
 
-**Run work larger than your device's memory, with unchanged results, within a memory ceiling you set.**
+**Run work that needs more memory than your machine has — with unchanged results, inside a memory ceiling you choose.**
 
+[![PyPI](https://img.shields.io/pypi/v/memopro.svg)](https://pypi.org/project/memopro/)
+[![crates.io](https://img.shields.io/crates/v/memopro.svg)](https://crates.io/crates/memopro)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 ![Python ≥ 3.11](https://img.shields.io/badge/python-%E2%89%A5%203.11-blue.svg)
 ![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
 
-[한국어](https://github.com/imhyensuk/memopro/blob/main/README.md) · English
+English · [한국어](https://github.com/imhyensuk/memopro/blob/main/README.md)
 
-memopro is an open-source library for work that needs more memory than the machine has. It is verified on 8-16 GB laptops and Macs and small GPUs; the design does not depend on the memory size ([design, in Korean](https://github.com/imhyensuk/memopro/blob/main/docs/design/scale.md)). The core is written in Rust and the interface in Python.
+memopro lets you fine-tune, run and process models and data that are larger than your RAM or GPU memory. You set a memory limit; memopro keeps your program inside it.
 
-- **Lossless**: no quantization or approximation. Generation and inference outputs are bit-identical to a plain run; training losses are bit-identical whatever the budget.
-- **Guaranteed ceiling**: memory use stays within the budget you set. A budget that cannot work is refused before anything runs.
-- **No disk writes**: model weights are re-read from their original files and data created in memory is compressed losslessly. No swap or cache files are created.
+- **Same results.** No quantization or approximation unless you ask for it. Outputs and training losses match a normal run.
+- **A ceiling that holds.** Memory use stays within the budget you set. A budget that cannot work is refused before anything runs.
+- **Nothing written to disk.** No swap files, no cache files.
+- **One line to start.** `memopro.enable()` in Python, or `memopro run` for scripts you do not want to change.
 
 ```python
 import memopro
@@ -22,257 +25,190 @@ r.adapter.save_pretrained("my-lora")                                       # a s
 print(memopro.generate(r.model, "Hello!", draft="Qwen/Qwen2.5-1.5B-Instruct"))
 ```
 
-> "Memory" means hardware memory (GPU and RAM), not agent or conversation memory.
+> "Memory" means hardware memory (RAM and GPU memory), not agent or conversation memory.
 
 ---
 
-## Results
+## What you can do
 
-All measured against criteria fixed in advance. Raw data and environments are in [`docs/research/data/`](https://github.com/imhyensuk/memopro/tree/main/docs/research/data); the scripts are in [`experiments/`](https://github.com/imhyensuk/memopro/tree/main/experiments).
-
-### Language models (MacBook Air M1, 8 GB)
-
-| Task | Result |
-|---|---|
-| Qwen2.5-**7B** bf16 LoRA training (14.2 GiB of weights) | Completes with a 1.5 GiB budget; losses bit-identical across budgets; 7.3 tokens/s |
-| Qwen2.5-3B bf16 LoRA, same setup as mlx-tune | mlx-tune runs out of memory before step 1; memopro trains at 20.0 tokens/s with a 1 GiB budget |
-| Qwen2.5-7B lossless generation (int4 draft + row-invariant verification) | Same output as plain generation, 8.95 → 2.37 s/token (3.8x) |
-| Qwen2.5-3B bf16 inference (CPU) at 1/4 of the memory it needs | Same output, about 5x faster than OS paging |
-| Qwen2.5-7B bf16 LoRA training on a Colab T4 (15 GB) | Plain training runs out of GPU memory; memopro completes with a 4 GiB budget, losses identical across budgets |
-| Qwen2.5-3B bf16 generation vs. other tools | memopro 1.09 s/token (2.1 GB process); llama.cpp CPU 14.75 s/token (3.3 GB); llama.cpp Metal runs out of memory |
-
-### Ordinary programs (Linux, limit = 1/2 of the memory they need)
-
-| Task | Result |
-|---|---|
-| Unmodified NumPy image processing | Same result, 3.3x faster than OS swap at the same limit |
-| Unmodified scikit-learn classification | Same result (a plain run is killed for lack of memory) |
-
-### One-line setup `memopro.enable` / `memopro run` (MacBook Air M1, whole-process ceiling)
-
-| Task | Result |
-|---|---|
-| Unmodified NumPy image processing, ceiling = 1/2 of what it needs | Identical results, peak within ceiling + 1.8 MiB, 2.4x the time |
-| 1 GiB array, 4 passes, ceiling = 1/2 and 3/4 of what it needs | Identical results; extra time predicted before running 3.81 s vs 3.72 s measured (3/4: 1.73 vs 1.86 s) |
-| Cost of leaving it on when memory is ample | 1.02-1.08x |
-
-On Linux (Colab) the results were identical as well, the ceiling held (0 MiB over) and the estimate was within 10%. Keeping it on when memory was ample cost 1.20x on Linux.
-
-### Vision models (Colab T4, inference with streamed weights)
-
-| Model | Result |
-|---|---|
-| ResNet-152 (CNN) | Output bit-identical to a plain run at 60 and 120 MiB budgets, 0.13 -> 0.14 s |
-| DINOv2-giant (1.1B parameters, 4.5 GB) | Identical output at 1.1 and 2.2 GB budgets, 1.57 -> 1.65 s |
-
-Dataframe workloads with heavy random access, and data that is still larger than the limit after compression, do not yet run at a practical speed at 1/2 ([Limitations](#limitations)).
+- **Fine-tune LLMs larger than your memory** — 16-bit LoRA on a 7B model with a 1.5 GiB budget on an 8 GB laptop.
+- **Generate text with models that do not fit** — identical output to plain generation, faster with a small draft model.
+- **Run vision and language models larger than memory** — any Hugging Face model in safetensors format.
+- **Process large NumPy arrays** — arrays bigger than the limit stay within it, without code changes.
+- **Run existing scripts unchanged** — `memopro run --budget 6GB train.py`.
+- **Know before you run** — check whether a model fits, and how much slower a job will be under a given limit.
 
 ---
 
 ## Installation
 
-Install from PyPI (alpha: APIs may change). Wheels are built for macOS arm64 and Linux x86_64/aarch64; elsewhere pip builds the source distribution, which needs a Rust toolchain.
-
 ```bash
-pip install "memopro[llm]"
+pip install memopro            # core, no dependencies
+pip install "memopro[llm]"     # LLM fine-tuning and generation
 ```
 
-The latest development version: `pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"` (needs a Rust toolchain).
-
-| Extra | For |
+| Extra | Adds |
 |---|---|
-| `memopro[torch]` | PyTorch integration (`load`, `train_session`, hibernation) |
-| `memopro[hf]` | Loading Hugging Face models |
-| `memopro[llm]` | `finetune`, `generate` (includes PEFT) |
+| `memopro[numpy]` | NumPy |
+| `memopro[torch]` | PyTorch integration (`load`, `train_session`) |
+| `memopro[hf]` | Hugging Face model loading |
+| `memopro[llm]` | `finetune` and `generate` (PyTorch, Transformers, PEFT) |
 | `memopro[notebook]` | Jupyter magics |
+
+Wheels are available for macOS (Apple silicon) and Linux (x86_64, aarch64), Python 3.11+. On other platforms pip builds from source, which needs a Rust toolchain.
+
+The Rust core is also available on crates.io: `cargo add memopro`.
 
 ---
 
-## Usage
+## Quick start
 
-Full guide: [docs/guide](https://github.com/imhyensuk/memopro/blob/main/docs/guide/README.en.md)
-
-### 0. One line
+### One line for the whole process
 
 ```python
 import memopro
 
-s = memopro.enable()               # measure this machine: ceiling = in use + free, minus headroom
-s = memopro.enable(budget="8GB")   # or set the whole-process ceiling (8GB of a 16GB machine)
+s = memopro.enable()            # automatic: use what this machine has free
+# s = memopro.enable("8GB")     # or keep this process within 8 GB
+print(s)                        # what was turned on
 
-print(s.estimate(sample, total="12GB", passes=3))  # before running: predicted slowdown
-...                                                # ordinary NumPy / PyTorch code
-print(s.measured())                                # afterwards: time memopro took, real slowdown
+...                             # your NumPy / PyTorch code, unchanged
+print(s.measured())             # how much time memopro took
 ```
 
-- Measures the hardware (OS, memory, GPU), sets one ceiling for the **whole process** and turns on what this platform supports; print the returned session to see what was applied or skipped.
-- Every part keeps to the ceiling together: each runtime and pager shrinks its share by the memory the process holds outside it (macOS physical footprint, Linux RSS).
-- **NumPy** (Linux, macOS): arrays of 16 MiB or more are paged within the ceiling, losslessly compressed, without code changes.
-- **PyTorch**: once the process passes 75% of the ceiling, activations saved for backward move into runtime buffers; the bytes come back unchanged, so gradients do not change (checked on CPU and MPS).
-- `finetune`, `generate`, `load`, `train_session` and `memopro.rt` use the ceiling unless told otherwise. Hugging Face `from_pretrained` loads like `memopro.load` only when the model does not fit as stored.
-- `memopro.disable()` (or `with memopro.enable(...):`) undoes it.
-- Limits: memory nothing can move (the interpreter, libraries, small objects, model weights the code loaded itself) counts too; when it alone passes the ceiling, the pager records overruns and runtimes raise `BudgetExceeded`. Kernel I/O on paged arrays (`ndarray.tofile`, `np.fromfile`) may raise `OSError`; `np.save`/`np.load` are routed around it. Predictions assume passes in a fixed order.
+- Large NumPy arrays (16 MiB and up) are kept within the ceiling (Linux, macOS).
+- PyTorch training keeps the activations it saves for backward within the ceiling; gradients do not change.
+- `finetune`, `generate`, `load`, `train_session` and `memopro.rt` follow the same ceiling.
+- `memopro.disable()`, or `with memopro.enable("8GB"):`, turns it off again.
 
-### 1. Train and generate with LLMs larger than memory
+Predict the cost before running:
+
+```python
+print(s.estimate(sample, total="12GB", passes=3))   # expected slowdown for 12 GB of data, 3 passes
+```
+
+### Fine-tune and generate with large LLMs
 
 ```python
 import memopro
 
 r = memopro.finetune(
     "Qwen/Qwen2.5-3B-Instruct", texts,
-    budget="1GiB",          # memory ceiling for the weights
-    seq_len=512, rank=8,    # LoRA on q/k/v/o
+    budget="1GiB",            # memory limit
+    seq_len=512, rank=8,      # LoRA on the attention projections
 )
-print(r.losses, r.tokens / r.seconds)
+print(r.losses)
+r.adapter.save_pretrained("my-lora")
 
 text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Instruct")
 ```
 
-- 16-bit weights stream layer by layer from the original safetensors files, handed to the Apple GPU without copies.
-- Activation memory is planned inside the budget; a budget that cannot hold one step is refused before training starts.
-- With `draft`, a small int4 draft model speculates; verification follows the same computation path as plain generation, so the output does not change.
-- Verified on Apple silicon (MPS), NVIDIA CUDA (Colab T4) and CPU.
+- Works on Apple silicon (MPS), NVIDIA GPUs (CUDA) and CPU.
+- `draft=` makes generation faster without changing the output.
+- A budget too small for one training step is refused before training starts.
 
-### 2. Run local models (vision and language models, inference)
-
-Any model downloaded in Hugging Face format (safetensors) can be loaded and run as is, even if it is larger than memory.
+### Run models larger than memory
 
 ```python
 import transformers
 import memopro.rt.torch as rtt
 
-m = rtt.stream_model("facebook/dinov2-giant", budget="1GB", device="cuda",   # "mps", "cpu"
+m = rtt.stream_model("facebook/dinov2-giant", budget="1GB", device="cuda",   # or "mps", "cpu"
                      model_class=transformers.Dinov2Model)
-features = m(pixel_values=images).last_hidden_state        # same output as the model loaded normally
+features = m(pixel_values=images).last_hidden_state   # same output as the model loaded normally
 ```
 
-- Weights stay in their files and are read within the budget as each layer computes. Download the model first (`huggingface-cli download ...`).
-- For language models use `memopro.generate`, for LoRA training `memopro.finetune` (section 1). For models that fit, `memopro.load` picks a form within the budget (quantized if needed).
-- Training your own PyTorch models: `memopro.enable()` moves saved activations within the ceiling. Streaming the weights themselves is supported for Hugging Face models only.
+Download the model first (for example `huggingface-cli download facebook/dinov2-giant`).
 
-### 3. Large arrays within a budget
+### Large arrays and objects within a budget
 
 ```python
 from memopro.rt import Runtime
 
 rt = Runtime(budget="2GB")
-weights = rt.load_npy("big.npy")             # from a file: dropped and re-read when needed (hash-checked)
-work = rt.array((50_000, 4_096), "float32")  # new buffer: compressed losslessly when needed
+weights = rt.load_npy("big.npy")               # read from the file when needed
+work = rt.array((50_000, 4_096), "float32")    # a new array larger than the budget
 
-with work.view(write=True) as a:             # in memory only while used, as a zero-copy NumPy view
+with work.view(write=True) as a:               # a normal NumPy array inside the block
     a[:] = 1.0
 print(rt.stats())
 ```
 
-Objects you already hold (tensors, modules, optimizers, KV caches, dicts of NumPy arrays) can be handed to the runtime as well.
+Objects you already have — tensors, modules, optimizers, KV caches, dicts of arrays — can be handed over too:
 
 ```python
-h = rt.adopt(state)    # managed by the runtime while idle (compressed losslessly when needed)
-with h:                # used as usual inside the block
+h = rt.adopt(state)    # kept within the budget while idle
+with h:                # use it as usual inside the block
     step(state)
 ```
 
-### 4. Run scripts without changing them
+### Scripts without code changes
 
 ```bash
-memopro run --budget 6GB train.py          # loads from_pretrained models that do not fit within the budget
-memopro run --transparent 1GB analysis.py  # Linux, macOS: pages large NumPy arrays with compression, no disk writes
-memopro run --dry-run train.py             # show what it would do
+memopro run --budget 6GB train.py           # the whole script runs within 6 GB
+memopro run --transparent 1GB analysis.py   # large NumPy arrays kept within 1 GB (Linux, macOS)
+memopro run --dry-run train.py              # show what would be done
 ```
 
-### 5. Load and train within a budget
+### Load and train any PyTorch model within a budget
 
 ```python
 model, tok = memopro.load("Qwen/Qwen2.5-7B-Instruct", tokenizer=True, quality="high")
 
-with memopro.train_session(model, optimizer) as s:   # micro-batching and checkpointing, exact methods first
+with memopro.train_session(model, optimizer) as s:     # micro-batching and checkpointing as needed
     for batch in loader:
         s.step(batch, lambda mb: model(**mb).loss)
 ```
 
+`quality` sets how much numeric change is allowed when a model must be made smaller to fit: `"lossless"`, `"high"`, `"balanced"` (default) or `"low"`. If nothing fits, the error lists settings that would.
+
+### Check before you run
+
 ```bash
-memopro doctor                                                      # available memory and budget per device, RAM, disk
-memopro check Qwen/Qwen2.5-7B-Instruct --batch-size 4 --seq-len 512 # predict memory before running
+memopro doctor                                                       # memory available per device, RAM and disk
+memopro check Qwen/Qwen2.5-7B-Instruct --batch-size 4 --seq-len 512  # does it fit, and how?
 ```
 
-- `quality` bounds the loss allowed automatically: `"lossless"` < `"high"` < `"balanced"` (default) < `"low"`.
-- When nothing fits, `BudgetExceeded` lists settings that would actually load.
+---
 
-### Budget forms
+## Budgets
 
-The same forms work in every API, the CLI (`--budget`), `memopro.toml` and `MEMOPRO_BUDGET`.
+Every API, the CLI (`--budget`), `memopro.toml` and the `MEMOPRO_BUDGET` variable accept the same forms.
 
 | Form | Meaning |
 |---|---|
-| `"auto"` | measured available memory minus 10% headroom (default) |
-| `"6GB"`, `0.5`, `"50%"` | a cap, or a fraction of the measured value |
-| `"-2GB"` | leave 2 GB of the measured value free |
-| `"2GB..6GB"` | at most 6 GB; do not run if 2 GB cannot be had |
-| `"6GB!"` | exactly 6 GB regardless of measurement (swap risk accepted) |
-| `{"device": "80%", "host": "-2GB"}` | per memory pool |
+| `"auto"` | what is free now, minus 10% (default) |
+| `"6GB"`, `0.5`, `"50%"` | at most 6 GB, or a share of what is free |
+| `"-2GB"` | leave 2 GB free |
+| `"2GB..6GB"` | at most 6 GB; refuse to run below 2 GB |
+| `"6GB!"` | exactly 6 GB, even above what is free |
+| `{"device": "80%", "host": "-2GB"}` | separate limits for GPU and RAM |
 
 ---
 
-## Architecture
+## Platforms
 
-```
-Python API      finetune · generate · load · train_session · run · adopt
-                ─────────────────────────────────────────────────────────
-Access layer    detect environment → budget → choose a configuration → apply → report measurements
-                (existing techniques such as quantization, offloading and checkpointing are wrapped)
-                ─────────────────────────────────────────────────────────
-Rust runtime    per buffer, chosen by measured cost:
-                keep · compress losslessly · re-read the source (hash-checked) · recompute
-                + prefetching, ceiling guarantee, slowdown prediction
-                ─────────────────────────────────────────────────────────
-Platform        zero-copy Apple GPU buffers · asynchronous CUDA copies · Linux userfaultfd
-```
-
-| Component | Location |
+| Platform | Support |
 |---|---|
-| Rust core (crates.io `memopro`) | [`crates/memopro`](https://github.com/imhyensuk/memopro/tree/main/crates/memopro) |
-| C ABI | [`crates/memopro-c`](https://github.com/imhyensuk/memopro/tree/main/crates/memopro-c) |
-| Linux allocation interposer (`LD_PRELOAD`) | [`crates/memopro-preload`](https://github.com/imhyensuk/memopro/tree/main/crates/memopro-preload) |
-| Python package | [`python/memopro`](https://github.com/imhyensuk/memopro/tree/main/python/memopro) |
+| macOS, Apple silicon | Full: LLM fine-tuning and generation, NumPy, scripts |
+| Linux, NVIDIA GPU | LLM fine-tuning and generation, vision models, NumPy, scripts |
+| Linux, CPU only | All features on CPU |
+| Windows | Basic features (`Runtime`, `doctor`); no transparent NumPy paging |
 
----
+Python 3.11+, PyTorch 2.4+ for the PyTorch features.
 
-## Supported platforms
+## Good to know
 
-| Platform | Status |
-|---|---|
-| macOS, Apple silicon (MPS) | Primary platform; LLM training and generation verified; transparent paging (signals) |
-| Linux, NVIDIA GPU (CUDA) | Generation, LoRA training, vision inference (ResNet, DINOv2), enable ceiling and estimate verified on a Colab T4 |
-| Linux, CPU | Verified in CI; transparent paging (userfaultfd) |
-| Windows | Basic features checked in CI |
+- **Time for memory.** Work that does not fit runs slower than it would on a machine with enough memory. If your model already fits, a speed-focused tool will be faster.
+- **Access patterns matter.** Heavy random access (sorting, group-by over huge tables) is slow when the data is much larger than the limit.
+- **Models.** LLM features are tested most on the Qwen2.5 family (1.5B–7B); vision on ResNet and DINOv2.
+- **Alpha.** APIs may change between 0.x versions.
 
-Python 3.11+, PyTorch 2.4+.
+## Documentation
 
----
-
-## Limitations
-
-- **Speed**: memory is saved at the cost of time. 7B training on an 8 GB Mac takes about 18 s per 129-token step. Models that fit in memory run faster with existing tools: on a Colab T4, Unsloth (fp16) trained 3B and 7B 16-bit LoRA 10-33x faster than memopro (stored bf16). memopro is for models larger than the GPU or device memory, which do not run otherwise.
-- **Transparent paging**: workloads with heavy random access (sorting, group-by) and data still larger than the limit after compression do not run at a practical speed. Linux and macOS (not Windows).
-- **Model coverage**: the LLM path is verified mainly on the Qwen2.5 family (1.5B-7B), vision on ResNet-152 and DINOv2. Diffusion and speech models are not tested.
-- **Alpha**: APIs may change.
-
----
-
-## Development
-
-```bash
-python3 -m venv .venv && .venv/bin/pip install "maturin>=1.9,<2" pytest ruff
-VIRTUAL_ENV=$PWD/.venv .venv/bin/maturin develop --release
-.venv/bin/pytest -q
-cargo test -p memopro
-```
-
-Experiment scripts are in [`experiments/`](https://github.com/imhyensuk/memopro/tree/main/experiments), raw results and environments in [`docs/research/data/`](https://github.com/imhyensuk/memopro/tree/main/docs/research/data), design documents in [`docs/design/`](https://github.com/imhyensuk/memopro/tree/main/docs/design) (in Korean).
-
-## Citation
-
-If you use memopro in research, please cite it with **"Cite this repository"** ([`CITATION.cff`](https://github.com/imhyensuk/memopro/blob/main/CITATION.cff)).
+- [Guide](https://github.com/imhyensuk/memopro/blob/main/docs/guide/README.en.md)
+- [Changelog](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md)
+- Rust API: [docs.rs/memopro](https://docs.rs/memopro)
 
 ## License
 

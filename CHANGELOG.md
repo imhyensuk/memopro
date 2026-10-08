@@ -4,6 +4,11 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: feature-focused introductions
+- `README.en.md` (also the PyPI page) and `crates/memopro/README.md` (the crates.io page)
+  describe what memopro does and how to use it; measurements and design notes stay in the
+  repository (`docs/`, `experiments/`). PyPI/crates.io summaries and the CLI description match.
+
 ### Changed: crates.io releases use Trusted Publishing
 - `publish-crates` gets a short-lived token from crates.io through
   `rust-lang/crates-io-auth-action` (OIDC, `id-token: write`) instead of the
