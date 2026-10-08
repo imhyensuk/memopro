@@ -1,14 +1,14 @@
-"""memopro: memory relief and redundancy diagnostics for PyTorch developers.
+"""memopro: run work that needs more memory than the machine has, losslessly, within a ceiling.
 
-``memopro.doctor()`` (and ``memopro doctor``) reports memory per pool and the budget.
-Product core (0032 I7): β hibernate (reclaim idle memory, no SSD writes unless allowed) and
-census (where memory goes and how much is redundant). The access layer (load, optimize,
-train_session, check) follows in v0.2, γ elastic and ``memopro run`` in v0.3.
+``memopro.enable()`` sets one memory ceiling for the whole process; ``finetune``/``generate``
+train and run LLMs whose weights exceed memory; ``memopro.rt`` manages large buffers within a
+budget; ``memopro.doctor()`` (and ``memopro doctor``) reports memory per pool and the budget.
 
 ``import memopro`` is cheap and has no side effects (0032 I4): it loads only the Rust core and
 this module. Everything else, and torch in particular, is imported on first use.
 
-Status: skeleton. Features that are not built yet raise `NotYetImplemented` with the plan.
+Status: alpha (the API may change). Features that are not built yet raise `NotYetImplemented`
+with the plan.
 """
 
 from __future__ import annotations
