@@ -89,3 +89,4 @@ def test_size_helpers():
     assert parse_size(1024) == 1024
     assert format_size(2254857830) == "2.10 GiB"
     assert format_size(10) == "10 B"
+    assert format_size(3 * 2**40) == "3.00 TiB"  # large machines (docs/design/scale.md)

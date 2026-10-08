@@ -679,3 +679,56 @@ fn a_process_budget_counts_memory_outside_the_runtime() {
     assert!(s.limit_low < 40 * MIB as u64, "{s:?}");
     std::hint::black_box(&outside);
 }
+
+/// One repeating scan at a fixed ratio of data to budget, at a given absolute scale: 16 buffers
+/// of `scale` MiB without a file, a budget for about 60% of them. Returns the decompressions of
+/// the last pass and the stats.
+fn scan_at_scale(scale: usize) -> (u64, Stats) {
+    let reserve = round_to_pages(codec::chunk_bound(codec::CHUNK)) as u64;
+    let total = 16 * scale * MIB;
+    let mut c = Config::new(total as u64 * 6 / 10 + reserve);
+    c.prefetch = false;
+    let rt = Runtime::new(c).unwrap();
+    let contents: Vec<_> = (0..16)
+        .map(|k| widened(scale * MIB / 4, 11 + k as u32))
+        .collect();
+    let ids: Vec<_> = contents
+        .iter()
+        .map(|c| {
+            let id = rt.alloc(c.len(), 4).unwrap();
+            rt.pin(id, true)
+                .unwrap()
+                .as_mut_slice()
+                .unwrap()
+                .copy_from_slice(c);
+            id
+        })
+        .collect();
+    let mut last = 0;
+    for _ in 0..3 {
+        let before = rt.stats().decompressions;
+        for (id, c) in ids.iter().zip(&contents) {
+            assert_eq!(rt.pin(*id, false).unwrap().as_slice(), &c[..]);
+        }
+        last = rt.stats().decompressions - before;
+    }
+    let s = rt.stats();
+    assert!(s.peak_used <= rt.limit(), "scale {scale}: {s:?}");
+    assert_eq!(s.written_bytes, 0);
+    (last, s)
+}
+
+#[test]
+fn the_same_ratio_behaves_the_same_at_every_scale() {
+    // scale.md S1: what the runtime does depends on the ratio of data to budget, not on its
+    // absolute size; a constant that does not scale shows up as a difference here
+    let (base, _) = scan_at_scale(1);
+    assert!(base > 0, "nothing was restored at a 60% budget");
+    for scale in [2, 4] {
+        let (n, s) = scan_at_scale(scale);
+        assert!(
+            n.abs_diff(base) <= 1,
+            "scale {scale}: {n} restores per pass, {base} at scale 1 ({s:?})"
+        );
+    }
+}
