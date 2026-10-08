@@ -2,6 +2,13 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Changed: crates.io releases use Trusted Publishing
+- `publish-crates` gets a short-lived token from crates.io through
+  `rust-lang/crates-io-auth-action` (OIDC, `id-token: write`) instead of the
+  `CARGO_REGISTRY_TOKEN` secret, which was removed after 0.1.0.
+
 ## 0.1.0 (first release, alpha)
 
 ### Changed: release texts match the code
