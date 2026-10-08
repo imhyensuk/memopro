@@ -71,11 +71,13 @@ Linux(Colab)에서도 같은 상한 안에서 결과가 같았고(초과 0MiB), 
 
 ## 설치
 
-정식 버전은 아직 PyPI에 올리지 않았습니다(알파). 소스에서 설치하려면 Rust 툴체인이 필요합니다.
+PyPI에서 설치합니다(알파, API가 바뀔 수 있음). macOS arm64, Linux x86_64·aarch64용 wheel이 있으며, 그 밖의 환경은 소스 배포본을 빌드하므로 Rust 툴체인이 필요합니다.
 
 ```bash
-pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"
+pip install "memopro[llm]"
 ```
+
+최신 개발 버전은 `pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"`로 설치합니다(Rust 툴체인 필요).
 
 | 추가 의존성 | 용도 |
 |---|---|

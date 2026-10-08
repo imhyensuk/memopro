@@ -2,7 +2,7 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## 0.1.0a1 (alpha, not published yet)
+## 0.1.0 (first release, alpha)
 
 ### Changed: release texts match the code
 - The crates.io README (`crates/memopro/README.md`) has a short example, now compiled and run as
