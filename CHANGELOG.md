@@ -4,6 +4,17 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## 0.1.0a1 (alpha, not published yet)
 
+### Changed: the goal does not depend on the memory size (docs/design/scale.md)
+- The goal is now any work that needs more memory than the machine has, at any scale; 8-16 GB
+  machines stay the first verified target. Constants that assumed a size are listed and scale
+  with the machine where measured.
+- The macOS pager reserves address space for its regions in proportion to the machine (eight
+  times its memory, at least the earlier 64 GiB, at most 2^23 chunks) instead of a fixed
+  64 GiB, which refused regions past 64 GiB on large Macs. 8-16 GB machines are unchanged.
+- `format_size` shows TiB.
+- A runtime test runs the same data-to-budget ratio at 1, 2 and 4 times the size and checks the
+  same restores per pass (12 of 16), the ceiling and bit-exact data.
+
 ### Changed: the `finetune` budget covers the step on the CPU too; streamed MPS models under `memopro run` (0175)
 - On the CPU `memopro.finetune` now holds back 1.5x the estimated activations as well (the CPU
   has no allocator count to measure them, so the estimate stays); budgets that cannot hold the

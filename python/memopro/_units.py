@@ -38,8 +38,8 @@ def parse_size(value: str | float) -> int:
 def format_size(nbytes: int) -> str:
     """Human-readable binary size, e.g. 2254857830 -> '2.10 GiB'."""
     size = float(nbytes)
-    for unit in ("B", "KiB", "MiB", "GiB"):
-        if abs(size) < 1024 or unit == "GiB":
+    for unit in ("B", "KiB", "MiB", "GiB", "TiB"):
+        if abs(size) < 1024 or unit == "TiB":
             return f"{size:.0f} {unit}" if unit == "B" else f"{size:.2f} {unit}"
         size /= 1024
     raise AssertionError("unreachable")

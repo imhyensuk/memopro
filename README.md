@@ -8,7 +8,7 @@
 
 한국어 · [English](README.en.md)
 
-memopro는 8~16GB 노트북·Mac이나 작은 GPU처럼 메모리가 부족한 기기를 위한 오픈 소스 라이브러리입니다. 코어는 Rust로, 인터페이스는 Python으로 작성했습니다.
+memopro는 작업이 요구하는 메모리가 기기 메모리보다 클 때 쓰는 오픈 소스 라이브러리입니다. 8~16GB 노트북·Mac과 작은 GPU에서 검증했고, 설계는 메모리 규모와 무관합니다([설계](docs/design/scale.md)). 코어는 Rust로, 인터페이스는 Python으로 작성했습니다.
 
 - **무손실**: 양자화나 근사를 쓰지 않습니다. 생성·추론 출력은 일반 실행과 비트 단위로 같고, 학습 손실은 예산을 바꿔도 비트 단위로 같습니다.
 - **메모리 상한 보장**: 사용자가 정한 예산을 넘지 않습니다. 감당할 수 없는 예산이면 실행 전에 거절합니다.
@@ -233,7 +233,7 @@ Rust 런타임     버퍼마다 실측 비용으로 선택:
 | Linux 할당 가로채기 (`LD_PRELOAD`) | [`crates/memopro-preload`](crates/memopro-preload) |
 | Python 패키지 | [`python/memopro`](python/memopro) |
 
-설계 문서: [아키텍처](docs/design/architecture.md) · [런타임](docs/design/runtime.md) · [LLM 경로](docs/design/g4-architecture.md)
+설계 문서: [아키텍처](docs/design/architecture.md) · [런타임](docs/design/runtime.md) · [LLM 경로](docs/design/g4-architecture.md) · [규모 무관 설계](docs/design/scale.md)
 
 ---
 

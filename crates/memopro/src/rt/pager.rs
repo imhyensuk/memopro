@@ -55,6 +55,22 @@ impl PagerConfig {
     }
 }
 
+/// Address space a pager reserves for its regions (no memory until touched; macOS, where one
+/// reservation holds every region). It scales with the machine instead of being one fixed size,
+/// so a large machine can page a working set as many times its memory as a small one can
+/// (scale.md S2): eight times the physical memory, at least 64 GiB (the earlier fixed size), and
+/// at most 2^23 chunks so the per-chunk state stays at 8 MiB (8 TiB at 1 MiB chunks).
+#[cfg(any(target_os = "macos", test))]
+pub(crate) fn arena_bytes(physical: u64, chunk: usize) -> usize {
+    const FLOOR: u64 = 64 << 30;
+    const MAX_CHUNKS: u64 = 1 << 23;
+    let chunk = chunk.max(1) as u64;
+    let ceiling = FLOOR.max(chunk.saturating_mul(MAX_CHUNKS));
+    let len = physical.saturating_mul(8).clamp(FLOOR, ceiling);
+    let len = usize::try_from(len).unwrap_or(usize::MAX);
+    len - len % chunk as usize
+}
+
 /// Counters of a [`Pager`].
 #[derive(Debug, Clone, Default, PartialEq)]
 pub struct PagerStats {
@@ -181,5 +197,24 @@ mod portable_tests {
         assert_eq!(c.chunk % 4096, 0);
         assert!(c.chunk <= crate::codec::CHUNK);
         let _ = Error::Unsupported(String::new());
+    }
+
+    #[test]
+    fn the_arena_scales_with_the_machine() {
+        const GIB: u64 = 1 << 30;
+        const MIB: usize = 1 << 20;
+        // small machines keep the earlier fixed 64 GiB
+        assert_eq!(arena_bytes(8 * GIB, MIB) as u64, 64 * GIB);
+        assert_eq!(arena_bytes(0, MIB) as u64, 64 * GIB);
+        // larger ones get eight times their memory
+        assert_eq!(arena_bytes(128 * GIB, MIB) as u64, 1024 * GIB);
+        assert_eq!(arena_bytes(512 * GIB, MIB) as u64, 4096 * GIB);
+        // at most 2^23 chunks of state, never below the floor
+        assert_eq!(arena_bytes(4096 * GIB, MIB) as u64, 8192 * GIB);
+        assert_eq!(arena_bytes(128 * GIB, 16 * 1024) as u64, 128 * GIB);
+        assert_eq!(arena_bytes(512 * GIB, 4096) as u64, 64 * GIB);
+        // a whole number of chunks
+        assert_eq!(arena_bytes(8 * GIB, 3 * 4096) % (3 * 4096), 0);
+        assert_eq!(arena_bytes(u64::MAX, MIB) % MIB, 0);
     }
 }

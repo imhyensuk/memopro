@@ -8,7 +8,7 @@
 
 [한국어](https://github.com/imhyensuk/memopro/blob/main/README.md) · English
 
-memopro is an open-source library for memory-limited machines: 8-16 GB laptops and Macs, and small GPUs. The core is written in Rust and the interface in Python.
+memopro is an open-source library for work that needs more memory than the machine has. It is verified on 8-16 GB laptops and Macs and small GPUs; the design does not depend on the memory size ([design, in Korean](https://github.com/imhyensuk/memopro/blob/main/docs/design/scale.md)). The core is written in Rust and the interface in Python.
 
 - **Lossless**: no quantization or approximation. Generation and inference outputs are bit-identical to a plain run; training losses are bit-identical whatever the budget.
 - **Guaranteed ceiling**: memory use stays within the budget you set. A budget that cannot work is refused before anything runs.
