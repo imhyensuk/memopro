@@ -38,8 +38,6 @@ const HOT_CHUNKS: u64 = 16;
 const MIN_CHUNKS: u64 = 8;
 /// Milliseconds between looks at the process footprint when nothing faults (process budget).
 const TRIM_MS: libc::c_int = 10;
-/// Address space each pager reserves for its regions (no memory until used).
-const ARENA: usize = 64 << 30;
 /// Pagers that can exist at once in a process.
 const SLOTS: usize = 64;
 
@@ -333,7 +331,9 @@ impl Pager {
             .iter()
             .position(|s| s.load(Ordering::Acquire).is_null())
             .ok_or_else(|| Error::Unsupported(format!("at most {SLOTS} pagers at once")))?;
-        let mut len = ARENA - ARENA % chunk;
+        // address space for the regions, sized to the machine (no memory until used)
+        let physical = crate::hwinfo::memory().map_or(0, |m| m.total_bytes);
+        let mut len = super::arena_bytes(physical, chunk);
         let base = loop {
             // SAFETY: a new reservation without access; nothing refers to it.
             let p = unsafe {
