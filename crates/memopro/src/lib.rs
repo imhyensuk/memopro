@@ -26,6 +26,11 @@ pub mod spill;
 
 pub use error::{Error, Result};
 
+/// The README's example compiles and runs (`cargo test --doc`), so the crates.io page stays true.
+#[cfg(doctest)]
+#[doc = include_str!("../README.md")]
+pub struct ReadmeDoctests;
+
 /// Version of the memopro core, taken from the crate manifest.
 pub const VERSION: &str = env!("CARGO_PKG_VERSION");
 

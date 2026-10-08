@@ -8,7 +8,7 @@
 
 [한국어](https://github.com/imhyensuk/memopro/blob/main/README.md) · English
 
-memopro is an open-source library for memory-limited machines: 8-16 GB laptops and Macs, and small GPUs. The core is written in Rust and the interface in Python.
+memopro is an open-source library for work that needs more memory than the machine has. It is verified on 8-16 GB laptops and Macs and small GPUs; the design does not depend on the memory size ([design, in Korean](https://github.com/imhyensuk/memopro/blob/main/docs/design/scale.md)). The core is written in Rust and the interface in Python.
 
 - **Lossless**: no quantization or approximation. Generation and inference outputs are bit-identical to a plain run; training losses are bit-identical whatever the budget.
 - **Guaranteed ceiling**: memory use stays within the budget you set. A budget that cannot work is refused before anything runs.
@@ -71,11 +71,13 @@ Dataframe workloads with heavy random access, and data that is still larger than
 
 ## Installation
 
-memopro is alpha and not yet on PyPI. Installing from source needs a Rust toolchain.
+Install from PyPI (alpha: APIs may change). Wheels are built for macOS arm64 and Linux x86_64/aarch64; elsewhere pip builds the source distribution, which needs a Rust toolchain.
 
 ```bash
-pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"
+pip install "memopro[llm]"
 ```
+
+The latest development version: `pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"` (needs a Rust toolchain).
 
 | Extra | For |
 |---|---|
