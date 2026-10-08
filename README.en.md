@@ -71,11 +71,13 @@ Dataframe workloads with heavy random access, and data that is still larger than
 
 ## Installation
 
-memopro is alpha and not yet on PyPI. Installing from source needs a Rust toolchain.
+Install from PyPI (alpha: APIs may change). Wheels are built for macOS arm64 and Linux x86_64/aarch64; elsewhere pip builds the source distribution, which needs a Rust toolchain.
 
 ```bash
-pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"
+pip install "memopro[llm]"
 ```
+
+The latest development version: `pip install "memopro[llm] @ git+https://github.com/imhyensuk/memopro"` (needs a Rust toolchain).
 
 | Extra | For |
 |---|---|

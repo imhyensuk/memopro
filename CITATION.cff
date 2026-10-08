@@ -8,7 +8,7 @@ authors:
     given-names: "Hyeonseok"
     alias: "임현석"
     affiliation: "한신대학교 공공인재빅데이터융합학"
-version: 0.1.0a1
+version: 0.1.0
 license:
   - MIT
   - Apache-2.0
