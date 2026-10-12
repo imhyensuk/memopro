@@ -376,6 +376,32 @@ def test_one_line_finetune_and_generate(tmp_path):
     assert s["peak_used"] <= r.model.memopro_runtime.limit and s["pinned_bytes"] == 0
 
 
+def test_finetune_batches_read_each_weight_once_per_step(tmp_path):
+    """0252 (S2): ``batch`` sequences share one read of the streamed weights per step; losses
+    stay identical across budgets, and the weights are re-read about half as often as with one
+    sequence per step."""
+    pytest.importorskip("peft")
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(4)]
+    runs = {}
+    for batch, budget in ((1, "16MiB"), (2, "16MiB"), (2, "20MiB")):
+        m = rtt.stream_model(path, budget=budget, device="cpu")
+        r = memopro.finetune(m, texts, tokenizer=tok, seq_len=16, batch=batch, lr=1e-2)
+        runs[batch, budget] = (r, m.memopro_runtime.stats()["reread_bytes"])
+    one, two, two_more = runs[1, "16MiB"], runs[2, "16MiB"], runs[2, "20MiB"]
+    assert one[0].tokens == two[0].tokens and len(two[0].losses) == len(one[0].losses) // 2 + 1
+    assert two[0].losses == two_more[0].losses
+    assert two[1] < 0.7 * one[1]
+    with pytest.raises(memopro.InvalidArgument):
+        memopro.finetune(m, texts, tokenizer=tok, batch=0)
+
+
 def test_streamed_vision_model_matches_plain(tmp_path):
     """0195: a ViT classifier (whose checkpoint names transformers 5 renames on loading) streams
     at an eighth of its size with the same logits, bit for bit, as the model loaded normally."""

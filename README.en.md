@@ -130,6 +130,8 @@ text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Inst
 
 - 16-bit weights stream layer by layer from the original safetensors files, handed to the Apple GPU without copies.
 - Activation memory is planned inside the budget; a budget that cannot hold one step is refused before training starts.
+- `batch=k` stacks k sequences per step: each weight is read once for all of them, so training is faster (8 GB M1, 7B, 129 tokens: batch 1 8.4 -> batch 4 15.5 tokens/s). It is ordinary mini-batch training, so losses differ from `batch=1` but stay the same whatever the budget; activations grow k times, and so does the budget they need.
+- On Apple GPUs call `finetune`/`stream_model` before anything else uses MPS, so torch's MPS allocator setting (`PYTORCH_MPS_LOW_WATERMARK_RATIO=0.01`) takes effect; otherwise one activation over 10 MiB can reserve a 1 GiB heap.
 - With `draft`, a small int4 draft model speculates; verification follows the same computation path as plain generation, so the output does not change.
 - Verified on Apple silicon (MPS), NVIDIA CUDA (Colab T4) and CPU.
 
