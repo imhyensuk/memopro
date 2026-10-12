@@ -2,7 +2,7 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.1.3 (alpha)
 
 ### Added: `finetune(batch="auto")` (0262)
 - Picks the largest batch (up to `memopro.llm.AUTO_BATCH_MAX` = 8 and the number of pieces)
@@ -18,7 +18,8 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ### Changed: CI
 - The whole matrix runs every Monday with the newest torch, transformers and peft; peft is now
-  installed, so the LoRA tests run in CI.
+  installed, so the LoRA tests run in CI. The batch test now counts weight uses per step
+  instead of bytes re-read, which vary with eviction timing in a model this small.
 
 ## 0.1.2 (alpha)
 
