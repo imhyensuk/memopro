@@ -130,6 +130,8 @@ text = memopro.generate(r.model, "요약해 줘: ...", draft="Qwen/Qwen2.5-1.5B-
 
 - 16비트 가중치를 원본 safetensors 파일에서 층 단위로 흘려 쓰며, Apple GPU에는 복사 없이 넘깁니다.
 - 활성값 메모리도 예산에 포함해 계획합니다. 한 스텝을 감당할 수 없는 예산은 시작 전에 거절합니다.
+- `batch=k`는 한 스텝에 시퀀스 k개를 묶습니다. 가중치를 한 번 읽어 k개에 쓰므로 빨라집니다(8GB M1, 7B, 129토큰: batch 1 8.4 → batch 4 15.5토큰/초). 보통의 미니배치라서 손실은 `batch=1`과 다르지만, 예산을 바꿔도 같습니다. 활성값이 k배로 늘어 예산이 그만큼 더 필요합니다.
+- Apple GPU에서는 `finetune`/`stream_model`을 MPS를 쓰기 전에 부르세요. 그래야 torch MPS 할당기 설정(`PYTORCH_MPS_LOW_WATERMARK_RATIO=0.01`)이 적용됩니다. 먼저 MPS를 쓴 경우 10MiB가 넘는 활성값 하나가 1GiB 힙을 잡을 수 있습니다.
 - `draft`를 주면 작은 int4 초안 모델로 추측 디코딩을 합니다. 검증을 일반 생성과 같은 계산 경로로 하므로 출력이 바뀌지 않습니다.
 - Apple silicon(MPS), NVIDIA CUDA(Colab T4), CPU에서 검증했습니다.
 
