@@ -58,9 +58,9 @@ r = memopro.finetune(
     "Qwen/Qwen2.5-7B-Instruct", texts,
     budget="2.5GiB",   # memory ceiling for weights and activations
     seq_len=129,
-    batch=4,           # four sequences share each read of the weights: faster
+    batch="auto",      # the largest batch the budget holds: sequences share each read of the weights
 )
-print(r.losses, r.tokens / r.seconds)   # about 15.5 tokens/s on an 8 GB M1
+print(r.batch, r.tokens / r.seconds)    # about 15.5 tokens/s at batch 4 on an 8 GB M1
 r.adapter.save_pretrained("my-lora")    # a standard PEFT adapter
 ```
 
@@ -201,7 +201,7 @@ Four ways in, so you use only as much as you need.
 
 | Function | What it does |
 |---|---|
-| `memopro.finetune(model, texts, budget=, batch=)` | LoRA training of LLMs larger than memory |
+| `memopro.finetune(model, texts, budget=, batch=)` | LoRA training of LLMs larger than memory (`batch="auto"`: the largest batch the budget holds) |
 | `memopro.generate(model, prompt, draft=)` | Generation from LLMs larger than memory (same output as plain generation) |
 | `memopro.enable(budget=)` / `disable()` | One memory ceiling for the whole process (NumPy and PyTorch handled automatically) |
 | `memopro.load(name, quality=)` | Load a model in the format that fits the budget (quantized if needed) |
@@ -345,7 +345,7 @@ Design documents (in Korean): [architecture](https://github.com/imhyensuk/memopr
 - **Speed**: memory is saved at the cost of time. 7B training on an 8 GB Mac takes about 15 s per 129-token step (`batch=4`: about 33 s for four sequences). Models that fit in memory run faster with existing tools.
 - **Paging without code changes**: random access (sorting, group-by) and data larger than the ceiling even compressed do not run at a practical speed. Linux and macOS only (not Windows).
 - **Model coverage**: LLMs mainly the Qwen2.5 family (1.5B-7B), vision ResNet-152 and DINOv2. Diffusion and speech models are not tested.
-- **Apple GPU**: call `finetune`/`stream_model` before anything else uses MPS, so torch's MPS allocator setting takes effect.
+- **Apple GPU**: call `finetune`/`stream_model` before anything else uses MPS, so torch's MPS allocator setting takes effect (a warning says when it is too late).
 - **Alpha**: the API may change; see the [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md).
 
 ---

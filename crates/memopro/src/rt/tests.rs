@@ -409,10 +409,11 @@ fn prefetching_keeps_what_the_policy_keeps() {
     let (with, s) = rereads_per_pass(true);
     assert!(s.prefetch_hits > 0, "{s:?}");
     // Before 0117 F1 the prefetcher evicted the kept blocks one by one and every pass re-read
-    // all 60; now the window (four blocks) is the only extra cost.
+    // all 60; now the window is the only extra cost: four blocks per service thread, two
+    // threads since 0248 (a 2-vCPU CI runner once re-read 38 against 30; 0263).
     for pass in 2..5 {
         assert!(
-            with[pass] <= without[pass] + 5,
+            with[pass] <= without[pass] + 12,
             "pass {pass}: {} blocks re-read with prefetching, {} without",
             with[pass],
             without[pass]

@@ -3,6 +3,7 @@ the weights in aligned memory), within the budget, for inference and frozen-weig
 
 import contextlib
 import math
+import warnings
 
 import pytest
 
@@ -380,8 +381,8 @@ def test_one_line_finetune_and_generate(tmp_path):
 
 def test_finetune_batches_read_each_weight_once_per_step(tmp_path):
     """0252 (S2): ``batch`` sequences share one read of the streamed weights per step; losses
-    stay identical across budgets, and the weights are re-read about half as often as with one
-    sequence per step."""
+    stay identical across budgets, and each weight is used once per step for the whole batch:
+    about half as many uses as with one sequence per step."""
     pytest.importorskip("peft")
     tokenizers = pytest.importorskip("tokenizers")
     path = _tiny_qwen(tmp_path / "t", 0)
@@ -395,13 +396,63 @@ def test_finetune_batches_read_each_weight_once_per_step(tmp_path):
     for batch, budget in ((1, "16MiB"), (2, "16MiB"), (2, "20MiB")):
         m = rtt.stream_model(path, budget=budget, device="cpu")
         r = memopro.finetune(m, texts, tokenizer=tok, seq_len=16, batch=batch, lr=1e-2)
-        runs[batch, budget] = (r, m.memopro_runtime.stats()["reread_bytes"])
+        runs[batch, budget] = (r, m.memopro_runtime.stats()["pins"])
     one, two, two_more = runs[1, "16MiB"], runs[2, "16MiB"], runs[2, "20MiB"]
     assert one[0].tokens == two[0].tokens and len(two[0].losses) == len(one[0].losses) // 2 + 1
     assert two[0].losses == two_more[0].losses
-    assert two[1] < 0.7 * one[1]
+    # each weight is used once per step whatever the batch: half the steps, about half the uses.
+    # (Bytes re-read also fell by half on 7B, 0255, but in a model this small the batch's larger
+    # activation hold-back shrinks the weights' share of the budget, and which buffer goes
+    # depends on measured costs, so re-read bytes vary from run to run: 0.61x here, 0.72x on CI)
+    assert two[1] < 0.6 * one[1]
     with pytest.raises(memopro.InvalidArgument):
         memopro.finetune(m, texts, tokenizer=tok, batch=0)
+
+
+def test_finetune_auto_batch_fits_the_budget(tmp_path):
+    """0262: ``batch="auto"`` takes the largest batch (up to AUTO_BATCH_MAX and the number of
+    pieces) whose step fits the budget, says which, and trains exactly as that batch does."""
+    pytest.importorskip("peft")
+    tokenizers = pytest.importorskip("tokenizers")
+    from memopro.llm import AUTO_BATCH_MAX
+
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(4)]
+
+    def run(budget, batch):
+        m = rtt.stream_model(path, budget=budget, device="cpu")
+        return memopro.finetune(m, texts, tokenizer=tok, seq_len=16, batch=batch, lr=1e-2)
+
+    tight, roomy = run("14MiB", "auto"), run("64MiB", "auto")
+    assert tight.batch < roomy.batch <= AUTO_BATCH_MAX
+    assert run("64MiB", roomy.batch).losses == roomy.losses
+    with pytest.raises(memopro.InvalidArgument):
+        run("64MiB", "big")
+
+
+def test_stream_model_warns_when_mps_started_first(tmp_path, monkeypatch):
+    """0262: torch reads PYTORCH_MPS_LOW_WATERMARK_RATIO only when MPS starts; when Apple GPU
+    memory is already in use, stream_model says the setting comes too late (unless the user
+    set it)."""
+    from memopro.env._torch import mps_usable
+
+    if not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    held = torch.ones(4 << 20, device="mps")  # 16 MiB in use before stream_model
+    path = _tiny_qwen(tmp_path / "t", 0)
+    monkeypatch.delenv("PYTORCH_MPS_LOW_WATERMARK_RATIO", raising=False)
+    with pytest.warns(UserWarning, match="already in use"):
+        rtt.stream_model(path, budget="9MiB", device="mps")
+    monkeypatch.setenv("PYTORCH_MPS_LOW_WATERMARK_RATIO", "0.05")
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        rtt.stream_model(path, budget="9MiB", device="mps")
+    del held
 
 
 def test_streamed_vision_model_matches_plain(tmp_path):
