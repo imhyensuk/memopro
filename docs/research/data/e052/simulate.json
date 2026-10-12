@@ -1,0 +1,48 @@
+{
+ "chain-8": {
+  "passes": 104,
+  "tokens": 384,
+  "tokens_per_pass": 3.6923076923076925,
+  "rows_per_pass": 9.0,
+  "draft_rounds_per_pass": 8.0
+ },
+ "chain-16": {
+  "passes": 96,
+  "tokens": 384,
+  "tokens_per_pass": 4.0,
+  "rows_per_pass": 17.0,
+  "draft_rounds_per_pass": 16.0
+ },
+ "tree-16": {
+  "passes": 82,
+  "tokens": 384,
+  "tokens_per_pass": 4.682926829268292,
+  "rows_per_pass": 17.0,
+  "draft_rounds_per_pass": 7.634146341463414,
+  "sim_seconds": 225.36382758299987
+ },
+ "tree-32": {
+  "passes": 66,
+  "tokens": 384,
+  "tokens_per_pass": 5.818181818181818,
+  "rows_per_pass": 33.0,
+  "draft_rounds_per_pass": 10.712121212121213,
+  "sim_seconds": 337.99330866700075
+ },
+ "tree-64": {
+  "passes": 57,
+  "tokens": 384,
+  "tokens_per_pass": 6.7368421052631575,
+  "rows_per_pass": 65.0,
+  "draft_rounds_per_pass": 12.87719298245614,
+  "sim_seconds": 579.297595125001
+ },
+ "tree-128": {
+  "passes": 50,
+  "tokens": 384,
+  "tokens_per_pass": 7.68,
+  "rows_per_pass": 129.0,
+  "draft_rounds_per_pass": 15.78,
+  "sim_seconds": 1109.5880154159986
+ }
+}
