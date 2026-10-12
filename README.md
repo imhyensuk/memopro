@@ -58,9 +58,9 @@ r = memopro.finetune(
     "Qwen/Qwen2.5-7B-Instruct", texts,
     budget="2.5GiB",   # 가중치와 활성값에 쓸 메모리 상한
     seq_len=129,
-    batch=4,           # 한 번 읽은 가중치를 4개 시퀀스가 나눠 씀 → 더 빠름
+    batch="auto",      # 예산에 들어가는 가장 큰 batch: 한 번 읽은 가중치를 여러 시퀀스가 나눠 씀
 )
-print(r.losses, r.tokens / r.seconds)   # 8GB M1에서 약 15.5토큰/초
+print(r.batch, r.tokens / r.seconds)    # 8GB M1, batch 4에서 약 15.5토큰/초
 r.adapter.save_pretrained("my-lora")    # 표준 PEFT 어댑터로 저장
 ```
 
@@ -201,7 +201,7 @@ memopro는 필요한 만큼만 골라 쓸 수 있도록 네 가지 방식으로 
 
 | 함수 | 하는 일 |
 |---|---|
-| `memopro.finetune(model, texts, budget=, batch=)` | 메모리보다 큰 LLM의 LoRA 학습 |
+| `memopro.finetune(model, texts, budget=, batch=)` | 메모리보다 큰 LLM의 LoRA 학습 (`batch="auto"`: 예산에 맞는 가장 큰 batch) |
 | `memopro.generate(model, prompt, draft=)` | 메모리보다 큰 LLM의 생성(출력은 일반 생성과 같음) |
 | `memopro.enable(budget=)` / `disable()` | 이 프로세스 전체에 메모리 상한(NumPy·PyTorch 자동 처리) |
 | `memopro.load(name, quality=)` | 예산에 맞는 형식(필요하면 양자화)을 골라 모델 불러오기 |
@@ -345,7 +345,7 @@ Rust 런타임     버퍼마다 실측 비용으로 선택: 유지 · 무손실 
 - **속도**: 메모리를 아끼는 대신 시간이 듭니다. 7B 학습은 8GB Mac에서 129토큰 스텝당 약 15초입니다(`batch=4`면 시퀀스 4개에 약 33초). 메모리에 다 들어가는 모델은 기존 도구가 더 빠릅니다.
 - **코드 수정 없는 페이징**: 무작위 접근이 많은 작업(정렬·그룹 집계)과 압축해도 상한보다 큰 데이터에서는 실용적인 속도가 나지 않습니다. Linux와 macOS에서 동작합니다(Windows 미지원).
 - **모델 범위**: LLM은 주로 Qwen2.5 계열(1.5B~7B), 비전은 ResNet-152와 DINOv2로 검증했습니다. 확산 모델·음성 모델은 시험하지 않았습니다.
-- **Apple GPU**: `finetune`/`stream_model`은 MPS를 쓰기 전에 부르세요. 그래야 torch MPS 할당기 설정이 적용됩니다.
+- **Apple GPU**: `finetune`/`stream_model`은 MPS를 쓰기 전에 부르세요. 그래야 torch MPS 할당기 설정이 적용됩니다(이미 쓰고 있으면 경고가 뜹니다).
 - **알파 버전**: API가 바뀔 수 있습니다. 변경 내역은 [CHANGELOG](CHANGELOG.md)에 있습니다.
 
 ---

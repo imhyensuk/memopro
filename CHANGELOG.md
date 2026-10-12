@@ -2,6 +2,24 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Added: `finetune(batch="auto")` (0262)
+- Picks the largest batch (up to `memopro.llm.AUTO_BATCH_MAX` = 8 and the number of pieces)
+  whose first-step activation estimate fits next to the largest weight in the budget (on CUDA:
+  in the GPU room `stream_model` leaves for activations). `FinetuneResult.batch` says which. The
+  default stays `batch=1`, since a batch changes the training trajectory.
+
+### Added: a warning when Apple GPU memory is in use before `stream_model`
+- torch reads `PYTORCH_MPS_LOW_WATERMARK_RATIO` only when MPS starts; if more than 4 MiB of
+  Apple GPU memory is already held, `stream_model` warns that the setting it makes comes too
+  late (activations over 10 MiB may then reserve 1 GiB heaps, which refused batch 4 at 2 GiB in
+  E051). No warning when the user set the variable.
+
+### Changed: CI
+- The whole matrix runs every Monday with the newest torch, transformers and peft; peft is now
+  installed, so the LoRA tests run in CI.
+
 ## 0.1.2 (alpha)
 
 ### Changed: crates.io publishing without a stored token
