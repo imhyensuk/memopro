@@ -4,12 +4,16 @@ name: CI
 # public since 0212, so macOS minutes are free, and the macOS pager must be tested before merge);
 # Windows runs once per push to main or on manual dispatch.
 # Documentation-only changes skip CI. A newer run on the same ref cancels the older one.
+# Every Monday the whole matrix (Windows too) runs on main with the newest torch, transformers and
+# peft, which are installed unpinned: most past breakages came from them (0159, 0221, 0243; 0262).
 on:
   push:
     branches: [main]
     paths-ignore: ["docs/**", "**/*.md"]
   pull_request:
     paths-ignore: ["docs/**", "**/*.md"]
+  schedule:
+    - cron: "17 3 * * 1"
   workflow_dispatch:
 
 concurrency:
@@ -69,7 +73,7 @@ jobs:
           cache-dependency-path: pyproject.toml
       - run: python -m pip install --upgrade pip maturin pytest ruff
       - run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-      - run: python -m pip install numpy ipython transformers accelerate
+      - run: python -m pip install numpy ipython transformers accelerate peft
       - run: ruff check python tests experiments
       - run: maturin build --release --out dist
       - run: python -m pip install --no-index --find-links dist memopro
@@ -108,7 +112,7 @@ jobs:
           cache: pip
           cache-dependency-path: pyproject.toml
       - run: python -m pip install --upgrade pip maturin pytest
-      - run: python -m pip install torch numpy ipython transformers accelerate
+      - run: python -m pip install torch numpy ipython transformers accelerate peft
       - run: maturin build --release --out dist
       - run: python -m pip install --no-index --find-links dist memopro
       - run: pytest -q
@@ -130,7 +134,7 @@ jobs:
           cache-dependency-path: pyproject.toml
       - run: python -m pip install --upgrade pip maturin pytest
       - run: python -m pip install torch --index-url https://download.pytorch.org/whl/cpu
-      - run: python -m pip install numpy ipython transformers accelerate
+      - run: python -m pip install numpy ipython transformers accelerate peft
       - run: maturin build --release --out dist
       - run: python -m pip install --no-index --find-links dist memopro
       - run: pytest -q
