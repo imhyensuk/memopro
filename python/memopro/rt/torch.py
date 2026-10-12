@@ -506,6 +506,7 @@ def stream_model(
         mine = os.environ.get(MPS_LOW_WATERMARK_VAR)
         if mine is None or mine == os.environ.get(MPS_LOW_WATERMARK_BY_RUN):
             os.environ[MPS_LOW_WATERMARK_VAR] = MPS_LOW_WATERMARK
+            _warn_if_mps_started()
         if not mps_usable():
             raise ModeUnavailable(
                 "memopro.rt.torch.stream_model(device='mps')",
@@ -553,6 +554,28 @@ def stream_model(
     return model
 
 
+def _warn_if_mps_started() -> None:
+    """torch's MPS allocator reads its low watermark once, when MPS starts: if something already
+    holds Apple GPU memory, the ratio just set comes too late, and one activation over 10 MiB can
+    reserve a 1 GiB heap (larger footprint, budgets refused; 0080, 0254). A fresh process holds
+    about 0.4 MiB at that point."""
+    import torch
+
+    try:
+        held = torch.mps.driver_allocated_memory() if torch.backends.mps.is_available() else 0
+    except RuntimeError:
+        return
+    if held > 4 << 20:
+        warnings.warn(
+            f"Apple GPU memory was already in use ({held >> 20} MiB) when stream_model set "
+            f"PYTORCH_MPS_LOW_WATERMARK_RATIO={MPS_LOW_WATERMARK}; torch reads it only when MPS "
+            "starts, so activations over 10 MiB may reserve 1 GiB heaps. Call stream_model or "
+            "memopro.finetune before anything else uses MPS, or set the variable before starting "
+            "Python.",
+            stacklevel=3,
+        )
+
+
 def _gpu_budget(value: str | int, device: Any) -> int:
     """Bytes of weight copies kept on a CUDA device (0201)."""
     import torch
@@ -561,8 +584,17 @@ def _gpu_budget(value: str | int, device: Any) -> int:
         from memopro._units import parse_size
 
         return max(0, parse_size(value))
-    free, total = torch.cuda.mem_get_info(device)
-    return max(0, free - max(2 << 30, int(0.15 * total)))
+    free, _ = torch.cuda.mem_get_info(device)
+    return max(0, free - _gpu_activation_room(device))
+
+
+def _gpu_activation_room(device: Any) -> int:
+    """GPU memory left for activations when weight copies stay on a CUDA device: 2 GiB or 15%
+    of the GPU, the larger (0201)."""
+    import torch
+
+    _, total = torch.cuda.mem_get_info(device)
+    return max(2 << 30, int(0.15 * total))
 
 
 def _renamed(regions: dict[str, Any], model: Any) -> dict[str, Any]:

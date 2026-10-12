@@ -89,6 +89,31 @@ def _generation_estimate(config: Any, tokens: int) -> int:
     return cache + 2 * tokens * (4 * h + 3 * i) + scores + 4 * config.vocab_size * 4
 
 
+# batch="auto" stops here: 129-token steps of 7B were 1.86x faster at batch 4 than at 1 and
+# compute already dominated (0255); larger batches mostly cost memory
+AUTO_BATCH_MAX = 8
+
+
+def _auto_batch(m: Any, seq_len: int, pieces: int) -> int:
+    """The largest batch up to ``AUTO_BATCH_MAX`` (and the number of pieces) whose first-step
+    activation estimate fits: next to the largest weight in the runtime's budget, or on CUDA in
+    the GPU room left for activations."""
+    if m.device.type == "cuda":
+        import memopro.rt.torch as rtt
+
+        room = rtt._gpu_activation_room(m.device)
+    else:
+        stats = m.memopro_runtime.stats()
+        largest = max(b[0].nbytes for b in m.memopro_weights.buffers.values())
+        room = stats["budget"] - stats["reserve"] - largest
+    batch = 1
+    while batch < min(AUTO_BATCH_MAX, pieces) and (
+        _FIRST_STEP_MARGIN * _activation_estimate(m.config, seq_len, batch + 1) <= room
+    ):
+        batch += 1
+    return batch
+
+
 def _gpu_kept(m: Any) -> int:
     """Apple GPU memory torch holds besides the wrapped streamed weights."""
     import torch
@@ -126,6 +151,7 @@ class FinetuneResult:
     seconds: float = 0.0
     tokens: int = 0
     held_back: int = 0  # bytes of the budget kept for the step's activations
+    batch: int = 1  # sequences per step (what batch="auto" chose)
 
 
 def finetune(
@@ -137,7 +163,7 @@ def finetune(
     device: str = "auto",
     epochs: int = 1,
     seq_len: int = 512,
-    batch: int = 1,
+    batch: int | str = 1,
     lr: float = 2e-4,
     rank: int = 8,
     alpha: int = 16,
@@ -151,7 +177,9 @@ def finetune(
     ``batch`` per step (the last step may hold fewer). Each streamed weight is read once per
     step whatever ``batch`` is, so a larger batch trains more tokens per read (0252); it is
     ordinary mini-batch training, so losses differ from ``batch=1`` but stay identical across
-    budgets. Only the LoRA weights train (AdamW, float32); the base weights are streamed
+    budgets. ``batch="auto"`` takes the largest batch up to ``AUTO_BATCH_MAX`` whose step fits
+    the budget (on CUDA, the GPU room ``stream_model`` leaves for activations); the result's
+    ``batch`` says which (0262). Only the LoRA weights train (AdamW, float32); the base weights are streamed
     within ``budget`` and never change. Layer checkpointing keeps activations small and results
     reproducible; ``checkpointing=False`` saves a pass over the streamed weights (about 10% on an
     M1) but keeps every layer's activations and, on Apple GPUs, made results differ from run to
@@ -163,8 +191,8 @@ def finetune(
 
     if not texts:
         raise InvalidArgument("finetune needs at least one text")
-    if batch < 1:
-        raise InvalidArgument(f"batch must be at least 1, not {batch}")
+    if batch != "auto" and (not isinstance(batch, int) or batch < 1):
+        raise InvalidArgument(f"batch must be 'auto' or at least 1, not {batch!r}")
     torch.manual_seed(seed)
     m = _streamed(model, budget, device)
     tok = _tokenizer(m, tokenizer)
@@ -188,12 +216,14 @@ def finetune(
         rtt.enable_checkpointing(m)
     pieces = [ids[i : i + seq_len] for i in range(0, len(ids) - 1, seq_len)]
     pieces = [p for p in pieces if len(p) > 1]
+    if batch == "auto":
+        batch = _auto_batch(m, seq_len, len(pieces))
     steps = [pieces[i : i + batch] for i in range(0, len(pieces), batch)]
     if steps and len({len(p) for p in steps[-1]}) > 1:  # only the last piece is shorter
         steps[-1:] = [steps[-1][:-1], steps[-1][-1:]]
     params = [p for p in m.parameters() if p.requires_grad]
     opt = torch.optim.AdamW(params, lr=lr)
-    result = FinetuneResult(m, adapter)
+    result = FinetuneResult(m, adapter, batch=batch)
     gpu = m.device.type == "mps"
     # the budget covers the whole step: weights plus what the step keeps (0165; CPU 0175). On
     # CUDA the step's memory is the GPU's own, outside the (host) budget (0195)
