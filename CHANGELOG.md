@@ -2,6 +2,19 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Changed: re-reads from model files run at the SSD's speed (S1, 0247-0251)
+- Reads of original files are aligned to 16 KiB pages. macOS reads an `F_NOCACHE` file at an
+  unaligned offset through its page cache, slower and leaving the pages cached, and
+  safetensors data starts at any byte; each reader now reads the aligned pages around a piece
+  into its own scratch buffer and copies the bytes (same bytes and digests, 16 MiB extra).
+- Reads run on their own pool of 4 threads (`MEMOPRO_READ_THREADS` to calibrate other
+  devices), and two service threads keep the next buffer's reads going while one finishes.
+- Measured on an 8 GB M1, alternating with the previous code in the same machine state:
+  memopro's read path 1.74 -> 2.08 GiB/s, Qwen2.5-7B lossless generation at a 1.5 GiB budget
+  9.39 -> 7.24 s/token with identical tokens (E050c).
+
 ## 0.1.0 (first release, alpha)
 
 ### Changed: release texts match the code
