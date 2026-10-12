@@ -39,6 +39,7 @@ each layer's weights pinned once for all of them (0142).
 from __future__ import annotations
 
 import contextlib
+import functools
 import warnings
 from collections.abc import Iterator
 from pathlib import Path
@@ -722,10 +723,14 @@ def _rows(t: Any, start: int, stop: int) -> Any:
 
 
 @contextlib.contextmanager
-def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
+def _row_invariant(model: Any, prompt: int) -> Iterator[dict]:
     """Inside this block, rows at positions >= ``prompt`` go through the decoder layers, the
     final norm and the output head one at a time, exactly as in plain generation; earlier rows
-    keep the block shape of the prompt's own pass (0142)."""
+    keep the block shape of the prompt's own pass (0142).
+
+    Yields a state dict. With ``state["depths"]`` set (a draft tree in depth-first order, the
+    root at depth 1), each row sees only the cache plus its own ancestors, as plain generation
+    would have seen that path, and its key/value is kept in ``state["kv"][layer]`` (0257)."""
     import torch
 
     base = getattr(model, getattr(model, "base_model_prefix", ""), None)
@@ -779,13 +784,22 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
                     if emb is not None:
                         part["position_embeddings"] = tuple(_rows(e, 0, block) for e in emb)
                     outs.append(original(hidden[:, :block], **part))
+                depths = state.get("depths")
+                own = cache.layers[layer.self_attn.layer_idx] if depths is not None else None
                 for i in range(block, q):
+                    if own is not None:  # the cache back to this row's parent (depth-first order)
+                        keep = before + depths[i] - 1
+                        own.keys, own.values = own.keys[..., :keep, :], own.values[..., :keep, :]
                     one = dict(kw)
                     one["attention_mask"] = None  # one row sees every cached key
                     one["position_ids"] = _rows(pos, i, i + 1)
                     if emb is not None:
                         one["position_embeddings"] = tuple(_rows(e, i, i + 1) for e in emb)
                     outs.append(original(hidden[:, i : i + 1], **one))
+                    if own is not None:
+                        state["kv"].setdefault(layer.self_attn.layer_idx, []).append(
+                            (own.keys[..., -1:, :].clone(), own.values[..., -1:, :].clone())
+                        )
             finally:
                 del held
             return torch.cat(outs, dim=1)
@@ -823,17 +837,176 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
     for module, forward in patched:
         module.forward = forward
     try:
-        yield
+        yield state
     finally:
         for module, _ in patched:
             del module.forward
+
+
+# a draft tree offers the top TREE_BRANCH tokens of each node it expands, and expands
+# max(1, nodes // TREE_ROUNDS) of its best candidates per batched draft pass (0256, 0257)
+TREE_BRANCH = 8
+TREE_ROUNDS = 8
+
+
+class _DraftTree:
+    """Best-first draft trees (SpecExec): the draft keeps a cache of the sequence so far and
+    proposes the ``nodes`` continuations with the highest cumulative log-probability."""
+
+    def __init__(self, draft: Any, nodes: int) -> None:
+        self.draft, self.nodes = draft, nodes
+        self.cache: Any = None
+        self.length = 0
+
+    def build(self, ids: Any, room: int) -> tuple[list[int], list[int], list[int]]:
+        """Nodes after the last token of ``ids`` in depth-first order: (tokens, parent index
+        with -1 for children of the root, depth from 1), at most ``room`` deep."""
+        import copy
+        import heapq
+
+        import torch
+        from transformers import DynamicCache
+
+        if self.cache is None:
+            self.cache = DynamicCache()
+        new = ids[:, self.length :]
+        out = self.draft(input_ids=new, past_key_values=self.cache, use_cache=True)
+        self.length = ids.shape[1]
+        root = torch.log_softmax(out.logits[0, -1].float(), -1)
+        heap: list[tuple[float, tuple[int, ...]]] = []
+
+        def offer(scored: list[tuple[float, tuple[int, ...]]], dists: Any) -> None:
+            top = torch.topk(dists, TREE_BRANCH, dim=-1)
+            for (score, path), lps, toks in zip(scored, top.values.tolist(), top.indices.tolist()):
+                if len(path) < room:
+                    for lp, tok in zip(lps, toks):
+                        heapq.heappush(heap, (-(score + lp), (*path, tok)))
+
+        offer([(0.0, ())], root[None])
+        chosen: list[tuple[int, ...]] = []
+        width = max(1, self.nodes // TREE_ROUNDS)
+        while len(chosen) < self.nodes and heap:
+            batch = []
+            while heap and len(batch) < min(width, self.nodes - len(chosen)):
+                neg, path = heapq.heappop(heap)
+                batch.append((-neg, path))
+            chosen += [p for _, p in batch]
+            if len(chosen) >= self.nodes:
+                break
+            by_depth: dict[int, list[tuple[float, tuple[int, ...]]]] = {}
+            for item in batch:
+                by_depth.setdefault(len(item[1]), []).append(item)
+            for group in by_depth.values():
+                cache = copy.deepcopy(self.cache)
+                cache.batch_repeat_interleave(len(group))
+                x = torch.tensor([list(p) for _, p in group], device=ids.device)
+                logits = self.draft(input_ids=x, past_key_values=cache).logits[:, -1].float()
+                offer(group, torch.log_softmax(logits, -1))
+        # depth-first order: each node right after its parent's subtree so far
+        children: dict[tuple[int, ...], list[tuple[int, ...]]] = {}
+        for p in sorted(chosen):
+            children.setdefault(p[:-1], []).append(p)
+        tokens, parents, depths = [], [], []
+
+        def visit(path: tuple[int, ...], parent: int) -> None:
+            for child in children.get(path, []):
+                tokens.append(child[-1])
+                parents.append(parent)
+                depths.append(len(child))
+                visit(child, len(tokens) - 1)
+
+        visit((), -1)
+        return tokens, parents, depths
+
+
+def _tree_decoding(
+    model: Any,
+    input_ids: Any,
+    logits_processor: Any,
+    stopping_criteria: Any,
+    generation_config: Any,
+    *,
+    tree: _DraftTree,
+    synced_gpus: bool = False,
+    streamer: Any = None,
+    **model_kwargs: Any,
+) -> Any:
+    """Greedy decoding that verifies a draft tree per pass over the streamed weights (0257).
+    Called by ``model.generate(custom_generate=...)``, so the generation config, the logits
+    processors, the stopping criteria and the prompt's pass are exactly those of plain greedy
+    generation; each tree row is computed as plain generation computes that path's next token
+    (``_row_invariant``), so the tokens are the same."""
+    import torch
+
+    if generation_config.return_dict_in_generate:
+        raise InvalidArgument("generate(tree=...) returns token ids only")
+    outputs = model._prefill(input_ids, generation_config, model_kwargs)
+    model_kwargs = model._update_model_kwargs_for_generation(
+        outputs, model_kwargs, is_encoder_decoder=False
+    )
+    cache = model_kwargs["past_key_values"]
+    logits = outputs.logits[:, -1].to(copy=True, dtype=torch.float32)
+    del outputs
+
+    def step(logits: Any) -> bool:
+        """Append the next greedy token; True when generation is over."""
+        nonlocal input_ids
+        scores = logits_processor(input_ids, logits)
+        token = torch.argmax(scores, dim=-1)
+        input_ids = torch.cat([input_ids, token[:, None]], dim=-1)
+        if streamer is not None:
+            streamer.put(token.cpu())
+        return bool(stopping_criteria(input_ids, scores).any())
+
+    done = step(logits)
+    state = model.memopro_tree_state
+    max_length = generation_config.max_length
+    while not done:
+        room = max(0, max_length - input_ids.shape[1])
+        tokens, parents, depths = tree.build(input_ids, room)
+        start = cache.get_seq_length()
+        rows = torch.tensor([[int(input_ids[0, -1]), *tokens]], device=input_ids.device)
+        depths = [1, *(d + 1 for d in depths)]
+        parents = [-1, *(p + 1 for p in parents)]
+        positions = torch.tensor([[start + d - 1 for d in depths]], device=input_ids.device)
+        state["depths"], state["kv"] = depths, {}
+        try:
+            out = model(
+                input_ids=rows, position_ids=positions, past_key_values=cache, use_cache=True
+            )
+        finally:
+            state["depths"] = None
+        children: dict[tuple[int, int], int] = {
+            (p, int(rows[0, i])): i for i, p in enumerate(parents) if p >= 0
+        }
+        node, accepted = 0, []
+        while True:
+            accepted.append(node)
+            done = step(out.logits[:, node].to(copy=True, dtype=torch.float32))
+            nxt = children.get((node, int(input_ids[0, -1])))
+            if done or nxt is None:
+                break
+            node = nxt
+        for idx, kv in state["kv"].items():  # the cache as plain generation would have it
+            own = cache.layers[idx]
+            own.keys = torch.cat([own.keys[..., :start, :], *(kv[n][0] for n in accepted)], -2)
+            own.values = torch.cat([own.values[..., :start, :], *(kv[n][1] for n in accepted)], -2)
+        state["kv"] = {}
+        del out
+    if streamer is not None:
+        streamer.end()
+    return input_ids
 
 
 def generate(model: Any, input_ids: Any, *, draft: Any = None, **kwargs: Any) -> Any:
     """Greedy generation from a streamed model, with an optional resident ``draft``
     (:func:`draft_model`) proposing tokens: returns exactly what
     ``model.generate(input_ids, do_sample=False, **kwargs)`` returns, in fewer passes over the
-    streamed weights (G4 E4, 0142). One sequence at a time, no padding."""
+    streamed weights (G4 E4, 0142). One sequence at a time, no padding.
+
+    ``tree=N``: the draft proposes a tree of N tokens per pass instead of one chain, and each
+    pass verifies all of them; rows cost little next to reading the weights, so passes accept
+    more tokens (0256, 0257)."""
     import torch
 
     if not hasattr(model, "memopro_weights"):
@@ -846,10 +1019,21 @@ def generate(model: Any, input_ids: Any, *, draft: Any = None, **kwargs: Any) ->
     if mask is not None and not bool(mask.all()):
         raise InvalidArgument("generate takes no padding (an attention_mask of all ones)")
     kwargs["do_sample"] = False
-    if draft is not None:
-        kwargs["assistant_model"] = draft
-    with torch.no_grad(), _row_invariant(model, input_ids.shape[1]):
-        return model.generate(input_ids=input_ids, **kwargs)
+    nodes = kwargs.pop("tree", 0)
+    if nodes and draft is None:
+        raise InvalidArgument("generate(tree=...) needs a draft")
+    with torch.no_grad(), _row_invariant(model, input_ids.shape[1]) as state:
+        if nodes:
+            model.memopro_tree_state = state
+            kwargs["custom_generate"] = functools.partial(
+                _tree_decoding, tree=_DraftTree(draft, int(nodes))
+            )
+        elif draft is not None:
+            kwargs["assistant_model"] = draft
+        try:
+            return model.generate(input_ids=input_ids, **kwargs)
+        finally:
+            model.__dict__.pop("memopro_tree_state", None)
 
 
 @contextlib.contextmanager

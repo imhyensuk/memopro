@@ -2,6 +2,7 @@
 the weights in aligned memory), within the budget, for inference and frozen-weight training."""
 
 import contextlib
+import gc
 import math
 
 import pytest
@@ -331,6 +332,56 @@ def test_int4_draft_keeps_greedy_generation_of_the_streamed_model(tmp_path):
         rtt.generate(m, ids, do_sample=True)
     with pytest.raises(memopro.InvalidArgument):
         rtt.generate(m, ids.repeat(2, 1))
+
+
+@pytest.mark.parametrize("device", ["cpu", "mps"])
+def test_draft_trees_keep_greedy_generation(tmp_path, device):
+    """0257 (S3): with ``tree=N`` the draft proposes a tree per pass and every row is computed
+    as plain generation computes that path, so the tokens equal plain greedy generation, with
+    a repetition penalty, a minimum length and an end token too; a draft that agrees with the
+    target makes passes accept several tokens."""
+    from memopro.env._torch import mps_usable
+
+    if device == "mps" and not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    target = _tiny_qwen(tmp_path / "target", 0)
+    m = rtt.stream_model(target, budget="9MiB", device=device)
+
+    def plain_model(path):
+        return transformers.AutoModelForCausalLM.from_pretrained(path, dtype=torch.bfloat16).to(
+            device
+        )
+
+    same, other = plain_model(target).eval(), plain_model(_tiny_qwen(tmp_path / "o", 1)).eval()
+    ids = torch.randint(0, 8000, (1, 12), generator=torch.Generator().manual_seed(3)).to(device)
+    passes = [0]
+    m.register_forward_pre_hook(lambda mod, args: passes.__setitem__(0, passes[0] + 1))
+    with torch.no_grad():
+        first = m.generate(input_ids=ids, do_sample=False, max_new_tokens=24, pad_token_id=0)
+    end = int(first[0, ids.shape[1] + 6])
+    for kw in (
+        {"max_new_tokens": 24},
+        {"max_new_tokens": 20, "repetition_penalty": 1.3},
+        {"max_new_tokens": 16, "min_new_tokens": 10, "eos_token_id": end},
+        {"max_new_tokens": 24, "eos_token_id": end},
+    ):
+        with torch.no_grad():
+            plain = m.generate(input_ids=ids, do_sample=False, pad_token_id=0, **kw)
+        for draft in (same, other):
+            for nodes in (1, 16):
+                passes[0] = 0
+                got = rtt.generate(m, ids, draft=draft, tree=nodes, pad_token_id=0, **kw)
+                assert torch.equal(got, plain), (kw, nodes, draft is same)
+                if draft is same and nodes == 16 and len(kw) == 1:
+                    assert passes[0] < (plain.shape[1] - ids.shape[1]) / 2
+    m.memopro_weights.finish()
+    assert m.memopro_runtime.stats()["pinned_bytes"] == 0
+    with pytest.raises(memopro.InvalidArgument):
+        rtt.generate(m, ids, tree=8, max_new_tokens=4)
+    del same, other  # later tests measure Apple GPU memory
+    gc.collect()
+    if device == "mps":
+        torch.mps.empty_cache()
 
 
 def test_int4_drafts_need_an_apple_gpu(tmp_path):

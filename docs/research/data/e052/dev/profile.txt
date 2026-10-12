@@ -1,0 +1,6 @@
+# 7B dev profile (0257): prompt 0, 32 tokens, 1.5 GiB, per pass
+{"tree": 32, "build_s": [3.46, 2.57, 2.42, 2.01], "fwd_s": [8.8, 11.75, 11.24, 11.21, 11.18], "rows": [33, 33, 33, 33], "same": true}
+{"tree": 8, "build_s": [1.49, 1.04, 0.84, 0.76], "fwd_s": [7.17, 7.89, 7.36, 7.41, 7.39], "rows": [9, 9, 9, 9], "same": true}
+# HF chain (assisted generation), [rows in the pass, seconds]; first pass includes the 36-token prompt
+{"chain": 32, "passes": [[69, 11.48], [23, 8.42], [14, 7.72], [13, 7.44], [6, 7.18]], "same": true}
+{"chain": 8, "passes": [[46, 8.14], [9, 7.53], [9, 7.56], [9, 7.25], [6, 7.16]], "same": true}

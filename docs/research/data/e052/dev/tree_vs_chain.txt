@@ -1,0 +1,4 @@
+# 7B dev check (0257): prompt 0, 64 tokens, 1.5 GiB
+{"prompt": 0, "tree": 0, "s_per_tok": 1.589, "passes": 12, "same": true}
+{"prompt": 0, "tree": 32, "s_per_tok": 2.214, "passes": 11, "same": true}
+{"prompt": 0, "tree": 64, "s_per_tok": 3.149, "passes": 10, "same": true}
