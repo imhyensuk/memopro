@@ -1,0 +1,42 @@
+{
+ "case": "G-P-64",
+ "seconds": 139.9612993329065,
+ "tokens": [
+  32,
+  5175,
+  1965,
+  374,
+  264,
+  821,
+  5944,
+  429,
+  5169,
+  458,
+  68903,
+  1334,
+  8115,
+  821,
+  943,
+  11
+ ],
+ "work": {
+  "load_bytes": 15231233024,
+  "reread_bytes": 228468495360,
+  "read_seconds": 129.47932326800014,
+  "restore_seconds": 125.80902487300267,
+  "prefetches": 5070,
+  "prefetch_bytes": 212118574080,
+  "prefetch_hits": 5070,
+  "prefetch_wasted": 0,
+  "prefetch_skipped": 15,
+  "pins": 5424
+ },
+ "kind": "none",
+ "lookahead": 67108864,
+ "budget": 1610612736,
+ "limit": 1606402048,
+ "base_footprint": 192088000,
+ "peak_footprint": 2068994304,
+ "swap_before": 3386963394,
+ "swap_after": 3590848512
+}
