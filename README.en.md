@@ -1,6 +1,6 @@
 # memopro
 
-**Run work larger than your device's memory, with unchanged results, within a memory ceiling you set.**
+**Run work that does not fit in your machine's memory, with exactly the same results.**
 
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 ![Python ≥ 3.11](https://img.shields.io/badge/python-%E2%89%A5%203.11-blue.svg)
@@ -8,19 +8,43 @@
 
 [한국어](https://github.com/imhyensuk/memopro/blob/main/README.md) · English
 
-memopro is an open-source library for work that needs more memory than the machine has. It is verified on 8-16 GB laptops and Macs and small GPUs; the design does not depend on the memory size ([design, in Korean](https://github.com/imhyensuk/memopro/blob/main/docs/design/scale.md)). The core is written in Rust and the interface in Python.
-
-- **Lossless**: no quantization or approximation. Generation and inference outputs are bit-identical to a plain run; training losses are bit-identical whatever the budget.
-- **Guaranteed ceiling**: memory use stays within the budget you set. A budget that cannot work is refused before anything runs.
-- **No disk writes**: model weights are re-read from their original files and data created in memory is compressed losslessly. No swap or cache files are created.
+An open-source library for when you want to fine-tune a 14 GB language model on an 8 GB laptop, or when a program dies with "out of memory" because its data is larger than your RAM.
 
 ```python
 import memopro
 
-r = memopro.finetune("Qwen/Qwen2.5-7B-Instruct", texts, budget="1.5GiB")  # 16-bit LoRA on an 8 GB Mac
-r.adapter.save_pretrained("my-lora")                                       # a standard PEFT adapter
+# 16-bit LoRA of a 7B model (14 GB of weights) on an 8 GB Mac, using only 1.5 GiB
+r = memopro.finetune("Qwen/Qwen2.5-7B-Instruct", texts, budget="1.5GiB")
+r.adapter.save_pretrained("my-lora")  # a standard PEFT adapter
 print(memopro.generate(r.model, "Hello!", draft="Qwen/Qwen2.5-1.5B-Instruct"))
 ```
+
+```bash
+memopro run --budget 8GB analysis.py  # run your existing script, unchanged, within 8 GB
+```
+
+## How it works
+
+memopro **trades time for memory.** It frees memory by compressing data that is not in use, re-reading it from its original file, or recomputing it when needed, and it measures which of these is fastest for each piece of data. Work gets somewhat slower, but work that could not even start now runs to the end.
+
+Compared with the other ways around the same problem:
+
+| | OS swap | Quantization (4-bit etc.) | memopro |
+|---|---|---|---|
+| Results | Same | **Different** (accuracy loss) | **Same** (bit-identical) |
+| Memory use | Not under your control | Smaller | **Stays within the ceiling you set**; refused before running if impossible |
+| Speed | Can slow to a crawl | Fast | 2-5x faster than swap on most measured work; slowdown **predicted before running** |
+| Disk writes | Many | None | None |
+
+## When to use it
+
+- Your model or data is larger than your device's memory (GPU or RAM) and does not run as is
+- Results must be exactly the same as a plain run (reproducible research, no accuracy loss allowed)
+- You want to keep a program under a fixed amount of memory while other programs run
+
+**When other tools are better**: if it fits in memory, Unsloth, mlx-tune or plain PyTorch are faster. If some accuracy loss is fine, 4-bit quantization (QLoRA, llama.cpp) is fast. memopro is for sizes those tools cannot run.
+
+Verified on 8-16 GB laptops and Macs and small GPUs; the design does not depend on the memory size ([design, in Korean](https://github.com/imhyensuk/memopro/blob/main/docs/design/scale.md)). The core is written in Rust and the interface in Python.
 
 > "Memory" means hardware memory (GPU and RAM), not agent or conversation memory.
 
