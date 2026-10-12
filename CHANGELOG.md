@@ -2,7 +2,20 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.1.1 (alpha)
+
+### Fixed: lossless generation on x86 CPUs (0243)
+- `memopro.rt.torch.generate` hands each verified row to the kernels with the shape and strides
+  plain generation uses (a copy instead of a strided view). On x86 CPUs, oneDNN's bf16 GEMM
+  rounds differently by row count and by stride (AVX-512 without bf16 instructions), so the
+  output could differ from plain greedy generation in the last bit of a logit; on Apple
+  silicon it never did. The test's reference now uses `logits_to_keep=1` like plain
+  generation.
+
+### Changed: README introduction
+- The README (ko/en) opens with the problem memopro solves, what it trades (time for memory,
+  never results or the ceiling), a comparison with OS swap and quantization, and when other
+  tools are better.
 
 ### Added: `finetune(batch=k)` trains k sequences per read of the weights (S2, 0252-0255)
 - Each streamed weight is read once per step, so k sequences per step train k times the tokens
