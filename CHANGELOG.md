@@ -4,6 +4,13 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Added: `finetune(batch=k)` trains k sequences per read of the weights (S2, 0252-0255)
+- Each streamed weight is read once per step, so k sequences per step train k times the tokens
+  per read. Ordinary mini-batch training: losses differ from `batch=1`, identical across
+  budgets. The activation estimate scales with the batch.
+- Measured on an 8 GB M1, Qwen2.5-7B 16-bit LoRA, 129 tokens, 2.5 GiB: batch 1 8.4, batch 2
+  13.0, batch 4 15.5 tokens/s (1.86x), losses identical between runs and budgets (E051b).
+
 ### Changed: re-reads from model files run at the SSD's speed (S1, 0247-0251)
 - Reads of original files are aligned to 16 KiB pages. macOS reads an `F_NOCACHE` file at an
   unaligned offset through its page cache, slower and leaving the pages cached, and
