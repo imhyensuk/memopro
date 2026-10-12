@@ -7,8 +7,8 @@
 //! - RS1: each call does the whole transfer; no intermediate copies (reads land in `dst`, writes
 //!   come from `src`).
 //! - RS2: buffers are borrowed (the Python bindings take the buffer protocol, never `bytes`).
-//! - RS3: reads and digests run on the process-wide rayon pool; writes on one process-wide,
-//!   low-I/O-priority pool (H4).
+//! - RS3: reads and digests run on one process-wide read pool of [`readers`] threads; writes on
+//!   one process-wide, low-I/O-priority pool (H4).
 //! - RS4: no transfer buffers at all, so extra memory does not grow with the transfer size.
 //! - RS5: digests are computed chunk by chunk while other chunks are being read or written.
 //! - P5: spill files are created `0600` with `create_new` and hold raw bytes only; metadata and
@@ -112,6 +112,30 @@ fn lower_io_priority() {
 #[cfg(not(any(target_os = "macos", target_os = "linux")))]
 fn lower_io_priority() {}
 
+/// Reads in flight at once: `MEMOPRO_READ_THREADS` when set (a calibration knob for other
+/// devices), else 4: more did not read faster on an M1 (E050, 0247) and each reader keeps one
+/// [`DIGEST_CHUNK`]-sized scratch buffer for unaligned reads.
+pub fn readers() -> usize {
+    std::env::var("MEMOPRO_READ_THREADS")
+        .ok()
+        .and_then(|v| v.parse().ok())
+        .filter(|&n| n > 0)
+        .unwrap_or(4)
+}
+
+/// Process-wide pool for reads (RS3).
+fn read_pool() -> Option<&'static rayon::ThreadPool> {
+    static POOL: OnceLock<Option<rayon::ThreadPool>> = OnceLock::new();
+    POOL.get_or_init(|| {
+        rayon::ThreadPoolBuilder::new()
+            .num_threads(readers())
+            .thread_name(|i| format!("memopro-read-{i}"))
+            .build()
+            .ok()
+    })
+    .as_ref()
+}
+
 /// Process-wide pool for spill writes, with lowered I/O priority (H4, RS3).
 fn write_pool() -> Option<&'static rayon::ThreadPool> {
     static POOL: OnceLock<Option<rayon::ThreadPool>> = OnceLock::new();
@@ -145,6 +169,41 @@ fn read_at(file: &File, mut buf: &mut [u8], mut offset: u64) -> std::io::Result<
         }
     }
     Ok(())
+}
+
+/// File offsets of uncached reads are aligned to this. macOS reads an `F_NOCACHE` file at an
+/// unaligned offset through its cache: slower (1.4 vs 2.0 GiB/s) and the pages stay cached
+/// (E050 follow-up, 0248). Safetensors data starts at any byte (0115).
+const ALIGN: u64 = 16 << 10;
+
+std::thread_local! {
+    static SCRATCH: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
+}
+
+/// Fill `dst` from `offset`: directly when the offset is aligned, else through an aligned
+/// per-thread scratch buffer covering the aligned pages around it (same bytes, one copy).
+fn read_aligned(file: &File, file_len: u64, dst: &mut [u8], offset: u64) -> std::io::Result<()> {
+    let skew = offset % ALIGN;
+    if skew == 0 {
+        return read_at(file, dst, offset);
+    }
+    let start = offset - skew;
+    let end = (offset + dst.len() as u64)
+        .next_multiple_of(ALIGN)
+        .min(file_len);
+    let len = (end - start) as usize;
+    SCRATCH.with(|s| {
+        let mut s = s.borrow_mut();
+        if s.len() < len + ALIGN as usize {
+            *s = vec![0; len + ALIGN as usize];
+        }
+        let at = s.as_ptr().align_offset(ALIGN as usize);
+        let buf = &mut s[at..at + len];
+        read_at(file, buf, start)?;
+        let from = skew as usize;
+        dst.copy_from_slice(&buf[from..from + dst.len()]);
+        Ok(())
+    })
 }
 
 /// Create a new spill file readable only by this user. Unix: mode 0600. Windows: the file
@@ -194,15 +253,22 @@ pub(crate) fn read_region(
     dst: &mut [u8],
     expected: Option<&Digest>,
 ) -> Result<Digest> {
-    let parts: std::io::Result<Vec<u128>> = dst
-        .par_chunks_mut(DIGEST_CHUNK)
-        .enumerate()
-        .map(|(i, chunk)| {
-            read_at(file, chunk, offset + (i * DIGEST_CHUNK) as u64)?;
-            Ok(xxh3_128(chunk))
-        })
-        .collect();
-    let got = combine(dst.len(), &parts?);
+    let len = dst.len();
+    let file_len = file.metadata()?.len();
+    let mut job = move || -> std::io::Result<Vec<u128>> {
+        dst.par_chunks_mut(DIGEST_CHUNK)
+            .enumerate()
+            .map(|(i, chunk)| {
+                read_aligned(file, file_len, chunk, offset + (i * DIGEST_CHUNK) as u64)?;
+                Ok(xxh3_128(chunk))
+            })
+            .collect()
+    };
+    let parts = match read_pool() {
+        Some(pool) => pool.install(job),
+        None => job(),
+    };
+    let got = combine(len, &parts?);
     match expected {
         Some(want) if *want != got => Err(Error::Integrity(
             "data read back does not match its digest".into(),
