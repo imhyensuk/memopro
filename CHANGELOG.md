@@ -2,6 +2,18 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## 0.1.2 (alpha)
+
+### Changed: crates.io publishing without a stored token
+- The release workflow publishes the crate through crates.io Trusted Publishing (GitHub OIDC,
+  a short-lived token per release). The 0.1.1 crate upload was refused by crates.io (the stored
+  token failed authentication), so crates.io goes from 0.1.0 to 0.1.2; the code of 0.1.1 is in
+  0.1.2 unchanged. PyPI has 0.1.1.
+
+### Changed: README
+- README (ko/en) reorganized for users: what memopro can do, examples, where it works, ways to
+  call it, a tour of the code, and how it works. The PyPI page shows it from this release.
+
 ## 0.1.1 (alpha)
 
 ### Fixed: lossless generation on x86 CPUs (0243)
