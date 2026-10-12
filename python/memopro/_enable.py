@@ -24,8 +24,11 @@ took so far. Everything it did or could not do is listed in the session; ``disab
 
 Limits (0229): memory that no part can move (the interpreter, libraries, small objects, model
 weights the code loaded itself) still counts; when it alone passes the ceiling, the pager
-records overruns and runtimes refuse with ``BudgetExceeded``. The kernel cannot fault paged
-NumPy memory in (``tofile``/``fromfile`` may raise ``OSError``).
+records overruns and runtimes refuse with ``BudgetExceeded``. Paged arrays that do not fit even
+compressed overrun it too. A watcher checks the process every second and warns once, with the
+likely cause, as soon as the ceiling is passed (0265); `Session.measured` reports the peak and
+how far over it went. The kernel cannot fault paged NumPy memory in (``tofile``/``fromfile``
+may raise ``OSError``).
 """
 
 from __future__ import annotations
@@ -56,6 +59,9 @@ class Session:
     activations: Any = None
     runtimes: weakref.WeakSet = field(default_factory=weakref.WeakSet, repr=False)
     started: float = field(default_factory=time.perf_counter)
+    peak_footprint: int = 0  # the most the process held, as the watcher saw it (0265)
+    start_peak: int | None = None  # the OS's peak when the session began
+    warned: bool = False
     _stack: contextlib.ExitStack = field(default_factory=contextlib.ExitStack, repr=False)
 
     def _add(self, part: str, status: str, detail: str) -> None:
@@ -92,7 +98,7 @@ class Session:
     def measured(self) -> dict[str, Any]:
         """What memopro cost so far: seconds the program waited for memopro (pager faults,
         runtime restores), the slowdown that implies, the process peak against the ceiling."""
-        from memopro.rt import process_footprint
+        from memopro.rt import process_footprint, process_peak_footprint
 
         elapsed = time.perf_counter() - self.started
         waited = 0.0
@@ -105,12 +111,21 @@ class Session:
         runtimes = [r.stats() for r in list(self.runtimes)]
         waited += sum(s["restore_seconds"] for s in runtimes)
         work = max(elapsed - waited, 1e-9)
+        now = process_footprint()
+        peak = max(self.peak_footprint, now or 0)
+        # the OS's own peak catches what a once-a-second watcher misses; it counts only when it
+        # rose during the session (an earlier peak belongs to the code before enable)
+        os_peak = process_peak_footprint()
+        if os_peak is not None and self.start_peak is not None and os_peak > self.start_peak:
+            peak = max(peak, os_peak)
         return {
             "elapsed_seconds": elapsed,
             "memopro_seconds": waited,
             "slowdown": elapsed / work,
             "ceiling": self.budget,
-            "footprint": process_footprint(),
+            "footprint": now,
+            "peak_footprint": peak,
+            "exceeded_bytes": max(0, peak - self.budget),
             "overruns": overruns,
             "activations_moved": 0 if self.activations is None else self.activations.moved,
             "pager": pager,
@@ -229,9 +244,71 @@ def enable(
         _transformers(s)
     if sys.platform == "darwin" and os.environ.get("MallocLargeCache") != "0":
         s._add("macOS", "note", "start Python with MallocLargeCache=0 so freed memory goes back")
+    _watch(s)
     atexit.register(s.disable)  # before NumPy and torch go away at exit
     _set_active(s)
     return s
+
+
+# the process may pass the ceiling by this much before the watcher calls it over: E047 stayed
+# within +1.8 MiB where everything fit
+OVER_TOLERANCE = 32 << 20
+
+
+def _watch(s: Session, every: float = 1.0) -> None:
+    """Check the process every ``every`` seconds; keep its peak and warn once when it is over
+    the ceiling (the pager overran it, or the footprint passed it), saying why (0265)."""
+    import threading
+    import warnings
+
+    from memopro.rt import process_footprint, process_peak_footprint
+
+    s.start_peak = process_peak_footprint()
+    stop = threading.Event()
+
+    def run() -> None:
+        while not stop.wait(every):
+            now = process_footprint()
+            if now is None:
+                return
+            s.peak_footprint = max(s.peak_footprint, now)
+            pager = dict(s.pager.stats()) if s.pager is not None else None
+            over = now > s.budget + OVER_TOLERANCE or bool(pager and pager["overruns"])
+            if over and not s.warned:
+                s.warned = True
+                warnings.warn(_over_message(s.budget, now, pager), UserWarning, stacklevel=1)
+
+    thread = threading.Thread(target=run, name="memopro-ceiling", daemon=True)
+    thread.start()
+    s._stack.callback(lambda: (stop.set(), thread.join()))
+
+
+def _over_message(ceiling: int, now: int, pager: dict[str, Any] | None) -> str:
+    from memopro._units import format_size
+
+    msg = (
+        f"memopro: the ceiling of {format_size(ceiling)} cannot be kept (the process holds "
+        f"{format_size(now)} now). "
+    )
+    if pager and pager["overruns"]:  # the pager found nothing it could evict
+        squeezed = (
+            f"compressed to {pager['compress_out'] / pager['compress_in']:.2f} of their size"
+            if pager["compress_in"]
+            else "could not be compressed"
+        )
+        msg += (
+            f"The paged arrays do not fit even compressed (they {squeezed}), so the pager lets "
+            "the process grow rather than stop it. "
+        )
+    else:
+        msg += (
+            "Most of it is memory memopro cannot move (the interpreter, libraries, arrays under "
+            "16 MiB). "
+        )
+    return msg + (
+        "Raise the ceiling or hold less data at once; Session.estimate(sample, total=...) "
+        "predicts whether data fits before running."
+    )
 
 
 def _set_active(s: Session) -> None:
