@@ -1,0 +1,42 @@
+{
+ "case": "G-P-384",
+ "seconds": 152.39630941697396,
+ "tokens": [
+  32,
+  5175,
+  1965,
+  374,
+  264,
+  821,
+  5944,
+  429,
+  5169,
+  458,
+  68903,
+  1334,
+  8115,
+  821,
+  943,
+  11
+ ],
+ "work": {
+  "load_bytes": 15231233024,
+  "reread_bytes": 228468495360,
+  "read_seconds": 251.50718213799996,
+  "restore_seconds": 142.18958650100438,
+  "prefetches": 5070,
+  "prefetch_bytes": 212118574080,
+  "prefetch_hits": 5070,
+  "prefetch_wasted": 0,
+  "prefetch_skipped": 15,
+  "pins": 5424
+ },
+ "kind": "none",
+ "lookahead": 402653184,
+ "budget": 1610612736,
+ "limit": 1606402048,
+ "base_footprint": 192808832,
+ "peak_footprint": 2093619520,
+ "swap_before": 4680056832,
+ "swap_after": 4063431229
+}
