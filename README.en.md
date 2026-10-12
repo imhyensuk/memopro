@@ -58,9 +58,10 @@ All measured against criteria fixed in advance. Raw data and environments are in
 
 | Task | Result |
 |---|---|
-| Qwen2.5-**7B** bf16 LoRA training (14.2 GiB of weights) | Completes with a 1.5 GiB budget; losses bit-identical across budgets; 7.3 tokens/s |
+| Qwen2.5-**7B** bf16 LoRA training (14.2 GiB of weights) | Completes with a 1.5 GiB budget; losses bit-identical across budgets. At 129 tokens and 2.5 GiB: batch 1 8.4 tokens/s, `batch=4` 15.5 tokens/s |
 | Qwen2.5-3B bf16 LoRA, same setup as mlx-tune | mlx-tune runs out of memory before step 1; memopro trains at 20.0 tokens/s with a 1 GiB budget |
 | Qwen2.5-7B lossless generation (int4 draft + row-invariant verification) | Same output as plain generation, 8.95 → 2.37 s/token (3.8x) |
+| Qwen2.5-7B generation, 0.1.1 read path (no draft, 1.5 GiB budget) | Same output; 9.39 → 7.24 s/token (+30%) against 0.1.0 in the same machine state |
 | Qwen2.5-3B bf16 inference (CPU) at 1/4 of the memory it needs | Same output, about 5x faster than OS paging |
 | Qwen2.5-7B bf16 LoRA training on a Colab T4 (15 GB) | Plain training runs out of GPU memory; memopro completes with a 4 GiB budget, losses identical across budgets |
 | Qwen2.5-3B bf16 generation vs. other tools | memopro 1.09 s/token (2.1 GB process); llama.cpp CPU 14.75 s/token (3.3 GB); llama.cpp Metal runs out of memory |
@@ -278,7 +279,7 @@ Python 3.11+, PyTorch 2.4+.
 
 ## Limitations
 
-- **Speed**: memory is saved at the cost of time. 7B training on an 8 GB Mac takes about 18 s per 129-token step. Models that fit in memory run faster with existing tools: on a Colab T4, Unsloth (fp16) trained 3B and 7B 16-bit LoRA 10-33x faster than memopro (stored bf16). memopro is for models larger than the GPU or device memory, which do not run otherwise.
+- **Speed**: memory is saved at the cost of time. 7B training on an 8 GB Mac takes about 15 s per 129-token step (`batch=4`: about 33 s for four sequences). Models that fit in memory run faster with existing tools: on a Colab T4, Unsloth (fp16) trained 3B and 7B 16-bit LoRA 10-33x faster than memopro (stored bf16). memopro is for models larger than the GPU or device memory, which do not run otherwise.
 - **Transparent paging**: workloads with heavy random access (sorting, group-by) and data still larger than the limit after compression do not run at a practical speed. Linux and macOS (not Windows).
 - **Model coverage**: the LLM path is verified mainly on the Qwen2.5 family (1.5B-7B), vision on ResNet-152 and DINOv2. Diffusion and speech models are not tested.
 - **Alpha**: APIs may change.
