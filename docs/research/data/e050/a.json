@@ -1,0 +1,610 @@
+{
+ "files": [
+  "model-00001-of-00004.safetensors",
+  "model-00002-of-00004.safetensors",
+  "model-00003-of-00004.safetensors",
+  "model-00004-of-00004.safetensors"
+ ],
+ "rows": [
+  {
+   "rep": 0,
+   "piece": 1048576,
+   "threads": 1,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 1351190422.7791264,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 1048576,
+   "threads": 2,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 2038936933.8018043,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 1048576,
+   "threads": 4,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 2705501149.340253,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 1048576,
+   "threads": 8,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 2485665480.7025504,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 1048576,
+   "threads": 16,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 2188360765.2437115,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 4194304,
+   "threads": 1,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 1919672012.2579901,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 4194304,
+   "threads": 2,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 2375282545.87882,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 4194304,
+   "threads": 4,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 2918263736.278828,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 4194304,
+   "threads": 8,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 2286897492.7968054,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 4194304,
+   "threads": 16,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 2203222046.0460963,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 16777216,
+   "threads": 1,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 2236008918.3582764,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 16777216,
+   "threads": 2,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 2499212143.664124,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 16777216,
+   "threads": 4,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 2506319951.8596134,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 16777216,
+   "threads": 8,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 2216750449.2366595,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 16777216,
+   "threads": 16,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 2009669395.808793,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 67108864,
+   "threads": 1,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 1872757053.732996,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 67108864,
+   "threads": 2,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 2242061655.897675,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 67108864,
+   "threads": 4,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 2179518021.0273037,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 67108864,
+   "threads": 8,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 2185716752.0165515,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 0,
+   "piece": 67108864,
+   "threads": 16,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 2517936282.599775,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 1048576,
+   "threads": 1,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 1676913385.3690832,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 1048576,
+   "threads": 2,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 1984597480.6912453,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 1048576,
+   "threads": 4,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 2540446473.2708526,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 1048576,
+   "threads": 8,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 2600293046.9442177,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 1048576,
+   "threads": 16,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 2601673380.228852,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 4194304,
+   "threads": 1,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 2044092430.493566,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 4194304,
+   "threads": 2,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 1916207610.5760586,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 4194304,
+   "threads": 4,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 2480445649.5144377,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 4194304,
+   "threads": 8,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 2159673927.533102,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 4194304,
+   "threads": 16,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 2260741721.66376,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 16777216,
+   "threads": 1,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 1559376497.1988444,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 16777216,
+   "threads": 2,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 1747674668.0441933,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 16777216,
+   "threads": 4,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 2281429407.4584007,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 16777216,
+   "threads": 8,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 2131026971.3027968,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 16777216,
+   "threads": 16,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 2131837559.0592523,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 67108864,
+   "threads": 1,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 1734142419.4326904,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 67108864,
+   "threads": 2,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 2305447943.043278,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 67108864,
+   "threads": 4,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 2016780792.034646,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 67108864,
+   "threads": 8,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 1776436781.852749,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 1,
+   "piece": 67108864,
+   "threads": 16,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 1915688954.7794733,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 1048576,
+   "threads": 1,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 991992354.096187,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 1048576,
+   "threads": 2,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 1589414123.6871784,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 1048576,
+   "threads": 4,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 1389144396.1141028,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 1048576,
+   "threads": 8,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 1815663312.2863653,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 1048576,
+   "threads": 16,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 1643307153.242526,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 4194304,
+   "threads": 1,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 1441480817.8971791,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 4194304,
+   "threads": 2,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 2247701153.1314745,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 4194304,
+   "threads": 4,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 1940979447.7553153,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 4194304,
+   "threads": 8,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 1811577988.0270083,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 4194304,
+   "threads": 16,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 1780119866.0538933,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 16777216,
+   "threads": 1,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 1727909264.4796646,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 16777216,
+   "threads": 2,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 0,
+   "resident_before": 0.0,
+   "bytes_per_s": 1985715052.099791,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 16777216,
+   "threads": 4,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 971010162.6059465,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 16777216,
+   "threads": 8,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 1930835098.8451712,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 16777216,
+   "threads": 16,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 1650340029.8473465,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 67108864,
+   "threads": 1,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 1073741824,
+   "resident_before": 0.0,
+   "bytes_per_s": 1423162804.0511632,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 67108864,
+   "threads": 2,
+   "file": "model-00001-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 1599000494.5253978,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 67108864,
+   "threads": 4,
+   "file": "model-00002-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 1500189244.6397882,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 67108864,
+   "threads": 8,
+   "file": "model-00003-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 1412775822.9550498,
+   "resident_after": 0.0
+  },
+  {
+   "rep": 2,
+   "piece": 67108864,
+   "threads": 16,
+   "file": "model-00004-of-00004.safetensors",
+   "offset": 2147483648,
+   "resident_before": 0.0,
+   "bytes_per_s": 1788445221.742113,
+   "resident_after": 0.0
+  }
+ ]
+}
