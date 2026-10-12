@@ -40,7 +40,7 @@ print(memopro.generate(r.model, "Hello!"))
 Whatever you use, three promises hold:
 
 - ✅ **Results do not change.** No quantization or approximation; outputs and losses are bit-identical.
-- ✅ **Memory stays within the ceiling you set.** A budget that cannot work is refused before anything runs.
+- ✅ **Memory stays within the ceiling you set.** A budget that cannot work is refused before anything runs; when an unchanged program's data does not fit even compressed, memopro warns the moment it passes the ceiling and reports by how much.
 - ✅ **Nothing is written to disk.** No swap or cache files.
 
 > "Memory" means hardware memory (GPU and RAM), not agent or conversation memory.
@@ -343,7 +343,7 @@ Design documents (in Korean): [architecture](https://github.com/imhyensuk/memopr
 ## Limitations
 
 - **Speed**: memory is saved at the cost of time. 7B training on an 8 GB Mac takes about 15 s per 129-token step (`batch=4`: about 33 s for four sequences). Models that fit in memory run faster with existing tools.
-- **Paging without code changes**: random access (sorting, group-by) and data larger than the ceiling even compressed do not run at a practical speed. Linux and macOS only (not Windows).
+- **Paging without code changes**: random access (sorting, group-by) does not run at a practical speed. Data larger than the ceiling even compressed has to pass it; memopro then warns and reports by how much (`Session.estimate` tells beforehand). Linux and macOS only (not Windows).
 - **Model coverage**: LLMs mainly the Qwen2.5 family (1.5B-7B), vision ResNet-152 and DINOv2. Diffusion and speech models are not tested.
 - **Apple GPU**: call `finetune`/`stream_model` before anything else uses MPS, so torch's MPS allocator setting takes effect (a warning says when it is too late).
 - **Alpha**: the API may change; see the [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md).

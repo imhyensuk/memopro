@@ -7,6 +7,45 @@ pub fn process_footprint() -> Option<u64> {
     imp()
 }
 
+/// The most [`process_footprint`] has been since the process started, as the OS keeps it
+/// (macOS lifetime maximum physical footprint, Linux `VmHWM`, Windows peak working set); a
+/// sampler can miss short peaks (0265).
+pub fn process_peak_footprint() -> Option<u64> {
+    peak()
+}
+
+#[cfg(target_os = "macos")]
+fn peak() -> Option<u64> {
+    // SAFETY: rusage_info_v4 is plain data; proc_pid_rusage fills it for our own pid.
+    unsafe {
+        let mut info: libc::rusage_info_v4 = std::mem::zeroed();
+        let r = libc::proc_pid_rusage(
+            libc::getpid(),
+            libc::RUSAGE_INFO_V4,
+            (&mut info as *mut libc::rusage_info_v4).cast(),
+        );
+        (r == 0).then_some(info.ri_lifetime_max_phys_footprint)
+    }
+}
+
+#[cfg(target_os = "linux")]
+fn peak() -> Option<u64> {
+    let s = std::fs::read_to_string("/proc/self/status").ok()?;
+    let line = s.lines().find(|l| l.starts_with("VmHWM:"))?;
+    let kib: u64 = line.split_whitespace().nth(1)?.parse().ok()?;
+    Some(kib * 1024)
+}
+
+#[cfg(windows)]
+fn peak() -> Option<u64> {
+    counters().map(|c| c.PeakWorkingSetSize as u64)
+}
+
+#[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
+fn peak() -> Option<u64> {
+    None
+}
+
 #[cfg(target_os = "macos")]
 fn imp() -> Option<u64> {
     // SAFETY: rusage_info_v2 is plain data; proc_pid_rusage fills it for our own pid.
@@ -30,6 +69,11 @@ fn imp() -> Option<u64> {
 
 #[cfg(windows)]
 fn imp() -> Option<u64> {
+    counters().map(|c| c.WorkingSetSize as u64)
+}
+
+#[cfg(windows)]
+fn counters() -> Option<windows_sys::Win32::System::ProcessStatus::PROCESS_MEMORY_COUNTERS> {
     use windows_sys::Win32::System::ProcessStatus::{
         K32GetProcessMemoryInfo, PROCESS_MEMORY_COUNTERS,
     };
@@ -42,7 +86,7 @@ fn imp() -> Option<u64> {
     // SAFETY: the counters are plain data of the size given in `cb`; the handle is our own
     // process (a pseudo-handle that needs no closing).
     let ok = unsafe { K32GetProcessMemoryInfo(GetCurrentProcess(), &mut c, c.cb) };
-    (ok != 0).then_some(c.WorkingSetSize as u64)
+    (ok != 0).then_some(c)
 }
 
 #[cfg(not(any(target_os = "macos", target_os = "linux", windows)))]
@@ -61,5 +105,6 @@ mod tests {
         let after = super::process_footprint().unwrap();
         assert!(after >= before + (48 << 20), "{before} -> {after}");
         drop(v);
+        assert!(super::process_peak_footprint().unwrap() >= after);
     }
 }
