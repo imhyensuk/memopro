@@ -159,6 +159,28 @@ mod tests {
     }
 
     #[test]
+    fn unaligned_reads_up_to_the_end_of_the_file_are_exact() {
+        // aligned reads go through a scratch buffer covering whole pages (0248); the last
+        // page of a file is partial
+        let data: Vec<u8> = (0..(9 << 20) + 12345)
+            .map(|i: u32| (i * 13 % 251) as u8)
+            .collect();
+        let path = temp_file("c.bin", &data);
+        let src = SourceFile::open(&path).unwrap();
+        for (offset, len) in [
+            (19, 64),
+            (data.len() - (5 << 20) - 7, (5 << 20) + 7),
+            (16384, 4096),
+        ] {
+            let mut dst = vec![0u8; len];
+            let d = src.read_into(offset as u64, &mut dst, None).unwrap();
+            assert_eq!(&dst[..], &data[offset..offset + len]);
+            assert_eq!(d, digest(&dst));
+        }
+        std::fs::remove_file(&path).ok();
+    }
+
+    #[test]
     fn a_changed_file_is_refused() {
         let path = temp_file("b.bin", &[1u8; 4096]);
         let src = SourceFile::open(&path).unwrap();

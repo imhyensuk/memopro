@@ -168,6 +168,8 @@ pub struct Stats {
     pub limit_low: u64,
 }
 
+const SERVICE_THREADS: usize = 2;
+
 /// The runtime. Cloning shares it; the service thread stops when the last clone is dropped
 /// (pins keep the memory they hold valid until they are dropped too).
 #[derive(Clone)]
@@ -178,18 +180,18 @@ pub struct Runtime {
 
 struct Owner {
     shared: Arc<Shared>,
-    service: Mutex<Option<JoinHandle<()>>>,
+    service: Mutex<Vec<JoinHandle<()>>>,
 }
 
 impl Drop for Owner {
     fn drop(&mut self) {
         self.shared.lock().stop = true;
         self.shared.cond.notify_all();
-        if let Some(handle) = self
+        for handle in self
             .service
             .lock()
             .unwrap_or_else(|e| e.into_inner())
-            .take()
+            .drain(..)
         {
             let _ = handle.join();
         }
@@ -477,17 +479,17 @@ impl Runtime {
             }),
             cond: Condvar::new(),
         });
-        let service = if prefetch {
+        // two service threads keep the next buffer's reads going while one finishes (0248)
+        let mut service = Vec::new();
+        for i in 0..if prefetch { SERVICE_THREADS } else { 0 } {
             let s = shared.clone();
-            Some(
+            service.push(
                 std::thread::Builder::new()
-                    .name("memopro-rt".into())
+                    .name(format!("memopro-rt-{i}"))
                     .spawn(move || s.serve())
                     .map_err(Error::Io)?,
-            )
-        } else {
-            None
-        };
+            );
+        }
         Ok(Runtime {
             _owner: Arc::new(Owner {
                 shared: shared.clone(),

@@ -31,7 +31,7 @@ from pathlib import Path
 from experiments.e028_mps_lora.run import footprint, swap_used
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "docs" / "research" / "data" / "e050"
+OUT = ROOT / "docs" / "research" / "data" / os.environ.get("E050_OUT", "e050")  # e050b: 0248
 MIB, GIB = 1 << 20, 1 << 30
 TARGET = "Qwen/Qwen2.5-7B-Instruct"
 REVISION = "a09a35458c702b33eeacc393d103063234e8bc28"
@@ -259,7 +259,7 @@ def _rate(work: dict, seconds: float) -> float:
 def summarize() -> str:
     a = json.loads((OUT / "a.json").read_text())
     recs = {p.stem: json.loads(p.read_text()) for p in sorted((OUT / "cases").glob("*.json"))}
-    lines = ["# E050 summary (0246)", "", "## A: device (GiB/s, median of 3)", "",
+    lines = [f"# {OUT.name.upper()} summary (0246, 0248)", "", "## A: device (GiB/s, median of 3)", "",
              "| piece \\ threads | " + " | ".join(map(str, THREADS)) + " |",
              "|---|" + "---|" * len(THREADS)]
     med = {}
@@ -298,6 +298,13 @@ def summarize() -> str:
             same.append((f"{a_} = {b_}", recs[a_]["tokens"] == recs[b_]["tokens"]))
     if "T-64" in recs and "T-384" in recs and "losses" in recs["T-64"]:
         same.append(("T-64 losses = T-384", recs["T-64"]["losses"] == recs["T-384"]["losses"]))
+    base = OUT.parent / "e050" / "cases"
+    if OUT.name != "e050":  # E050b: the same results as before the change (0248)
+        for name, r in recs.items():
+            key = "tokens" if "tokens" in r else "losses" if "losses" in r else None
+            if key and (base / f"{name}.json").exists():
+                before = json.loads((base / f"{name}.json").read_text()).get(key)
+                same.append((f"{name} {key} = E050", r[key] == before))
     for label, ok in same:
         lines.append(f"- {label}: {'yes' if ok else 'NO'}")
     for name, r in recs.items():
@@ -320,8 +327,12 @@ def run_all() -> None:
                                  text=True, check=False).stdout.strip(),
         "script_sha256": hashlib.sha256(Path(__file__).read_bytes()).hexdigest(),
         "swap_at_start": swap_used(),
-        "ssd": subprocess.run(["system_profiler", "SPNVMeDataType"], capture_output=True,
-                              text=True, check=False).stdout,
+        "ssd": "\n".join(
+            line
+            for line in subprocess.run(["system_profiler", "SPNVMeDataType"],
+                                       capture_output=True, text=True, check=False).stdout.splitlines()
+            if "Serial" not in line
+        ),
     }
     (OUT / "env.json").write_text(json.dumps(env, indent=1))
     child = {**os.environ, "MallocLargeCache": "0", "PYTORCH_MPS_LOW_WATERMARK_RATIO": "0.1",
