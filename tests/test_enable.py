@@ -2,6 +2,7 @@
 predicted before a run and undone by disable."""
 
 import sys
+import time
 
 import pytest
 
@@ -74,6 +75,30 @@ def test_numpy_arrays_are_paged_within_the_ceiling():
         st = s.pager.stats()
         assert st["evictions"] > 0 and st["limit_low"] < 48 * MIB
         del x
+
+
+def _incompressible_until_warned(s, nbytes):
+    noise = np.random.default_rng(0).integers(0, 255, nbytes, dtype=np.uint8)
+    deadline = time.monotonic() + 10
+    while not s.warned and time.monotonic() < deadline:  # the watcher looks every second
+        time.sleep(0.1)
+    return noise
+
+
+@pytest.mark.skipif(not paged, reason="transparent paging needs Linux or macOS")
+def test_passing_the_ceiling_is_warned_and_measured():
+    """0265: data that does not fit even compressed makes the pager let the process grow; the
+    session warns once, while it runs, and reports the peak and how far over it went."""
+    held = rt.process_footprint() or 0
+    with memopro.enable(held + 48 * MIB, torch=False, transformers=False) as s:
+        if parts(s).get("numpy") != "applied":
+            pytest.skip("transparent paging not usable here")
+        with pytest.warns(UserWarning, match="cannot be kept"):
+            noise = _incompressible_until_warned(s, 128 * MIB)
+        m = s.measured()
+        assert m["exceeded_bytes"] > 32 * MIB and m["peak_footprint"] > s.budget
+        assert s.pager.stats()["overruns"] > 0
+        del noise
 
 
 def test_estimate_predicts_before_running():

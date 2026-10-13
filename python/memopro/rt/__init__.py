@@ -40,7 +40,14 @@ from typing import Any
 from memopro._errors import InvalidArgument
 from memopro._units import format_size, parse_size
 
-__all__ = ["Buffer", "Runtime", "process_footprint", "resolve_budget", "transparent"]
+__all__ = [
+    "Buffer",
+    "Runtime",
+    "process_footprint",
+    "process_peak_footprint",
+    "resolve_budget",
+    "transparent",
+]
 
 # element sizes the codec shuffles by; bfloat16 has no NumPy dtype, it is viewed as uint16
 _BFLOAT16 = "bfloat16"
@@ -90,6 +97,14 @@ def process_footprint() -> int | None:
     from memopro import _core
 
     return _core.process_footprint()
+
+
+def process_peak_footprint() -> int | None:
+    """The most `process_footprint` has been since the process started, as the OS keeps it
+    (macOS lifetime maximum footprint, Linux ``VmHWM``, Windows peak working set)."""
+    from memopro import _core
+
+    return _core.process_peak_footprint()
 
 
 def _available() -> int:

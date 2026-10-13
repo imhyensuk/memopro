@@ -994,6 +994,12 @@ fn process_footprint() -> Option<u64> {
     memopro::rt::process_footprint()
 }
 
+/// The most the process footprint has been since it started (0265).
+#[pyfunction]
+fn process_peak_footprint() -> Option<u64> {
+    memopro::rt::process_peak_footprint()
+}
+
 /// Make `handler` (a `mem_handler` capsule, or None for NumPy's default) NumPy's memory
 /// handler in the current context; returns the previous one.
 #[pyfunction]
@@ -1057,6 +1063,7 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_class::<RtPin>()?;
     m.add_class::<RtPager>()?;
     m.add_function(wrap_pyfunction!(process_footprint, m)?)?;
+    m.add_function(wrap_pyfunction!(process_peak_footprint, m)?)?;
     m.add_function(wrap_pyfunction!(numpy_set_handler, m)?)?;
     Ok(())
 }
