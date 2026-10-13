@@ -9,7 +9,8 @@ pub fn process_footprint() -> Option<u64> {
 
 /// The most [`process_footprint`] has been since the process started, as the OS keeps it
 /// (macOS lifetime maximum physical footprint, Linux `VmHWM`, Windows peak working set); a
-/// sampler can miss short peaks (0265).
+/// sampler can miss short peaks (0265). Linux updates `VmHWM` lazily from batched counters, so
+/// right after a large free it can read a little below the true peak.
 pub fn process_peak_footprint() -> Option<u64> {
     peak()
 }
@@ -104,7 +105,9 @@ mod tests {
         let v = vec![1u8; 64 << 20];
         let after = super::process_footprint().unwrap();
         assert!(after >= before + (48 << 20), "{before} -> {after}");
-        drop(v);
+        // while the memory is held (Linux folds batched RSS counts into VmHWM lazily, so a peak
+        // read right after freeing can lag; CI, 0265)
         assert!(super::process_peak_footprint().unwrap() >= after);
+        drop(v);
     }
 }
