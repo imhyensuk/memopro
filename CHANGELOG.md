@@ -2,7 +2,7 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.1.4 (alpha)
 
 ### Changed: passing the ceiling is never silent (0265)
 - An `enable` session (and so `memopro run`) checks the process every second and warns once,
