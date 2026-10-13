@@ -2,6 +2,17 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## 0.1.4 (alpha)
+
+### Changed: passing the ceiling is never silent (0265)
+- An `enable` session (and so `memopro run`) checks the process every second and warns once,
+  while the program runs, when the ceiling cannot be kept: the pager overran it because the
+  paged arrays do not fit even compressed, or memory memopro cannot move passed it.
+- `Session.measured()` reports `peak_footprint` and `exceeded_bytes`, from the OS's own peak
+  (macOS lifetime maximum footprint, Linux `VmHWM`, Windows peak working set) when it rose
+  during the session; `memopro run` adds a `ceiling exceeded` line to its report.
+- New `memopro.rt.process_peak_footprint()` (Rust `rt::process_peak_footprint`).
+
 ## 0.1.3 (alpha)
 
 ### Added: `finetune(batch="auto")` (0262)

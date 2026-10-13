@@ -235,7 +235,8 @@ def run(
     (`default_elastic`). ``transparent`` is the earlier name for the ceiling (used only when no
     budget is configured). ``report_json`` writes the report, the pager's counters and the
     session's measurements to that file at the end."""
-    from memopro._enable import enable
+    from memopro._enable import OVER_TOLERANCE, enable
+    from memopro._units import format_size
     from memopro.config import configure, get_config
 
     default = elastic is None
@@ -278,6 +279,13 @@ def run(
         measured = session.measured()
         if session.pager is not None:
             _report_pager(session.pager)
+        if measured["exceeded_bytes"] > OVER_TOLERANCE:
+            report().add(
+                "ceiling",
+                "exceeded",
+                f"peak {format_size(measured['peak_footprint'])} against "
+                f"{format_size(session.budget)} (+{format_size(measured['exceeded_bytes'])})",
+            )
         session.disable()
         if report_json is not None:
             import json

@@ -30,7 +30,7 @@ mod predict;
 mod region;
 mod source;
 
-pub use footprint::process_footprint;
+pub use footprint::{process_footprint, process_peak_footprint};
 pub use pager::{Pager, PagerConfig, PagerStats, in_pager_thread};
 pub use predict::Prediction;
 pub use region::{Region, page_size, round_to_pages};
