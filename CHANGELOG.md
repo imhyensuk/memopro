@@ -103,7 +103,7 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 - The status reads alpha everywhere: the PyPI classifier `3 - Alpha` (was `2 - Pre-Alpha`) and
   the package docstring (was "skeleton").
 
-### Changed: the goal does not depend on the memory size (docs/design/scale.md)
+### Changed: the goal does not depend on the memory size
 - The goal is now any work that needs more memory than the machine has, at any scale; 8-16 GB
   machines stay the first verified target. Constants that assumed a size are listed and scale
   with the machine where measured.

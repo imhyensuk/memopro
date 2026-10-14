@@ -186,7 +186,7 @@ Python 3.11+, PyTorch 2.4+. Wheels on PyPI for macOS arm64 and Linux x86_64/aarc
 
 ## How is this possible?
 
-memopro empties data you are not using and brings it back when it is needed. For a language model it reads only the weights of the layer being computed from the original file, and drops them afterwards. Other data is compressed losslessly, so it comes back byte for byte. Nothing is approximated or quantized: results stay the same, only time is added. Details: [design documents](https://github.com/imhyensuk/memopro/blob/main/docs/design/architecture.md).
+memopro empties data you are not using and brings it back when it is needed. For a language model it reads only the weights of the layer being computed from the original file, and drops them afterwards. Other data is compressed losslessly, so it comes back byte for byte. Nothing is approximated or quantized: results stay the same, only time is added.
 
 ## Good to know
 
