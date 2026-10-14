@@ -38,6 +38,9 @@ def _device(device: str) -> str:
 
     if torch.cuda.is_available():
         return "cuda"
+    from memopro.rt.torch import set_mps_watermark
+
+    set_mps_watermark()  # the probe below starts MPS
     return "mps" if mps_usable() else "cpu"
 
 
