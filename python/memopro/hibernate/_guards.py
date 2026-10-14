@@ -85,6 +85,17 @@ def _compiled_wrappers(modules: list[Any]) -> list[Any]:
     ]
 
 
+def _retag(m: Any) -> None:
+    """Make dynamo check ``m``'s tensors again. torch 2.11 treats tensors as immutable and skips
+    their guards while the dict holding them keeps its tag (``use_recursive_dict_tags_for_guards``),
+    so a function compiled before hibernation ran on the emptied tensors (0270). Rebinding each
+    entry changes the tag; the guards then fail, dynamo retraces and meets the wake hook."""
+    for d in (m._parameters, m._buffers):
+        for k, v in list(d.items()):
+            d[k] = None
+            d[k] = v
+
+
 def _warn_if_compiled_caller(handle: Any) -> None:
     """Warn once when a compiled frame we could not see reached a sleeping module (0049)."""
     compiled_code = getattr(sys.modules.get("torch._dynamo.utils"), "orig_code_map", None)
@@ -189,6 +200,7 @@ class Guards:
                 self._hook(m.register_state_dict_pre_hook(wake_hook))
                 self._hook(m.register_load_state_dict_pre_hook(wake_hook))
                 self._override_module(m)
+                _retag(m)
         elif isinstance(obj, torch.optim.Optimizer):
             self._hook(obj.register_step_pre_hook(wake_hook))
             self._hook(obj.register_state_dict_pre_hook(wake_hook))

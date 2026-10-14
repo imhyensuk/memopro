@@ -2,6 +2,23 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## 0.1.5 (alpha)
+
+### Fixed: defects found by the Colab breadth test E053 (0269, 0270)
+- `stream_model(model_class=...)` reads the class's own config, so the vision tower of a whole
+  CLIP or SigLIP checkpoint (`CLIPVisionModel`, `SiglipVisionModel`) streams; it failed with
+  `'CLIPConfig' object has no attribute 'hidden_size'`.
+- `nn.MultiheadAttention` reads `out_proj.weight` without calling `out_proj`: such a module now
+  pins its children's weights too (SigLIP's pooling head saw meta tensors).
+- Hibernation on torch 2.11: a function compiled before `hibernate.now` ran on the emptied
+  weights, because torch 2.11 skips tensor guards while the holding dict keeps its tag. The
+  module's parameter and buffer entries are now rebound, so dynamo checks them again.
+
+### Changed: README
+- Rewritten around use cases, how to use memopro and measured results, with the Colab T4
+  results and what is practical (14B 16-bit LoRA on a T4 completes but runs about 1 token/s,
+  0271).
+
 ## 0.1.4 (alpha)
 
 ### Changed: passing the ceiling is never silent (0265)
