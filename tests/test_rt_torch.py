@@ -455,6 +455,26 @@ def test_stream_model_warns_when_mps_started_first(tmp_path, monkeypatch):
     del held
 
 
+def test_finetune_picks_the_apple_gpu_after_setting_the_watermark():
+    """0274: choosing device="auto" probes MPS, which starts it; the watermark must be set first,
+    or a fresh `memopro.finetune(name)` warned that its own setting came too late."""
+    import subprocess
+    import sys
+
+    from memopro.env._torch import mps_usable
+
+    if not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    code = (
+        "import os, warnings; warnings.simplefilter('error');"
+        "os.environ.pop('PYTORCH_MPS_LOW_WATERMARK_RATIO', None);"
+        "from memopro.llm import _device; d = _device('auto');"
+        "print(d, os.environ['PYTORCH_MPS_LOW_WATERMARK_RATIO'])"
+    )
+    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
+    assert out.stdout.split() == ["mps", rtt.MPS_LOW_WATERMARK]
+
+
 def test_streamed_vision_model_matches_plain(tmp_path):
     """0195: a ViT classifier (whose checkpoint names transformers 5 renames on loading) streams
     at an eighth of its size with the same logits, bit for bit, as the model loaded normally."""

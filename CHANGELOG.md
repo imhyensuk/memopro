@@ -2,6 +2,19 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Fixed: `finetune`/`generate` on Apple GPUs set the MPS watermark too late (0274)
+- With `device="auto"` they probed MPS (which starts it) before lowering torch's MPS low
+  watermark, so a fresh `memopro.finetune(name)` warned that its own setting came too late and
+  activations over 10 MiB could reserve 1 GiB heaps. The watermark is now set before the probe
+  (`memopro.rt.torch.set_mps_watermark`).
+
+### Changed: README and package metadata
+- README (ko/en) reorganised: overview, features, who it is for, installation, commands and API,
+  a quick start verified to run as pasted, advanced usage and benchmarks, contributing.
+- PyPI keywords and Python 3.11–3.14 classifiers.
+
 ## 0.1.5 (alpha)
 
 ### Fixed: defects found by the Colab breadth test E053 (0269, 0270)

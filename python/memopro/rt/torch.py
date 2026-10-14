@@ -506,16 +506,9 @@ def stream_model(
             "memopro.rt.torch.stream_model(device='cuda')", "no CUDA GPU here", ("device='cpu'",)
         )
     if device == "mps":
-        import os
-
-        from memopro.env import MPS_LOW_WATERMARK_BY_RUN, MPS_LOW_WATERMARK_VAR
         from memopro.env._torch import mps_usable
 
-        # before torch's MPS allocator starts (later it has no effect): see MPS_LOW_WATERMARK
-        mine = os.environ.get(MPS_LOW_WATERMARK_VAR)
-        if mine is None or mine == os.environ.get(MPS_LOW_WATERMARK_BY_RUN):
-            os.environ[MPS_LOW_WATERMARK_VAR] = MPS_LOW_WATERMARK
-            _warn_if_mps_started()
+        set_mps_watermark()
         if not mps_usable():
             raise ModeUnavailable(
                 "memopro.rt.torch.stream_model(device='mps')",
@@ -563,6 +556,20 @@ def stream_model(
         {"device": property(lambda self: where)},
     )
     return model
+
+
+def set_mps_watermark() -> None:
+    """Lower torch's MPS low watermark before MPS starts (later it has no effect; see
+    MPS_LOW_WATERMARK). A value the user set is kept. Callers that pick a device first must call
+    this before probing MPS, since the probe starts it (0274)."""
+    import os
+
+    from memopro.env import MPS_LOW_WATERMARK_BY_RUN, MPS_LOW_WATERMARK_VAR
+
+    mine = os.environ.get(MPS_LOW_WATERMARK_VAR)
+    if mine is None or mine == os.environ.get(MPS_LOW_WATERMARK_BY_RUN):
+        os.environ[MPS_LOW_WATERMARK_VAR] = MPS_LOW_WATERMARK
+        _warn_if_mps_started()
 
 
 def _warn_if_mps_started() -> None:
