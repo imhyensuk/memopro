@@ -1,6 +1,6 @@
 # memopro
 
-**Run work that does not fit in your machine's memory, with exactly the same results.**
+**A Python and Rust library that runs work larger than memory without changing its results**
 
 [![PyPI](https://img.shields.io/pypi/v/memopro.svg)](https://pypi.org/project/memopro/)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
@@ -9,6 +9,8 @@
 
 [한국어](https://github.com/imhyensuk/memopro/blob/main/README.md) · English
 
+memopro runs language models, vision models and data processing that are larger than a device's memory, within a set memory ceiling. It uses no quantization or approximation, so outputs and training losses are bit-identical to a run with enough memory; the cost is longer run time.
+
 ```bash
 pip install "memopro[llm]"
 ```
@@ -16,64 +18,51 @@ pip install "memopro[llm]"
 ```python
 import memopro
 
-# 16-bit LoRA of a 7B model (14 GB of weights) on an 8 GB MacBook
+# 16-bit LoRA of a 7B model (14 GB of weights) within 2 GiB of memory
 r = memopro.finetune("Qwen/Qwen2.5-7B-Instruct", texts, budget="2GiB")
-print(memopro.generate(r.model, "Hello!"))
+print(memopro.generate(r.model, "Hello"))
 ```
 
----
+## Features
 
-## When to use it
+- **Fine-tuning and generation with language models larger than memory**: LoRA training and text generation on the 16-bit weights as stored
+- **Inference with large vision models**: Hugging Face models run as they are, even when larger than memory
+- **A memory ceiling without code changes**: `memopro run --budget 8GB script.py` runs existing NumPy and PyTorch scripts within the ceiling
+- **Diagnosis and prediction before running**: whether a model fits a budget, and how much slower a ceiling makes a program
+- **Usable from Python, Rust and C**
 
-- 🧠 **You want to train or run a language model bigger than your laptop**: fine-tune a 7B model on an 8 GB MacBook, or run models bigger than the GPU on free Colab.
-- 🖼️ **You need a large vision model on little memory**: use a downloaded Hugging Face model as it is, even if it is bigger than memory.
-- 📊 **Your script dies with "out of memory" because the data is bigger than RAM**: run it unchanged with one line, `memopro run`.
-- 🎯 **The results must stay exactly the same**: no 4-bit quantization or other accuracy trade-offs. Outputs and losses are bit-identical.
+Every feature guarantees:
 
-memopro promises three things:
+- **Unchanged results**: only lossless methods are used; outputs equal those of a plain run.
+- **A memory ceiling**: a budget that cannot be kept is refused before starting. If an unmodified program exceeds the ceiling even after compression, memopro warns while it runs and reports by how much.
+- **No disk writes**: no swap files or cache files are created.
 
-- ✅ **Results do not change.** It spends time, not accuracy, to save memory.
-- ✅ **It runs within the memory ceiling you set.** A budget that cannot work is refused before starting. If an unchanged program must pass the ceiling, memopro warns at that moment and reports by how much.
-- ✅ **It never writes to disk.** No swap files, no cache files.
+## Usage
 
----
-
-## How to use it
-
-### 1. Fine-tune a language model on a MacBook
+### Fine-tuning a language model
 
 ```python
 import memopro
 
 r = memopro.finetune(
     "Qwen/Qwen2.5-7B-Instruct", texts,
-    budget="2.5GiB",   # the memory ceiling
-    batch="auto",      # the largest batch that fits (larger is faster)
+    budget="2.5GiB",   # memory ceiling
+    batch="auto",      # the largest batch that fits the ceiling
 )
 r.adapter.save_pretrained("my-lora")   # a standard PEFT adapter
-print(r.losses, r.batch)
 ```
 
-> 7B trains at about 15 tokens/s on an 8 GB M1. Training the same data under another budget gives bit-identical losses.
+The device is chosen automatically (NVIDIA GPU, then Apple GPU, then CPU). The same data gives the same losses under any budget.
 
-### 2. Generate text (faster, same output)
+### Text generation
 
 ```python
 text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Instruct")
 ```
 
-With a small `draft` model, the small model guesses ahead and the large one only checks. The output is identical to the large model alone, and 3.8x faster for 7B.
+With a small `draft` model, the draft proposes tokens and the large model verifies them. The output equals generation with the large model alone.
 
-### 3. Models bigger than an NVIDIA GPU (Colab and others)
-
-```python
-# the same code as on a Mac: an NVIDIA GPU is used when present
-r = memopro.finetune("mistralai/Mistral-7B-Instruct-v0.3", texts, budget="4GiB", batch="auto")
-```
-
-> On a free Colab T4 (15 GB), 16-bit LoRA of a 7B model takes about 6 s per 256-token step.
-
-### 4. Large vision models
+### Vision model inference
 
 ```python
 import transformers
@@ -81,118 +70,94 @@ import memopro.rt.torch as rtt
 
 m = rtt.stream_model("facebook/dinov2-giant", budget="1GB", device="cuda",  # "mps", "cpu"
                      model_class=transformers.Dinov2Model)
-features = m(pixel_values=images).pooler_output   # same output as the model loaded plainly
+features = m(pixel_values=images).pooler_output
 ```
 
-### 5. Run your script unchanged
+`model_class` can also select the vision tower of a CLIP or SigLIP checkpoint (`CLIPVisionModel`, `SiglipVisionModel`).
+
+### Running existing scripts unchanged
 
 ```bash
 memopro run --budget 8GB analysis.py   # large NumPy arrays compressed losslessly within the ceiling
 memopro run --budget 50% train.py      # within half of the measured free memory
-memopro run --dry-run train.py         # only show what it would do
+memopro run --dry-run train.py         # print the settings only
 ```
 
-### 6. Add one line to your code
+### Setting a ceiling in code
 
 ```python
 import memopro
 
-s = memopro.enable(budget="8GB")                    # a ceiling for this whole process
-print(s.estimate(sample, total="12GB", passes=3))   # before: how many seconds it will add
-...                                                 # your NumPy / PyTorch code as usual
-print(s.measured())                                 # after: real time and peak memory
+s = memopro.enable(budget="8GB")                    # ceiling for the whole process
+print(s.estimate(sample, total="12GB", passes=3))   # expected extra time
+...                                                 # NumPy / PyTorch code
+print(s.measured())                                 # actual time and peak memory
 ```
 
-### 7. Check before running
+### Diagnosis
 
 ```bash
 memopro doctor                                                      # usable memory per device
-memopro check Qwen/Qwen2.5-7B-Instruct --batch-size 4 --seq-len 512 # does this model fit
+memopro check Qwen/Qwen2.5-7B-Instruct --batch-size 4 --seq-len 512 # whether a model fits a budget
 ```
 
-More examples: [user guide](https://github.com/imhyensuk/memopro/blob/main/docs/guide/README.md)
+See the [user guide](https://github.com/imhyensuk/memopro/blob/main/docs/guide/README.en.md) for details.
 
-### Budgets
+### Budget forms
 
-Every function, `--budget`, `memopro.toml` and the `MEMOPRO_BUDGET` variable take the same forms.
+Every function, `--budget`, `memopro.toml` and the `MEMOPRO_BUDGET` variable accept the same forms.
 
 | Form | Meaning |
 |---|---|
 | `"auto"` | measured free memory − 10% (default) |
-| `"6GB"`, `"50%"`, `0.5` | a size, or a share of the free memory |
-| `"-2GB"` | everything but 2 GB |
-| `"2GB..6GB"` | at most 6 GB; do not start below 2 GB |
-| `"6GB!"` | 6 GB whatever was measured (you accept the swap risk) |
+| `"6GB"`, `"50%"`, `0.5` | a size, or a share of free memory |
+| `"-2GB"` | all but 2 GB |
+| `"2GB..6GB"` | at most 6 GB; refuse to start below 2 GB |
+| `"6GB!"` | 6 GB regardless of the measurement (may swap) |
 
----
+## Benchmarks
 
-## Results
+| Task | Hardware | Result |
+|---|---|---|
+| Qwen2.5-7B LoRA training | Apple M1, 8 GB | 15.5 tokens/s at a 2.5 GiB budget, `batch=4` |
+| Mistral-7B LoRA training | NVIDIA T4, 16 GB | about 43 tokens/s at a 4 GiB budget |
+| Qwen2.5-7B generation with `draft` | Apple M1, 8 GB | 8.95 → 2.37 s/token, identical output |
+| Qwen2.5-3B LoRA training | Apple M1, 8 GB | 20 tokens/s (mlx-tune runs out of memory) |
+| 1.5B–3.8B models (Qwen2.5, SmolLM2, Phi-3.5) | NVIDIA T4, 16 GB | 1.00–1.03x the time of a run with enough memory for training, 1.06–1.35x for generation |
+| NumPy, scikit-learn, CSV processing at 50–75% of the memory they need | Linux | identical results, 1.1–3.4x the time |
 
-Every result was measured against pass criteria fixed before running. Raw data: [`docs/research/data/`](https://github.com/imhyensuk/memopro/tree/main/docs/research/data).
+Models verified: Qwen2.5 (1.5B–14B), SmolLM2, Phi-3.5, Mistral-7B, DINOv2, ConvNeXtV2, ResNet-152. Raw results: [`docs/research/data/`](https://github.com/imhyensuk/memopro/tree/main/docs/research/data).
 
-### 🍎 MacBook Air M1 (8 GB)
+## Scope and limitations
 
-| What we tried | Result |
-|---|---|
-| Qwen2.5-**7B** LoRA (14 GB of weights) | ✅ completed at a 1.5 GiB budget; **15.5 tokens/s** with `batch=4`; same losses under every budget |
-| Qwen2.5-3B LoRA vs mlx-tune | ✅ mlx-tune runs out of memory before step 1; memopro trains at 1 GiB, 20 tokens/s |
-| Qwen2.5-7B generation with a draft model | ✅ identical output, 8.95 → **2.37 s/token** |
-| Qwen2.5-3B generation vs llama.cpp | ✅ memopro 1.09 s/token, llama.cpp (CPU) 14.75 s/token |
-| NumPy image pipeline at half its memory | ✅ identical result, within the ceiling + 1.8 MiB; slowdown predicted 3.81 s, measured 3.72 s |
+- **Good fit**: models or data a little larger than memory, and work whose results must match the original run.
+- **Models that fit in memory**: dedicated tools such as Unsloth and mlx-tune are faster.
+- **Models far larger than memory**: they run, but storage read speed makes them very slow; 14B 16-bit LoRA on an NVIDIA T4 runs at about 1 token/s.
+- **When some accuracy loss is acceptable**: 4-bit quantization (QLoRA, llama.cpp) is faster.
+- **Data work with heavy random access** (sorts, joins, Polars): results are identical, but it can be much slower.
+- **Apple GPUs**: call `finetune`/`stream_model` before other MPS work so the memory setting applies; a late call shows a warning.
+- **Alpha**: the API may change. See the [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md).
 
-### 🟩 Free Google Colab T4 (15 GB GPU, 12.7 GB RAM)
+## Installation
 
-Installed from PyPI (0.1.4) on a fresh runtime.
-
-| What we tried | Result |
-|---|---|
-| Five language models: Qwen2.5-1.5B, SmolLM2-1.7B, Phi-3.5-mini, Mistral-7B, Qwen2.5-14B | ✅ generated tokens and training losses identical across budgets |
-| Speed of small models (1.5B–3.8B) | training **1.00–1.03x**, generation 1.06–1.35x (less memory, nearly the same speed) |
-| Mistral-**7B** 16-bit LoRA | ✅ about 6 s per 256-token step, about 43 tokens/s |
-| Qwen2.5-**14B** 16-bit LoRA | ⚠️ completed, but about 125 s per step (about 1 token/s); plain PyTorch and Unsloth 16-bit failed. **Possible, not practical** |
-| Vision: DINOv2-giant, ConvNeXtV2-Huge, ResNet-152 | ✅ outputs bit-identical to the plain model |
-| NumPy, scikit-learn, CSV, image preprocessing at ½ and ¾ of their memory | ✅ identical results; ceiling kept, or warned and reported when it could not be; 1.1–3.4x slower |
-
-### What is practical
-
-| Situation | What to expect |
-|---|---|
-| A model **a little** bigger than memory (7B on an 8 GB Mac, 7B on a T4) | ✅ practical: 8–45 tokens/s |
-| A model that **fits** in memory | little reason to use memopro: Unsloth and mlx-tune are faster (10–33x on a T4) |
-| A model **far** bigger than memory (14B on a T4) | ⚠️ runs, but storage read speed makes it very slow |
-| You can accept a small accuracy loss | 4-bit QLoRA is much faster |
-| Data work with lots of random access (sorts, joins, Polars) | ⚠️ results are right, but it can get much slower |
-
----
-
-## Install and platforms
-
-| Install | For |
+| Command | Includes |
 |---|---|
 | `pip install memopro` | `memopro run`, `enable`, the runtime, diagnostics |
 | `pip install "memopro[llm]"` | `finetune`, `generate` (with PyTorch, Transformers, PEFT) |
 | `pip install "memopro[notebook]"` | Jupyter magics (`%hibernate`, `%wake`) |
 
-| Platform | Status |
+| Platform | Support |
 |---|---|
-| 🍎 macOS, Apple silicon | main development platform, every feature |
-| 🟩 Linux + NVIDIA GPU | verified on a Colab T4 |
-| 🐧 Linux CPU | verified in CI |
-| 🪟 Windows | basic features only |
+| macOS, Apple silicon | all features |
+| Linux + NVIDIA GPU | all features |
+| Linux CPU | all features except GPU ones |
+| Windows | basic features |
 
-Python 3.11+, PyTorch 2.4+. Wheels on PyPI for macOS arm64 and Linux x86_64/aarch64. Also usable from Rust ([crates.io](https://crates.io/crates/memopro)) and C ([`crates/memopro-c`](https://github.com/imhyensuk/memopro/tree/main/crates/memopro-c)).
+Requires Python 3.11+ and PyTorch 2.4+. PyPI provides wheels for macOS arm64 and Linux x86_64/aarch64. Rust: [crates.io](https://crates.io/crates/memopro); C: [`crates/memopro-c`](https://github.com/imhyensuk/memopro/tree/main/crates/memopro-c).
 
----
+## How it works
 
-## How is this possible?
-
-memopro empties data you are not using and brings it back when it is needed. For a language model it reads only the weights of the layer being computed from the original file, and drops them afterwards. Other data is compressed losslessly, so it comes back byte for byte. Nothing is approximated or quantized: results stay the same, only time is added. Details: [design documents](https://github.com/imhyensuk/memopro/blob/main/docs/design/architecture.md).
-
-## Good to know
-
-- On Apple GPUs, call `finetune`/`stream_model` before other MPS work so the memory setting applies (a late call warns).
-- Using only the vision tower of a combined checkpoint (CLIP, SigLIP) is fixed in the next release.
-- This is an alpha: the API may change. See the [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md).
+memopro empties data that is not in use and restores it when needed. For language models, it reads only the weights of the layer being computed from the original file and releases them afterwards. Other data is compressed losslessly and restored byte for byte. Nothing is approximated or quantized, so results stay the same and only run time increases.
 
 ## Development
 

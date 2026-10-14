@@ -1,4 +1,4 @@
-"""Common contract for every memory technique (docs/design/architecture.md, section 5).
+"""Common contract for every memory technique.
 
 Both memopro-native techniques (hibernate, census, rfc, elastic) and integrations of existing
 techniques (quantization, offload, checkpointing, ...) implement the same `Technique` protocol,

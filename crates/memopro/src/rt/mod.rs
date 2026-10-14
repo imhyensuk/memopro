@@ -1,4 +1,4 @@
-//! Runtime C-R (design `docs/design/runtime.md`; phase 1 0112, phase 2 0115).
+//! Runtime C-R (phase 1 0112, phase 2 0115).
 //!
 //! Large buffers are held as a recipe plus a state and kept under a hard memory budget. When a
 //! buffer has to come in and the budget is full, the runtime makes room by
