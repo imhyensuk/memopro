@@ -714,3 +714,34 @@ def test_dinov2_swiglu_rows_split_on_loading_stream_like_from_pretrained(tmp_pat
     want = transformers.Dinov2Model.from_pretrained(tmp_path).eval()(pixel_values=x).pooler_output
     streamed = rtt.stream_model(tmp_path, budget=64 << 20, model_class=transformers.Dinov2Model)
     assert torch.equal(streamed(pixel_values=x).pooler_output, want)
+
+
+@pytest.mark.parametrize("family", ["CLIP", "Siglip"])
+def test_vision_tower_of_a_combined_checkpoint_streams_like_from_pretrained(tmp_path, family):
+    """0270: `model_class=CLIPVisionModel` on a whole CLIP checkpoint needs the class's own config
+    (`vision_config`); the text tower's weights in the file are left alone."""
+    transformers = pytest.importorskip("transformers")
+    import memopro.rt.torch as rtt
+
+    small = {
+        "hidden_size": 32,
+        "intermediate_size": 64,
+        "num_hidden_layers": 2,
+        "num_attention_heads": 4,
+    }
+    config = getattr(transformers, f"{family}Config")(
+        text_config={**small, "vocab_size": 99},
+        vision_config={**small, "image_size": 28, "patch_size": 14},
+    )
+    torch.manual_seed(0)
+    getattr(transformers, f"{family}Model")(config).eval().save_pretrained(tmp_path)
+    cls = getattr(transformers, f"{family}VisionModel")
+    x = torch.randn(2, 3, 28, 28)
+    plain = cls.from_pretrained(tmp_path).eval()
+    # frozen like streamed weights: on x86, nn.MultiheadAttention computes differently (last
+    # bits) when its weights require grad, even under no_grad (CI diagnosis, 0270)
+    plain.requires_grad_(False)
+    streamed = rtt.stream_model(tmp_path, budget=64 << 20, model_class=cls)
+    with torch.no_grad():
+        want = plain(pixel_values=x).pooler_output
+        assert torch.equal(streamed(pixel_values=x).pooler_output, want)

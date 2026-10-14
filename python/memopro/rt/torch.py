@@ -248,12 +248,21 @@ class StreamedWeights:
                         module._buffers[name] = b.to(self.device)
         # storage address -> (buffer, dtype, numel) of weights pinned right now (for backward)
         self.pinned: dict[int, tuple[Any, torch.dtype, int]] = {}
-        self._own: dict[Any, list[tuple[str, Any]]] = {}
+        # module -> (owner, name, parameter) of the weights pinned around its forward
+        self._own: dict[Any, list[tuple[Any, str, Any]]] = {}
         self._held: dict[Any, list[list[Any]]] = {}
         self._handles = []
         for module in model.modules():
+            # nn.MultiheadAttention reads out_proj.weight without calling out_proj (SigLIP's
+            # pooling head, 0270): such a module pins its children's weights too
+            owners = (
+                module.modules() if isinstance(module, torch.nn.MultiheadAttention) else (module,)
+            )
             own = [
-                (n, p) for n, p in module.named_parameters(recurse=False) if id(p) in self.buffers
+                (owner, n, p)
+                for owner in owners
+                for n, p in owner.named_parameters(recurse=False)
+                if id(p) in self.buffers
             ]
             if own:
                 self._own[module] = own
@@ -342,7 +351,7 @@ class StreamedWeights:
         i = self._order.index(module)
         nxt = self._order[(i + 1) % len(self._order)]
         self._prefetched.clear()
-        want = [id(p) for _, p in self._own.get(nxt, ()) if id(p) not in self.gpu_cache]
+        want = [id(p) for _, _, p in self._own.get(nxt, ()) if id(p) not in self.gpu_cache]
         if not want:
             return
         if self.device.type == "cuda":
@@ -369,15 +378,15 @@ class StreamedWeights:
             self._seen.add(module)
             self._order.append(module)
         swapped = []
-        for name, param in self._own[module]:
+        for owner, name, param in self._own[module]:
             t = self._tensor(id(param))
-            module._parameters[name] = torch.nn.Parameter(t, requires_grad=False)
-            swapped.append((name, param, t.untyped_storage().data_ptr()))
+            owner._parameters[name] = torch.nn.Parameter(t, requires_grad=False)
+            swapped.append((owner, name, param, t.untyped_storage().data_ptr()))
         self._held[module].append(swapped)
 
     def _after(self, module: Any, args: Any, output: Any) -> None:
-        for name, param, ptr in self._held[module].pop():
-            module._parameters[name] = param
+        for owner, name, param, ptr in self._held[module].pop():
+            owner._parameters[name] = param
             self.pinned.pop(ptr, None)
         if self.copy:
             self._prefetch_after(module)
@@ -524,8 +533,10 @@ def stream_model(
     for r in floats:
         by_dtype[r.dtype] = by_dtype.get(r.dtype, 0) + r.nbytes
     stored = max(by_dtype, key=by_dtype.__getitem__)
-    config = transformers.AutoConfig.from_pretrained(str(name_or_dir), revision=revision)
     cls = model_class or transformers.AutoModelForCausalLM
+    # a model class reads its own config: CLIPVisionModel takes `vision_config` of a CLIP checkpoint
+    config_class = getattr(cls, "config_class", None) or transformers.AutoConfig
+    config = config_class.from_pretrained(str(name_or_dir), revision=revision)
     with init_empty_weights(include_buffers=False):
         # Auto classes build from a config with from_config, model classes with _from_config
         build = getattr(cls, "from_config", None) or cls._from_config
@@ -785,7 +796,7 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
             weights._tensor(id(p))
             for m in module.modules()
             if m in weights._own
-            for _, p in weights._own[m]
+            for _, _, p in weights._own[m]
         ]
 
     def layer_forward(layer: Any, original: Any) -> Any:
