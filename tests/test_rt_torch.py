@@ -740,6 +740,8 @@ def test_vision_tower_of_a_combined_checkpoint_streams_like_from_pretrained(tmp_
     plain = cls.from_pretrained(tmp_path).eval()
     for p in plain.parameters():  # aligned copies: BLAS results depend on alignment (0115)
         p.data = p.data.clone()
-    want = plain(pixel_values=x).pooler_output
     streamed = rtt.stream_model(tmp_path, budget=64 << 20, model_class=cls)
-    assert torch.equal(streamed(pixel_values=x).pooler_output, want)
+    # inference on both: nn.MultiheadAttention takes another kernel when weights need gradients
+    with torch.no_grad():
+        want = plain(pixel_values=x).pooler_output
+        assert torch.equal(streamed(pixel_values=x).pooler_output, want)
