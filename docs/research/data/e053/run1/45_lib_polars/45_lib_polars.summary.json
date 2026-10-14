@@ -1,0 +1,87 @@
+{
+ "test": "45_lib_polars",
+ "env": {
+  "time": "2026-10-13T14:54:25+00:00",
+  "python": "3.13.15",
+  "memopro": "0.1.4",
+  "torch": "2.11.0+cu130",
+  "transformers": "5.18.0",
+  "peft": "0.21.1",
+  "numpy": "2.1.3",
+  "gpu": "Tesla T4, 15360 MiB",
+  "host_memory_bytes": 13605830656,
+  "disk_free_bytes": 75415601152
+ },
+ "records": [
+  {
+   "agg": "2093b2f796de0f4b",
+   "groups": 100000,
+   "seconds": 4.55,
+   "peak_bytes": 1433583616,
+   "status": "ok",
+   "case": "plain",
+   "wall_s": 5.4,
+   "warned_ceiling": false
+  },
+  {
+   "agg": "2093b2f796de0f4b",
+   "groups": 100000,
+   "seconds": 195.92,
+   "peak_bytes": 1155371008,
+   "status": "ok",
+   "case": "memopro_50pct",
+   "wall_s": 196.4,
+   "warned_ceiling": true,
+   "ceiling": 716791808,
+   "peak_footprint": 1155371008,
+   "exceeded_bytes": 438579200,
+   "overruns": 44875
+  },
+  {
+   "agg": "2093b2f796de0f4b",
+   "groups": 100000,
+   "seconds": 179.13,
+   "peak_bytes": 1120505856,
+   "status": "ok",
+   "case": "memopro_75pct",
+   "wall_s": 179.5,
+   "warned_ceiling": true,
+   "ceiling": 1075187712,
+   "peak_footprint": 1120505856,
+   "exceeded_bytes": 45318144,
+   "overruns": 38706
+  }
+ ],
+ "checks": [
+  {
+   "check": "\uacb0\uacfc = \uc77c\ubc18 \uc2e4\ud589 (\uc0c1\ud55c 50%)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "\uc0c1\ud55c 50%: \uc9c0\ud0b4 \ub610\ub294 \uacbd\uace0\u00b7\ubcf4\uace0",
+   "ok": true,
+   "detail": "\uc0c1\ud55c\uc744 \uc9c0\ud0ac \uc218 \uc5c6\uc5b4 \uacbd\uace0, +418 MiB \ubcf4\uace0 (0265\uc758 \uc57d\uc18d)"
+  },
+  {
+   "check": "\uc2dc\uac04 \ubc30\uc728 50%",
+   "ok": null,
+   "detail": "43.06x (196s / 5s)"
+  },
+  {
+   "check": "\uacb0\uacfc = \uc77c\ubc18 \uc2e4\ud589 (\uc0c1\ud55c 75%)",
+   "ok": true,
+   "detail": ""
+  },
+  {
+   "check": "\uc0c1\ud55c 75%: \uc9c0\ud0b4 \ub610\ub294 \uacbd\uace0\u00b7\ubcf4\uace0",
+   "ok": true,
+   "detail": "\uc0c1\ud55c\uc744 \uc9c0\ud0ac \uc218 \uc5c6\uc5b4 \uacbd\uace0, +43 MiB \ubcf4\uace0 (0265\uc758 \uc57d\uc18d)"
+  },
+  {
+   "check": "\uc2dc\uac04 \ubc30\uc728 75%",
+   "ok": null,
+   "detail": "39.37x (179s / 5s)"
+  }
+ ]
+}

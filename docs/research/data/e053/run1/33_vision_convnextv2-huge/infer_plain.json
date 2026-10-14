@@ -1,0 +1,29 @@
+{
+ "task": "vis_infer",
+ "argv": [
+  "/content/memopro_bench/models/facebook--convnextv2-huge-22k-512",
+  "ConvNextV2ForImageClassification",
+  "plain",
+  "0",
+  "4",
+  "512"
+ ],
+ "device": "cuda",
+ "status": "ok",
+ "load_s": 1.1,
+ "output_sha": "dc6dd495cbabc69b",
+ "same_twice": true,
+ "shape": [
+  4,
+  1000
+ ],
+ "first_s": 4.432762384414673,
+ "second_s": 1.4558148384094238,
+ "rt": null,
+ "host_peak_bytes": 3608190976,
+ "gpu_peak_bytes": 4679663616,
+ "gpu_peak_allocated_bytes": 3962433024,
+ "case": "infer_plain",
+ "wall_s": 17.8,
+ "warned_ceiling": false
+}

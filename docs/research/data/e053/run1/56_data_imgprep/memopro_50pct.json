@@ -1,0 +1,11 @@
+{
+ "channel_mean": "a515370ef1089966",
+ "channel_std": "8be752f4e4d6be14",
+ "batch": "71916d7ed7372a99",
+ "seconds": 227.52,
+ "peak_bytes": 6514376704,
+ "status": "ok",
+ "case": "memopro_50pct",
+ "wall_s": 228.1,
+ "warned_ceiling": true
+}

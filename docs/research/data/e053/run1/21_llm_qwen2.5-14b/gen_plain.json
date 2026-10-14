@@ -1,0 +1,20 @@
+{
+ "task": "lm_gen",
+ "argv": [
+  "/content/memopro_bench/models/Qwen--Qwen2.5-14B-Instruct",
+  "plain",
+  "0",
+  "8",
+  "1"
+ ],
+ "device": "cuda",
+ "status": "oom",
+ "error": "CUDA out of memory. Tried to allocate 50.00 MiB. GPU 0 has a total capacity of 14.56 GiB of which 49.81 MiB is free. Including non-PyTorch memory, this process has 14.51 GiB memory in use. Of the allocated memory 14.41 GiB is allocated by PyTorch, and 1.16 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments",
+ "host_peak_bytes": 5282947072,
+ "gpu_peak_bytes": 15584854016,
+ "gpu_peak_allocated_bytes": 15473672192,
+ "case": "gen_plain",
+ "wall_s": 78.8,
+ "warned_ceiling": false,
+ "stderr": "\nLoading weights:   0%|          | 0/579 [00:00<?, ?it/s]\nLoading weights:   7%|\u258b         | 38/579 [00:00<00:01, 373.18it/s]\nLoading weights:  13%|\u2588\u258e        | 76/579 [00:00<00:01, 352.34it/s]\nLoading weights:  25%|\u2588\u2588\u258c       | 146/579 [00:00<00:00, 489.82it/s]\nLoading weights:  34%|\u2588\u2588\u2588\u258d      | 196/579 [00:00<00:00, 466.34it/s]\nLoading weights:  42%|\u2588\u2588\u2588\u2588\u258f     | 243/579 [00:00<00:00, 443.55it/s]\nLoading weights:  50%|\u2588\u2588\u2588\u2588\u2589     | 288/579 [00:00<00:00, 433.56it/s]\nLoading weights:  60%|\u2588\u2588\u2588\u2588\u2588\u2588    | 350/579 [00:00<00:00, 476.91it/s]\nLoading weights:  72%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f  | 417/579 [00:00<00:00, 534.19it/s]\nLoading weights:  81%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f | 471/579 [00:00<00:00, 534.85it/s]\nLoading weights:  91%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u258f| 529/579 [00:01<00:00, 543.75it/s]\nLoading weights: 100%|\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588\u2588| 579/579 [00:01<00:00, 498.72it/s]\n"
+}

@@ -1,0 +1,11 @@
+{
+ "coef": "a9b9ed86098f6946",
+ "accuracy": 0.9514175,
+ "nnz": 21699438,
+ "seconds": 16.26,
+ "peak_bytes": 2563014656,
+ "status": "ok",
+ "case": "plain",
+ "wall_s": 16.8,
+ "warned_ceiling": false
+}

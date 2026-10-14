@@ -1,0 +1,9 @@
+{
+ "case": "pytest",
+ "status": "failed",
+ "wall_s": 84.1,
+ "summary": "1 failed, 311 passed, 31 skipped, 3 warnings in 78.76s (0:01:18)",
+ "failed": [
+  "FAILED tests/test_hibernate_compile.py::test_unseen_compiled_callers_work_and_warn_once[compiled_function]"
+ ]
+}

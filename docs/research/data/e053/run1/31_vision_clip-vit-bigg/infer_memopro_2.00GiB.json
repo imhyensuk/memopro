@@ -1,0 +1,22 @@
+{
+ "task": "vis_infer",
+ "argv": [
+  "/content/memopro_bench/models/laion--CLIP-ViT-bigG-14-laion2B-39B-b160k",
+  "CLIPVisionModel",
+  "memopro",
+  "2147483648",
+  "4",
+  "224"
+ ],
+ "device": "cuda",
+ "status": "error",
+ "error": "AttributeError: 'CLIPConfig' object has no attribute 'hidden_size'",
+ "traceback": "Traceback (most recent call last):\n  File \"/content/memopro_bench/code/worker.py\", line 368, in main\n    fn(*args)\n    ~~^^^^^^^\n  File \"/content/memopro_bench/code/worker.py\", line 255, in vis_infer\n    m = vision(path, cls_name, mode, budget)\n  File \"/content/memopro_bench/code/worker.py\", line 234, in vision\n    m = rtt.stream_model(path, budget=int(budget), device=DEVICE, model_class=cls)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 532, in stream_model\n    model = build(config, dtype=stored)\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/modeling_utils.py\", line 1457, in _from_config\n    model = cls(config, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/models/clip/modeling_clip.py\", line 593, in __init__\n    embed_dim = config.hidden_size\n                ^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/configuration_utils.py\", line 525, in __getattribute__\n    return super().__getattribute__(key)\n           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/integrations/heterogeneity/configuration_utils.py\", line 312, in __getattribute__\n    return super().__getattribute__(key)\n           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\nAttributeError: 'CLIPConfig' object has no attribute 'hidden_size'\n",
+ "host_peak_bytes": 950259712,
+ "gpu_peak_bytes": 109969408,
+ "gpu_peak_allocated_bytes": 0,
+ "case": "infer_memopro_2.00GiB",
+ "wall_s": 8.2,
+ "warned_ceiling": false,
+ "stderr": ""
+}
