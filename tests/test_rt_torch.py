@@ -737,6 +737,9 @@ def test_vision_tower_of_a_combined_checkpoint_streams_like_from_pretrained(tmp_
     getattr(transformers, f"{family}Model")(config).eval().save_pretrained(tmp_path)
     cls = getattr(transformers, f"{family}VisionModel")
     x = torch.randn(2, 3, 28, 28)
-    want = cls.from_pretrained(tmp_path).eval()(pixel_values=x).pooler_output
+    plain = cls.from_pretrained(tmp_path).eval()
+    for p in plain.parameters():  # aligned copies: BLAS results depend on alignment (0115)
+        p.data = p.data.clone()
+    want = plain(pixel_values=x).pooler_output
     streamed = rtt.stream_model(tmp_path, budget=64 << 20, model_class=cls)
     assert torch.equal(streamed(pixel_values=x).pooler_output, want)
