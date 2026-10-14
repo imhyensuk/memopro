@@ -2,7 +2,7 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.1.6 (alpha)
 
 ### Fixed: `finetune`/`generate` on Apple GPUs set the MPS watermark too late (0274)
 - With `device="auto"` they probed MPS (which starts it) before lowering torch's MPS low
