@@ -16,7 +16,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "notebooks"
-MEMOPRO = "0.1.4"
+MEMOPRO = "0.1.5"
 GiB, MiB = 1 << 30, 1 << 20
 
 # ---------------------------------------------------------------------------- the tests
