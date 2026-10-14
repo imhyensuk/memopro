@@ -102,9 +102,27 @@ def fetch(repo, patterns):
     path = os.path.join(MODELS, repo.replace("/", "--"))
     t = time.time()
     snapshot_download(repo, local_dir=path, allow_patterns=[*patterns, *WEIGHT_FILES])
+    index_safetensors(path)
     size = sum(os.path.getsize(f) for f in glob.glob(os.path.join(path, "*.safetensors")))
     log(f"{repo}: {size / GiB:.1f} GiB of safetensors in {time.time() - t:.0f} s")
     return path, size
+
+
+def index_safetensors(path):
+    """Sharded safetensors without `model.safetensors.index.json` (CLIP-bigG ships only the .bin
+    index): write the index from the shards' headers so `from_pretrained` finds them (0270)."""
+    shards = sorted(glob.glob(os.path.join(path, "*.safetensors")))
+    index = os.path.join(path, "model.safetensors.index.json")
+    if len(shards) < 2 or glob.glob(os.path.join(path, "*.safetensors.index.json")):
+        return
+    weight_map = {}
+    for shard in shards:
+        with open(shard, "rb") as f:
+            header = json.loads(f.read(int.from_bytes(f.read(8), "little")))
+        weight_map.update({k: os.path.basename(shard) for k in header if k != "__metadata__"})
+    with open(index, "w") as f:
+        json.dump({"metadata": {}, "weight_map": weight_map}, f)
+    log(f"wrote {os.path.basename(index)} for {len(shards)} shards")
 
 
 def drop(path):

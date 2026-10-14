@@ -14,6 +14,7 @@ writes this file into a fresh Colab runtime.
 import gc
 import hashlib
 import json
+import os
 import sys
 import threading
 import time
@@ -168,6 +169,9 @@ def lm_lora(path, mode, budget, steps, seq, batch):
     tok = transformers.AutoTokenizer.from_pretrained(path)
     ids = wikitext(tok, (seq - 1) * steps)
     texts = [tok.decode(ids[i * (seq - 1) : (i + 1) * (seq - 1)]) for i in range(steps)]
+    # decoding and tokenizing again can add tokens (Mistral, 0270): cut into `steps` pieces exactly
+    eos = tok.eos_token or ""
+    seq = -(-(len(tok(eos.join(texts) + eos).input_ids) - 1) // steps)
     if mode == "memopro":
         m = rtt.stream_model(path, budget=int(budget), device=DEVICE)
         targets = targets_of(m)  # before PEFT wraps them
@@ -192,7 +196,6 @@ def lm_lora(path, mode, budget, steps, seq, batch):
     import peft
 
     m = transformers.AutoModelForCausalLM.from_pretrained(path, dtype=torch.bfloat16).to(DEVICE)
-    eos = tok.eos_token or ""
     all_ids = tok(eos.join(texts) + eos, return_tensors="pt").input_ids[0]
     torch.manual_seed(0)
     targets = targets_of(m)
@@ -273,12 +276,15 @@ def vis_infer(path, cls_name, mode, budget, batch, size):
 
 
 def vis_lora(path, cls_name, mode, budget, steps, batch, size):
-    """LoRA on the attention projections + a fresh 10-class head; deterministic kernels on."""
+    """LoRA on the attention projections + a fresh 10-class head; deterministic kernels only
+    (strict, cuBLAS workspace fixed, attention on the math kernel: 0270)."""
     import peft
+    from torch.nn.attention import SDPBackend, sdpa_kernel
 
     import memopro.rt.torch as rtt
 
-    torch.use_deterministic_algorithms(True, warn_only=True)
+    os.environ.setdefault("CUBLAS_WORKSPACE_CONFIG", ":4096:8")  # before cuBLAS starts
+    torch.use_deterministic_algorithms(True)
     m = vision(path, cls_name, mode, budget)
     torch.manual_seed(0)
     m = peft.get_peft_model(m, peft.LoraConfig(r=8, lora_alpha=16, target_modules=targets_of(m)))
@@ -304,7 +310,10 @@ def vis_lora(path, cls_name, mode, budget, steps, batch, size):
     losses, step_s = [], []
     for _ in range(int(steps)):
         t = time.time()
-        with rtt.saved_weights(base) if streamed else torch.enable_grad():
+        with (
+            sdpa_kernel(SDPBackend.MATH),
+            rtt.saved_weights(base) if streamed else torch.enable_grad(),
+        ):
             loss = torch.nn.functional.cross_entropy(head(features(base, x).float()), y)
             loss.backward()
         opt.step()

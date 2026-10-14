@@ -221,9 +221,13 @@ if SPEC["lora"]:
     la = run(f"lora_memopro_{gib(b1)}_a", "vis_lora", path, cls, "memopro", b1, 5, batch, px)
     lb = run(f"lora_memopro_{gib(b1)}_b", "vis_lora", path, cls, "memopro", b1, 5, batch, px)
     lc = run(f"lora_memopro_{gib(b2)}", "vis_lora", path, cls, "memopro", b2, 5, batch, px)
-    R += [la, lb, lc]
+    pa = run("lora_plain_a", "vis_lora", path, cls, "plain", 0, 5, batch, px)
+    pb = run("lora_plain_b", "vis_lora", path, cls, "plain", 0, 5, batch, px)
+    R += [la, lb, lc, pa, pb]
     checks.append((f"LoRA: 같은 예산 두 번 손실 같음 (결정성 켬)", bench.same(la, lb, "loss_bits"), str(la.get("losses"))[:100]))
     checks.append((f"LoRA: 예산 {gib(b1)} = {gib(b2)}", bench.same(la, lc, "loss_bits"), str(lc.get("losses"))[:100]))
+    checks.append(("LoRA: 일반 실행 두 번 같음 (보고)", None, bench.same(pa, pb, "loss_bits")))
+    checks.append(("LoRA: memopro = 일반 실행 (보고)", None, bench.same(la, pa, "loss_bits")))
 bench.verdict(SPEC["name"], env, R, checks)
 """
 
@@ -315,7 +319,7 @@ out = p.stdout + p.stderr
 summary = [l for l in out.splitlines() if " passed" in l or " failed" in l or " error" in l]
 failed = [l for l in out.splitlines() if l.startswith(("FAILED", "ERROR"))]
 rec = {"case": "pytest", "status": "ok" if p.returncode == 0 else "failed", "wall_s": round(time.time() - t, 1),
-       "summary": summary[-1] if summary else "", "failed": failed}
+       "summary": summary[-1] if summary else "", "failed": failed, "output_tail": out[-20000:]}
 with open(os.path.join(bench.RESULTS, "pytest.json"), "w") as f:
     json.dump(rec, f, indent=1)
 print(out[-2500:])
