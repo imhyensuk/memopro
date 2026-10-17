@@ -541,6 +541,31 @@ def test_copy_path_cache_and_prefetch_keep_results(tmp_path):
     assert 0 < stats["part"]["hits"] and stats["part"]["copies"] < stats["no cache"]["copies"]
 
 
+def test_draft_on_the_copy_path_keeps_greedy_output_and_copies_once_per_pass(tmp_path):
+    """0276: on the copy path (CUDA) a verification runs its rows one at a time; each row's
+    leaves reuse the layer's held device copies, so a draft cuts the copies (fewer passes)
+    instead of multiplying them by the rows. Forced on the CPU with no GPU cache; the draft is
+    a small model loaded normally (any assistant model works)."""
+    target = _tiny_qwen(tmp_path / "target", 0)
+    draft = transformers.AutoModelForCausalLM.from_pretrained(target, dtype=torch.bfloat16)
+    ids = torch.randint(0, 8000, (1, 12), generator=torch.Generator().manual_seed(3))
+    kw = {"max_new_tokens": 24, "pad_token_id": 0}
+    runs = {}
+    for name, d in (("plain", None), ("draft", draft)):
+        m = rtt.stream_model(target, budget="9MiB", device="cpu")
+        m.memopro_weights.copy, m.memopro_weights.gpu_budget = True, 0
+        if d is None:
+            with torch.no_grad():
+                out = m.generate(input_ids=ids, do_sample=False, **kw)
+        else:
+            out = rtt.generate(m, ids, draft=d, **kw)
+        runs[name] = (out, m.memopro_weights.copy_stats["copies"])
+        assert m.memopro_weights._holding == {}
+        assert m.memopro_runtime.stats()["pinned_bytes"] == 0
+    assert torch.equal(runs["draft"][0], runs["plain"][0])
+    assert runs["draft"][1] < runs["plain"][1]
+
+
 def test_copy_path_trains_like_weights_in_place(tmp_path):
     """0195: on CUDA each use copies a weight to the device and gives the runtime buffer back
     at once (forward and backward). Forced on the CPU, that path gives the same LoRA losses,

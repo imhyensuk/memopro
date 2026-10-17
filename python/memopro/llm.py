@@ -275,8 +275,8 @@ def generate(
 
     ``model`` is a name, a folder or a streamed model (reused as is). A string ``prompt`` goes
     through the chat template when the tokenizer has one and ``chat`` is true. ``draft`` (a
-    name, folder or :func:`memopro.rt.torch.draft_model`) proposes tokens on Apple GPUs; the
-    text is the same with or without it.
+    name, folder or :func:`memopro.rt.torch.draft_model`) proposes tokens on Apple and NVIDIA
+    GPUs; the text is the same with or without it.
 
     The budget covers the whole generation (0182): part of it is held back for the draft, the
     key/value cache and the prompt's intermediates (estimated first; on Apple GPUs measured
