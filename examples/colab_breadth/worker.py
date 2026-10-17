@@ -1,6 +1,6 @@
 """E053 worker (docs/research/0268): one case in a fresh process; prints one JSON line.
 
-    worker.py lm_gen   <model_dir> <plain|memopro> <host_budget> <new_tokens> [prompts]
+    worker.py lm_gen   <model_dir> <plain|memopro> <host_budget> <tokens> <prompts> [draft_dir]
     worker.py lm_lora  <model_dir> <plain|memopro> <host_budget> <steps> <seq> <batch|auto>
     worker.py vis_infer <model_dir> <class> <plain|memopro> <host_budget> <batch> <size>
     worker.py vis_lora  <model_dir> <class> <plain|memopro> <host_budget> <steps> <batch> <size>
@@ -124,10 +124,15 @@ def load_lm(path, mode, budget):
     return m, transformers.AutoTokenizer.from_pretrained(path)
 
 
-def lm_gen(path, mode, budget, new_tokens, prompts=None):
+def lm_gen(path, mode, budget, new_tokens, prompts=None, draft=None):
     import memopro
+    import memopro.rt.torch as rtt
 
     m, tok = load_lm(path, mode, int(budget))
+    if draft:  # a resident draft proposes tokens; the text must not change (0276)
+        draft = rtt.draft_model(draft, target=m, device=DEVICE)
+        RESULT["draft_bytes"] = draft.memopro_draft_bytes
+        RESULT["draft_dtype"] = str(next(draft.parameters()).dtype)
     tokens, secs = [], []
     for p in PROMPTS[: int(prompts or len(PROMPTS))]:
         msgs = [{"role": "user", "content": p}]
@@ -143,9 +148,7 @@ def lm_gen(path, mode, budget, new_tokens, prompts=None):
             with torch.no_grad():
                 out = m.generate(input_ids=ids, do_sample=False, **kw)
         else:
-            import memopro.rt.torch as rtt
-
-            out = rtt.generate(m, ids, **kw)
+            out = rtt.generate(m, ids, draft=draft or None, **kw)
         sync()
         secs.append(time.time() - t)
         tokens.append(out[0, ids.shape[1] :].tolist())
@@ -155,6 +158,7 @@ def lm_gen(path, mode, budget, new_tokens, prompts=None):
         seconds=secs,
         s_per_token=sum(secs) / (int(new_tokens) * len(secs)),
         rt=stats_of(m),
+        copy_stats=getattr(getattr(m, "memopro_weights", None), "copy_stats", None),
         memopro=memopro.__version__,
     )
 

@@ -17,7 +17,7 @@ memopro가 **여러 모델 계열(SLM·LLM)·비전 모델·고사양 라이브�
 
 | 노트북 | 분류 | 내용 | 예상 시간 | 내려받는 모델 |
 |---|---|---|---|---|
-| [00_tests](https://colab.research.google.com/github/imhyensuk/memopro/blob/main/examples/colab_breadth/notebooks/00_tests.ipynb) | 시험 묶음 | PyPI 0.1.5 + 같은 태그의 pytest(CUDA 포함) | 약 10분 | - |
+| [00_tests](https://colab.research.google.com/github/imhyensuk/memopro/blob/main/examples/colab_breadth/notebooks/00_tests.ipynb) | 시험 묶음 | PyPI 0.1.7 + 같은 태그의 pytest(CUDA 포함) | 약 10분 | - |
 | [10_slm_qwen2.5-1.5b](https://colab.research.google.com/github/imhyensuk/memopro/blob/main/examples/colab_breadth/notebooks/10_slm_qwen2.5-1.5b.ipynb) | SLM | Qwen2.5-1.5B (대조군) | 약 15분 | 3GB |
 | [11_slm_smollm2-1.7b](https://colab.research.google.com/github/imhyensuk/memopro/blob/main/examples/colab_breadth/notebooks/11_slm_smollm2-1.7b.ipynb) | SLM | SmolLM2-1.7B (Llama 구조) | 약 15분 | 3.5GB |
 | [12_slm_phi-3.5-mini](https://colab.research.google.com/github/imhyensuk/memopro/blob/main/examples/colab_breadth/notebooks/12_slm_phi-3.5-mini.ipynb) | SLM | Phi-3.5-mini (합쳐진 qkv_proj) | 약 25분 | 7.6GB |

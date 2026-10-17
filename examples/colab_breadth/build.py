@@ -16,7 +16,7 @@ from pathlib import Path
 
 HERE = Path(__file__).resolve().parent
 OUT = HERE / "notebooks"
-MEMOPRO = "0.1.5"
+MEMOPRO = "0.1.7"
 GiB, MiB = 1 << 30, 1 << 20
 
 # ---------------------------------------------------------------------------- the tests
@@ -188,6 +188,54 @@ for b in (b1, b2):
     checks.append((f"속도 {gib(b)}", None, f"{gen[b].get('s_per_token', 0):.2f} 초/토큰, LoRA 단계 {lora[b].get('step_s')}"))
 if ok(gen["plain"]):
     checks.append(("속도 일반 실행", None, f"{gen['plain'].get('s_per_token', 0):.2f} 초/토큰"))
+bench.verdict(SPEC["name"], env, R, checks)
+"""
+
+# CUDA drafts (0276, pre-registered in 0277): name, target, drafts, host budget, (tokens, prompts)
+DRAFT = [
+    (
+        "23_draft_qwen2.5-7b",
+        "Qwen/Qwen2.5-7B-Instruct",
+        ["Qwen/Qwen2.5-0.5B-Instruct", "Qwen/Qwen2.5-1.5B-Instruct"],
+        4 * GiB,
+        (32, 2),
+        "15.2GB: GPU 캐시(약 12GB)에 대부분 들어가는 크기",
+    ),
+    (
+        "24_draft_qwen2.5-14b",
+        "Qwen/Qwen2.5-14B-Instruct",
+        ["Qwen/Qwen2.5-0.5B-Instruct", "Qwen/Qwen2.5-1.5B-Instruct"],
+        6 * GiB,
+        (16, 1),
+        "29.5GB: 매 패스 디스크에서 약 11GB를 다시 읽는 크기",
+    ),
+]
+BODY_DRAFT = r"""
+import sys, os
+sys.path.insert(0, CODE)
+import bench
+env = bench.setup(f"memopro[llm]=={MEMOPRO}")
+path, size = bench.fetch(SPEC["repo"], ["*.safetensors"])
+drafts = {d.split("/")[-1]: bench.fetch(d, ["*.safetensors"])[0] for d in SPEC["drafts"]}
+tokens, prompts = SPEC["gen"]
+T, b = SPEC["timeout_s"], SPEC["budget"]
+base = bench.worker("gen_nodraft", ["lm_gen", path, "memopro", b, tokens, prompts], T)
+R, checks = [base], []
+ok = lambda r: r.get("status") == "ok"
+# steady state: the last prompt (the first one also reads the whole model cold)
+last = lambda r: (r.get("seconds") or [0])[-1] / tokens
+for name, dpath in drafts.items():
+    r = bench.worker(f"gen_draft_{name}", ["lm_gen", path, "memopro", b, tokens, prompts, dpath], T)
+    R.append(r)
+    checks.append((f"초안 {name}: 토큰 = 초안 없음", bench.same(r, base, "tokens"),
+                   f"{r.get('status')} {str(r.get('error', ''))[:100]}"))
+    if ok(r) and ok(base):
+        checks.append((f"초안 {name}: 속도", None,
+                       f"{last(base):.2f} → {last(r):.2f} 초/토큰 ({last(base) / max(last(r), 1e-9):.2f}배), "
+                       f"초안 {r.get('draft_dtype')} {r.get('draft_bytes', 0) / bench.GiB:.2f}GiB, "
+                       f"복사 {base.get('copy_stats', {}).get('copy_bytes', 0) / bench.GiB:.0f} → "
+                       f"{r.get('copy_stats', {}).get('copy_bytes', 0) / bench.GiB:.0f}GiB"))
+checks.insert(0, ("초안 없는 흘려 쓰기 동작", ok(base), str(base.get("error", ""))[:120]))
 bench.verdict(SPEC["name"], env, R, checks)
 """
 
@@ -459,6 +507,24 @@ def build():
             "있어야 합니다(0.1.4의 약속, 0265).\n- 시간 배율은 보고만 합니다.\n\n" + HOW
         )
         books[name] = notebook(name, f"E053 · {name}", md, spec, BODY_SCRIPT, files)
+    for name, repo, drafts, budget, gen, note in DRAFT:
+        spec = {
+            "name": name,
+            "repo": repo,
+            "drafts": drafts,
+            "budget": budget,
+            "gen": gen,
+            "timeout_s": 5400,
+        }
+        md = (
+            f"**CUDA 초안 생성 (0.1.7)** · `{repo}` + 초안 {', '.join(f'`{d}`' for d in drafts)} — "
+            f"{note}\n\n"
+            "**무엇을 보나**: 가중치를 흘려 쓰는 큰 모델에 GPU에 올린 16비트 초안을 붙였을 때\n"
+            "- 생성 토큰이 초안 없는 결과와 **같아야** 합니다(필수).\n"
+            "- 속도(마지막 프롬프트 기준 초/토큰), 초안 크기·형식, GPU로 복사한 바이트를 보고합니다.\n\n"
+            + HOW.replace("0268 (E053)", "0277 (CUDA 초안)")
+        )
+        books[name] = notebook(name, f"E053 · {name}", md, spec, BODY_DRAFT, shared)
     spec = {
         "name": "22_llm_qwen2.5-14b_vs_unsloth",
         "repo": "Qwen/Qwen2.5-14B-Instruct",
