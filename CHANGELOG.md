@@ -2,6 +2,19 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## 0.1.6 (alpha)
+
+### Fixed: `finetune`/`generate` on Apple GPUs set the MPS watermark too late (0274)
+- With `device="auto"` they probed MPS (which starts it) before lowering torch's MPS low
+  watermark, so a fresh `memopro.finetune(name)` warned that its own setting came too late and
+  activations over 10 MiB could reserve 1 GiB heaps. The watermark is now set before the probe
+  (`memopro.rt.torch.set_mps_watermark`).
+
+### Changed: README and package metadata
+- README (ko/en) reorganised: overview, features, who it is for, installation, commands and API,
+  a quick start verified to run as pasted, advanced usage and benchmarks, contributing.
+- PyPI keywords and Python 3.11–3.14 classifiers.
+
 ## 0.1.5 (alpha)
 
 ### Fixed: defects found by the Colab breadth test E053 (0269, 0270)
@@ -103,7 +116,7 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 - The status reads alpha everywhere: the PyPI classifier `3 - Alpha` (was `2 - Pre-Alpha`) and
   the package docstring (was "skeleton").
 
-### Changed: the goal does not depend on the memory size (docs/design/scale.md)
+### Changed: the goal does not depend on the memory size
 - The goal is now any work that needs more memory than the machine has, at any scale; 8-16 GB
   machines stay the first verified target. Constants that assumed a size are listed and scale
   with the machine where measured.
