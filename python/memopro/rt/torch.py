@@ -212,6 +212,9 @@ class StreamedWeights:
         self._order: list[Any] = []
         self._seen: set[Any] = set()
         self._stream: Any = None
+        # device copies held for a whole layer while a verification runs its rows one at a time
+        # (`_row_invariant`): each row's leaves reuse them instead of copying again (0276)
+        self._holding: dict[int, Any] = {}
         self.copy_stats = {"copies": 0, "copy_bytes": 0, "hits": 0, "prefetched": 0}
         prefix = getattr(model, "base_model_prefix", "") or ""
         # one runtime buffer per distinct parameter object (tied weights share one)
@@ -327,6 +330,9 @@ class StreamedWeights:
         if t is not None:
             self.copy_stats["hits"] += 1
             return t
+        t = self._holding.get(pid)
+        if t is not None:
+            return t
         t = self._prefetched.pop(pid, None)
         if t is not None:
             self.copy_stats["prefetched"] += 1
@@ -346,7 +352,9 @@ class StreamedWeights:
         on a side stream while the device computes `module`."""
         import torch
 
-        if not self._order or module not in self._seen:
+        # ponytail: no prefetch inside a held layer (its weights are all copied already); the
+        # next layer's first copy is then not overlapped, which only verifications pay
+        if not self._order or module not in self._seen or self._holding:
             return
         i = self._order.index(module)
         nxt = self._order[(i + 1) % len(self._order)]
@@ -717,13 +725,16 @@ def draft_model(
     device: str = "mps",
     revision: str | None = None,
 ) -> Any:
-    """An int4 copy of a Hugging Face model that stays in device memory, to propose tokens for
+    """A copy of a Hugging Face model that stays in device memory, to propose tokens for
     ``target`` (a streamed model) through ``generate(assistant_model=...)`` (G4 E4, 0139).
 
-    Linear layers become torch's int4 kernel layers (``int4pack``, group 32); embeddings, norms
-    and the output head stay in bfloat16. Its size in bytes is ``memopro_draft_bytes``; it is
-    device memory outside the streamed model's budget. The draft never changes what greedy
-    generation returns, only how many passes over the streamed weights it takes."""
+    On Apple GPUs linear layers become torch's int4 kernel layers (``int4pack``, group 32);
+    embeddings, norms and the output head stay in bfloat16. On NVIDIA GPUs the draft is kept in
+    16 bits (bfloat16, or float16 on GPUs without native bfloat16 such as the T4), and the
+    target's GPU cache gives up the draft's size (0276). Its size in bytes is
+    ``memopro_draft_bytes``; it is device memory outside the streamed model's budget. The draft
+    never changes what greedy generation returns, only how many passes over the streamed weights
+    it takes."""
     import gc
 
     import torch
@@ -731,31 +742,50 @@ def draft_model(
 
     from memopro.techniques.integrations import int4pack
 
-    if device != "mps":
+    if device not in ("mps", "cuda"):
         raise ModeUnavailable(
             "memopro.rt.torch.draft_model",
-            f"int4 drafts use torch's int4 kernel on Apple GPUs; not on {device!r}",
+            f"drafts stay in Apple (int4) or NVIDIA (16-bit) GPU memory; not on {device!r}",
             ("pass a smaller model loaded normally as assistant_model",),
         )
-    reason = int4pack.works(device)
-    if reason:
-        raise ModeUnavailable("memopro.rt.torch.draft_model", reason, ("device='cpu' streaming",))
+    if device == "mps":
+        reason = int4pack.works(device)
+        if reason:
+            raise ModeUnavailable(
+                "memopro.rt.torch.draft_model", reason, ("device='cpu' streaming",)
+            )
     config = transformers.AutoConfig.from_pretrained(str(name_or_dir), revision=revision)
     pad = 0
     if target is not None and getattr(target.config, "vocab_size", None) != config.vocab_size:
         pad = _vocabulary_padding(name_or_dir, revision, config, target)
-    # memory-mapped bf16 on the CPU, converted one layer at a time (0069)
-    model = transformers.AutoModelForCausalLM.from_pretrained(
-        str(name_or_dir), revision=revision, dtype=torch.bfloat16
-    )
-    int4pack.convert(model, device)
+    if device == "mps":
+        # memory-mapped bf16 on the CPU, converted one layer at a time (0069)
+        model = transformers.AutoModelForCausalLM.from_pretrained(
+            str(name_or_dir), revision=revision, dtype=torch.bfloat16
+        )
+        int4pack.convert(model, device)
+    else:
+        # torch's int4 kernel needs sm80+; a 16-bit draft only proposes, so its dtype never
+        # changes the output. ponytail: float16 before Ampere for speed; switch to bfloat16 if
+        # a draft overflows in float16 (fewer accepted tokens, same text)
+        dtype = (
+            torch.bfloat16
+            if torch.cuda.is_bf16_supported(including_emulation=False)
+            else torch.float16
+        )
+        model = transformers.AutoModelForCausalLM.from_pretrained(
+            str(name_or_dir), revision=revision, dtype=dtype
+        ).to(device)
     model.eval()
     if pad:  # the target's extra rows are padding: the draft never proposes them
         head = model.get_output_embeddings()
         head.forward = _padded(head.forward, pad)
         model.config.vocab_size += pad
     gc.collect()
-    torch.mps.empty_cache()
+    if device == "mps":
+        torch.mps.empty_cache()
+    else:
+        torch.cuda.empty_cache()
     seen: set[int] = set()
     size = 0
     for t in [*model.parameters(), *model.buffers()]:
@@ -764,6 +794,11 @@ def draft_model(
             seen.add(key)
             size += t.untyped_storage().nbytes()
     model.memopro_draft_bytes = size
+    weights = getattr(target, "memopro_weights", None)
+    if device == "cuda" and weights is not None:  # the draft takes GPU memory the cache counted on
+        weights.gpu_budget = max(0, weights.gpu_budget - size)
+        if weights.gpu_cache_bytes > weights.gpu_budget:
+            weights.drop_gpu_cache()
     return model
 
 
@@ -796,15 +831,23 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
     weights = model.memopro_weights
     state = {"before": 0, "rows": 0}  # the cache length before this pass, its rows
 
-    def hold(module: Any) -> list[Any]:
+    def hold(module: Any) -> dict[int, Any]:
         """Pin the weights under ``module`` once for all rows (the tensors keep them pinned;
-        each leaf's own hooks then reuse the pinned memory)."""
-        return [
-            weights._tensor(id(p))
+        each leaf's own hooks then reuse the pinned memory, or on CUDA the device copies)."""
+        held = {
+            id(p): weights._tensor(id(p))
             for m in module.modules()
             if m in weights._own
             for _, _, p in weights._own[m]
-        ]
+        }
+        if weights.copy:
+            weights._holding.update(held)
+        return held
+
+    def release(held: dict[int, Any]) -> None:
+        for pid in held:
+            weights._holding.pop(pid, None)
+        held.clear()
 
     def layer_forward(layer: Any, original: Any) -> Any:
         def forward(hidden: Any, *args: Any, **kw: Any) -> Any:
@@ -845,7 +888,7 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
                         one["position_embeddings"] = tuple(_rows(e, i, i + 1) for e in emb)
                     outs.append(original(_rows(hidden, i, i + 1), **one))
             finally:
-                del held
+                release(held)
             return torch.cat(outs, dim=1)
 
         return forward
@@ -884,7 +927,7 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
                     dim=1,
                 )
             finally:
-                del held
+                release(held)
 
         return forward
 

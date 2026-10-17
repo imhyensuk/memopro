@@ -2,6 +2,20 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Added: draft models on NVIDIA GPUs (0276)
+- `draft_model(device="cuda")` keeps a 16-bit draft in GPU memory (bfloat16, or float16 on GPUs
+  without native bfloat16 such as the T4: torch's int4 kernel needs sm80+), and the target's GPU
+  cache gives up the draft's size; `memopro.generate(..., draft=...)` uses it on CUDA.
+- Verification on the copy path (CUDA) reuses each layer's device copies for all its rows; it
+  copied uncached weights again for every row, so a draft made more copies than none (forced
+  copy path on the CPU, no cache: 1,262 copies plain, 1,862 with a draft before, 626 after).
+
+### Fixed: README claim on training losses
+- Generation and inference outputs equal a plain run; training losses are identical across
+  budgets (against plain PEFT training they differ from step 2 in the last digits, 0220).
+
 ## 0.1.6 (alpha)
 
 ### Fixed: `finetune`/`generate` on Apple GPUs set the MPS watermark too late (0274)

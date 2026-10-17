@@ -32,7 +32,7 @@ On 8–16 GB laptops and small GPUs, a model or dataset larger than memory stops
 
 memopro trades **time for memory**. It empties data that is not in use and restores it when needed, using only lossless methods: model weights are read again from their original files, and other data is compressed losslessly. This guarantees:
 
-- **Unchanged results**: outputs and training losses are bit-identical to a run with enough memory.
+- **Unchanged results**: generation and inference outputs are bit-identical to a plain run with enough memory. Training losses are bit-identical under any budget (against plain PyTorch training they can differ in the last digits, from the order of computation).
 - **A memory ceiling**: a budget that cannot be kept is refused before starting. If an unmodified program exceeds the ceiling even after compression, memopro warns while it runs and reports by how much.
 - **No disk writes**: no swap files or cache files are created.
 
@@ -122,7 +122,7 @@ Main `memopro run` options: `--budget` (ceiling), `--dry-run` (print the setting
 | `Runtime.load_npy`, `.array`, `.add_file`, `.alloc` | register files and new buffers; `Buffer.view()` gives a zero-copy NumPy view |
 | `Runtime.adopt(obj)` | hand over an object holding tensors, modules, optimizers or arrays |
 | `memopro.rt.torch.stream_model(name, budget=, device=, model_class=)` | run a Hugging Face model with its weights left in the files |
-| `memopro.rt.torch.draft_model(name, target=)` | an int4 draft model for faster generation |
+| `memopro.rt.torch.draft_model(name, target=, device=)` | a draft model for faster generation (Apple GPU: int4, NVIDIA GPU: 16-bit) |
 | `memopro.rt.process_footprint()` | the process's current memory use |
 
 ### Jupyter
@@ -221,7 +221,7 @@ Weights are read once per step, so a larger batch costs less time per token. Wit
 text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Instruct")
 ```
 
-The small model proposes tokens and the large model verifies them; the output equals generation with the large model alone.
+The small model proposes tokens and the large model verifies them; the output equals generation with the large model alone. Drafts run on Apple GPUs (int4) and NVIDIA GPUs (16-bit) and must share the target's tokenizer.
 
 ### Vision models
 
