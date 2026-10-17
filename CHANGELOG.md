@@ -2,7 +2,7 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.1.7 (alpha)
 
 ### Added: draft models on NVIDIA GPUs (0276)
 - `draft_model(device="cuda")` keeps a 16-bit draft in GPU memory (bfloat16, or float16 on GPUs
