@@ -32,7 +32,7 @@
 
 memopro는 이 문제를 **메모리 대신 시간을 쓰는 방식**으로 해결합니다. 지금 쓰지 않는 데이터를 메모리에서 비우고 필요할 때 되돌리되, 되돌리는 방법은 무손실만 사용합니다. 모델 가중치는 원본 파일에서 다시 읽고, 그 밖의 데이터는 무손실 압축합니다. 그 결과 다음이 보장됩니다.
 
-- **결과 불변**: 출력과 학습 손실이 메모리를 충분히 쓴 실행과 비트 단위로 같습니다.
+- **결과 불변**: 생성·추론 출력은 메모리를 충분히 쓴 일반 실행과 비트 단위로 같습니다. 학습 손실은 예산과 관계없이 비트 단위로 같습니다(일반 PyTorch 학습과는 계산 순서 차이로 마지막 자리가 다를 수 있습니다).
 - **메모리 상한**: 지킬 수 없는 예산은 시작 전에 거부합니다. 코드를 수정하지 않은 프로그램이 압축 후에도 상한을 넘으면 실행 중에 경고하고 초과량을 보고합니다.
 - **디스크 쓰기 없음**: 스왑 파일이나 캐시 파일을 만들지 않습니다.
 
@@ -122,7 +122,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 | `Runtime.load_npy`, `.array`, `.add_file`, `.alloc` | 파일·새 버퍼 등록. `Buffer.view()`로 복사 없는 NumPy 뷰 |
 | `Runtime.adopt(obj)` | 텐서·모듈·옵티마이저·배열을 담은 객체를 런타임에 맡김 |
 | `memopro.rt.torch.stream_model(name, budget=, device=, model_class=)` | 가중치를 파일에 둔 채 Hugging Face 모델 실행 |
-| `memopro.rt.torch.draft_model(name, target=)` | 생성 속도용 int4 초안 모델 |
+| `memopro.rt.torch.draft_model(name, target=, device=)` | 생성 속도용 초안 모델 (Apple GPU: int4, NVIDIA GPU: 16비트) |
 | `memopro.rt.process_footprint()` | 현재 프로세스 메모리 사용량 |
 
 ### Jupyter
@@ -221,7 +221,7 @@ r.adapter.save_pretrained("my-lora")     # 표준 PEFT 어댑터
 text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Instruct")
 ```
 
-작은 모델이 토큰을 제안하고 큰 모델이 검증합니다. 출력은 큰 모델만으로 생성한 결과와 같습니다.
+작은 모델이 토큰을 제안하고 큰 모델이 검증합니다. 출력은 큰 모델만으로 생성한 결과와 같습니다. 초안은 Apple GPU(int4)와 NVIDIA GPU(16비트)에서 쓸 수 있고, 같은 토크나이저를 쓰는 모델이어야 합니다.
 
 ### 비전 모델
 
