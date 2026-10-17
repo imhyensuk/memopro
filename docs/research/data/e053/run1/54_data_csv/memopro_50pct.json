@@ -1,0 +1,11 @@
+{
+ "rows": 11996897,
+ "summary": "07d8b54d4701bb22",
+ "feels": "f507acfa79fb4aa3",
+ "seconds": 56.27,
+ "peak_bytes": 840327168,
+ "status": "ok",
+ "case": "memopro_50pct",
+ "wall_s": 56.9,
+ "warned_ceiling": false
+}

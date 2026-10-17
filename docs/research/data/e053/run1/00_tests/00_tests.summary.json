@@ -1,0 +1,38 @@
+{
+ "test": "00_tests",
+ "env": {
+  "time": "2026-10-13T09:26:34+00:00",
+  "python": "3.13.15",
+  "memopro": "0.1.4",
+  "torch": "2.11.0+cu130",
+  "transformers": "5.18.0",
+  "peft": "0.21.1",
+  "numpy": "2.1.3",
+  "gpu": "Tesla T4, 15360 MiB",
+  "host_memory_bytes": 13605830656,
+  "disk_free_bytes": 74743939072
+ },
+ "records": [
+  {
+   "case": "pytest",
+   "status": "failed",
+   "wall_s": 84.1,
+   "summary": "1 failed, 311 passed, 31 skipped, 3 warnings in 78.76s (0:01:18)",
+   "failed": [
+    "FAILED tests/test_hibernate_compile.py::test_unseen_compiled_callers_work_and_warn_once[compiled_function]"
+   ]
+  }
+ ],
+ "checks": [
+  {
+   "check": "pytest (\uc124\uce58\ud55c PyPI \ubc84\uc804, T4)",
+   "ok": false,
+   "detail": "1 failed, 311 passed, 31 skipped, 3 warnings in 78.76s (0:01:18)"
+  },
+  {
+   "check": "\uc2e4\ud328\ud55c \uc2dc\ud5d8",
+   "ok": null,
+   "detail": "FAILED tests/test_hibernate_compile.py::test_unseen_compiled_callers_work_and_warn_once[compiled_function]"
+  }
+ ]
+}
