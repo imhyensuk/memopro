@@ -2,7 +2,7 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.1.8 (alpha)
 
 ### Fixed: messages and README for new users
 - Reports, notes, warnings and CLI help no longer cite internal research record numbers
