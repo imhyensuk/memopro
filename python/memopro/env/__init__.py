@@ -88,7 +88,7 @@ def _os_version() -> str:
 
 MALLOC_CACHE_NOTE = (
     "macOS keeps CPU memory freed by hibernate or `del` in the allocator cache until memory "
-    "pressure (0060); start Python with MallocLargeCache=0 to return it to other apps at once "
+    "pressure; start Python with MallocLargeCache=0 to return it to other apps at once "
     "(`memopro run` does this for you)"
 )
 
@@ -99,7 +99,7 @@ MPS_LOW_WATERMARK = "0.1"
 MPS_LOW_WATERMARK_BY_RUN = "MEMOPRO_RUN_MPS_WATERMARK"
 MPS_HEAP_NOTE = (
     "PyTorch's MPS allocator reserves a whole 1 GiB heap for any 10-512 MiB allocation (a long "
-    "prompt, full logits) while it sees no memory pressure (0080); set "
+    "prompt, full logits) while it sees no memory pressure; set "
     f"{MPS_LOW_WATERMARK_VAR}={MPS_LOW_WATERMARK} before torch first uses MPS to allocate exact "
     "sizes once MPS memory in use exceeds 10% of the recommended maximum (about 1 GiB less for "
     "Qwen2.5-1.5B/3B int4 on an 8 GB M1, same speed and output; `memopro run` does this for you)"

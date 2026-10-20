@@ -94,7 +94,7 @@ class _LoadingPolicy:
             return policy.load(klass, name, args, kwargs)
 
         cls.from_pretrained = classmethod(from_pretrained)
-        report().add("run.from_pretrained", "applied", "loading policy installed (P4 exception)")
+        report().add("run.from_pretrained", "applied", "loading policy installed")
 
     def remove(self) -> None:
         if self.cls is not None:
@@ -175,13 +175,13 @@ def plan_text(script: str, *, elastic: bool, census: bool) -> str:
             f"(device {device}, host {format_size(s.budget.host)})"
         ),
         f"  quality        {cfg.quality}, prefer {cfg.prefer}, disk writes {cfg.disk_writes}",
-        "  ceiling        the budget bounds the whole process (memopro.enable, 0230)",
+        "  ceiling        the budget bounds the whole process (memopro.enable)",
         "  numpy          arrays >= 16 MiB paged within it (Linux userfaultfd, macOS signals)",
         "  torch          saved activations move into runtime buffers above 75% of it",
         "  from_pretrained  only when the script chose no placement or precision and the model",
-        "                   does not fit as stored: loaded as memopro.load would (P4 exception)",
+        "                   does not fit as stored: loaded as memopro.load would",
         f"  elastic        {'on: memory pressure is watched (experimental)' if elastic else 'off'}"
-        + ("" if elastic else " (default, 0088/0093; --elastic)"),
+        + ("" if elastic else " (default; --elastic)"),
         f"  census         {'on: saved activations of the whole run' if census else 'off'}",
     ]
     return "\n".join(lines)
@@ -204,9 +204,9 @@ def _report_pager(pager: Any) -> None:
 
 
 ELASTIC_OFF_NOTE = (
-    "γ is off by default (experimental): the macOS pressure level marks pressure, not the stalls "
-    "a user feels (E013a/0088), and Linux PSI rose above 'warning' from the I/O of loading a "
-    "model, halving budgets so the loading policy stood aside (E021/0093); --elastic turns it on"
+    "watching memory pressure is off by default (experimental): the macOS pressure level did not "
+    "match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure "
+    "and halved budgets; --elastic turns it on"
 )
 
 

@@ -181,7 +181,7 @@ print(memopro.generate(r.model, "What does memopro do?", max_new_tokens=30))
 
 **사전 요구 사항**: `pip install memopro numpy`. macOS 또는 Linux가 필요합니다.
 
-아래 스크립트는 보통 약 1.8GB를 씁니다. 파일로 저장한 뒤 memopro로 실행하면 1GB 안에서 같은 결과를 냅니다.
+아래 스크립트는 보통 약 2.4GB를 씁니다(macOS 측정). 파일로 저장한 뒤 memopro로 실행하면 1GB 안에서 같은 결과를 냅니다.
 
 ```python
 # big_job.py: an ordinary NumPy program, no memopro code in it
@@ -193,7 +193,7 @@ print("sum:", float(y.sum(dtype=np.float64)))
 ```
 
 ```bash
-python big_job.py                          # 최대 약 1.8GB
+python big_job.py                          # 최대 약 2.4GB
 memopro run --budget 1GB big_job.py        # 최대 약 1GB, 같은 결과
 ```
 

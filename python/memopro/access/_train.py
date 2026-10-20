@@ -234,7 +234,7 @@ class TrainSession:
                 "train_session",
                 "applied",
                 f"returned {format_size(released)} of torch's unused CUDA cache before measuring "
-                "(E023 F2: cache left by loading was mostly not reused)",
+                "(cache left by loading was mostly not reused)",
             )
         self._allow_half = (
             QUALITY_LIMIT[self._setup.config.quality].value >= QualityGrade.NEAR_LOSSLESS.value

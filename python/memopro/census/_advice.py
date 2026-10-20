@@ -75,7 +75,7 @@ def advise(result: dict[str, Any]) -> list[str]:
         )
         out.append(
             f"sampled tensors with massive values: {parts}. Lossy formats must treat outliers "
-            "separately (K1)"
+            "separately"
         )
 
     sparse = [

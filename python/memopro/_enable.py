@@ -172,7 +172,7 @@ class Session:
             "moved_per_pass": moved if fits else None,
             "extra_seconds_per_pass": per_pass,
             "extra_seconds": per_pass * passes,
-            "assumes": "passes in a fixed order; random access is slower (E040b)",
+            "assumes": "passes in a fixed order; random access is slower",
         }
         if compute_seconds is not None:
             out["slowdown"] = (compute_seconds + per_pass) / compute_seconds
