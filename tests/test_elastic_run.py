@@ -270,7 +270,7 @@ def test_run_applies_the_loading_policy_only_where_the_script_did_not_choose(tin
     assert (name, arg) == ("__main__", "hello")
     assert chosen in ("torch.float16", "torch.bfloat16")  # did not fit as stored
     assert explicit == "torch.float32"  # the script's explicit choice is kept
-    assert "does not fit as stored" in done.stderr and "P4 exception" in done.stderr
+    assert "does not fit as stored" in done.stderr and "loading policy installed" in done.stderr
 
 
 def test_run_leaves_models_that_fit_alone_and_cleans_up(tiny_dir, tmp_path):
@@ -343,4 +343,4 @@ def test_dry_run_says_gamma_is_off_on_macos(monkeypatch, tmp_path, capsys):
     monkeypatch.setattr(sys, "platform", "darwin")
     (tmp_path / "app.py").write_text("x = 1\n")
     run(str(tmp_path / "app.py"), dry_run=True)
-    assert "elastic        off (default, 0088/0093; --elastic)" in capsys.readouterr().out
+    assert "elastic        off (default; --elastic)" in capsys.readouterr().out

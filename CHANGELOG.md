@@ -2,6 +2,13 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Fixed: messages and README for new users
+- Reports, notes, warnings and CLI help no longer cite internal research record numbers
+  (such as `E013a/0088`) or the Greek name of memory-pressure watching.
+- README (ko/en): the NumPy example peaks at about 2.4 GB on macOS (it said 1.8 GB).
+
 ## 0.1.7 (alpha)
 
 ### Added: draft models on NVIDIA GPUs (0276)

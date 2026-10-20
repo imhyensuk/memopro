@@ -115,7 +115,7 @@ def _warn_if_compiled_caller(handle: Any) -> None:
         f"memopro: a torch.compile'd call reached hibernated {handle.name!r}. It was woken and "
         "the result is correct, but torch.compile may keep running this part eagerly (slower) "
         "on later calls. Wake it (handle.wake()) before compiled calls, or hibernate the "
-        "compiled module you call (0049).",
+        "compiled module you call.",
         RuntimeWarning,
         stacklevel=2,
     )

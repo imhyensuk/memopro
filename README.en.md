@@ -181,7 +181,7 @@ Models larger than `budget` train with the same code; change only the model and 
 
 **Before you start**: `pip install memopro numpy`, on macOS or Linux.
 
-The script below normally uses about 1.8 GB. Save it to a file and run it with memopro to get the same result within 1 GB.
+The script below normally uses about 2.4 GB (measured on macOS). Save it to a file and run it with memopro to get the same result within 1 GB.
 
 ```python
 # big_job.py: an ordinary NumPy program, no memopro code in it
@@ -193,7 +193,7 @@ print("sum:", float(y.sum(dtype=np.float64)))
 ```
 
 ```bash
-python big_job.py                          # peak about 1.8 GB
+python big_job.py                          # peak about 2.4 GB
 memopro run --budget 1GB big_job.py        # peak about 1 GB, same result
 ```
 

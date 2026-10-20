@@ -277,26 +277,26 @@ def _int4_group(ctx: LoadContext, bits: int) -> int:
 # measured quality cost of int4 per back end (E022 D9: a CUDA load cited the MPS numbers)
 INT4PACK_QUALITY_NOTE = (
     "quality cost: int4 raised WikiText-2 perplexity by 5.7-7.6% for Qwen2.5-1.5B/3B with torch "
-    "int4pack group 32 (E020, 0084); other models differ"
+    "int4pack group 32; other models differ"
 )
 BNB_INT4_QUALITY_NOTE = (
     "quality cost: bitsandbytes nf4 raised WikiText-2 perplexity by 7.6-8.4% for "
-    "Qwen2.5-1.5B/3B/7B on a T4 (E021/0093, E022/0098); other models differ"
+    "Qwen2.5-1.5B/3B/7B on a T4; other models differ"
 )
 INT4_QUALITY_NOTE = (  # a back end without its own measurement
     "quality cost: int4 raised WikiText-2 perplexity by 5.7-8.4% for Qwen2.5 models with the "
-    "back ends measured so far (0084, 0093, 0098); this back end and other models differ"
+    "back ends measured so far; this back end and other models differ"
 )
 BNB_INT4_SPEED_HINT = (
     "quality='low' would load int4 (bitsandbytes nf4) instead: Qwen2.5-7B decoded 2.9x faster "
-    "on a T4 (15.8 vs 5.5 tok/s) for perplexity +7.7% instead of +0.8% (E022/0098)"
+    "on a T4 (15.8 vs 5.5 tok/s) for perplexity +7.7% instead of +0.8%"
 )
 
 
 SLOW_BF16_SPEED = 2  # between int4 (1) and offload (3): slow prompts, decoding unaffected
 SLOW_BF16_NOTE = (
     "fp16 instead of the stored bf16: this GPU has no bf16 hardware, where bf16 prompts took "
-    "3.7-5.4x longer (T4, E021/0093); values beyond fp16's range would overflow "
+    "3.7-5.4x longer (T4); values beyond fp16's range would overflow "
     "(quality='lossless' keeps bf16)"
 )
 BNB_INT8_SPEED = 2  # bitsandbytes int8 decoded 2.4-3.6x slower than nf4 on a T4 (E021/0093)

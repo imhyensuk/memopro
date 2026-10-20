@@ -59,7 +59,7 @@ def _parser() -> argparse.ArgumentParser:
     run = sub.add_parser(
         "run",
         help="run a script within one memory ceiling (memopro.enable), with the loading policy, "
-        "γ and census (no code changes)",
+        "memory-pressure watching and census (no code changes)",
     )
     run.add_argument("--budget", default=None, help=_BUDGET_HELP)
     run.add_argument(
@@ -76,7 +76,7 @@ def _parser() -> argparse.ArgumentParser:
         action="store_const",
         const=True,
         default=None,
-        help="watch memory pressure (γ, experimental; off by default, 0088/0093)",
+        help="watch memory pressure (experimental; off by default)",
     )
     gamma.add_argument(
         "--no-elastic", dest="elastic", action="store_const", const=False, help="do not watch it"
@@ -87,7 +87,7 @@ def _parser() -> argparse.ArgumentParser:
         metavar="BUDGET",
         default=None,
         help="earlier name for --budget (the ceiling; NumPy arrays are paged within it on Linux "
-        "and macOS by default since 0230)",
+        "and macOS by default)",
     )
     run.add_argument(
         "--no-numpy", action="store_true", help="do not page the script's NumPy arrays"
