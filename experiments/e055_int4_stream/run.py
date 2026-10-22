@@ -23,11 +23,15 @@ import time
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
-OUT = ROOT / "docs" / "research" / "data" / "e055"
+# E055_MODEL=7b: the second model of 0285 (0290), results in data/e055/7b/
+SIZE = os.environ.get("E055_MODEL", "3b")
+OUT = ROOT / "docs" / "research" / "data" / "e055" / ("" if SIZE == "3b" else SIZE)
 CACHE = ROOT / ".cache"
 MIB = 1 << 20
-TARGET = "Qwen/Qwen2.5-3B-Instruct"
-BUDGET = "1GiB"
+TARGET, BUDGET = {
+    "3b": ("Qwen/Qwen2.5-3B-Instruct", "1GiB"),
+    "7b": ("Qwen/Qwen2.5-7B-Instruct", "1.5GiB"),  # 0285: 0174's budget
+}[SIZE]
 NEW = 64
 WARMUP = 4
 LONG = 512  # prompt tokens for the first-token time (Q3)
@@ -38,8 +42,9 @@ PROMPTS = [
     "List five tips for studying for a programming exam and explain each briefly.",
 ]
 # the int4 file cache is written once with the user's consent (0285); the free-space floor is
-# lowered for this run because the disk is 13% free (floor 20%) and the cache needs about 2.4 GB
-SETTINGS = {"disk_writes": "allow", "min_free_disk_fraction": 0.05}
+# lowered for this run because the disk is 13% free (floor 20%) and the cache needs about 2.4 GB;
+# for 7B (cache 6.3 GB next to the 15.2 GB original) 2% (0290)
+SETTINGS = {"disk_writes": "allow", "min_free_disk_fraction": 0.05 if SIZE == "3b" else 0.02}
 
 
 class Clock:
@@ -76,6 +81,7 @@ def _model(name: str):
     import memopro.rt.torch as rtt
     from memopro.techniques.integrations import int4pack
 
+    name = name.split("_")[0]  # I4S_2: the same case again
     if name == "I4R":  # int4 in memory: the compute floor (0069's conversion, as draft_model)
         model = transformers.AutoModelForCausalLM.from_pretrained(TARGET, dtype=torch.bfloat16)
         int4pack.convert(model, "mps")
@@ -214,7 +220,7 @@ def summarize() -> str:
         ),
         "|---|---|---|---|---|---|---|---|",
     ]
-    recs = {n: _load(n) for n in ("B16", "I4S", "I4R")}
+    recs = {n: _load(n) for n in ("B16", "I4S", "I4S_2", "I4R")}
     steady = {}
     for n, r in recs.items():
         if not r or not r.get("completed"):
@@ -223,14 +229,18 @@ def summarize() -> str:
         steady[n] = statistics.median(p["steady_s_per_token"] for p in r["prompts"])
         toks = sum(len(p["tokens"]) for p in r["prompts"])
         reread = sum(p.get("reread_bytes", 0) for p in r["prompts"]) / max(toks, 1) / MIB
+        first = r["long"]["first_token_s"]
+        first = f"{first:.2f}" if first else "refused"
         lines.append(
-            f"| {n} | yes | {steady[n]:.3f} | {r['long']['first_token_s'] or 'refused'} | "
+            f"| {n} | yes | {steady[n]:.3f} | {first} | "
             f"{reread:.0f} | {(r.get('peak_footprint') or 0) / MIB:.0f} | "
             f"{(r['swap_after'] - r['swap_before']) / MIB:+.0f} | {r['load_s']:.1f} |"
         )
     lines.append("")
     if "B16" in steady and "I4S" in steady:
         lines.append(f"- Q1 speed-up I4S over B16: {steady['B16'] / steady['I4S']:.2f}x")
+    if "B16" in steady and "I4S_2" in steady:
+        lines.append(f"- Q1 speed-up I4S_2 over B16: {steady['B16'] / steady['I4S_2']:.2f}x")
     b, i = recs.get("B16"), recs.get("I4S")
     if b and i and b.get("completed") and i.get("completed"):
         for k, (pb, pi) in enumerate(zip(b["prompts"], i["prompts"], strict=True)):
