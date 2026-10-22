@@ -2,11 +2,11 @@
 
 | case | completed | steady s/token (median of prompts) | first token, 512-token prompt (s) | reread MiB/token | peak footprint MiB | swap Δ MiB | load s |
 |---|---|---|---|---|---|---|---|
-| B16 | yes | 2.424 | 6.045847749977838 | 5231 | 1527 | -591 | 0.6 |
-| I4S | yes | 0.910 | 34.78857604099903 | 1678 | 1535 | -59 | 0.5 |
-| I4R | yes | 0.072 | 8.093723583995597 | 0 | 3289 | +557 | 19.7 |
+| B16 | yes | 2.408 | 14.205009915982373 | 5169 | 1530 | -1314 | 1.2 |
+| I4S | yes | 0.979 | 16.322261916997377 | 1695 | 1560 | -128 | 1.1 |
+| I4R | yes | 0.107 | 13.87750075000804 | 0 | 3411 | +993 | 22.0 |
 
-- Q1 speed-up I4S over B16: 2.66x
+- Q1 speed-up I4S over B16: 2.46x
 - prompt 0: I4S first differs from B16 at new token 3 (of 64)
 - prompt 1: I4S first differs from B16 at new token 7 (of 64)
 - prompt 2: I4S first differs from B16 at new token 2 (of 64)

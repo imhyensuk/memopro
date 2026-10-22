@@ -275,7 +275,7 @@ Models verified: Qwen2.5 (1.5B–14B), SmolLM2, Phi-3.5, Mistral-7B, DINOv2, Con
 - Models far larger than memory run, but storage read speed makes them very slow; 14B 16-bit LoRA on an NVIDIA T4 runs at about 1 token/s.
 - Data work with heavy random access (sorts, joins, Polars) gives identical results but can be much slower.
 - On Apple GPUs, call `finetune`/`stream_model` before other MPS work so the memory setting applies.
-- `stream_model(precision="int4")` is experimental. On an 8 GB M1 with Qwen2.5-3B and a 1 GiB budget it was 2.7-3.2x faster than 16-bit streaming (0.77-0.91 s/token over two runs), but its output differs from the original (WikiText-2 perplexity +7.6%) and long prompts are slow (about 35 s to the first token of a 512-token prompt; 6 s with 16-bit streaming). Writing the cache needs `disk_writes="allow"`.
+- `stream_model(precision="int4")` is experimental. On an 8 GB M1 with Qwen2.5-3B and a 1 GiB budget it generated tokens 2.5-3.2x faster than 16-bit streaming (2.46x in a same-conditions run, 0.98 vs 2.41 s/token), but its output differs from the original (WikiText-2 perplexity +7.6%). The first token of a 512-token prompt took about 15% longer than with 16-bit streaming in the same run (16.3 vs 14.2 s). Writing the cache needs `disk_writes="allow"`.
 - Alpha: the API may change. See the [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md).
 
 ## Contributing and license
