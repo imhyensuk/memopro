@@ -20,6 +20,7 @@ import hashlib
 import json
 import os
 import struct
+from collections.abc import Callable
 from pathlib import Path
 from typing import Any
 
@@ -273,7 +274,12 @@ def _valid(path: Path, sources: list[dict]) -> bool:
     )
 
 
-def _write_cache(model: Any, path: Path, sources: list[dict]) -> int:
+def _write_cache(
+    model: Any, path: Path, sources: list[dict], fill: Callable[[str], Any] | None = None
+) -> int:
+    """Write every weight of ``model`` to ``path`` with its manifest. A weight on the meta
+    device is made only when its turn comes, by ``fill(name)`` (an int4 layer's codes: then only
+    one layer is ever in memory, not the whole converted model)."""
     import torch
 
     entries, offset, seen = [], 0, {}
@@ -282,25 +288,32 @@ def _write_cache(model: Any, path: Path, sources: list[dict]) -> int:
     fd = os.open(tmp, os.O_WRONLY | os.O_CREAT | os.O_TRUNC, 0o600)
     with os.fdopen(fd, "wb") as f:
         for name, t in list(model.named_parameters()) + list(model.named_buffers()):
-            key = (t.untyped_storage().data_ptr(), t.storage_offset(), tuple(t.shape))
-            if key in seen:  # tied weights: one copy
-                entries.append({**seen[key], "name": name})
-                continue
-            data = t.detach().contiguous().cpu()
-            raw = data.reshape(-1).view(torch.uint8).numpy().tobytes() if data.numel() else b""
+            key = None
+            if t.is_meta:
+                data = fill(name)
+            else:
+                key = (t.untyped_storage().data_ptr(), t.storage_offset(), tuple(t.shape))
+                if key in seen:  # tied weights: one copy
+                    entries.append({**seen[key], "name": name})
+                    continue
+                data = t.detach().contiguous().cpu()
+            nbytes = data.numel() * data.element_size()
             entry = {
                 "name": name,
                 "dtype": str(data.dtype).removeprefix("torch."),
                 "shape": list(data.shape),
                 "offset": offset,
-                "nbytes": len(raw),
+                "nbytes": nbytes,
             }
-            f.write(raw)
-            pad = (-len(raw)) % _PAGE
+            if nbytes:  # straight from the tensor's memory, without a copy in bytes
+                f.write(data.reshape(-1).view(torch.uint8).numpy())
+            pad = (-nbytes) % _PAGE
             f.write(b"\0" * pad)
-            offset += len(raw) + pad
-            seen[key] = entry
+            offset += nbytes + pad
+            if key is not None:
+                seen[key] = entry
             entries.append(entry)
+            del data
     int4 = {
         n: {
             "in": m.in_features,
