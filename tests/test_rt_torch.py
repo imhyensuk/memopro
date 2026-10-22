@@ -682,6 +682,44 @@ def test_generate_budget_covers_the_generation(tmp_path, device):
         )
 
 
+def test_int4_streaming_equals_the_int4_model(tmp_path):
+    """0286: ``precision="int4"`` streams int4 weights from a file cache written once with disk
+    consent; logits and greedy text equal those of the same model converted to int4 in memory
+    (the same packed bytes through the same kernel), within the budget."""
+    from memopro.env._torch import mps_usable
+    from memopro.techniques.integrations import int4pack
+
+    path = _tiny_qwen(tmp_path / "t", 0)
+    with pytest.raises(memopro.ModeUnavailable):
+        rtt.stream_model(path, budget="9MiB", device="cpu", precision="int4")
+    if not mps_usable() or int4pack.works("mps"):
+        pytest.skip("needs a usable Apple GPU with torch's int4 kernel")
+    spill = tmp_path / "spill"
+    with (
+        memopro.using(disk_writes="never", spill_dir=str(spill)),
+        pytest.raises(memopro.ModeUnavailable),
+    ):
+        rtt.stream_model(path, budget="9MiB", device="mps", precision="int4")
+    plain = transformers.Qwen2ForCausalLM.from_pretrained(path, dtype=torch.bfloat16)
+    int4pack.convert(plain, "mps")
+    ids = torch.tensor([[2, 9, 16, 23, 30]], device="mps")
+    with torch.no_grad():
+        want = plain(ids).logits
+        text = plain.generate(input_ids=ids, max_new_tokens=8, do_sample=False, pad_token_id=1)
+    with memopro.using(disk_writes="allow", spill_dir=str(spill), min_free_disk_fraction=0.0):
+        m = rtt.stream_model(path, budget="9MiB", device="mps", precision="int4")
+        (cache,) = (spill / "fcache").glob("*.f")
+        built = cache.stat().st_mtime_ns
+        assert rtt.stream_model(path, budget="9MiB", device="mps", precision="int4")
+        assert cache.stat().st_mtime_ns == built  # reused, not written again
+    with torch.no_grad():
+        got = m(ids).logits
+    assert torch.equal(want, got)
+    assert torch.equal(text, rtt.generate(m, ids, max_new_tokens=8, pad_token_id=1))
+    assert m.memopro_runtime.stats()["peak_used"] <= m.memopro_runtime.limit
+    assert cache.stat().st_size < sum(f.stat().st_size for f in path.glob("*.safetensors"))
+
+
 def test_draft_with_a_smaller_padded_vocabulary_keeps_greedy_output(tmp_path):
     """0170: Qwen2.5 pads its vocabulary differently per size (7B 152,064 rows, 1.5B 151,936)
     over the same tokenizer; a draft with fewer rows is padded with -inf logits."""

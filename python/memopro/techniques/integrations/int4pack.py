@@ -24,7 +24,7 @@ from typing import Any
 
 import torch
 
-__all__ = ["GROUP", "Int4PackedLinear", "convert", "quantize_linear", "works"]
+__all__ = ["GROUP", "Int4PackedLinear", "convert", "eligible", "quantize_linear", "works"]
 
 GROUP = 32  # 0084 Q-b (was 64)
 INNER_K_TILES = 8
@@ -110,23 +110,31 @@ def quantize_linear(
     )
 
 
+def eligible(model: Any) -> list[tuple[Any, str, torch.nn.Linear]]:
+    """(parent, attribute, layer) of every ``nn.Linear`` that becomes int4: not named like an
+    embedding, the output head or a norm, and of a shape the kernel takes."""
+    return [
+        (module, child_name, child)
+        for name, module in list(model.named_modules())
+        for child_name, child in list(module.named_children())
+        if type(child) is torch.nn.Linear
+        and not any(
+            part in (f"{name}.{child_name}" if name else child_name).lower() for part in _SKIP
+        )
+        and _fits(child, GROUP)
+    ]
+
+
 def convert(model: Any, device: str, dtype: torch.dtype = torch.bfloat16) -> int:
     """Replace eligible ``nn.Linear`` layers by int4 ones on ``device``, then move the rest.
 
     Returns the number of layers converted. Layers named like embeddings, the output head or
     norms, and layers whose shapes the kernel does not take, stay in ``dtype``.
     """
-    converted = 0
-    for name, module in list(model.named_modules()):
-        for child_name, child in list(module.named_children()):
-            full = f"{name}.{child_name}" if name else child_name
-            if (
-                type(child) is torch.nn.Linear
-                and not any(part in full.lower() for part in _SKIP)
-                and _fits(child, GROUP)
-            ):
-                setattr(module, child_name, quantize_linear(child, device, GROUP, dtype))
-                converted += 1
+    layers = eligible(model)
+    for module, child_name, child in layers:
+        setattr(module, child_name, quantize_linear(child, device, GROUP, dtype))
+    converted = len(layers)
     model.to(device)
     for p in model.parameters():  # the rest (embeddings, norms, head) in half precision
         if p.is_floating_point() and p.dtype != dtype:

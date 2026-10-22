@@ -219,7 +219,11 @@ class StreamedWeights:
         prefix = getattr(model, "base_model_prefix", "") or ""
         # one runtime buffer per distinct parameter object (tied weights share one)
         self.buffers: dict[int, tuple[Any, torch.dtype, tuple[int, ...]]] = {}
-        for name, param in model.named_parameters(remove_duplicate=False):
+        # parameters, then buffers still on the meta device: int4 layers keep their weight as
+        # buffers (packed codes, scales) that stream like parameters (0286)
+        tensors = [*model.named_parameters(remove_duplicate=False)]
+        tensors += [(n, b) for n, b in model.named_buffers(remove_duplicate=False) if b.is_meta]
+        for name, param in tensors:
             if id(param) in self.buffers:
                 continue
             region = _find(regions, name, prefix)
@@ -240,7 +244,7 @@ class StreamedWeights:
             )
             self.buffers[id(param)] = (buf, region.dtype, tuple(region.shape))
         self._pid_of = {buf.id: pid for pid, (buf, _, _) in self.buffers.items()}
-        missing = [n for n, p in model.named_parameters() if id(p) not in self.buffers]
+        missing = [n for n, p in tensors if id(p) not in self.buffers]
         if missing:
             raise InvalidArgument(f"no weights in the files for {missing[:5]}")
         self._load_saved_buffers(regions, prefix)
@@ -264,7 +268,10 @@ class StreamedWeights:
             own = [
                 (owner, n, p)
                 for owner in owners
-                for n, p in owner.named_parameters(recurse=False)
+                for n, p in [
+                    *owner.named_parameters(recurse=False),
+                    *owner.named_buffers(recurse=False),
+                ]
                 if id(p) in self.buffers
             ]
             if own:
@@ -278,6 +285,8 @@ class StreamedWeights:
         import torch
 
         for name, buf in self.model.named_buffers():
+            if id(buf) in self.buffers:  # streamed
+                continue
             region = _find(regions, name, prefix)
             if region is None or tuple(region.shape) != tuple(buf.shape):
                 continue
@@ -388,13 +397,16 @@ class StreamedWeights:
         swapped = []
         for owner, name, param in self._own[module]:
             t = self._tensor(id(param))
-            owner._parameters[name] = torch.nn.Parameter(t, requires_grad=False)
+            if name in owner._parameters:
+                owner._parameters[name] = torch.nn.Parameter(t, requires_grad=False)
+            else:
+                owner._buffers[name] = t
             swapped.append((owner, name, param, t.untyped_storage().data_ptr()))
         self._held[module].append(swapped)
 
     def _after(self, module: Any, args: Any, output: Any) -> None:
         for owner, name, param, ptr in self._held[module].pop():
-            owner._parameters[name] = param
+            (owner._parameters if name in owner._parameters else owner._buffers)[name] = param
             self.pinned.pop(ptr, None)
         if self.copy:
             self._prefetch_after(module)
@@ -491,6 +503,7 @@ def stream_model(
     lookahead: str | int = "64MiB",
     device: str = "cpu",
     gpu_budget: str | int = "auto",
+    precision: str = "stored",
 ) -> Any:
     """A Hugging Face model whose weights stay on disk and are streamed through a runtime with
     ``budget`` bytes (or the given ``runtime``). Weights keep their stored dtype; results equal
@@ -500,7 +513,15 @@ def stream_model(
     On CUDA up to ``gpu_budget`` bytes of those copies stay on the GPU for the next use, and the
     next module's weights are copied while the current one computes (0201). ``"auto"`` keeps
     the GPU's free memory minus room for activations (2 GiB or 15% of the GPU, the larger); 0
-    keeps one module's weights at a time."""
+    keeps one module's weights at a time.
+
+    ``precision="int4"`` (Apple GPUs only) streams int4 weights instead (0286): linear layers
+    become torch's int4 kernel layers (``int4pack``, group 32; embeddings, norms and the output
+    head stay as stored), read from a file cache written once next to the spill files (needs
+    ``disk_writes="allow"`` and room in the disk budget; rebuilt when the model's files change).
+    Each pass reads about 2.4-2.6 times fewer bytes than ``"stored"``, but the results are those
+    of the int4 model, not of the original (Qwen2.5-3B: WikiText-2 perplexity +7.6%, 0084). The
+    default ``"stored"`` is lossless."""
     import torch
     import transformers
     from accelerate import init_empty_weights
@@ -509,6 +530,14 @@ def stream_model(
 
     if device not in ("cpu", "mps", "cuda"):
         raise InvalidArgument(f"device must be 'cpu', 'mps' or 'cuda', not {device!r}")
+    if precision not in ("stored", "int4"):
+        raise InvalidArgument(f"precision must be 'stored' or 'int4', not {precision!r}")
+    if precision == "int4" and device != "mps":
+        raise ModeUnavailable(
+            "memopro.rt.torch.stream_model(precision='int4')",
+            f"int4 streaming uses torch's int4 kernel on Apple GPUs; the device is {device!r}",
+            ("precision='stored'",),
+        )
     if device == "cuda" and not torch.cuda.is_available():
         raise ModeUnavailable(
             "memopro.rt.torch.stream_model(device='cuda')", "no CUDA GPU here", ("device='cpu'",)
@@ -549,7 +578,10 @@ def stream_model(
         model.generation_config = transformers.GenerationConfig.from_pretrained(
             str(name_or_dir), revision=revision
         )
-    regions = _renamed(regions, model)
+    if precision == "int4":
+        regions = _int4_regions(name_or_dir, revision, cls, model)
+    else:
+        regions = _renamed(regions, model)
     rt = runtime or Runtime(budget=budget, prefetch=prefetch, lookahead=lookahead)
     weights = StreamedWeights(model, rt, regions, device=device)
     if weights.copy:
@@ -564,6 +596,103 @@ def stream_model(
         {"device": property(lambda self: where)},
     )
     return model
+
+
+def _int4_regions(name_or_dir: Any, revision: str | None, cls: Any, model: Any) -> dict[str, Any]:
+    """Turn the eligible linear layers of the meta ``model`` into int4 shells and return the
+    regions of the int4 file cache (every weight of the model), building the cache first if it
+    is missing or stale. The cache is ``residency``'s file format (0072), built one layer at a
+    time: the original is memory mapped on the CPU, each layer quantized on the GPU (torch's
+    packing) and its codes brought back, so only the int4 model is ever in memory."""
+    import json
+
+    import torch
+
+    from memopro import residency
+    from memopro._units import format_size
+    from memopro.config import get_config, spill_location
+    from memopro.hibernate._source import Region
+    from memopro.techniques.integrations import int4pack
+
+    reason = int4pack.works("mps")
+    if reason:
+        raise ModeUnavailable(
+            "memopro.rt.torch.stream_model(precision='int4')", reason, ("precision='stored'",)
+        )
+    layers = int4pack.eligible(model)
+    cfg = get_config()
+    path = residency.cache_path(
+        spill_location(cfg) / "fcache", name_or_dir, revision, "stream.int4"
+    )
+    sources = residency._sources(name_or_dir, revision)
+    if not residency._valid(path, sources):
+        from memopro.env import detect
+        from memopro.orchestrator.budget import compute_budget
+
+        int4 = {id(p) for _, _, layer in layers for p in [layer.weight]}
+        size = sum(
+            p.numel() * 5 // 8 if id(p) in int4 else p.numel() * p.element_size()
+            for p in model.parameters()
+        )
+        what = "memopro.rt.torch.stream_model(precision='int4')"
+        if cfg.disk_writes != "allow":
+            raise ModeUnavailable(
+                what,
+                f"the int4 file cache must be written once (about {format_size(size)} to SSD) and "
+                f"disk_writes is {cfg.disk_writes!r}; pass disk_writes='allow'",
+                ("memopro.configure(disk_writes='allow')", "precision='stored'"),
+            )
+        disk = compute_budget(detect(devices=False, config=cfg), cfg).disk
+        if size > disk:
+            raise ModeUnavailable(
+                what,
+                f"the int4 file cache needs about {format_size(size)} of disk and the disk budget "
+                f"is {format_size(disk)}",
+                ("free disk space", "precision='stored'"),
+            )
+        full = cls.from_pretrained(str(name_or_dir), revision=revision, dtype=model.dtype)
+        for parent, attr, layer in int4pack.eligible(full):
+            q = int4pack.quantize_linear(layer, "mps")
+            for name, t in [*q.named_buffers(recurse=False), *q.named_parameters(recurse=False)]:
+                t.data = t.data.cpu()
+            setattr(parent, attr, q)
+        residency._write_cache(full, path, sources)
+        del full
+        torch.mps.empty_cache()
+    manifest = json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
+    st = path.stat()
+    regions = {
+        e["name"]: Region(
+            str(path),
+            e["offset"],
+            e["nbytes"],
+            getattr(torch, e["dtype"]),
+            tuple(e["shape"]),
+            st.st_size,
+            st.st_mtime_ns,
+        )
+        for e in manifest["entries"]
+    }
+    names = {id(m): n for n, m in model.named_modules()}
+    for parent, attr, layer in layers:  # shells whose buffers stream from the cache
+        name = names[id(layer)]
+        meta = {
+            key: torch.empty(r.shape, dtype=r.dtype, device="meta")
+            for key in ("packed", "scales_and_zeros", "bias")
+            if (r := regions.get(f"{name}.{key}")) is not None
+        }
+        spec = manifest["int4"][name]
+        shell = int4pack.Int4PackedLinear(
+            meta["packed"],
+            meta["scales_and_zeros"],
+            spec["in"],
+            spec["out"],
+            meta.get("bias"),
+            spec["group"],
+            getattr(torch, spec["dtype"]),
+        )
+        setattr(parent, attr, shell)
+    return regions
 
 
 def set_mps_watermark() -> None:
