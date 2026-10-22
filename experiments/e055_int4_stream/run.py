@@ -139,7 +139,10 @@ def case(name: str) -> dict:
         rows.append(run(ids, NEW))
     filler = " ".join(PROMPTS) * 40
     long_ids = tok(filler, return_tensors="pt").input_ids[:, :LONG]
-    long_row = run(long_ids, 8)
+    try:  # a refusal here (BudgetExceeded) is a result; keep the short prompts' rows
+        long_row = run(long_ids, 8)
+    except memopro.MemoproError as e:
+        long_row = {"error": f"{type(e).__name__}: {e}", "first_token_s": None}
     rec = {"load_s": load, "prompts": rows, "long": long_row}
     if streamed:
         model.memopro_weights.finish()
@@ -221,7 +224,7 @@ def summarize() -> str:
         toks = sum(len(p["tokens"]) for p in r["prompts"])
         reread = sum(p.get("reread_bytes", 0) for p in r["prompts"]) / max(toks, 1) / MIB
         lines.append(
-            f"| {n} | yes | {steady[n]:.3f} | {r['long']['first_token_s']:.2f} | "
+            f"| {n} | yes | {steady[n]:.3f} | {r['long']['first_token_s'] or 'refused'} | "
             f"{reread:.0f} | {(r.get('peak_footprint') or 0) / MIB:.0f} | "
             f"{(r['swap_after'] - r['swap_before']) / MIB:+.0f} | {r['load_s']:.1f} |"
         )
