@@ -106,7 +106,7 @@ Main `memopro run` options: `--budget` (ceiling), `--dry-run` (print the setting
 | Function | Description |
 |---|---|
 | `memopro.finetune(model, texts, budget=, batch=, seq_len=, epochs=, lr=, rank=)` | LoRA training of an LLM larger than memory; returns a `FinetuneResult` (`model`, `adapter`, `losses`, `batch`, …) |
-| `memopro.generate(model, prompt, budget=, draft=, max_new_tokens=)` | generation with an LLM larger than memory |
+| `memopro.generate(model, prompt, budget=, draft=, max_new_tokens=, streamer=, stopping_criteria=)` | generation with an LLM larger than memory. `streamer` (e.g. Transformers' `TextIteratorStreamer`) and `stopping_criteria` go to `model.generate` as they are; the streamed text equals the returned text |
 | `memopro.enable(budget=)` / `memopro.disable()` | a ceiling on the whole process; `Session.estimate()`, `Session.measured()` |
 | `memopro.load(model_id, budget=, quality=)` | load a Hugging Face model in a form that fits the budget |
 | `memopro.check(...)` / `memopro.doctor()` | the same diagnostics as the CLI |
