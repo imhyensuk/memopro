@@ -727,6 +727,37 @@ def test_int4_streaming_equals_the_int4_model(tmp_path):
     assert torch.equal(want, got)
 
 
+def test_int4_cache_is_written_one_layer_at_a_time_as_before(tmp_path):
+    """The int4 cache is written while each layer is quantized (only one layer's codes in
+    memory), with the same bytes and manifest as converting the whole model first and writing
+    it with ``residency._write_cache`` (0286's build), so caches written before stay valid."""
+    import json
+
+    from memopro import residency
+    from memopro.env._torch import mps_usable
+    from memopro.techniques.integrations import int4pack
+
+    if not mps_usable() or int4pack.works("mps"):
+        pytest.skip("needs a usable Apple GPU with torch's int4 kernel")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    spill = tmp_path / "spill"
+    with memopro.using(disk_writes="allow", spill_dir=str(spill), min_free_disk_fraction=0.0):
+        rtt.stream_model(path, budget="9MiB", device="mps", precision="int4")
+    (cache,) = (spill / "fcache").glob("*.f")
+    full = transformers.Qwen2ForCausalLM.from_pretrained(path, dtype=torch.bfloat16)
+    for parent, attr, layer in int4pack.eligible(full):
+        q = int4pack.quantize_linear(layer, "mps")
+        for t in [*q.buffers(recurse=False), *q.parameters(recurse=False)]:
+            t.data = t.data.cpu()
+        setattr(parent, attr, q)
+    before = tmp_path / "before.f"
+    residency._write_cache(full, before, residency._sources(path, None))
+    assert cache.read_bytes() == before.read_bytes()
+    manifest = json.loads(cache.with_suffix(".json").read_text())
+    assert manifest == json.loads(before.with_suffix(".json").read_text())
+    assert len(manifest["int4"]) == 4 * 7
+
+
 def test_generate_streams_the_returned_text(tmp_path):
     """`memopro.generate` passes ``streamer`` and ``stopping_criteria`` to ``model.generate``:
     a ``TextIteratorStreamer`` yields exactly the returned text, and stopping criteria end it."""

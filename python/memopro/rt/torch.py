@@ -603,7 +603,8 @@ def _int4_regions(name_or_dir: Any, revision: str | None, cls: Any, model: Any) 
     regions of the int4 file cache (every weight of the model), building the cache first if it
     is missing or stale. The cache is ``residency``'s file format (0072), built one layer at a
     time: the original is memory mapped on the CPU, each layer quantized on the GPU (torch's
-    packing) and its codes brought back, so only the int4 model is ever in memory."""
+    packing) when the writer reaches it and its codes written, so besides the mapped original
+    only one layer's codes are ever in memory."""
     import json
 
     import torch
@@ -651,13 +652,37 @@ def _int4_regions(name_or_dir: Any, revision: str | None, cls: Any, model: Any) 
                 ("free disk space", "precision='stored'"),
             )
         full = cls.from_pretrained(str(name_or_dir), revision=revision, dtype=model.dtype)
+        # int4 shells with meta tensors; each layer is quantized when the writer reaches it and
+        # its codes leave memory once written, so the peak is the mapped original + one layer
+        names = {id(m): n for n, m in full.named_modules()}
+        originals, held = {}, {}
         for parent, attr, layer in int4pack.eligible(full):
-            q = int4pack.quantize_linear(layer, "mps")
-            for name, t in [*q.named_buffers(recurse=False), *q.named_parameters(recurse=False)]:
-                t.data = t.data.cpu()
-            setattr(parent, attr, q)
-        residency._write_cache(full, path, sources)
-        del full
+            originals[names[id(layer)]] = layer
+            meta = [torch.empty(0, device="meta") for _ in range(3)]  # distinct, or deduplicated
+            shell = int4pack.Int4PackedLinear(
+                meta[0],
+                meta[1],
+                layer.in_features,
+                layer.out_features,
+                None if layer.bias is None else meta[2],
+                int4pack.GROUP,
+                torch.bfloat16,
+            )
+            setattr(parent, attr, shell)
+
+        def fill(name: str) -> Any:
+            module, key = name.rsplit(".", 1)
+            layer = originals[module]
+            if key == "bias":  # among the parameters, before the codes: cast as quantize_linear
+                return layer.bias.detach().to("mps", torch.bfloat16).cpu()
+            if name not in held:
+                q = int4pack.quantize_linear(layer, "mps")
+                for k in ("packed", "scales_and_zeros"):
+                    held[f"{module}.{k}"] = getattr(q, k).cpu()
+            return held.pop(name)
+
+        residency._write_cache(full, path, sources, fill)
+        del full, originals
         torch.mps.empty_cache()
     manifest = json.loads(path.with_suffix(".json").read_text(encoding="utf-8"))
     st = path.stat()

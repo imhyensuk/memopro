@@ -1,0 +1,22 @@
+W1022 22:08:34.426000 76591 torch/distributed/elastic/multiprocessing/redirects.py:35] NOTE: Redirects are currently not supported in MacOs.
+W1022 22:08:34.463000 76591 torch/utils/_pytree.py:630] <enum 'KernelPreference'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+W1022 22:08:34.504000 76591 torch/utils/_pytree.py:630] <enum 'ScaleCalculationMode'> is an Enum subclass and is now natively supported by torch.compile as an opaque value type. Calling register_constant() on Enum subclasses is deprecated and will be an error in a future release.
+Loading weights:   0%|          | 0/339 [00:00<?, ?it/s]Loading weights: 100%|██████████| 339/339 [00:00<00:00, 4741.92it/s]
+      103.53 real        40.38 user        28.70 sys
+          1685045248  maximum resident set size
+                   0  average shared memory size
+                   0  average unshared data size
+                   0  average unshared stack size
+             1244133  page reclaims
+              932114  page faults
+                   0  swaps
+                   0  block input operations
+                   6  block output operations
+                   0  messages sent
+                   0  messages received
+                   0  signals received
+              123415  voluntary context switches
+              942999  involuntary context switches
+        384890511844  instructions retired
+        134194904937  cycles elapsed
+          7834321384  peak memory footprint
