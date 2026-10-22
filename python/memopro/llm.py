@@ -270,13 +270,17 @@ def generate(
     draft: Any = None,
     max_new_tokens: int = 256,
     chat: bool = True,
+    streamer: Any = None,
+    stopping_criteria: Any = None,
 ) -> str:
     """Greedy text from a model whose 16-bit weights stay in their files.
 
     ``model`` is a name, a folder or a streamed model (reused as is). A string ``prompt`` goes
     through the chat template when the tokenizer has one and ``chat`` is true. ``draft`` (a
     name, folder or :func:`memopro.rt.torch.draft_model`) proposes tokens on Apple and NVIDIA
-    GPUs; the text is the same with or without it.
+    GPUs; the text is the same with or without it. ``streamer`` (e.g. Transformers'
+    ``TextIteratorStreamer``) and ``stopping_criteria`` go to ``model.generate`` as they are: the
+    streamer receives the same tokens the returned text is decoded from.
 
     The budget covers the whole generation (0182): part of it is held back for the draft, the
     key/value cache and the prompt's intermediates (estimated first; on Apple GPUs measured
@@ -321,6 +325,8 @@ def generate(
             draft=draft,
             max_new_tokens=max_new_tokens,
             pad_token_id=tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id,
+            streamer=streamer,
+            stopping_criteria=stopping_criteria,
         )
     finally:
         if hook is not None:

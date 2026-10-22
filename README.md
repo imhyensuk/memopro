@@ -106,7 +106,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 | 함수 | 설명 |
 |---|---|
 | `memopro.finetune(model, texts, budget=, batch=, seq_len=, epochs=, lr=, rank=)` | 메모리보다 큰 LLM의 LoRA 학습. `FinetuneResult`(`model`, `adapter`, `losses`, `batch` 등) 반환 |
-| `memopro.generate(model, prompt, budget=, draft=, max_new_tokens=)` | 메모리보다 큰 LLM의 생성 |
+| `memopro.generate(model, prompt, budget=, draft=, max_new_tokens=, streamer=, stopping_criteria=)` | 메모리보다 큰 LLM의 생성. `streamer`(예: Transformers `TextIteratorStreamer`)와 `stopping_criteria`는 `model.generate`에 그대로 넘어가며, 스트리머가 받는 텍스트는 반환값과 같음 |
 | `memopro.enable(budget=)` / `memopro.disable()` | 프로세스 전체 메모리 상한. `Session.estimate()`, `Session.measured()` |
 | `memopro.load(model_id, budget=, quality=)` | 예산에 맞는 형식을 골라 Hugging Face 모델 불러오기 |
 | `memopro.check(...)` / `memopro.doctor()` | CLI와 같은 진단 |
