@@ -1,0 +1,11 @@
+{
+ "time": "2026-10-22T18:03:28",
+ "platform": "macOS-27.0.1-arm64-arm-64bit-Mach-O",
+ "python": "3.14.0",
+ "torch": "2.14.0",
+ "torchao": "0.18.0",
+ "transformers": "5.17.0",
+ "commit": "23215c60a402045951fc593f9edcdf00eb339f7d",
+ "dirty": "",
+ "pmset": "Now drawing from 'AC Power'\n -InternalBattery-0 (id=37355619)\t90%; AC attached; not charging present: true"
+}

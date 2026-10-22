@@ -1,0 +1,24 @@
+{
+ "what": "Qwen2.5-3B int4 in memory, one 512-token prompt pass (logits_to_keep=1), alternating old (whole-weight unpack) and new (512-row slices) in one process",
+ "commit": "09aae02",
+ "new": [
+  16.476451875001658,
+  14.960588624991942,
+  15.390714540990302
+ ],
+ "old": [
+  15.502102458995068,
+  15.169819707982242,
+  17.334965584013844
+ ],
+ "driver_new_MiB": [
+  26,
+  18,
+  0
+ ],
+ "driver_old_MiB": [
+  1030,
+  1048,
+  1030
+ ]
+}

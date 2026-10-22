@@ -175,6 +175,21 @@ def test_long_inputs_take_the_dequantized_path_with_the_same_result(monkeypatch)
 
 
 @needs_mps
+def test_long_inputs_unpack_in_slices_with_the_whole_weights_result(monkeypatch):
+    """0288: a long input unpacks ``UNPACK_ROWS`` output rows at a time, each in pieces of at
+    most ``UNPACK_BYTES`` of float32 codes; the result equals the whole-weight product bit for
+    bit (made small here so one layer has several slices and pieces)."""
+    from memopro.techniques.integrations import int4pack
+
+    torch.manual_seed(0)
+    layer = int4pack.quantize_linear(torch.nn.Linear(512, 1280).to(torch.bfloat16), "mps")
+    long = torch.randn(int4pack.LONG_INPUT + 40, 512, device="mps", dtype=torch.bfloat16)
+    want = torch.nn.functional.linear(long, layer.dequantized()) + layer.bias
+    monkeypatch.setattr(int4pack, "UNPACK_BYTES", 4 * 512 * 100)  # 100 rows per piece
+    assert torch.equal(layer(long), want)  # slices of 512, 512, 256 rows
+
+
+@needs_mps
 def test_loading_int4_reports_its_quality_cost(qwen_dir):
     from memopro.access._load import plan_load
     from memopro.orchestrator.candidates import INT4PACK_QUALITY_NOTE
