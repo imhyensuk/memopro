@@ -2,6 +2,34 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## 0.1.9 (alpha)
+
+### Added: streaming output from `memopro.generate` (0284)
+- `memopro.generate(..., streamer=None, stopping_criteria=None)` passes both to
+  `model.generate` as they are, so a Transformers `TextIteratorStreamer` can stream tokens while
+  the budget handling stays the same. The text from the streamer equals the returned text.
+
+### Added: experimental int4 streaming on Apple GPUs (0285–0291)
+- `memopro.rt.torch.stream_model(..., precision="int4")` streams int4 weights (torch's int4
+  kernel, group 32; embeddings, norms and the output head stay as stored) from a file cache
+  written once. Writing it needs `disk_writes="allow"` and room in the disk budget; it is rebuilt
+  when the model's files change, and it is written one layer at a time (Qwen2.5-7B: 60 s, peak
+  footprint 2.2 GB). Other devices raise `ModeUnavailable`.
+- Not lossless: output equals the same int4 model in memory, not the original. The default
+  `precision="stored"` stays lossless.
+- 8 GB M1, same budget, no draft: Qwen2.5-3B at 1 GiB 2.46x faster than 16-bit streaming
+  (0.98 vs 2.41 s/token; WikiText-2 perplexity +7.6%), Qwen2.5-7B at 1.5 GiB 2.6x (2.54 vs
+  6.63 s/token; perplexity +4.4% on 512-token windows). Peak footprint equals 16-bit streaming.
+  The first token of a 512-token prompt is slower (3B 1.15x, 7B 1.5-1.6x).
+- `StreamedWeights` also streams buffers left on the meta device (the int4 layers' codes).
+
+### Changed: int4 layers unpack long inputs in slices (0288)
+- From 160 input rows on, `Int4PackedLinear` multiplies 512 output rows at a time, each unpacked
+  in float32 pieces of at most 8 MiB, instead of unpacking the whole weight. This also applies to
+  int4 models loaded with `memopro.load` and to drafts. Outputs are unchanged bit for bit
+  (Qwen2.5-3B logits, 159-1,024 tokens) at the same speed; the GPU memory left after a
+  512-token pass drops from about 1 GiB to under 30 MiB.
+
 ## 0.1.8 (alpha)
 
 ### Fixed: messages and README for new users
