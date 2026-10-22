@@ -682,6 +682,45 @@ def test_generate_budget_covers_the_generation(tmp_path, device):
         )
 
 
+def test_generate_streams_the_returned_text(tmp_path):
+    """`memopro.generate` passes ``streamer`` and ``stopping_criteria`` to ``model.generate``:
+    a ``TextIteratorStreamer`` yields exactly the returned text, and stopping criteria end it."""
+    import threading
+
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    m = rtt.stream_model(path, budget="24MiB", device="cpu")
+    plain = memopro.generate(m, "w2 w9 w16", tokenizer=tok, max_new_tokens=8, chat=False)
+    streamer = transformers.TextIteratorStreamer(tok, skip_prompt=True, skip_special_tokens=True)
+    out = []
+    t = threading.Thread(
+        target=lambda: out.append(
+            memopro.generate(
+                m, "w2 w9 w16", tokenizer=tok, max_new_tokens=8, chat=False, streamer=streamer
+            )
+        )
+    )
+    t.start()
+    streamed = "".join(streamer)
+    t.join()
+    assert streamed == out[0] == plain != ""
+
+    class TwoTokens(transformers.StoppingCriteria):
+        def __call__(self, input_ids, scores, **kwargs):
+            return input_ids.shape[1] >= 3 + 2
+
+    stop = transformers.StoppingCriteriaList([TwoTokens()])
+    short = memopro.generate(
+        m, "w2 w9 w16", tokenizer=tok, max_new_tokens=8, chat=False, stopping_criteria=stop
+    )
+    assert short and short != plain and plain.startswith(short)
+
+
 def test_draft_with_a_smaller_padded_vocabulary_keeps_greedy_output(tmp_path):
     """0170: Qwen2.5 pads its vocabulary differently per size (7B 152,064 rows, 1.5B 151,936)
     over the same tokenizer; a draft with fewer rows is padded with -inf logits."""
