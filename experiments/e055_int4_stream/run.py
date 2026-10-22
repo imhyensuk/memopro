@@ -145,7 +145,6 @@ def case(name: str) -> dict:
         model.memopro_weights.finish()
         rec["rt"] = model.memopro_runtime.stats()
         rec["rt_limit"] = model.memopro_runtime.limit
-        rec["file"] = sorted({b[0].path for b in model.memopro_weights.buffers.values()} - {None})
     return rec
 
 
