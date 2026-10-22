@@ -12,6 +12,7 @@ plus macOS pressure level and swap (E013a), and the model's footprint, load time
     python -m experiments.e054_yield.run --plan           # the 24 runs in seed-54 order
     python -m experiments.e054_yield.run --int4-cache     # build L's int4 cache (needs consent)
     caffeinate -dis python -m experiments.e054_yield.run --run all   # or --run 3 (index)
+      (in a terminal: each run waits for Enter after you open the KakaoTalk rooms)
     python -m experiments.e054_yield.analyze
 
 Results: docs/research/data/e054/ (env.json, plan.json, runs/NN.json). Assets in .cache/e054/.
@@ -158,6 +159,9 @@ def open_apps() -> dict:
     time.sleep(10)
     subprocess.run(["open", "-a", "KakaoTalk"], check=True)
     time.sleep(10)
+    # 0283 W4, opened by hand each run (no accessibility automation, 0297): the same three rooms
+    input("KakaoTalk: open the chat list and rooms A, B, C (scroll back in the photo room), "
+          "then press Enter... ")
     profile = tempfile.mkdtemp(prefix="e054-chrome-")
     urls = [f"http://127.0.0.1:{PORT}/page{i:02d}.html" for i in range(1, 21)]
     urls.append(f"http://127.0.0.1:{PORT}/frame_probe.html")
