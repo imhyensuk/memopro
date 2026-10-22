@@ -685,8 +685,8 @@ def test_generate_budget_covers_the_generation(tmp_path, device):
 def test_int4_streaming_equals_the_int4_model(tmp_path):
     """0286: ``precision="int4"`` streams int4 weights from a file cache written once with disk
     consent; logits and greedy text equal those of the same model converted to int4 in memory
-    (the same packed bytes through the same kernel), within the budget. Long prompts are
-    prefilled in pieces the int4 kernel takes (0287)."""
+    (the same packed bytes through the same kernel), within the budget, also for a prompt
+    long enough to unpack (0288)."""
     from memopro.env._torch import mps_usable
     from memopro.techniques.integrations import int4pack
 
@@ -719,22 +719,12 @@ def test_int4_streaming_equals_the_int4_model(tmp_path):
     assert torch.equal(text, rtt.generate(m, ids, max_new_tokens=8, pad_token_id=1))
     assert m.memopro_runtime.stats()["peak_used"] <= m.memopro_runtime.limit
     assert cache.stat().st_size < sum(f.stat().st_size for f in path.glob("*.safetensors"))
-    # 0287: a long prompt goes in pieces below LONG_INPUT rows (the int4 kernel, no unpacking)
+    # a long prompt takes the unpacking path (0288), in slices, with the same text
     long = torch.arange(2, 202, device="mps").unsqueeze(0)
-    layer = next(x for x in m.modules() if isinstance(x, int4pack.Int4PackedLinear))
-    rows = []
-    hook = layer.register_forward_pre_hook(lambda _, a: rows.append(a[0].shape[-2]))
     got = rtt.generate(m, long, max_new_tokens=4, pad_token_id=1)
-    hook.remove()
     with torch.no_grad():
-        want = plain.generate(
-            input_ids=long,
-            max_new_tokens=4,
-            do_sample=False,
-            pad_token_id=1,
-            prefill_chunk_size=int4pack.LONG_INPUT - 1,
-        )
-    assert max(rows) < int4pack.LONG_INPUT and torch.equal(want, got)
+        want = plain.generate(input_ids=long, max_new_tokens=4, do_sample=False, pad_token_id=1)
+    assert torch.equal(want, got)
 
 
 def test_generate_streams_the_returned_text(tmp_path):

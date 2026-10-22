@@ -1,0 +1,48 @@
+{
+ "model": "Qwen/Qwen2.5-3B-Instruct",
+ "what": "whole-model logits (all rows), int4pack.convert on MPS; new = slices of 512 output rows unpacked in <=8 MiB pieces (working tree on top of commit), old = whole-weight unpack (commit's int4pack.py)",
+ "commit": "d788ab75623eb5a23b54e6d539a95ea22a9ef19f",
+ "torch": "2.14.0",
+ "cases": [
+  {
+   "tokens": 159,
+   "equal": true,
+   "max_abs": 0.0
+  },
+  {
+   "tokens": 160,
+   "equal": true,
+   "max_abs": 0.0
+  },
+  {
+   "tokens": 200,
+   "equal": true,
+   "max_abs": 0.0
+  },
+  {
+   "tokens": 256,
+   "equal": true,
+   "max_abs": 0.0
+  },
+  {
+   "tokens": 300,
+   "equal": true,
+   "max_abs": 0.0
+  },
+  {
+   "tokens": 384,
+   "equal": true,
+   "max_abs": 0.0
+  },
+  {
+   "tokens": 512,
+   "equal": true,
+   "max_abs": 0.0
+  },
+  {
+   "tokens": 1024,
+   "equal": true,
+   "max_abs": 0.0
+  }
+ ]
+}

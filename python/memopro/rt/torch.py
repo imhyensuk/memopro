@@ -579,12 +579,7 @@ def stream_model(
             str(name_or_dir), revision=revision
         )
     if precision == "int4":
-        from memopro.techniques.integrations.int4pack import LONG_INPUT
-
         regions = _int4_regions(name_or_dir, revision, cls, model)
-        # prompts in pieces the int4 kernel takes: from LONG_INPUT rows on, a layer unpacks its
-        # weight to 16 bits, and a 512-token prompt was refused at 1 GiB (0286, 0287)
-        model.generation_config.prefill_chunk_size = LONG_INPUT - 1
     else:
         regions = _renamed(regions, model)
     rt = runtime or Runtime(budget=budget, prefetch=prefetch, lookahead=lookahead)
