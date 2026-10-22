@@ -1,0 +1,46 @@
+<!doctype html>
+<!-- E054 P2 (docs/research/0282 §4): the front tab plays the local video in a loop and reports,
+     once a second, the longest gap between animation frames and the video's dropped/total frame
+     counts to the local server (POST /frame). Kept in the foreground: background tabs throttle
+     requestAnimationFrame. -->
+<html>
+<head>
+<meta charset="utf-8">
+<title>E054 frame probe</title>
+<style>
+  body { margin: 0; background: #000; color: #9f9; font: 14px monospace; }
+  video { width: 100vw; height: calc(100vh - 2em); display: block; }
+</style>
+</head>
+<body>
+<video id="v" src="video.mp4" autoplay muted loop playsinline></video>
+<div id="s">starting</div>
+<script>
+const v = document.getElementById("v");
+const s = document.getElementById("s");
+let last = performance.now(), maxGap = 0, prev = v.getVideoPlaybackQuality();
+
+function frame(now) {
+  maxGap = Math.max(maxGap, now - last);
+  last = now;
+  requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
+
+setInterval(() => {
+  const q = v.getVideoPlaybackQuality();
+  const row = {
+    wall: Date.now() / 1000,
+    max_gap_ms: maxGap,
+    dropped: q.droppedVideoFrames - prev.droppedVideoFrames,
+    total: q.totalVideoFrames - prev.totalVideoFrames,
+    playing: !v.paused,
+  };
+  prev = q;
+  maxGap = 0;
+  s.textContent = JSON.stringify(row);
+  fetch("/frame", { method: "POST", body: JSON.stringify(row) }).catch(() => {});
+}, 1000);
+</script>
+</body>
+</html>

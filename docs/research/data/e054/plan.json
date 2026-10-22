@@ -1,0 +1,122 @@
+[
+ {
+  "model": "L",
+  "cond": "A0",
+  "index": 0
+ },
+ {
+  "model": "S",
+  "cond": "A",
+  "index": 1
+ },
+ {
+  "model": "S",
+  "cond": "A",
+  "index": 2
+ },
+ {
+  "model": "S",
+  "cond": "C",
+  "index": 3
+ },
+ {
+  "model": "L",
+  "cond": "B",
+  "index": 4
+ },
+ {
+  "model": "L",
+  "cond": "B4",
+  "index": 5
+ },
+ {
+  "model": "L",
+  "cond": "B4",
+  "index": 6
+ },
+ {
+  "model": "L",
+  "cond": "C",
+  "index": 7
+ },
+ {
+  "model": "S",
+  "cond": "A",
+  "index": 8
+ },
+ {
+  "model": "L",
+  "cond": "A",
+  "index": 9
+ },
+ {
+  "model": "S",
+  "cond": "B",
+  "index": 10
+ },
+ {
+  "model": "S",
+  "cond": "C",
+  "index": 11
+ },
+ {
+  "model": "L",
+  "cond": "A",
+  "index": 12
+ },
+ {
+  "model": "L",
+  "cond": "A0",
+  "index": 13
+ },
+ {
+  "model": "S",
+  "cond": "B",
+  "index": 14
+ },
+ {
+  "model": "L",
+  "cond": "B4",
+  "index": 15
+ },
+ {
+  "model": "S",
+  "cond": "C",
+  "index": 16
+ },
+ {
+  "model": "L",
+  "cond": "B",
+  "index": 17
+ },
+ {
+  "model": "L",
+  "cond": "A0",
+  "index": 18
+ },
+ {
+  "model": "L",
+  "cond": "C",
+  "index": 19
+ },
+ {
+  "model": "L",
+  "cond": "A",
+  "index": 20
+ },
+ {
+  "model": "L",
+  "cond": "C",
+  "index": 21
+ },
+ {
+  "model": "L",
+  "cond": "B",
+  "index": 22
+ },
+ {
+  "model": "S",
+  "cond": "B",
+  "index": 23
+ }
+]
