@@ -2,6 +2,16 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Fixed: two streamed models on one Apple GPU (0298)
+- What a generation or fine-tuning step keeps on the GPU is now counted without the wrapped
+  weights of other streamed models in the process and what their runtimes already hold back.
+  Before, a second model counted the first model's weights as its own memory: it was refused
+  with `BudgetExceeded`, or held back that much and re-read its weights (Qwen2.5 0.5B + 1.5B
+  int4: refused at 0.75 GB, otherwise the next answers 1.5-4.6x slower). One model alone is
+  counted as before.
+
 ## 0.1.9 (alpha)
 
 ### Added: streaming output from `memopro.generate` (0284)

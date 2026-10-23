@@ -40,6 +40,7 @@ from __future__ import annotations
 
 import contextlib
 import warnings
+import weakref
 from collections.abc import Iterator
 from pathlib import Path
 from typing import Any
@@ -186,6 +187,31 @@ class _MetalPins:
         return sum(r["pin"].nbytes for r in self.shared.values())
 
 
+# every streamed model on an Apple GPU in this process (their StreamedWeights), for gpu_kept
+_ON_MPS: weakref.WeakSet[Any] = weakref.WeakSet()
+
+
+def gpu_kept(weights: StreamedWeights) -> int:
+    """Apple GPU memory that the model of ``weights`` must hold back for its step: what torch
+    holds on the GPU, less the wrapped weights of every streamed model in this process and what
+    the other models' runtimes already hold back. With one model it is all GPU memory besides its
+    wrapped weights; with several, each counts only what the others do not cover, so together
+    their held-back memory still covers all of it (0298)."""
+    import torch
+
+    models = list(_ON_MPS)
+    others = {id(w.runtime): w.runtime for w in models if w.runtime is not weights.runtime}
+    covered = sum(w.metal.held_bytes() for w in models) + sum(
+        _held_back(rt) for rt in others.values()
+    )
+    return torch.mps.driver_allocated_memory() - covered
+
+
+def _held_back(runtime: Runtime) -> int:
+    stats = runtime.stats()
+    return stats["budget"] - stats["reserve"] - runtime.limit
+
+
 class StreamedWeights:
     """The weights of one model as runtime buffers, and the hooks that pin them around each
     module's forward. Reached as ``model.memopro_weights``."""
@@ -199,6 +225,8 @@ class StreamedWeights:
         self.model = model
         self.device = torch.device(device)
         self.metal = _MetalPins(runtime) if self.device.type == "mps" else None
+        if self.metal is not None:
+            _ON_MPS.add(self)
         # a discrete GPU (CUDA) cannot use runtime memory in place: each use copies the weight to
         # the device and lets the runtime buffer go at once (0195)
         self.copy = self.device.type == "cuda"

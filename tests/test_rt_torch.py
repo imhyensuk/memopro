@@ -682,6 +682,33 @@ def test_generate_budget_covers_the_generation(tmp_path, device):
         )
 
 
+def test_two_streamed_models_on_mps_count_only_their_own_memory(tmp_path):
+    """0298: with two streamed models in one process, what a generation keeps on the GPU is
+    counted without the other model's wrapped weights and what its runtime holds back: a budget
+    that runs model b alone also runs a next to it (before, a was refused for b's memory), b's
+    text stays the same, and what b's runtime holds back covers what the others do not."""
+    from memopro.env._torch import mps_usable
+
+    if not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    tokenizers = pytest.importorskip("tokenizers")
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+
+    def run(m):
+        return memopro.generate(m, "w2 w9 w16", tokenizer=tok, max_new_tokens=8, chat=False)
+
+    b = rtt.stream_model(_tiny_qwen(tmp_path / "b", 1), budget="20MiB", device="mps")
+    alone = run(b)
+    a = rtt.stream_model(_tiny_qwen(tmp_path / "a", 0), budget="20MiB", device="mps")
+    run(a)
+    assert run(b) == alone
+    assert rtt.gpu_kept(b.memopro_weights) <= rtt._held_back(b.memopro_runtime)
+
+
 def test_int4_streaming_equals_the_int4_model(tmp_path):
     """0286: ``precision="int4"`` streams int4 weights from a file cache written once with disk
     consent; logits and greedy text equal those of the same model converted to int4 in memory

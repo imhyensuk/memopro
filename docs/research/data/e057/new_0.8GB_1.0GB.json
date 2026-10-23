@@ -1,0 +1,72 @@
+{
+ "dirs": [
+  "/Users/imhyeonseok/Desktop/model/memochat/models/Qwen2.5-0.5B-Instruct",
+  "/Users/imhyeonseok/Desktop/model/memochat/models/Qwen2.5-1.5B-Instruct"
+ ],
+ "budgets": [
+  "0.8GB",
+  "1.0GB"
+ ],
+ "steps": [
+  {
+   "model": "A",
+   "text": "Three common colors are red, blue, and green. These colors are widely used in various forms of art, design,",
+   "ok": true,
+   "seconds": 1.7359024159959517,
+   "held_back": {
+    "A": 13488384,
+    "B": 0
+   },
+   "wrapped": {
+    "A": 496054016,
+    "B": 0
+   },
+   "budget": {
+    "A": 800000000,
+    "B": 1000000000
+   },
+   "mps_driver": 509542400,
+   "footprint": 1072334600
+  },
+  {
+   "model": "B",
+   "text": "Sure! Here are three common colors:\n\n1. Blue\n2. Green\n3. Red",
+   "ok": true,
+   "seconds": 10.282008167007007,
+   "held_back": {
+    "A": 13488384,
+    "B": 11180355
+   },
+   "wrapped": {
+    "A": 496054016,
+    "B": 494279168
+   },
+   "budget": {
+    "A": 800000000,
+    "B": 1000000000
+   },
+   "mps_driver": 1003864064,
+   "footprint": 2060274232
+  },
+  {
+   "model": "A",
+   "text": "Three common colors are red, blue, and green. These colors are widely used in various forms of art, design,",
+   "ok": true,
+   "seconds": 1.4473777920065913,
+   "held_back": {
+    "A": 7539559,
+    "B": 11180355
+   },
+   "wrapped": {
+    "A": 496054016,
+    "B": 494279168
+   },
+   "budget": {
+    "A": 800000000,
+    "B": 1000000000
+   },
+   "mps_driver": 1003864064,
+   "footprint": 2055522872
+  }
+ ]
+}
