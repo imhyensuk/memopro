@@ -2,7 +2,7 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.1.10 (alpha)
 
 ### Fixed: two streamed models on one Apple GPU (0298)
 - What a generation or fine-tuning step keeps on the GPU is now counted without the wrapped
