@@ -118,10 +118,11 @@ def _auto_batch(m: Any, seq_len: int, pieces: int) -> int:
 
 
 def _gpu_kept(m: Any) -> int:
-    """Apple GPU memory torch holds besides the wrapped streamed weights."""
-    import torch
+    """Apple GPU memory torch holds besides the wrapped streamed weights, not counting what other
+    streamed models in this process hold back (0298)."""
+    import memopro.rt.torch as rtt
 
-    return torch.mps.driver_allocated_memory() - m.memopro_weights.metal.held_bytes()
+    return rtt.gpu_kept(m.memopro_weights)
 
 
 def _hold(
