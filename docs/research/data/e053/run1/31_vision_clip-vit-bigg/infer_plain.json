@@ -1,0 +1,22 @@
+{
+ "task": "vis_infer",
+ "argv": [
+  "/content/memopro_bench/models/laion--CLIP-ViT-bigG-14-laion2B-39B-b160k",
+  "CLIPVisionModel",
+  "plain",
+  "0",
+  "4",
+  "224"
+ ],
+ "device": "cuda",
+ "status": "error",
+ "error": "FileNotFoundError: [Errno 2] No such file or directory: '/content/memopro_bench/models/laion--CLIP-ViT-bigG-14-laion2B-39B-b160k/pytorch_model-00001-of-00002.bin'",
+ "traceback": "Traceback (most recent call last):\n  File \"/content/memopro_bench/code/worker.py\", line 368, in main\n    fn(*args)\n    ~~^^^^^^^\n  File \"/content/memopro_bench/code/worker.py\", line 255, in vis_infer\n    m = vision(path, cls_name, mode, budget)\n  File \"/content/memopro_bench/code/worker.py\", line 232, in vision\n    m = cls.from_pretrained(path).to(DEVICE).eval()\n        ~~~~~~~~~~~~~~~~~~~^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/modeling_utils.py\", line 4262, in from_pretrained\n    config, dtype = _get_dtype(\n                    ~~~~~~~~~~^\n        dtype, checkpoint_files, config, sharded_metadata, state_dict, weights_only, hf_quantizer\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/modeling_utils.py\", line 846, in _get_dtype\n    state_dict = load_state_dict(\n        checkpoint_files[0], map_location=\"meta\", weights_only=weights_only\n    )\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/modeling_utils.py\", line 369, in load_state_dict\n    return torch.load(checkpoint_path, map_location=map_location, weights_only=weights_only, **extra_args)\n           ~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/serialization.py\", line 1530, in load\n    with _open_file_like(f, \"rb\") as opened_file:\n         ~~~~~~~~~~~~~~~^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/serialization.py\", line 795, in _open_file_like\n    return _open_file(name_or_buffer, mode)\n  File \"/usr/local/lib/python3.13/dist-packages/torch/serialization.py\", line 776, in __init__\n    super().__init__(open(name, mode))  # noqa: SIM115\n                     ~~~~^^^^^^^^^^^^\nFileNotFoundError: [Errno 2] No such file or directory: '/content/memopro_bench/models/laion--CLIP-ViT-bigG-14-laion2B-39B-b160k/pytorch_model-00001-of-00002.bin'\n",
+ "host_peak_bytes": 955621376,
+ "gpu_peak_bytes": 109969408,
+ "gpu_peak_allocated_bytes": 0,
+ "case": "infer_plain",
+ "wall_s": 9.9,
+ "warned_ceiling": false,
+ "stderr": ""
+}

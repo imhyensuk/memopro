@@ -1,0 +1,79 @@
+{
+ "task": "lm_lora",
+ "argv": [
+  "/content/memopro_bench/models/mistralai--Mistral-7B-Instruct-v0.3",
+  "memopro",
+  "6442450944",
+  "3",
+  "256",
+  "auto"
+ ],
+ "device": "cuda",
+ "status": "ok",
+ "losses": [
+  2.4996392726898193,
+  12.249089241027832
+ ],
+ "loss_bits": [
+  "0x1.3ff42e0000000p+1",
+  "0x1.87f88a0000000p+3"
+ ],
+ "batch": 4,
+ "step_s": [
+  71.46800594199999,
+  1.9090159620000122
+ ],
+ "tokens": 770,
+ "rt": {
+  "budget": 6442450944,
+  "reserve": 4210688,
+  "used": 6375579648,
+  "peak_used": 6425919488,
+  "buffers": 291,
+  "resident_bytes": 6375579648,
+  "compressed_bytes": 0,
+  "pinned_bytes": 0,
+  "loads": 291,
+  "load_bytes": 14496047104,
+  "rereads": 0,
+  "reread_bytes": 0,
+  "read_seconds": 51.27911273400003,
+  "drops": 163,
+  "drop_bytes": 8120467456,
+  "compressions": 0,
+  "compress_in": 0,
+  "compress_out": 0,
+  "compress_seconds": 0.0,
+  "decompressions": 0,
+  "decompress_bytes": 0,
+  "decompress_seconds": 0.0,
+  "incompressible": 0,
+  "evictions": 163,
+  "refusals": 0,
+  "restore_seconds": 51.763290002000005,
+  "pins": 392,
+  "recomputes": 0,
+  "recompute_bytes": 0,
+  "recompute_seconds": 0.0,
+  "prefetches": 0,
+  "prefetch_bytes": 0,
+  "prefetch_hits": 0,
+  "prefetch_wasted": 0,
+  "prefetch_skipped": 0,
+  "written_bytes": 0,
+  "outside_peak": 0,
+  "limit_low": 0
+ },
+ "targets": [
+  "q_proj",
+  "k_proj",
+  "v_proj",
+  "o_proj"
+ ],
+ "host_peak_bytes": 7970115584,
+ "gpu_peak_bytes": 14915862528,
+ "gpu_peak_allocated_bytes": 13795057664,
+ "case": "lora_memopro_auto",
+ "wall_s": 87.9,
+ "warned_ceiling": false
+}

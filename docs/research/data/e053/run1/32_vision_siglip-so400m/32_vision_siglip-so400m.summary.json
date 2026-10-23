@@ -1,0 +1,117 @@
+{
+ "test": "32_vision_siglip-so400m",
+ "env": {
+  "time": "2026-10-13T22:13:28+00:00",
+  "python": "3.13.15",
+  "memopro": "0.1.4",
+  "torch": "2.11.0+cu130",
+  "transformers": "5.18.0",
+  "peft": "0.21.1",
+  "numpy": "2.1.3",
+  "gpu": "Tesla T4, 15360 MiB",
+  "host_memory_bytes": 13605822464,
+  "disk_free_bytes": 71862108160
+ },
+ "records": [
+  {
+   "task": "vis_infer",
+   "argv": [
+    "/content/memopro_bench/models/google--siglip-so400m-patch14-384",
+    "SiglipVisionModel",
+    "plain",
+    "0",
+    "8",
+    "384"
+   ],
+   "device": "cuda",
+   "status": "ok",
+   "load_s": 1.0,
+   "output_sha": "88823f5c808d503a",
+   "same_twice": true,
+   "shape": [
+    8,
+    1152
+   ],
+   "first_s": 1.8326823711395264,
+   "second_s": 1.5019195079803467,
+   "rt": null,
+   "host_peak_bytes": 2693042176,
+   "gpu_peak_bytes": 2517499904,
+   "gpu_peak_allocated_bytes": 2048429568,
+   "case": "infer_plain",
+   "wall_s": 13.1,
+   "warned_ceiling": false
+  },
+  {
+   "task": "vis_infer",
+   "argv": [
+    "/content/memopro_bench/models/google--siglip-so400m-patch14-384",
+    "SiglipVisionModel",
+    "memopro",
+    "536870912",
+    "8",
+    "384"
+   ],
+   "device": "cuda",
+   "status": "error",
+   "error": "AttributeError: 'SiglipConfig' object has no attribute 'hidden_size'",
+   "traceback": "Traceback (most recent call last):\n  File \"/content/memopro_bench/code/worker.py\", line 368, in main\n    fn(*args)\n    ~~^^^^^^^\n  File \"/content/memopro_bench/code/worker.py\", line 255, in vis_infer\n    m = vision(path, cls_name, mode, budget)\n  File \"/content/memopro_bench/code/worker.py\", line 234, in vision\n    m = rtt.stream_model(path, budget=int(budget), device=DEVICE, model_class=cls)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 532, in stream_model\n    model = build(config, dtype=stored)\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/modeling_utils.py\", line 1457, in _from_config\n    model = cls(config, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/models/siglip/modeling_siglip.py\", line 563, in __init__\n    embed_dim = config.hidden_size\n                ^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/configuration_utils.py\", line 525, in __getattribute__\n    return super().__getattribute__(key)\n           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/integrations/heterogeneity/configuration_utils.py\", line 312, in __getattribute__\n    return super().__getattribute__(key)\n           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\nAttributeError: 'SiglipConfig' object has no attribute 'hidden_size'\n",
+   "host_peak_bytes": 970620928,
+   "gpu_peak_bytes": 109969408,
+   "gpu_peak_allocated_bytes": 0,
+   "case": "infer_memopro_0.50GiB",
+   "wall_s": 8.5,
+   "warned_ceiling": false,
+   "stderr": "[transformers] Model config: bos_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 49406. This may result in unexpected behavior.\n[transformers] Model config: eos_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 49407. This may result in unexpected behavior.\n"
+  },
+  {
+   "task": "vis_infer",
+   "argv": [
+    "/content/memopro_bench/models/google--siglip-so400m-patch14-384",
+    "SiglipVisionModel",
+    "memopro",
+    "1073741824",
+    "8",
+    "384"
+   ],
+   "device": "cuda",
+   "status": "error",
+   "error": "AttributeError: 'SiglipConfig' object has no attribute 'hidden_size'",
+   "traceback": "Traceback (most recent call last):\n  File \"/content/memopro_bench/code/worker.py\", line 368, in main\n    fn(*args)\n    ~~^^^^^^^\n  File \"/content/memopro_bench/code/worker.py\", line 255, in vis_infer\n    m = vision(path, cls_name, mode, budget)\n  File \"/content/memopro_bench/code/worker.py\", line 234, in vision\n    m = rtt.stream_model(path, budget=int(budget), device=DEVICE, model_class=cls)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 532, in stream_model\n    model = build(config, dtype=stored)\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/modeling_utils.py\", line 1457, in _from_config\n    model = cls(config, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/models/siglip/modeling_siglip.py\", line 563, in __init__\n    embed_dim = config.hidden_size\n                ^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/configuration_utils.py\", line 525, in __getattribute__\n    return super().__getattribute__(key)\n           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/integrations/heterogeneity/configuration_utils.py\", line 312, in __getattribute__\n    return super().__getattribute__(key)\n           ~~~~~~~~~~~~~~~~~~~~~~~~^^^^^\nAttributeError: 'SiglipConfig' object has no attribute 'hidden_size'\n",
+   "host_peak_bytes": 969846784,
+   "gpu_peak_bytes": 109969408,
+   "gpu_peak_allocated_bytes": 0,
+   "case": "infer_memopro_1.00GiB",
+   "wall_s": 8.6,
+   "warned_ceiling": false,
+   "stderr": "[transformers] Model config: bos_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 49406. This may result in unexpected behavior.\n[transformers] Model config: eos_token_id must be `None` or an integer within the vocabulary (between 0 and 31999), got 49407. This may result in unexpected behavior.\n"
+  }
+ ],
+ "checks": [
+  {
+   "check": "\ucd94\ub860: memopro(0.50GiB) \ucd9c\ub825 = \uc77c\ubc18 \uc2e4\ud589 (\ube44\ud2b8 \ub2e8\uc704)",
+   "ok": false,
+   "detail": ""
+  },
+  {
+   "check": "\ucd94\ub860: memopro(1.00GiB) \ucd9c\ub825 = \uc77c\ubc18 \uc2e4\ud589 (\ube44\ud2b8 \ub2e8\uc704)",
+   "ok": false,
+   "detail": ""
+  },
+  {
+   "check": "\uc2dc\uac04 plain",
+   "ok": null,
+   "detail": "\uccab 1.83s, \ub458\uc9f8 1.50s"
+  },
+  {
+   "check": "\uc2dc\uac04 0.50GiB",
+   "ok": null,
+   "detail": "\uccab 0.00s, \ub458\uc9f8 0.00s"
+  },
+  {
+   "check": "\uc2dc\uac04 1.00GiB",
+   "ok": null,
+   "detail": "\uccab 0.00s, \ub458\uc9f8 0.00s"
+  }
+ ]
+}

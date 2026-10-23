@@ -1,0 +1,65 @@
+{
+ "task": "lm_gen",
+ "argv": [
+  "/content/memopro_bench/models/mistralai--Mistral-7B-Instruct-v0.3",
+  "plain",
+  "0",
+  "16",
+  "2"
+ ],
+ "device": "cuda",
+ "status": "ok",
+ "load_s": 61.2,
+ "tokens": [
+  [
+   1098,
+   7903,
+   3169,
+   1117,
+   1032,
+   1946,
+   5461,
+   1137,
+   6866,
+   1032,
+   7903,
+   1676,
+   1066,
+   4109,
+   8916,
+   1066
+  ],
+  [
+   9557,
+   18435,
+   781,
+   781,
+   2038,
+   1117,
+   29498,
+   12688,
+   1275,
+   8189,
+   29500,
+   29481,
+   29515,
+   1885,
+   29499,
+   3961
+  ]
+ ],
+ "text": "A hash table is a data structure that uses a hash function to map keys to",
+ "seconds": [
+  3.0069520473480225,
+  1.3290250301361084
+ ],
+ "s_per_token": 0.1354992836713791,
+ "rt": null,
+ "memopro": "0.1.4",
+ "host_peak_bytes": 5922574336,
+ "gpu_peak_bytes": 14798422016,
+ "gpu_peak_allocated_bytes": 14512256000,
+ "case": "gen_plain",
+ "wall_s": 72.4,
+ "warned_ceiling": false
+}

@@ -1,0 +1,10 @@
+{
+ "agg": "2093b2f796de0f4b",
+ "groups": 100000,
+ "seconds": 4.55,
+ "peak_bytes": 1433583616,
+ "status": "ok",
+ "case": "plain",
+ "wall_s": 5.4,
+ "warned_ceiling": false
+}
