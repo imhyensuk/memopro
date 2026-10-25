@@ -81,9 +81,9 @@ class Config:
     budget_basis: str = "conservative"
     # never budgeted (U3 prevention, 0035): a fraction of the measured memory, or bytes (0059 D4)
     headroom: float = 0.10
-    quality: str = "balanced"
+    quality: str = "lossless"
     prefer: str = "speed"
-    fallback: str = "none"
+    fallback: str = "stream"
     residency: str = "memory"
     hibernate_modes: tuple[str, ...] = AUTO_MODES
     disk_writes: str = "ask"

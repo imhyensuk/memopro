@@ -23,6 +23,15 @@ import helpers
 
 
 @pytest.fixture(autouse=True)
+def _quantizing_settings(isolated, monkeypatch):
+    """These tests cover the quality machinery: they keep the pre-0.2.0 defaults explicitly
+    (quality "balanced", no fallback; environment variables, so configure() in a test still
+    wins); the lossless defaults are tested on their own (0314)."""
+    monkeypatch.setenv("MEMOPRO_QUALITY", "balanced")
+    monkeypatch.setenv("MEMOPRO_FALLBACK", "none")
+
+
+@pytest.fixture(autouse=True)
 def isolated(monkeypatch):
     for key in list(os.environ):
         if key.startswith("MEMOPRO_"):

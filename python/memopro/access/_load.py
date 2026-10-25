@@ -186,8 +186,14 @@ def load(
     info, ctx, candidates = plan.info, plan.ctx, plan.candidates
     usable = [c for c in candidates if c.usable]
     fallback = None
-    if not usable and plan.setup.config.fallback == "stream":
-        return _load_streamed(plan, model_id, revision, task, tokenizer, from_pretrained)
+    if not usable and plan.setup.config.fallback == "stream" and not from_pretrained:
+        # the default since 0.2.0 (0314): lossless streaming when nothing fits; a budget too
+        # small even for the runtime gets the usual explanation and suggestions below
+        try:
+            return _load_streamed(plan, model_id, revision, task, tokenizer, from_pretrained)
+        except InvalidArgument as e:
+            if "too small" not in str(e) and "needs a host budget" not in str(e):
+                raise
     if not usable:
         fallback = _fallback(plan)
         if fallback is None:

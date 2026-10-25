@@ -4,6 +4,14 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: every default is lossless (0314)
+- `quality` now defaults to `"lossless"` (was `"balanced"`) and `fallback` to `"stream"` (was
+  `"none"`): `memopro.load` no longer quantizes on its own; a model that does not fit as stored
+  is streamed, results unchanged. `memopro run` and `train_session` follow the same default.
+  Half precision, int8 or int4 stay available with `quality="high"`, `"balanced"` or `"low"`
+  (`memopro run --quality ...`). A budget too small even for streaming still gets the usual
+  explanation with settings that would fit.
+
 ### Removed: lossy int4 streaming (0309)
 - `stream_model(precision="int4")` (experimental since 0.1.9) is gone: results stay lossless.
   `precision` keeps only `"stored"`, and `"int4"` raises `InvalidArgument`. Fast drafts come
