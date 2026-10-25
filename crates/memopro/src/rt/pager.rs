@@ -106,6 +106,36 @@ pub struct PagerStats {
     pub limit_low: u64,
     /// Chunks given up while nothing faulted because memory outside the pager grew (0230).
     pub trims: u64,
+    /// Times the process budget could not be kept even with the pager at its floor, so the
+    /// chunks were given the room the machine still has instead of being squeezed further
+    /// (0306).
+    pub holds: u64,
+}
+
+/// What the machine can still give without swapping, keeping 5% of it (at least 256 MiB) for
+/// everything else; measured at most every half second (0306).
+#[derive(Default)]
+pub(crate) struct MachineRoom {
+    at: Option<std::time::Instant>,
+    bytes: u64,
+}
+
+impl MachineRoom {
+    pub(crate) fn bytes(&mut self) -> u64 {
+        if self
+            .at
+            .is_none_or(|t| t.elapsed() > std::time::Duration::from_millis(500))
+        {
+            self.bytes = crate::hwinfo::memory()
+                .map(|m| {
+                    let keep = (m.total_bytes / 20).max(256 << 20);
+                    m.usable_bytes().saturating_sub(keep)
+                })
+                .unwrap_or(0);
+            self.at = Some(std::time::Instant::now());
+        }
+        self.bytes
+    }
 }
 
 #[cfg(target_os = "linux")]

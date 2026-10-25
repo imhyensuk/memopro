@@ -4,6 +4,16 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: a ceiling that cannot be kept no longer costs a refault storm (0306)
+- When memory outside the pager, compressed chunks and incompressible chunks alone already
+  pass the process ceiling, the pager stops squeezing what is left (that only refaulted: an
+  unchanged Polars aggregation at half its memory took 104 s instead of 1.4 s). Its chunks may
+  then use the pager's own budget, as far as the machine still has room without swapping.
+  The same program now takes 5 s; results are unchanged, and `memopro.enable` still warns while
+  it runs and reports the excess (here +522 MB instead of +325 MB, below the plain run's peak).
+  Programs that fit their ceiling are not affected.
+- Pager statistics gain `holds`: how often the chunks were given that room.
+
 ### Added: models are downloaded once when streamed by name (0307)
 - `stream_model`, `finetune` and `generate` given a Hugging Face name that is not on this disk
   now download it once into the Hugging Face cache (weights, configs and tokenizer only) and say

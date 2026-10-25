@@ -168,6 +168,11 @@ struct State {
     clock: u64,
     resident: u64,
     compressed: u64,
+    /// The last chunk limit under which the process budget could still be kept (0306).
+    held: u64,
+    /// Bytes of chunks found incompressible: they stay in memory for good (0306).
+    fixed: u64,
+    machine: super::MachineRoom,
     stats: PagerStats,
     scratch: Vec<u8>,
     packed: Vec<u8>,
@@ -248,6 +253,9 @@ impl Pager {
                 clock: 0,
                 resident: 0,
                 compressed: 0,
+                held: 0,
+                fixed: 0,
+                machine: Default::default(),
                 stats,
                 scratch: Vec::new(),
                 packed: Vec::new(),
@@ -354,6 +362,9 @@ impl Pager {
         // SAFETY: the caller's contract: our mapping, no longer in use.
         unsafe { libc::munmap(addr.cast(), region.len) };
         for c in &region.chunks {
+            if c.incompressible && matches!(c.data, Data::Resident) {
+                st.fixed -= chunk;
+            }
             match &c.data {
                 Data::Resident => st.resident -= chunk,
                 Data::Compressed(p) => st.compressed -= p.len() as u64,
@@ -585,6 +596,22 @@ impl Shared {
             limit = limit.min(total.saturating_sub(outside + self.config.chunk as u64));
             st.stats.outside_peak = st.stats.outside_peak.max(outside);
             st.stats.limit_low = st.stats.limit_low.min(limit);
+            // memory outside the pager and the chunks that cannot move (compressed or
+            // incompressible) alone pass the budget: squeezing the rest cannot keep it, only
+            // refaults (Polars 40x slower, E053). The budget is lost
+            // anyway, so the chunks may use their own budget as far as the machine still has
+            // room without swapping (and at least what they last had while it could be kept);
+            // memopro.enable still warns and reports the excess (0306)
+            if limit < st.compressed + st.fixed + MIN_CHUNKS * self.config.chunk as u64 {
+                let room = (st.resident + st.compressed).saturating_add(st.machine.bytes());
+                let allowed = self.limit.min(room).max(st.held);
+                if allowed > limit {
+                    limit = allowed;
+                    st.stats.holds += 1;
+                }
+            } else {
+                st.held = limit;
+            }
         }
         let hard = limit;
         let limit = limit.max(st.compressed + MIN_CHUNKS * self.config.chunk as u64);
@@ -673,6 +700,7 @@ impl Shared {
             }
             c.incompressible = true;
             st.packed = packed;
+            st.fixed += chunk as u64;
             st.stats.incompressible += 1;
             return;
         }

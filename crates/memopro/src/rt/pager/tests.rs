@@ -251,6 +251,65 @@ fn a_process_budget_counts_memory_outside_the_pager() {
 }
 
 #[test]
+#[ignore = "measures the whole process: run with --ignored --test-threads=1"]
+fn a_process_budget_lost_to_memory_outside_keeps_the_chunks_room() {
+    // 0284: once memory outside the pager alone passes the process budget, squeezing the
+    // chunks to the floor cannot keep the budget, it only refaults; the chunks keep the room
+    // they last had, so data that fit before is read again without restores
+    let Some(now) = footprint() else { return };
+    let config = PagerConfig {
+        chunk: 256 * 1024,
+        process_budget: Some(now + 40 * MIB as u64),
+        ..PagerConfig::new(64 << 20)
+    };
+    let p = match Pager::new(config) {
+        Ok(p) => p,
+        Err(Error::Unsupported(why)) => return eprintln!("skipping: {why}"),
+        Err(e) => panic!("{e}"),
+    };
+    let len = 16 * MIB;
+    let ptr = p.map(len).unwrap();
+    // SAFETY: a fresh region.
+    let words = unsafe { std::slice::from_raw_parts_mut(ptr as *mut u32, len / 4) };
+    for (i, w) in words.iter_mut().enumerate() {
+        *w = pattern(i);
+    }
+    // fresh pages straight from the OS (malloc would reuse memory earlier tests freed, and the
+    // footprint would not grow): now the process is over its budget without the pager
+    let outside_len = 64 * MIB;
+    // SAFETY: an anonymous private mapping, unmapped below.
+    let outside = unsafe {
+        libc::mmap(
+            std::ptr::null_mut(),
+            outside_len,
+            libc::PROT_READ | libc::PROT_WRITE,
+            libc::MAP_PRIVATE | libc::MAP_ANON,
+            -1,
+            0,
+        )
+    };
+    assert_ne!(outside, libc::MAP_FAILED);
+    // SAFETY: the mapping is `outside_len` writable bytes.
+    unsafe { std::ptr::write_bytes(outside as *mut u8, 7, outside_len) };
+    std::thread::sleep(std::time::Duration::from_millis(100)); // trims run every 10 ms
+    let before = p.stats().restores;
+    for _ in 0..3 {
+        assert!(words.iter().enumerate().all(|(i, &w)| w == pattern(i)));
+    }
+    let s = p.stats();
+    assert!(s.holds > 0, "{s:?}");
+    assert!(
+        s.restores - before < (len / (256 * 1024)) as u64,
+        "refaulted although the budget was lost anyway: {s:?}"
+    );
+    // SAFETY: done with both.
+    unsafe {
+        libc::munmap(outside, outside_len);
+        p.unmap(ptr).unwrap();
+    }
+}
+
+#[test]
 fn several_pagers_serve_their_own_faults() {
     let (Some(a), Some(b)) = (pager(4), pager(4)) else {
         return;
@@ -282,7 +341,8 @@ fn several_pagers_serve_their_own_faults() {
 #[test]
 fn a_process_budget_with_no_room_left_still_makes_progress() {
     // the process already holds more than its budget: the pager keeps a few chunks anyway
-    // (counted as overruns) instead of letting a copy's two operands evict each other forever
+    // (counted as overruns), or uses the room the machine still has since the budget is lost
+    // (0306, counted as holds), instead of letting a copy's two operands evict each other forever
     let config = PagerConfig {
         chunk: 256 * 1024,
         process_budget: Some(1),
@@ -313,7 +373,7 @@ fn a_process_budget_with_no_room_left_still_makes_progress() {
             .all(|(i, &w)| w == pattern(i))
     );
     let s = p.stats();
-    assert!(s.overruns > 0, "{s:?}");
+    assert!(s.overruns > 0 || s.holds > 0, "{s:?}");
     // SAFETY: done with both.
     unsafe {
         p.unmap(src).unwrap();
