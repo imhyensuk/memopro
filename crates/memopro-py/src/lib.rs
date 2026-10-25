@@ -934,6 +934,7 @@ impl RtPager {
         d.set_item("outside_peak", s.outside_peak)?;
         d.set_item("limit_low", s.limit_low)?;
         d.set_item("trims", s.trims)?;
+        d.set_item("holds", s.holds)?;
         d.set_item("written_bytes", 0u64)?;
         Ok(d)
     }

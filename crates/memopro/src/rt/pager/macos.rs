@@ -278,6 +278,11 @@ struct State {
     clock: u64,
     resident: u64,
     compressed: u64,
+    /// The last chunk limit under which the process budget could still be kept (0306).
+    held: u64,
+    /// Bytes of chunks found incompressible: they stay in memory for good (0306).
+    fixed: u64,
+    machine: super::MachineRoom,
     stats: PagerStats,
     packed: Vec<u8>,
 }
@@ -403,6 +408,9 @@ impl Pager {
                 clock: 0,
                 resident: 0,
                 compressed: 0,
+                held: 0,
+                fixed: 0,
+                machine: Default::default(),
                 stats,
                 packed: Vec::new(),
             }),
@@ -475,7 +483,14 @@ impl Pager {
         let n = st.regions.remove(&start).ok_or_else(not_ours)?;
         for i in start..start + n {
             arena.states[i].store(FREE, Ordering::Release);
-            match st.chunks.remove(&i).map(|c| c.data) {
+            let removed = st.chunks.remove(&i);
+            if removed
+                .as_ref()
+                .is_some_and(|c| c.incompressible && matches!(c.data, Data::Resident))
+            {
+                st.fixed -= chunk as u64;
+            }
+            match removed.map(|c| c.data) {
                 Some(Data::Resident) => st.resident -= chunk as u64,
                 Some(Data::Compressed(p)) => st.compressed -= p.len() as u64,
                 _ => {}
@@ -746,6 +761,22 @@ impl Shared {
             limit = limit.min(total.saturating_sub(outside + self.config.chunk as u64));
             st.stats.outside_peak = st.stats.outside_peak.max(outside);
             st.stats.limit_low = st.stats.limit_low.min(limit);
+            // memory outside the pager and the chunks that cannot move (compressed or
+            // incompressible) alone pass the budget: squeezing the rest cannot keep it, only
+            // refaults (Polars 40x slower, E053). The budget is lost
+            // anyway, so the chunks may use their own budget as far as the machine still has
+            // room without swapping (and at least what they last had while it could be kept);
+            // memopro.enable still warns and reports the excess (0306)
+            if limit < st.compressed + st.fixed + MIN_CHUNKS * self.config.chunk as u64 {
+                let room = (st.resident + st.compressed).saturating_add(st.machine.bytes());
+                let allowed = self.limit.min(room).max(st.held);
+                if allowed > limit {
+                    limit = allowed;
+                    st.stats.holds += 1;
+                }
+            } else {
+                st.held = limit;
+            }
         }
         let hard = limit;
         let limit = limit.max(st.compressed + MIN_CHUNKS * self.config.chunk as u64);
@@ -828,6 +859,7 @@ impl Shared {
             }
             self.arena.states[i].store(RESIDENT, Ordering::Release);
             c.incompressible = true;
+            st.fixed += chunk as u64;
             st.stats.incompressible += 1;
             return;
         }
