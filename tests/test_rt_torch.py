@@ -709,80 +709,10 @@ def test_two_streamed_models_on_mps_count_only_their_own_memory(tmp_path):
     assert rtt.gpu_kept(b.memopro_weights) <= rtt._held_back(b.memopro_runtime)
 
 
-def test_int4_streaming_equals_the_int4_model(tmp_path):
-    """0286: ``precision="int4"`` streams int4 weights from a file cache written once with disk
-    consent; logits and greedy text equal those of the same model converted to int4 in memory
-    (the same packed bytes through the same kernel), within the budget, also for a prompt
-    long enough to unpack (0288)."""
-    from memopro.env._torch import mps_usable
-    from memopro.techniques.integrations import int4pack
-
-    path = _tiny_qwen(tmp_path / "t", 0)
-    with pytest.raises(memopro.ModeUnavailable):
-        rtt.stream_model(path, budget="9MiB", device="cpu", precision="int4")
-    if not mps_usable() or int4pack.works("mps"):
-        pytest.skip("needs a usable Apple GPU with torch's int4 kernel")
-    spill = tmp_path / "spill"
-    with (
-        memopro.using(disk_writes="never", spill_dir=str(spill)),
-        pytest.raises(memopro.ModeUnavailable),
-    ):
-        rtt.stream_model(path, budget="9MiB", device="mps", precision="int4")
-    plain = transformers.Qwen2ForCausalLM.from_pretrained(path, dtype=torch.bfloat16)
-    int4pack.convert(plain, "mps")
-    ids = torch.tensor([[2, 9, 16, 23, 30]], device="mps")
-    with torch.no_grad():
-        want = plain(ids).logits
-        text = plain.generate(input_ids=ids, max_new_tokens=8, do_sample=False, pad_token_id=1)
-    with memopro.using(disk_writes="allow", spill_dir=str(spill), min_free_disk_fraction=0.0):
-        m = rtt.stream_model(path, budget="9MiB", device="mps", precision="int4")
-        (cache,) = (spill / "fcache").glob("*.f")
-        built = cache.stat().st_mtime_ns
-        assert rtt.stream_model(path, budget="9MiB", device="mps", precision="int4")
-        assert cache.stat().st_mtime_ns == built  # reused, not written again
-    with torch.no_grad():
-        got = m(ids).logits
-    assert torch.equal(want, got)
-    assert torch.equal(text, rtt.generate(m, ids, max_new_tokens=8, pad_token_id=1))
-    assert m.memopro_runtime.stats()["peak_used"] <= m.memopro_runtime.limit
-    assert cache.stat().st_size < sum(f.stat().st_size for f in path.glob("*.safetensors"))
-    # a long prompt takes the unpacking path (0288), in slices, with the same text
-    long = torch.arange(2, 202, device="mps").unsqueeze(0)
-    got = rtt.generate(m, long, max_new_tokens=4, pad_token_id=1)
-    with torch.no_grad():
-        want = plain.generate(input_ids=long, max_new_tokens=4, do_sample=False, pad_token_id=1)
-    assert torch.equal(want, got)
-
-
-def test_int4_cache_is_written_one_layer_at_a_time_as_before(tmp_path):
-    """The int4 cache is written while each layer is quantized (only one layer's codes in
-    memory), with the same bytes and manifest as converting the whole model first and writing
-    it with ``residency._write_cache`` (0286's build), so caches written before stay valid."""
-    import json
-
-    from memopro import residency
-    from memopro.env._torch import mps_usable
-    from memopro.techniques.integrations import int4pack
-
-    if not mps_usable() or int4pack.works("mps"):
-        pytest.skip("needs a usable Apple GPU with torch's int4 kernel")
-    path = _tiny_qwen(tmp_path / "t", 0)
-    spill = tmp_path / "spill"
-    with memopro.using(disk_writes="allow", spill_dir=str(spill), min_free_disk_fraction=0.0):
-        rtt.stream_model(path, budget="9MiB", device="mps", precision="int4")
-    (cache,) = (spill / "fcache").glob("*.f")
-    full = transformers.Qwen2ForCausalLM.from_pretrained(path, dtype=torch.bfloat16)
-    for parent, attr, layer in int4pack.eligible(full):
-        q = int4pack.quantize_linear(layer, "mps")
-        for t in [*q.buffers(recurse=False), *q.parameters(recurse=False)]:
-            t.data = t.data.cpu()
-        setattr(parent, attr, q)
-    before = tmp_path / "before.f"
-    residency._write_cache(full, before, residency._sources(path, None))
-    assert cache.read_bytes() == before.read_bytes()
-    manifest = json.loads(cache.with_suffix(".json").read_text())
-    assert manifest == json.loads(before.with_suffix(".json").read_text())
-    assert len(manifest["int4"]) == 4 * 7
+def test_lossy_int4_streaming_was_removed(tmp_path):
+    """0309: results stay lossless; precision='int4' (0.1.9, experimental) is gone."""
+    with pytest.raises(memopro.InvalidArgument, match="removed in 0.2.0"):
+        rtt.stream_model(_tiny_qwen(tmp_path / "t", 0), budget="9MiB", precision="int4")
 
 
 def test_generate_streams_the_returned_text(tmp_path):

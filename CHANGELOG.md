@@ -4,6 +4,11 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Removed: lossy int4 streaming (0309)
+- `stream_model(precision="int4")` (experimental since 0.1.9) is gone: results stay lossless.
+  `precision` keeps only `"stored"`, and `"int4"` raises `InvalidArgument`. Fast drafts come
+  from the lossless EDR format instead.
+
 ### Changed: a ceiling that cannot be kept no longer costs a refault storm (0306)
 - When memory outside the pager, compressed chunks and incompressible chunks alone already
   pass the process ceiling, the pager stops squeezing what is left (that only refaulted: an
