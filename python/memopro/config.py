@@ -28,6 +28,9 @@ from memopro._units import parse_size
 QUALITIES = ("lossless", "high", "balanced", "low")
 PREFERENCES = ("speed", "quality", "memory")
 DISK_WRITES = ("ask", "never", "allow")
+# a model streamed by name and not on this disk is downloaded once into the Hugging Face cache
+# ("auto", 0303) or refused ("never")
+DOWNLOADS = ("auto", "never")
 # What the measured host budget starts from (0059 D3); only "conservative" never needs swap
 BUDGET_BASES = ("conservative", "os", "total")
 POOLS = ("device", "host", "disk")
@@ -84,6 +87,7 @@ class Config:
     residency: str = "memory"
     hibernate_modes: tuple[str, ...] = AUTO_MODES
     disk_writes: str = "ask"
+    download: str = "auto"
     daily_write_limit: int | None = None  # None: derived from the disk size (decided in A1b)
     min_free_disk_fraction: float = 0.20  # 0032 H4
     spill_dir: str | None = None
@@ -246,6 +250,8 @@ def _validate(key: str, value: Any) -> Any:
             return _modes(value)
         case "disk_writes":
             return _choice(key, value, DISK_WRITES)
+        case "download":
+            return _choice(key, value, DOWNLOADS)
         case "daily_write_limit":
             return None if value in (None, "", "auto") else parse_size(value)
         case "headroom":

@@ -34,7 +34,7 @@ memopro는 이 문제를 **메모리 대신 시간을 쓰는 방식**으로 해�
 
 - **결과 불변**: 생성·추론 출력은 메모리를 충분히 쓴 일반 실행과 비트 단위로 같습니다. 학습 손실은 예산과 관계없이 비트 단위로 같습니다(일반 PyTorch 학습과는 계산 순서 차이로 마지막 자리가 다를 수 있습니다).
 - **메모리 상한**: 지킬 수 없는 예산은 시작 전에 거부합니다. 코드를 수정하지 않은 프로그램이 압축 후에도 상한을 넘으면 실행 중에 경고하고 초과량을 보고합니다.
-- **디스크 쓰기 없음**: 스왑 파일이나 캐시 파일을 만들지 않습니다.
+- **디스크 쓰기 최소화**: 실행 중에 스왑 파일이나 임시 파일을 쓰지 않습니다. 디스크에 쓰는 것은 모델을 처음 한 번 내려받을 때뿐이고, 쓴 양을 알려 줍니다(`download="never"`로 끌 수 있음).
 
 ## 주요 기능
 
@@ -153,24 +153,19 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 
 **사전 요구 사항**
 - `pip install "memopro[llm]"`
-- 인터넷 연결: 처음 실행할 때 Hugging Face에서 공개 모델 Qwen2.5-0.5B(약 1GB)를 내려받습니다. 토큰은 필요 없습니다.
-- memopro는 디스크에 쓰지 않으므로 모델을 자동으로 받지 않습니다. 아래 코드처럼 먼저 내려받아야 합니다.
+- 인터넷 연결: 처음 실행할 때 Hugging Face에서 공개 모델 Qwen2.5-0.5B(약 1GB)를 한 번 내려받습니다. 토큰은 필요 없습니다. 쓴 양은 안내 메시지로 표시되고, 이후 실행은 내려받지 않습니다.
 - 장치는 자동으로 선택됩니다(NVIDIA GPU → Apple GPU → CPU). Apple silicon 맥에서 약 1~2분이 걸립니다.
 
 ```python
-from huggingface_hub import snapshot_download
-
 import memopro
-
-# memopro never writes to disk, so download the model once first (about 1 GB)
-path = snapshot_download("Qwen/Qwen2.5-0.5B-Instruct")
 
 texts = [
     "memopro runs models that are larger than the memory of the machine.",
     "It reads each layer's weights from the file only while that layer runs.",
 ] * 8
 
-r = memopro.finetune(path, texts, budget="1GiB", seq_len=64)
+# the first run downloads the model once (about 1 GB); later runs read it from the cache
+r = memopro.finetune("Qwen/Qwen2.5-0.5B-Instruct", texts, budget="1GiB", seq_len=64)
 print("losses:", [round(x, 3) for x in r.losses])
 print(memopro.generate(r.model, "What does memopro do?", max_new_tokens=30))
 ```
@@ -208,7 +203,7 @@ memopro doctor
 ### 학습 속도: `batch="auto"`
 
 ```python
-r = memopro.finetune(path, texts, budget="2.5GiB", batch="auto")
+r = memopro.finetune("Qwen/Qwen2.5-0.5B-Instruct", texts, budget="2.5GiB", batch="auto")
 print(r.batch)                           # 고른 batch
 r.adapter.save_pretrained("my-lora")     # 표준 PEFT 어댑터
 ```
@@ -229,7 +224,7 @@ text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Inst
 import transformers
 import memopro.rt.torch as rtt
 
-m = rtt.stream_model(path_to_dinov2, budget="1GB", device="cuda",  # "mps", "cpu"
+m = rtt.stream_model("facebook/dinov2-giant", budget="1GB", device="cuda",  # "mps", "cpu"
                      model_class=transformers.Dinov2Model)
 features = m(pixel_values=images).pooler_output
 ```
