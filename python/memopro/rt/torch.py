@@ -73,8 +73,21 @@ _RT_DTYPE = {
 }
 
 
-# what streaming a model needs from its repository: weights, configs and tokenizer files
-_DOWNLOAD_PATTERNS = ["*.safetensors", "*.json", "*.model", "*.txt", "*.tiktoken", "tokenizer*"]
+# what streaming a model needs from its repository besides the weights: configs and tokenizer
+_DOWNLOAD_EXTRA = ["*.json", "*.model", "*.txt", "*.tiktoken", "tokenizer*"]
+
+
+def _weight_files(names: list[str]) -> list[str]:
+    """The safetensors files to download: the Hugging Face format ones (``model.safetensors``,
+    ``model-0000x-of-0000y.safetensors``, ``pytorch_model-*.safetensors``) when the repository
+    has them, since some also hold the same weights in another layout (Mistral-7B-Instruct-v0.3:
+    ``consolidated.safetensors``, 14.5 GB more; CLIP-ViT-bigG: ``open_clip_model.safetensors``,
+    10 GB more; 0311); every safetensors file otherwise."""
+    weights = [n for n in names if n.endswith(".safetensors") and "/" not in n]
+    hf = [n for n in weights if n.startswith(("model.", "model-", "pytorch_model"))]
+    return hf or weights
+
+
 # a one-time download keeps this much of the disk free (5%, at least 2 GiB). The 20% floor of
 # `min_free_disk_fraction` is for writes repeated while a program runs; on a full laptop disk
 # it refused every model (0307)
@@ -112,11 +125,9 @@ def _download(name: str, revision: str | None) -> list[Path]:
         info = HfApi().model_info(name, revision=revision, files_metadata=True)
     except Exception:  # noqa: BLE001 - offline, private or unknown: the caller says what to do
         return []
-    size = sum(
-        s.size or 0
-        for s in info.siblings or ()
-        if any(fnmatch.fnmatch(s.rfilename, p) for p in _DOWNLOAD_PATTERNS)
-    )
+    siblings = {s.rfilename: s.size or 0 for s in info.siblings or ()}
+    patterns = [*_weight_files(list(siblings)), *_DOWNLOAD_EXTRA]
+    size = sum(n for f, n in siblings.items() if any(fnmatch.fnmatch(f, p) for p in patterns))
     cache = Path(constants.HF_HUB_CACHE)
     cache.mkdir(parents=True, exist_ok=True)
     disk = shutil.disk_usage(cache)
@@ -134,7 +145,7 @@ def _download(name: str, revision: str | None) -> list[Path]:
         UserWarning,
         stacklevel=4,
     )
-    path = snapshot_download(name, revision=revision, allow_patterns=_DOWNLOAD_PATTERNS)
+    path = snapshot_download(name, revision=revision, allow_patterns=patterns)
     return sorted(Path(path).glob("*.safetensors"))
 
 
