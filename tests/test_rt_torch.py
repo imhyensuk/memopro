@@ -924,3 +924,31 @@ def test_only_one_layout_of_the_weights_is_downloaded():
     clip = ["open_clip_model.safetensors", "pytorch_model-00001-of-00002.safetensors"]
     assert pick(clip) == clip[1:]
     assert pick(["onnx/model.safetensors", "model.safetensors"]) == ["model.safetensors"]
+
+
+def test_drafts_and_load_download_through_the_same_path(tmp_path, monkeypatch):
+    """0312: a hub name not on this disk is downloaded once through `_download` (notice,
+    free-disk check, one layout) for drafts and memopro.load too; a local folder or a refusal
+    leaves the name as it is, and an unsupported draft device refuses before any download."""
+
+    calls = []
+    src = _tiny_qwen(tmp_path / "snapshot", 0)
+    monkeypatch.setattr(
+        rtt, "_download", lambda name, rev: calls.append(name) or sorted(src.glob("*.safetensors"))
+    )
+    assert rtt._snapshot(src, None) == (src, None)
+    with memopro.using(download="never"):
+        assert rtt._snapshot("memopro-test/remote", "abc") == ("memopro-test/remote", "abc")
+    assert calls == []
+    assert rtt._snapshot("memopro-test/remote", "abc") == (src, None)
+    assert calls == ["memopro-test/remote"]
+    with pytest.raises(memopro.ModeUnavailable):
+        rtt.draft_model("memopro-test/remote", device="cpu")
+    assert calls == ["memopro-test/remote"]
+    from memopro.access import _load
+
+    seen = []
+    real = rtt._snapshot
+    monkeypatch.setattr(rtt, "_snapshot", lambda name, rev: seen.append(name) or real(name, rev))
+    assert _load.load(str(src), budget="1GB!", quality="lossless") is not None
+    assert seen == [str(src)]  # memopro.load goes through the same path before loading

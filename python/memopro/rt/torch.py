@@ -112,6 +112,22 @@ def _files(name_or_dir: str | Path, revision: str | None) -> list[Path]:
     return files
 
 
+def _snapshot(name_or_dir: Any, revision: str | None) -> tuple[Any, str | None]:
+    """A local folder for a model and the revision to pass with it: the folder itself, the
+    cached snapshot, or one downloaded once through `_download` (notice, free-disk check, one
+    layout of the weights; 0312). Unchanged when none of these has safetensors files, so the
+    caller's own loading decides (e.g. a repository with only .bin files)."""
+    from memopro.access._info import local_safetensors
+    from memopro.config import get_config
+
+    if Path(str(name_or_dir)).expanduser().exists():
+        return name_or_dir, revision
+    files = local_safetensors(name_or_dir, revision)
+    if not files and get_config().download == "auto":
+        files = _download(str(name_or_dir), revision)
+    return (files[0].parent, None) if files else (name_or_dir, revision)
+
+
 def _download(name: str, revision: str | None) -> list[Path]:
     """Download a hub model once into the Hugging Face cache (a one-time write, 0303), keeping
     5% of the disk (at least 2 GiB) free; later runs read it from there. Returns its
@@ -869,6 +885,7 @@ def draft_model(
             raise ModeUnavailable(
                 "memopro.rt.torch.draft_model", reason, ("device='cpu' streaming",)
             )
+    name_or_dir, revision = _snapshot(name_or_dir, revision)  # a hub draft: downloaded once
     config = transformers.AutoConfig.from_pretrained(str(name_or_dir), revision=revision)
     pad = 0
     if target is not None and getattr(target.config, "vocab_size", None) != config.vocab_size:
