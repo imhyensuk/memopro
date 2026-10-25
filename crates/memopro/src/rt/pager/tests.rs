@@ -341,7 +341,8 @@ fn several_pagers_serve_their_own_faults() {
 #[test]
 fn a_process_budget_with_no_room_left_still_makes_progress() {
     // the process already holds more than its budget: the pager keeps a few chunks anyway
-    // (counted as overruns) instead of letting a copy's two operands evict each other forever
+    // (counted as overruns), or uses the room the machine still has since the budget is lost
+    // (0306, counted as holds), instead of letting a copy's two operands evict each other forever
     let config = PagerConfig {
         chunk: 256 * 1024,
         process_budget: Some(1),
@@ -372,7 +373,7 @@ fn a_process_budget_with_no_room_left_still_makes_progress() {
             .all(|(i, &w)| w == pattern(i))
     );
     let s = p.stats();
-    assert!(s.overruns > 0, "{s:?}");
+    assert!(s.overruns > 0 || s.holds > 0, "{s:?}");
     // SAFETY: done with both.
     unsafe {
         p.unmap(src).unwrap();
