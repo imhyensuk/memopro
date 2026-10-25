@@ -28,6 +28,9 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   20% floor of `min_free_disk_fraction` stays for writes repeated while a program runs.
 - New setting `download` (`"auto"` default, `"never"`; `MEMOPRO_DOWNLOAD`).
 - A streamed hub model reads its config and tokenizer from the snapshot holding its weights.
+- Only one layout of the weights is downloaded: the Hugging Face format files when a repository
+  also holds the same weights in another layout (Mistral-7B-Instruct-v0.3 29.0 → 14.5 GB,
+  CLIP-ViT-bigG 20.3 → 10.2 GB; 0311).
 
 ## 0.1.10 (alpha)
 

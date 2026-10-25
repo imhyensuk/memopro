@@ -878,7 +878,11 @@ def test_a_model_not_on_disk_is_downloaded_once_with_a_note(tmp_path, monkeypatc
     calls = []
 
     def model_info(self, name, revision=None, files_metadata=False):
-        sib = [types.SimpleNamespace(rfilename="model.safetensors", size=size)]
+        sib = [
+            types.SimpleNamespace(rfilename="model.safetensors", size=size),
+            # the same weights in another layout (Mistral): never downloaded (0311)
+            types.SimpleNamespace(rfilename="consolidated.safetensors", size=size),
+        ]
         return types.SimpleNamespace(siblings=sib)
 
     def snapshot_download(name, revision=None, allow_patterns=None):
@@ -894,7 +898,9 @@ def test_a_model_not_on_disk_is_downloaded_once_with_a_note(tmp_path, monkeypatc
     assert calls == []
     with pytest.warns(UserWarning, match="downloading memopro-test/not-on-this-disk once"):
         m = rtt.stream_model(name, budget="9MiB")
-    assert calls and "*.safetensors" in calls[0][1]
+    assert calls and "model.safetensors" in calls[0][1]
+    assert not any("consolidated" in p for p in calls[0][1])
+    assert "*.safetensors" not in calls[0][1]
     ids = torch.randint(0, 8000, (1, 6), generator=torch.Generator().manual_seed(1))
     with torch.no_grad():
         assert m(input_ids=ids).logits.shape == (1, 6, 8000)
@@ -902,3 +908,19 @@ def test_a_model_not_on_disk_is_downloaded_once_with_a_note(tmp_path, monkeypatc
     monkeypatch.setattr("shutil.disk_usage", lambda _: full)  # less than 2 GiB would stay free
     with pytest.raises(memopro.ModeUnavailable, match="leave less than"):
         rtt.stream_model(name, budget="9MiB")
+
+
+def test_only_one_layout_of_the_weights_is_downloaded():
+    """0311: Hugging Face format files are preferred over another copy of the same weights."""
+    pick = rtt._weight_files
+    mistral = [
+        "consolidated.safetensors",
+        "model-00001-of-00002.safetensors",
+        "model-00002-of-00002.safetensors",
+    ]
+    assert pick(mistral) == mistral[1:]
+    assert pick(["model.safetensors", "README.md"]) == ["model.safetensors"]
+    assert pick(["open_clip_model.safetensors"]) == ["open_clip_model.safetensors"]
+    clip = ["open_clip_model.safetensors", "pytorch_model-00001-of-00002.safetensors"]
+    assert pick(clip) == clip[1:]
+    assert pick(["onnx/model.safetensors", "model.safetensors"]) == ["model.safetensors"]
