@@ -121,7 +121,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 | `memopro.rt.Runtime(budget=)` | 예산 안에서 버퍼를 관리하는 런타임 |
 | `Runtime.load_npy`, `.array`, `.add_file`, `.alloc` | 파일·새 버퍼 등록. `Buffer.view()`로 복사 없는 NumPy 뷰 |
 | `Runtime.adopt(obj)` | 텐서·모듈·옵티마이저·배열을 담은 객체를 런타임에 맡김 |
-| `memopro.rt.torch.stream_model(name, budget=, device=, model_class=, precision=)` | 가중치를 파일에 둔 채 Hugging Face 모델 실행. `precision="int4"`(Apple GPU, 시험 단계)는 한 번 만든 int4 파일 캐시를 흘려 써서 더 빠르지만 무손실이 아님(기본 `"stored"`는 무손실) |
+| `memopro.rt.torch.stream_model(name, budget=, device=, model_class=)` | 가중치를 파일에 둔 채 Hugging Face 모델 실행 |
 | `memopro.rt.torch.draft_model(name, target=, device=)` | 생성 속도용 초안 모델 (Apple GPU: int4, NVIDIA GPU: 16비트) |
 | `memopro.rt.process_footprint()` | 현재 프로세스 메모리 사용량 |
 
@@ -270,7 +270,6 @@ with work.view(write=True) as a:             # 사용하는 동안만 메모리�
 - 메모리를 크게 넘는 모델은 실행되지만 저장 장치 읽기 속도에 묶여 매우 느립니다. 예를 들어 NVIDIA T4에서 14B 16비트 LoRA는 약 1토큰/초입니다.
 - 무작위 접근이 많은 데이터 작업(정렬, 조인, Polars 등)은 결과는 같지만 크게 느려질 수 있습니다.
 - Apple GPU에서는 `finetune`/`stream_model`을 다른 MPS 연산보다 먼저 호출해야 메모리 설정이 적용됩니다.
-- `stream_model(precision="int4")`는 시험 단계입니다. 8GB M1, Qwen2.5-3B, 예산 1GiB에서 토큰 생성이 16비트 흘려 쓰기보다 2.5~3.2배 빨랐지만(같은 조건 실행에서 2.46배, 0.98 대 2.41초/토큰), 출력은 원본과 다릅니다(WikiText-2 PPL +7.6%). 512토큰 프롬프트의 첫 토큰은 같은 실행에서 16비트 흘려 쓰기보다 약 15% 느렸습니다(16.3 대 14.2초). Qwen2.5-7B, 예산 1.5GiB에서는 2.6배(2.54 대 6.63초/토큰), PPL +4.4%(512토큰 창), 512토큰 첫 토큰은 1.5~1.6배 느렸습니다. 캐시를 쓰려면 `disk_writes="allow"`가 필요합니다. 캐시는 예산 밖에서 한 층씩 쓰입니다(Qwen2.5-7B: 60초, 최대 footprint 2.2GB).
 - 알파 버전이라 API가 바뀔 수 있습니다. 변경 내역은 [CHANGELOG](CHANGELOG.md)에 있습니다.
 
 ## 기여와 라이선스

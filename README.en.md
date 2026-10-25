@@ -121,7 +121,7 @@ Main `memopro run` options: `--budget` (ceiling), `--dry-run` (print the setting
 | `memopro.rt.Runtime(budget=)` | a runtime that keeps buffers within a budget |
 | `Runtime.load_npy`, `.array`, `.add_file`, `.alloc` | register files and new buffers; `Buffer.view()` gives a zero-copy NumPy view |
 | `Runtime.adopt(obj)` | hand over an object holding tensors, modules, optimizers or arrays |
-| `memopro.rt.torch.stream_model(name, budget=, device=, model_class=, precision=)` | run a Hugging Face model with its weights left in the files. `precision="int4"` (Apple GPUs, experimental) streams an int4 file cache built once: faster, but not lossless (the default `"stored"` is lossless) |
+| `memopro.rt.torch.stream_model(name, budget=, device=, model_class=)` | run a Hugging Face model with its weights left in the files |
 | `memopro.rt.torch.draft_model(name, target=, device=)` | a draft model for faster generation (Apple GPU: int4, NVIDIA GPU: 16-bit) |
 | `memopro.rt.process_footprint()` | the process's current memory use |
 
@@ -270,7 +270,6 @@ Models verified: Qwen2.5 (1.5B–14B), SmolLM2, Phi-3.5, Mistral-7B, DINOv2, Con
 - Models far larger than memory run, but storage read speed makes them very slow; 14B 16-bit LoRA on an NVIDIA T4 runs at about 1 token/s.
 - Data work with heavy random access (sorts, joins, Polars) gives identical results but can be much slower.
 - On Apple GPUs, call `finetune`/`stream_model` before other MPS work so the memory setting applies.
-- `stream_model(precision="int4")` is experimental. On an 8 GB M1 with Qwen2.5-3B and a 1 GiB budget it generated tokens 2.5-3.2x faster than 16-bit streaming (2.46x in a same-conditions run, 0.98 vs 2.41 s/token), but its output differs from the original (WikiText-2 perplexity +7.6%). The first token of a 512-token prompt took about 15% longer than with 16-bit streaming in the same run (16.3 vs 14.2 s). With Qwen2.5-7B and a 1.5 GiB budget: 2.6x (2.54 vs 6.63 s/token), perplexity +4.4% (512-token windows), and the first token of a 512-token prompt 1.5-1.6x slower. Writing the cache needs `disk_writes="allow"`; it is written one layer at a time, outside the budget (Qwen2.5-7B: 60 s, peak memory footprint 2.2 GB).
 - Alpha: the API may change. See the [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md).
 
 ## Contributing and license
