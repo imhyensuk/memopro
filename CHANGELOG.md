@@ -2,7 +2,7 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.1.11 (alpha)
 
 ### Changed: a ceiling that cannot be kept no longer costs a refault storm (0306)
 - When memory outside the pager, compressed chunks and incompressible chunks alone already
