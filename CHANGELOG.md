@@ -14,6 +14,16 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   Programs that fit their ceiling are not affected.
 - Pager statistics gain `holds`: how often the chunks were given that room.
 
+### Added: models are downloaded once when streamed by name (0307)
+- `stream_model`, `finetune` and `generate` given a Hugging Face name that is not on this disk
+  now download it once into the Hugging Face cache (weights, configs and tokenizer only) and say
+  how many bytes they wrote; later runs read the cache and write nothing. Before, they stopped
+  with `ModeUnavailable` and the README quick start needed a separate download step.
+- A download that would leave less than 5% of the disk (at least 2 GiB) free is refused. The
+  20% floor of `min_free_disk_fraction` stays for writes repeated while a program runs.
+- New setting `download` (`"auto"` default, `"never"`; `MEMOPRO_DOWNLOAD`).
+- A streamed hub model reads its config and tokenizer from the snapshot holding its weights.
+
 ## 0.1.10 (alpha)
 
 ### Fixed: two streamed models on one Apple GPU (0298)

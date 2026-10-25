@@ -932,3 +932,43 @@ def test_vision_tower_of_a_combined_checkpoint_streams_like_from_pretrained(tmp_
     with torch.no_grad():
         want = plain(pixel_values=x).pooler_output
         assert torch.equal(streamed(pixel_values=x).pooler_output, want)
+
+
+def test_a_model_not_on_disk_is_downloaded_once_with_a_note(tmp_path, monkeypatch):
+    """0307: a hub name with no files on this disk is downloaded once into the Hugging Face
+    cache (a one-time write, 0303), with a note of the bytes written; `download="never"` keeps
+    the refusal, and a download that would leave less than 5% (2 GiB) of the disk free is
+    refused."""
+    import types
+
+    import huggingface_hub
+
+    src = _tiny_qwen(tmp_path / "snapshot", 0)
+    size = sum(f.stat().st_size for f in src.glob("*.safetensors"))
+    calls = []
+
+    def model_info(self, name, revision=None, files_metadata=False):
+        sib = [types.SimpleNamespace(rfilename="model.safetensors", size=size)]
+        return types.SimpleNamespace(siblings=sib)
+
+    def snapshot_download(name, revision=None, allow_patterns=None):
+        calls.append((name, tuple(allow_patterns)))
+        return str(src)
+
+    monkeypatch.setattr(huggingface_hub.HfApi, "model_info", model_info)
+    monkeypatch.setattr(huggingface_hub, "snapshot_download", snapshot_download)
+    monkeypatch.setattr(huggingface_hub.constants, "HF_HUB_CACHE", str(tmp_path / "cache"))
+    name = "memopro-test/not-on-this-disk"
+    with memopro.using(download="never"), pytest.raises(memopro.ModeUnavailable):
+        rtt.stream_model(name, budget="9MiB")
+    assert calls == []
+    with pytest.warns(UserWarning, match="downloading memopro-test/not-on-this-disk once"):
+        m = rtt.stream_model(name, budget="9MiB")
+    assert calls and "*.safetensors" in calls[0][1]
+    ids = torch.randint(0, 8000, (1, 6), generator=torch.Generator().manual_seed(1))
+    with torch.no_grad():
+        assert m(input_ids=ids).logits.shape == (1, 6, 8000)
+    full = types.SimpleNamespace(total=100 << 30, used=99 << 30, free=1 << 30)
+    monkeypatch.setattr("shutil.disk_usage", lambda _: full)  # less than 2 GiB would stay free
+    with pytest.raises(memopro.ModeUnavailable, match="leave less than"):
+        rtt.stream_model(name, budget="9MiB")

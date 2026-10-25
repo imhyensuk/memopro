@@ -34,7 +34,7 @@ memopro trades **time for memory**. It empties data that is not in use and resto
 
 - **Unchanged results**: generation and inference outputs are bit-identical to a plain run with enough memory. Training losses are bit-identical under any budget (against plain PyTorch training they can differ in the last digits, from the order of computation).
 - **A memory ceiling**: a budget that cannot be kept is refused before starting. If an unmodified program exceeds the ceiling even after compression, memopro warns while it runs and reports by how much.
-- **No disk writes**: no swap files or cache files are created.
+- **Minimal disk writes**: nothing is written while a program runs (no swap or scratch files). The only write is downloading a model once, and memopro tells you how much (`download="never"` turns it off).
 
 ## Features
 
@@ -153,24 +153,19 @@ Every function, `--budget`, the settings file `memopro.toml` (or `$MEMOPRO_CONFI
 
 **Before you start**
 - `pip install "memopro[llm]"`
-- An internet connection: the first run downloads the public model Qwen2.5-0.5B (about 1 GB) from Hugging Face. No token is needed.
-- memopro never writes to disk, so it does not download models itself; download first, as the code does.
+- An internet connection: the first run downloads the public model Qwen2.5-0.5B (about 1 GB) from Hugging Face once. No token is needed. memopro tells you how much it wrote, and later runs download nothing.
 - The device is chosen automatically (NVIDIA GPU → Apple GPU → CPU). It takes about 1–2 minutes on an Apple silicon Mac.
 
 ```python
-from huggingface_hub import snapshot_download
-
 import memopro
-
-# memopro never writes to disk, so download the model once first (about 1 GB)
-path = snapshot_download("Qwen/Qwen2.5-0.5B-Instruct")
 
 texts = [
     "memopro runs models that are larger than the memory of the machine.",
     "It reads each layer's weights from the file only while that layer runs.",
 ] * 8
 
-r = memopro.finetune(path, texts, budget="1GiB", seq_len=64)
+# the first run downloads the model once (about 1 GB); later runs read it from the cache
+r = memopro.finetune("Qwen/Qwen2.5-0.5B-Instruct", texts, budget="1GiB", seq_len=64)
 print("losses:", [round(x, 3) for x in r.losses])
 print(memopro.generate(r.model, "What does memopro do?", max_new_tokens=30))
 ```
@@ -208,7 +203,7 @@ memopro doctor
 ### Training speed: `batch="auto"`
 
 ```python
-r = memopro.finetune(path, texts, budget="2.5GiB", batch="auto")
+r = memopro.finetune("Qwen/Qwen2.5-0.5B-Instruct", texts, budget="2.5GiB", batch="auto")
 print(r.batch)                           # the batch chosen
 r.adapter.save_pretrained("my-lora")     # a standard PEFT adapter
 ```
@@ -229,7 +224,7 @@ The small model proposes tokens and the large model verifies them; the output eq
 import transformers
 import memopro.rt.torch as rtt
 
-m = rtt.stream_model(path_to_dinov2, budget="1GB", device="cuda",  # "mps", "cpu"
+m = rtt.stream_model("facebook/dinov2-giant", budget="1GB", device="cuda",  # "mps", "cpu"
                      model_class=transformers.Dinov2Model)
 features = m(pixel_values=images).pooler_output
 ```
