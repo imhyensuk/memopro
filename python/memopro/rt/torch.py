@@ -73,10 +73,23 @@ _RT_DTYPE = {
 }
 
 
+# what streaming a model needs from its repository: weights, configs and tokenizer files
+_DOWNLOAD_PATTERNS = ["*.safetensors", "*.json", "*.model", "*.txt", "*.tiktoken", "tokenizer*"]
+# a one-time download keeps this much of the disk free (5%, at least 2 GiB). The 20% floor of
+# `min_free_disk_fraction` is for writes repeated while a program runs; on a full laptop disk
+# it refused every model (0307)
+DOWNLOAD_KEEP_FRACTION = 0.05
+DOWNLOAD_KEEP_MIN = 2 << 30
+
+
 def _files(name_or_dir: str | Path, revision: str | None) -> list[Path]:
     from memopro.access._info import local_safetensors
+    from memopro.config import get_config
 
     files = local_safetensors(name_or_dir, revision)
+    local = Path(str(name_or_dir)).expanduser().exists()
+    if not files and not local and get_config().download == "auto":
+        files = _download(str(name_or_dir), revision)
     if not files:
         raise ModeUnavailable(
             "memopro.rt.torch.stream_model",
@@ -84,6 +97,45 @@ def _files(name_or_dir: str | Path, revision: str | None) -> list[Path]:
             ("download the model once (e.g. huggingface-cli download)", "pass a local folder"),
         )
     return files
+
+
+def _download(name: str, revision: str | None) -> list[Path]:
+    """Download a hub model once into the Hugging Face cache (a one-time write, 0303), keeping
+    5% of the disk (at least 2 GiB) free; later runs read it from there. Returns its
+    safetensors files, or none when the hub cannot be reached or has no such files."""
+    import fnmatch
+    import shutil
+
+    try:
+        from huggingface_hub import HfApi, constants, snapshot_download
+
+        info = HfApi().model_info(name, revision=revision, files_metadata=True)
+    except Exception:  # noqa: BLE001 - offline, private or unknown: the caller says what to do
+        return []
+    size = sum(
+        s.size or 0
+        for s in info.siblings or ()
+        if any(fnmatch.fnmatch(s.rfilename, p) for p in _DOWNLOAD_PATTERNS)
+    )
+    cache = Path(constants.HF_HUB_CACHE)
+    cache.mkdir(parents=True, exist_ok=True)
+    disk = shutil.disk_usage(cache)
+    keep = max(DOWNLOAD_KEEP_MIN, DOWNLOAD_KEEP_FRACTION * disk.total)
+    if disk.free - size < keep:
+        raise ModeUnavailable(
+            "memopro.rt.torch.stream_model",
+            f"{name} needs {size / 2**30:.1f} GiB, and {disk.free / 2**30:.1f} GiB is free on the "
+            f"disk of {cache}; downloading would leave less than {keep / 2**30:.1f} GiB free",
+            ("free disk space", "set HF_HOME to a larger disk", "pass a local folder"),
+        )
+    warnings.warn(
+        f"memopro: downloading {name} once ({size / 2**30:.1f} GiB written to {cache}); later "
+        "runs read it from there (memopro.configure(download='never') to refuse)",
+        UserWarning,
+        stacklevel=4,
+    )
+    path = snapshot_download(name, revision=revision, allow_patterns=_DOWNLOAD_PATTERNS)
+    return sorted(Path(path).glob("*.safetensors"))
 
 
 class _MetalPins:
@@ -581,6 +633,10 @@ def stream_model(
                 ("device='cpu'",),
             )
     files = _files(name_or_dir, revision)
+    if not Path(str(name_or_dir)).expanduser().is_dir():
+        # a hub model: read its config and tokenizer from the snapshot holding these files
+        # (the one just downloaded, or the cached one) instead of asking the hub again
+        name_or_dir, revision = files[0].parent, None
     regions: dict[str, Any] = {}
     for f in files:
         regions.update(read_header(f))
