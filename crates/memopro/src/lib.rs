@@ -8,6 +8,7 @@
 //! - [`spill`]: write-free restore from original files with digest checks, and spill files (v0.1)
 //! - [`ledger`]: bookkeeping of hibernated buffers and SSD bytes written (v0.1)
 //! - [`codec`]: byte shuffle + zstd for lossless in-RAM compression (v0.1)
+//! - [`edr`]: bf16 weights as a 1-byte base (a draft) and a 4-bit residual, lossless (0308)
 //! - [`pressure`]: OS memory-pressure signal for γ elastic (v0.3)
 //! - [`rt`]: runtime C-R: large buffers under a hard memory budget, dropped and re-read from
 //!   their original files or compressed, never written to disk (0109, 0112)
@@ -15,6 +16,7 @@
 //! Unbuilt functions return [`Error::NotImplemented`] with the planned milestone; nothing panics.
 
 pub mod codec;
+pub mod edr;
 pub mod error;
 pub mod hwinfo;
 pub mod ledger;

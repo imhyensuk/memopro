@@ -153,6 +153,109 @@ fn hwinfo_disk(py: Python<'_>, path: PathBuf) -> PyResult<Bound<'_, PyDict>> {
     Ok(d)
 }
 
+// ------------------------------------------------------------------ EDR (0308)
+
+fn edr_table_arg(table: &[u8]) -> PyResult<[u8; 15]> {
+    table
+        .try_into()
+        .map_err(|_| PyValueError::new_err("an EDR table is 15 bytes"))
+}
+
+/// A borrowed buffer seen as `T` values: its address and length must suit `T`.
+fn typed<T>(raw: Raw, what: &str) -> PyResult<(usize, usize)> {
+    let size = std::mem::size_of::<T>();
+    if raw.len % size != 0 || raw.ptr % std::mem::align_of::<T>() != 0 {
+        return Err(PyValueError::new_err(format!(
+            "{what} must be an aligned buffer of {size}-byte values"
+        )));
+    }
+    Ok((raw.ptr, raw.len / size))
+}
+
+/// The 15 most frequent exponents of a bf16 buffer (EDR v1 table).
+#[pyfunction]
+fn edr_table<'py>(py: Python<'py>, src: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyBytes>> {
+    let (_keep, raw) = borrow(src, false)?;
+    let (ptr, n) = typed::<u16>(raw, "src")?;
+    // SAFETY: `_keep` holds the buffer; `typed` checked its size and alignment.
+    let t = py.detach(|| {
+        memopro::edr::table(unsafe { std::slice::from_raw_parts(ptr as *const u16, n) })
+    });
+    Ok(PyBytes::new(py, &t))
+}
+
+/// Encode bf16 `src` into `base` (n bytes) and `resid` (ceil(n/2) bytes); returns the escapes as
+/// (u64 positions, u16 bits), little-endian bytes.
+#[pyfunction]
+fn edr_encode<'py>(
+    py: Python<'py>,
+    src: &Bound<'py, PyAny>,
+    table: &[u8],
+    base: &Bound<'py, PyAny>,
+    resid: &Bound<'py, PyAny>,
+) -> PyResult<(Bound<'py, PyBytes>, Bound<'py, PyBytes>)> {
+    let t = edr_table_arg(table)?;
+    let (_s, s) = borrow(src, false)?;
+    let (_b, b) = borrow(base, true)?;
+    let (_r, r) = borrow(resid, true)?;
+    let (sp, n) = typed::<u16>(s, "src")?;
+    let esc = py
+        .detach(|| {
+            // SAFETY: the three buffers are held by `_s`, `_b`, `_r`; base and residual are ours.
+            let src = unsafe { std::slice::from_raw_parts(sp as *const u16, n) };
+            memopro::edr::encode(src, &t, unsafe { b.slice_mut() }, unsafe { r.slice_mut() })
+        })
+        .map_err(to_py_err)?;
+    let index: Vec<u8> = esc.index.iter().flat_map(|i| i.to_le_bytes()).collect();
+    let bits: Vec<u8> = esc.bits.iter().flat_map(|x| x.to_le_bytes()).collect();
+    Ok((PyBytes::new(py, &index), PyBytes::new(py, &bits)))
+}
+
+/// Decode into the bf16 buffer `out`: every bit with `resid`, the draft with `resid=None`.
+#[pyfunction]
+#[pyo3(signature = (base, resid, table, esc_index, esc_bits, out))]
+fn edr_decode<'py>(
+    py: Python<'py>,
+    base: &Bound<'py, PyAny>,
+    resid: Option<&Bound<'py, PyAny>>,
+    table: &[u8],
+    esc_index: &[u8],
+    esc_bits: &[u8],
+    out: &Bound<'py, PyAny>,
+) -> PyResult<()> {
+    let t = edr_table_arg(table)?;
+    if esc_index.len() % 8 != 0 || esc_bits.len() * 4 != esc_index.len() {
+        return Err(PyValueError::new_err(
+            "escapes: 8-byte positions and 2-byte bits, as many",
+        ));
+    }
+    let index: Vec<u64> = esc_index
+        .chunks_exact(8)
+        .map(|c| u64::from_le_bytes(c.try_into().expect("8 bytes")))
+        .collect();
+    let bits: Vec<u16> = esc_bits
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes(c.try_into().expect("2 bytes")))
+        .collect();
+    let (_b, b) = borrow(base, false)?;
+    let r = resid.map(|r| borrow(r, false)).transpose()?;
+    let (_o, o) = borrow(out, true)?;
+    let (op, n) = typed::<u16>(o, "out")?;
+    let rr = r.as_ref().map(|(_, raw)| *raw);
+    py.detach(|| {
+        // SAFETY: every buffer is held for the call; `out` is ours and checked by `typed`.
+        let out = unsafe { std::slice::from_raw_parts_mut(op as *mut u16, n) };
+        memopro::edr::decode(
+            unsafe { b.slice() },
+            rr.map(|r| unsafe { r.slice() }),
+            &t,
+            (&index, &bits),
+            out,
+        )
+    })
+    .map_err(to_py_err)
+}
+
 // ------------------------------------------------------------------ spill engine
 
 /// Digest (16 bytes) of a buffer.
@@ -1047,6 +1150,9 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hwinfo_process_rss, m)?)?;
     m.add_function(wrap_pyfunction!(hwinfo_disk, m)?)?;
     m.add_function(wrap_pyfunction!(pressure_current, m)?)?;
+    m.add_function(wrap_pyfunction!(edr_table, m)?)?;
+    m.add_function(wrap_pyfunction!(edr_encode, m)?)?;
+    m.add_function(wrap_pyfunction!(edr_decode, m)?)?;
     m.add_function(wrap_pyfunction!(engine_digest, m)?)?;
     m.add_function(wrap_pyfunction!(engine_digest_parts, m)?)?;
     m.add_function(wrap_pyfunction!(engine_digest_combine, m)?)?;
