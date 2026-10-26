@@ -10,6 +10,12 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   as before). Restoring bf16 weights: about 1.5x faster on an M1 (1.2-1.9 GB/s instead of
   0.7-1.1); results unchanged.
 
+### Added: EDR v2, a lossless 10.7-bit form of bf16 weights (0315)
+- `memopro.rt.edr.encode2` / `decode2`: the exponents as per-tensor Huffman codes in blocks that
+  decode in parallel, sign and mantissa as nibbles. Every bit comes back; without the low
+  nibbles it is the same draft as EDR v1. Qwen2.5-0.5B: 66.7% of its size (EDR v1 75.1%, zstd
+  level 1 77.9%); decoding runs at about 2.2 GB/s on an M1 (EDR v1 about 6.5).
+
 ### Changed: every default is lossless (0314)
 - `quality` now defaults to `"lossless"` (was `"balanced"`) and `fallback` to `"stream"` (was
   `"none"`): `memopro.load` no longer quantizes on its own; a model that does not fit as stored
