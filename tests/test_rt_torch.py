@@ -1171,3 +1171,32 @@ def test_a_resumed_streamer_gets_only_what_it_has_not_had():
         again.put(torch.tensor(v))
     again.end()
     assert seen.puts == [[5, 6, 7], [1], [2, 3], [4], [8]] and seen.ended == 1
+
+
+def test_draft_room_counts_what_the_machine_cannot_give():
+    # 0333: a self-draft beside a ceiling the machine could not hold grew swap 1.2 GB
+    from types import SimpleNamespace
+
+    from memopro import llm
+
+    class Rt:
+        short = 0
+
+        def stats(self):
+            return {"budget": 1000, "reserve": 10}
+
+        def limit(self):
+            return 990
+
+        def machine_limit(self):
+            return 990 - self.short
+
+    rt = Rt()
+    m = SimpleNamespace(
+        device=SimpleNamespace(type="cpu"),
+        memopro_runtime=SimpleNamespace(_rt=rt),
+        memopro_weights=SimpleNamespace(buffers={1: (SimpleNamespace(nbytes=100), 0, 0)}),
+    )
+    assert llm._room(m, 50) == 1000 - 10 - 100 - 50
+    rt.short = 300
+    assert llm._room(m, 50) == 1000 - 10 - 300 - 100 - 50

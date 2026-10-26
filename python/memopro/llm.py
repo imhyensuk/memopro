@@ -407,15 +407,19 @@ def _note(message: str) -> None:
 
 
 def _room(m: Any, estimate: int) -> int | None:
-    """Budget bytes left beside the largest weight and ``estimate`` for a draft; None on CUDA,
-    where the draft takes GPU memory from the device cache instead (0276)."""
+    """Budget bytes left beside the largest weight and ``estimate`` for a draft, less what the
+    machine cannot give without swapping (0333: a self-draft beside a 4.5 GiB ceiling on 8 GB
+    grew swap 1.2 GB); None on CUDA, where the draft takes GPU memory from the device cache
+    instead (0276)."""
     if m.device.type == "cuda":
         return None
     if m.device.type == "mps":  # what the GPU already keeps counts as it will be measured
         estimate = max(estimate, _gpu_kept(m))
-    stats = m.memopro_runtime.stats()
+    rt = m.memopro_runtime._rt
+    stats = rt.stats()
     largest = max(b[0].nbytes for b in m.memopro_weights.buffers.values())
-    return stats["budget"] - stats["reserve"] - largest - estimate
+    short = rt.limit() - rt.machine_limit()
+    return stats["budget"] - stats["reserve"] - short - largest - estimate
 
 
 def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:
@@ -450,12 +454,19 @@ def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:
     name, path = choice
     need = int(rtt.draft_size(path, m.device.type) * (1 + AUTO_DRAFT_SLACK))
     if room is not None and need > room:
-        budget = m.memopro_runtime.stats()["budget"]
+        rt = m.memopro_runtime._rt
+        budget = rt.stats()["budget"]
+        more = (budget + need - room + (1 << 20) - 1) >> 20
+        how = (
+            f"a budget of at least {more} MiB lets it draft"
+            if rt.machine_limit() >= rt.limit()
+            else "this machine cannot give that much without swapping now; closing other "
+            "programs may let it draft"
+        )
         _note(
-            f"memopro: {name} could draft, but the budget leaves {room >> 20} MiB beside the "
-            f"largest weight and the generation, and the draft needs about {need >> 20} MiB; "
-            f"a budget of at least {(budget + need - room + (1 << 20) - 1) >> 20} MiB lets it "
-            "draft (the text is the same either way)"
+            f"memopro: {name} could draft, but the budget leaves {max(room, 0) >> 20} MiB "
+            f"beside the largest weight and the generation, and the draft needs about "
+            f"{need >> 20} MiB; {how} (the text is the same either way)"
         )
         return None
     try:
