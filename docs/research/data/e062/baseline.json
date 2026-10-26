@@ -1,0 +1,1078 @@
+{
+ "commit": "9ffe4db1b1e810fc0fb79eb8afeffbe1cae06ce1",
+ "image": {
+  "plain": [
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/python",
+     "experiments/e027_transparent/workload.py",
+     "1024"
+    ],
+    "returncode": 0,
+    "wall_seconds": 2.238241624989314,
+    "peak_footprint": 825754632,
+    "swap_delta": 0,
+    "result": {
+     "images": 1024,
+     "means_sha256": "b861a4784dbc9750534a825b502ea0d9efa11ff143561a7bd0d481bd500cf28d",
+     "counts_sha256": "8d39ee60d44d19ffb1222003fc927446e2a1d993da991bd2f7d85fbf4b24f84f",
+     "total": 232319114517,
+     "max": 1780,
+     "stack_sha256": "8bb0fe82b1bf12c3aa9547008331b8c507988148a6dac54e78b628ce3918e319",
+     "build_seconds": 1.2115897500043502,
+     "seconds": 2.059874917002162,
+     "maxrss_bytes": 838942720
+    },
+    "stderr_tail": "        2.23 real         1.58 user         0.42 sys\n           838942720  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n              104127  page reclaims\n                 608  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                 277  voluntary context switches\n                1821  involuntary context switches\n         20765583586  instructions retired\n          6264585749  cycles elapsed\n           825754632  peak memory footprint\n"
+   },
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/python",
+     "experiments/e027_transparent/workload.py",
+     "1024"
+    ],
+    "returncode": 0,
+    "wall_seconds": 1.7980848750012228,
+    "peak_footprint": 824902664,
+    "swap_delta": 0,
+    "result": {
+     "images": 1024,
+     "means_sha256": "b861a4784dbc9750534a825b502ea0d9efa11ff143561a7bd0d481bd500cf28d",
+     "counts_sha256": "8d39ee60d44d19ffb1222003fc927446e2a1d993da991bd2f7d85fbf4b24f84f",
+     "total": 232319114517,
+     "max": 1780,
+     "stack_sha256": "8bb0fe82b1bf12c3aa9547008331b8c507988148a6dac54e78b628ce3918e319",
+     "build_seconds": 1.0163769999926444,
+     "seconds": 1.7099074159923475,
+     "maxrss_bytes": 845414400
+    },
+    "stderr_tail": "        1.79 real         1.52 user         0.24 sys\n           845414400  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n               52824  page reclaims\n                  44  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   1  voluntary context switches\n                 450  involuntary context switches\n         20119969412  instructions retired\n          5603465802  cycles elapsed\n           824902664  peak memory footprint\n"
+   }
+  ],
+  "ceiling": 412664324,
+  "runs": [
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/memopro",
+     "run",
+     "--budget",
+     "412664324",
+     "--no-torch",
+     "--report-json",
+     "/var/folders/sj/pvxtwzlx5t79rnt58lgylnc80000gn/T/tmpb3ey7_7z/report.json",
+     "experiments/e027_transparent/workload.py",
+     "1024"
+    ],
+    "returncode": 0,
+    "wall_seconds": 4.632469916992704,
+    "peak_footprint": 415269656,
+    "swap_delta": 0,
+    "result": {
+     "images": 1024,
+     "means_sha256": "b861a4784dbc9750534a825b502ea0d9efa11ff143561a7bd0d481bd500cf28d",
+     "counts_sha256": "8d39ee60d44d19ffb1222003fc927446e2a1d993da991bd2f7d85fbf4b24f84f",
+     "total": 232319114517,
+     "max": 1780,
+     "stack_sha256": "8bb0fe82b1bf12c3aa9547008331b8c507988148a6dac54e78b628ce3918e319",
+     "build_seconds": 1.2439452499966137,
+     "seconds": 4.426471457991283,
+     "maxrss_bytes": 488112128
+    },
+    "stderr_tail": "memopro: restarting with PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1 so that freed memory returns to macOS (--keep-mps-heap to skip)\nmemopro report:\n  [skipped] elastic - watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on\n  [applied] enable.rt - runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it\n  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)\n  [applied] enable.transformers - from_pretrained loads models that do not fit as memopro.load\n  [applied] transparent - budget 393.55 MiB, peak 392.55 MiB; 2946 faults, 2669 chunks compressed (2.61 GiB to 1.12 GiB), 2178 brought back, 0 over budget; nothing written\n        4.62 real         3.75 user         0.84 sys\n           488112128  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n              348240  page reclaims\n                 157  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                2946  signals received\n                  39  voluntary context switches\n               97229  involuntary context switches\n         46350187961  instructions retired\n         14221154700  cycles elapsed\n           415269656  peak memory footprint\n",
+    "report": {
+     "report": {
+      "entries": [
+       {
+        "technique": "elastic",
+        "action": "skipped",
+        "detail": "watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003442.981688
+       },
+       {
+        "technique": "enable.rt",
+        "action": "applied",
+        "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003443.029551
+       },
+       {
+        "technique": "enable.numpy",
+        "action": "applied",
+        "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003443.0295522
+       },
+       {
+        "technique": "enable.transformers",
+        "action": "applied",
+        "detail": "from_pretrained loads models that do not fit as memopro.load",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003443.029553
+       },
+       {
+        "technique": "transparent",
+        "action": "applied",
+        "detail": "budget 393.55 MiB, peak 392.55 MiB; 2946 faults, 2669 chunks compressed (2.61 GiB to 1.12 GiB), 2178 brought back, 0 over budget; nothing written",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003447.468435
+       }
+      ]
+     },
+     "transparent": {
+      "budget": 412664324,
+      "limit": 411615748,
+      "used": 0,
+      "peak_used": 411613333,
+      "regions": 0,
+      "mapped_bytes": 0,
+      "resident_bytes": 0,
+      "compressed_bytes": 0,
+      "faults": 2946,
+      "zero_fills": 768,
+      "restores": 2178,
+      "restore_seconds": 0.7707100009999996,
+      "evictions": 2669,
+      "compress_in": 2798649344,
+      "compress_out": 1198538718,
+      "compress_seconds": 1.614488007000003,
+      "incompressible": 0,
+      "overruns": 0,
+      "spurious": 0,
+      "outside_peak": 27050464,
+      "limit_low": 384565284,
+      "trims": 0,
+      "holds": 0,
+      "written_bytes": 0
+     },
+     "session": {
+      "elapsed_seconds": 4.469560833997093,
+      "memopro_seconds": 2.3851980080000024,
+      "slowdown": 2.1443295659713186,
+      "ceiling": 412664324,
+      "footprint": 26985072,
+      "peak_footprint": 415269656,
+      "exceeded_bytes": 2605332,
+      "overruns": 0,
+      "activations_moved": 0,
+      "activations_over_ceiling": 0,
+      "runtimes": [],
+      "predictions": []
+     },
+     "ceiling": 412664324
+    },
+    "same_as_plain": false
+   },
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/memopro",
+     "run",
+     "--budget",
+     "412664324",
+     "--no-torch",
+     "--report-json",
+     "/var/folders/sj/pvxtwzlx5t79rnt58lgylnc80000gn/T/tmpot2wf44s/report.json",
+     "experiments/e027_transparent/workload.py",
+     "1024"
+    ],
+    "returncode": 0,
+    "wall_seconds": 4.529548499995144,
+    "peak_footprint": 415253272,
+    "swap_delta": 0,
+    "result": {
+     "images": 1024,
+     "means_sha256": "b861a4784dbc9750534a825b502ea0d9efa11ff143561a7bd0d481bd500cf28d",
+     "counts_sha256": "8d39ee60d44d19ffb1222003fc927446e2a1d993da991bd2f7d85fbf4b24f84f",
+     "total": 232319114517,
+     "max": 1780,
+     "stack_sha256": "8bb0fe82b1bf12c3aa9547008331b8c507988148a6dac54e78b628ce3918e319",
+     "build_seconds": 1.2189304579951568,
+     "seconds": 4.329960332994233,
+     "maxrss_bytes": 490487808
+    },
+    "stderr_tail": "memopro: restarting with PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1 so that freed memory returns to macOS (--keep-mps-heap to skip)\nmemopro report:\n  [skipped] elastic - watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on\n  [applied] enable.rt - runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it\n  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)\n  [applied] enable.transformers - from_pretrained loads models that do not fit as memopro.load\n  [applied] transparent - budget 393.55 MiB, peak 392.55 MiB; 2947 faults, 2670 chunks compressed (2.61 GiB to 1.12 GiB), 2179 brought back, 0 over budget; nothing written\n        4.52 real         3.71 user         0.84 sys\n           490487808  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n              347770  page reclaims\n                 139  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                2947  signals received\n                   0  voluntary context switches\n               95330  involuntary context switches\n         46407049377  instructions retired\n         14133679515  cycles elapsed\n           415253272  peak memory footprint\n",
+    "report": {
+     "report": {
+      "entries": [
+       {
+        "technique": "elastic",
+        "action": "skipped",
+        "detail": "watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003447.604776
+       },
+       {
+        "technique": "enable.rt",
+        "action": "applied",
+        "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003447.644387
+       },
+       {
+        "technique": "enable.numpy",
+        "action": "applied",
+        "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003447.6443892
+       },
+       {
+        "technique": "enable.transformers",
+        "action": "applied",
+        "detail": "from_pretrained loads models that do not fit as memopro.load",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003447.6443899
+       },
+       {
+        "technique": "transparent",
+        "action": "applied",
+        "detail": "budget 393.55 MiB, peak 392.55 MiB; 2947 faults, 2670 chunks compressed (2.61 GiB to 1.12 GiB), 2179 brought back, 0 over budget; nothing written",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003451.998833
+       }
+      ]
+     },
+     "transparent": {
+      "budget": 412664324,
+      "limit": 411615748,
+      "used": 0,
+      "peak_used": 411615136,
+      "regions": 0,
+      "mapped_bytes": 0,
+      "resident_bytes": 0,
+      "compressed_bytes": 0,
+      "faults": 2947,
+      "zero_fills": 768,
+      "restores": 2179,
+      "restore_seconds": 0.7588027599999994,
+      "evictions": 2670,
+      "compress_in": 2799697920,
+      "compress_out": 1199080657,
+      "compress_seconds": 1.5698240109999975,
+      "incompressible": 0,
+      "overruns": 0,
+      "spurious": 0,
+      "outside_peak": 27017696,
+      "limit_low": 384598052,
+      "trims": 0,
+      "holds": 0,
+      "written_bytes": 0
+     },
+     "session": {
+      "elapsed_seconds": 4.383146666994435,
+      "memopro_seconds": 2.328626770999997,
+      "slowdown": 2.133416510368173,
+      "ceiling": 412664324,
+      "footprint": 26886768,
+      "peak_footprint": 415253272,
+      "exceeded_bytes": 2588948,
+      "overruns": 0,
+      "activations_moved": 0,
+      "activations_over_ceiling": 0,
+      "runtimes": [],
+      "predictions": []
+     },
+     "ceiling": 412664324
+    },
+    "same_as_plain": false
+   }
+  ]
+ },
+ "dataframe": {
+  "plain": [
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/python",
+     "experiments/e040_workloads/dataframe.py"
+    ],
+    "returncode": 0,
+    "wall_seconds": 6.52675629100122,
+    "peak_footprint": 1542440712,
+    "swap_delta": 0,
+    "result": {
+     "per_store": "49cb8fa74accc9bd7a04b7a2c5e5f4bff0f7cb94b6dc3c177b39c531a4aff27a",
+     "top": "452ad99081182b466b5535f63441a82da5f98efb5ac2221f2f61902b68fa4d84",
+     "sorted_revenue": "3669526891788c4366e2a4da0baac4a4b9855ceae365a6d3a4e20cfaab5ebdb4",
+     "total": 20035592915.31,
+     "seconds": 5.582160250007291,
+     "import_rss_bytes": 101777408,
+     "maxrss_bytes": 1325416448
+    },
+    "stderr_tail": "        6.52 real         4.70 user         1.01 sys\n          1325416448  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n              469446  page reclaims\n                1835  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                 523  voluntary context switches\n                6525  involuntary context switches\n         32668108137  instructions retired\n         17894219363  cycles elapsed\n          1542440712  peak memory footprint\n"
+   },
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/python",
+     "experiments/e040_workloads/dataframe.py"
+    ],
+    "returncode": 0,
+    "wall_seconds": 5.793460000000778,
+    "peak_footprint": 1542375176,
+    "swap_delta": 0,
+    "result": {
+     "per_store": "49cb8fa74accc9bd7a04b7a2c5e5f4bff0f7cb94b6dc3c177b39c531a4aff27a",
+     "top": "452ad99081182b466b5535f63441a82da5f98efb5ac2221f2f61902b68fa4d84",
+     "sorted_revenue": "3669526891788c4366e2a4da0baac4a4b9855ceae365a6d3a4e20cfaab5ebdb4",
+     "total": 20035592915.31,
+     "seconds": 5.404287582990946,
+     "import_rss_bytes": 101695488,
+     "maxrss_bytes": 1408876544
+    },
+    "stderr_tail": "        5.79 real         4.66 user         0.90 sys\n          1408876544  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n              478286  page reclaims\n                 127  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   2  voluntary context switches\n                2925  involuntary context switches\n         32383505574  instructions retired\n         17629049031  cycles elapsed\n          1542375176  peak memory footprint\n"
+   }
+  ],
+  "ceiling": 771203972,
+  "runs": [
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/memopro",
+     "run",
+     "--budget",
+     "771203972",
+     "--no-torch",
+     "--report-json",
+     "/var/folders/sj/pvxtwzlx5t79rnt58lgylnc80000gn/T/tmpyg_j5zm_/report.json",
+     "experiments/e040_workloads/dataframe.py"
+    ],
+    "returncode": 0,
+    "wall_seconds": 191.1954864159925,
+    "peak_footprint": 1143146080,
+    "swap_delta": 342548808,
+    "result": {
+     "per_store": "49cb8fa74accc9bd7a04b7a2c5e5f4bff0f7cb94b6dc3c177b39c531a4aff27a",
+     "top": "452ad99081182b466b5535f63441a82da5f98efb5ac2221f2f61902b68fa4d84",
+     "sorted_revenue": "3669526891788c4366e2a4da0baac4a4b9855ceae365a6d3a4e20cfaab5ebdb4",
+     "total": 20035592915.31,
+     "seconds": 190.5594608340034,
+     "import_rss_bytes": 107724800,
+     "maxrss_bytes": 895156224
+    },
+    "stderr_tail": "memopro: restarting with PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1 so that freed memory returns to macOS (--keep-mps-heap to skip)\n/Users/imhyeonseok/Desktop/memopro/python/memopro/_enable.py:283: UserWarning: memopro: the ceiling of 735.48 MiB cannot be kept (the process holds 765.94 MiB now). The paged arrays do not fit even compressed (they compressed to 0.35 of their size), so the pager lets the process grow rather than stop it. Raise the ceiling or hold less data at once; Session.estimate(sample, total=...) predicts whether data fits before running.\n  warnings.warn(_over_message(s.budget, now, pager), UserWarning, stacklevel=1)\nmemopro report:\n  [skipped] elastic - watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on\n  [applied] enable.rt - runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it\n  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)\n  [applied] enable.transformers - from_pretrained loads models that do not fit as memopro.load\n  [applied] transparent - budget 735.48 MiB, peak 734.48 MiB; 95880 faults, 93486 chunks compressed (91.29 GiB to 30.70 GiB), 91492 brought back, 1 over budget; nothing written\n  [exceeded] ceiling - peak 1.06 GiB against 735.48 MiB (+354.71 MiB)\n      191.19 real       165.89 user        26.23 sys\n           895156224  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n            12404541  page reclaims\n                 783  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n               95880  signals received\n                  69  voluntary context switches\n             6511005  involuntary context switches\n       1941833991255  instructions retired\n        585650902392  cycles elapsed\n          1143146080  peak memory footprint\n",
+    "report": {
+     "report": {
+      "entries": [
+       {
+        "technique": "elastic",
+        "action": "skipped",
+        "detail": "watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003464.483595
+       },
+       {
+        "technique": "enable.rt",
+        "action": "applied",
+        "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003464.527661
+       },
+       {
+        "technique": "enable.numpy",
+        "action": "applied",
+        "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003464.527663
+       },
+       {
+        "technique": "enable.transformers",
+        "action": "applied",
+        "detail": "from_pretrained loads models that do not fit as memopro.load",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003464.527663
+       },
+       {
+        "technique": "transparent",
+        "action": "applied",
+        "detail": "budget 735.48 MiB, peak 734.48 MiB; 95880 faults, 93486 chunks compressed (91.29 GiB to 30.70 GiB), 91492 brought back, 1 over budget; nothing written",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003655.364735
+       },
+       {
+        "technique": "ceiling",
+        "action": "exceeded",
+        "detail": "peak 1.06 GiB against 735.48 MiB (+354.71 MiB)",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003655.364741
+       }
+      ]
+     },
+     "transparent": {
+      "budget": 771203972,
+      "limit": 770155396,
+      "used": 0,
+      "peak_used": 770154181,
+      "regions": 0,
+      "mapped_bytes": 0,
+      "resident_bytes": 0,
+      "compressed_bytes": 0,
+      "faults": 95880,
+      "zero_fills": 4388,
+      "restores": 91492,
+      "restore_seconds": 65.03082940000019,
+      "evictions": 93486,
+      "compress_in": 98027175936,
+      "compress_out": 32959605517,
+      "compress_seconds": 108.90919512199959,
+      "incompressible": 0,
+      "overruns": 1,
+      "spurious": 0,
+      "outside_peak": 793962179,
+      "limit_low": 0,
+      "trims": 435,
+      "holds": 132,
+      "written_bytes": 0
+     },
+     "session": {
+      "elapsed_seconds": 190.8683799999999,
+      "memopro_seconds": 173.94002452199976,
+      "slowdown": 11.275069232096996,
+      "ceiling": 771203972,
+      "footprint": 72467416,
+      "peak_footprint": 1143146080,
+      "exceeded_bytes": 371942108,
+      "overruns": 1,
+      "activations_moved": 0,
+      "activations_over_ceiling": 0,
+      "runtimes": [],
+      "predictions": []
+     },
+     "ceiling": 771203972
+    },
+    "same_as_plain": true
+   },
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/memopro",
+     "run",
+     "--budget",
+     "771203972",
+     "--no-torch",
+     "--report-json",
+     "/var/folders/sj/pvxtwzlx5t79rnt58lgylnc80000gn/T/tmpcpf2dpln/report.json",
+     "experiments/e040_workloads/dataframe.py"
+    ],
+    "returncode": 0,
+    "wall_seconds": 146.9315415420133,
+    "peak_footprint": 1138624096,
+    "swap_delta": -33554432,
+    "result": {
+     "per_store": "49cb8fa74accc9bd7a04b7a2c5e5f4bff0f7cb94b6dc3c177b39c531a4aff27a",
+     "top": "452ad99081182b466b5535f63441a82da5f98efb5ac2221f2f61902b68fa4d84",
+     "sorted_revenue": "3669526891788c4366e2a4da0baac4a4b9855ceae365a6d3a4e20cfaab5ebdb4",
+     "total": 20035592915.31,
+     "seconds": 145.98604866600363,
+     "import_rss_bytes": 107659264,
+     "maxrss_bytes": 1101692928
+    },
+    "stderr_tail": "memopro: restarting with PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1 so that freed memory returns to macOS (--keep-mps-heap to skip)\n/Users/imhyeonseok/Desktop/memopro/python/memopro/_enable.py:283: UserWarning: memopro: the ceiling of 735.48 MiB cannot be kept (the process holds 888.11 MiB now). Most of it is memory memopro cannot move (the interpreter, libraries, arrays under 16 MiB). Raise the ceiling or hold less data at once; Session.estimate(sample, total=...) predicts whether data fits before running.\n  warnings.warn(_over_message(s.budget, now, pager), UserWarning, stacklevel=1)\nmemopro report:\n  [skipped] elastic - watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on\n  [applied] enable.rt - runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it\n  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)\n  [applied] enable.transformers - from_pretrained loads models that do not fit as memopro.load\n  [applied] transparent - budget 735.48 MiB, peak 734.48 MiB; 70362 faults, 67923 chunks compressed (66.33 GiB to 26.46 GiB), 65973 brought back, 1 over budget; nothing written\n  [exceeded] ceiling - peak 1.06 GiB against 735.48 MiB (+350.40 MiB)\n      146.92 real       128.67 user        19.39 sys\n          1101692928  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n             9082285  page reclaims\n                2535  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n               70361  signals received\n                 746  voluntary context switches\n             4976815  involuntary context switches\n       1533102948023  instructions retired\n        452672693973  cycles elapsed\n          1138624096  peak memory footprint\n",
+    "report": {
+     "report": {
+      "entries": [
+       {
+        "technique": "elastic",
+        "action": "skipped",
+        "detail": "watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003655.7509272
+       },
+       {
+        "technique": "enable.rt",
+        "action": "applied",
+        "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003655.847595
+       },
+       {
+        "technique": "enable.numpy",
+        "action": "applied",
+        "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003655.8475971
+       },
+       {
+        "technique": "enable.transformers",
+        "action": "applied",
+        "detail": "from_pretrained loads models that do not fit as memopro.load",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003655.847598
+       },
+       {
+        "technique": "transparent",
+        "action": "applied",
+        "detail": "budget 735.48 MiB, peak 734.48 MiB; 70362 faults, 67923 chunks compressed (66.33 GiB to 26.46 GiB), 65973 brought back, 1 over budget; nothing written",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003802.365079
+       },
+       {
+        "technique": "ceiling",
+        "action": "exceeded",
+        "detail": "peak 1.06 GiB against 735.48 MiB (+350.40 MiB)",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003802.365084
+       }
+      ]
+     },
+     "transparent": {
+      "budget": 771203972,
+      "limit": 770155396,
+      "used": 0,
+      "peak_used": 770154958,
+      "regions": 0,
+      "mapped_bytes": 0,
+      "resident_bytes": 0,
+      "compressed_bytes": 0,
+      "faults": 70362,
+      "zero_fills": 4388,
+      "restores": 65973,
+      "restore_seconds": 49.63554611599958,
+      "evictions": 67923,
+      "compress_in": 71222427648,
+      "compress_out": 28414642892,
+      "compress_seconds": 82.65715675599955,
+      "incompressible": 0,
+      "overruns": 1,
+      "spurious": 1,
+      "outside_peak": 799804499,
+      "limit_low": 0,
+      "trims": 346,
+      "holds": 132,
+      "written_bytes": 0
+     },
+     "session": {
+      "elapsed_seconds": 146.59708179200243,
+      "memopro_seconds": 132.29270287199913,
+      "slowdown": 10.248405933025198,
+      "ceiling": 771203972,
+      "footprint": 72647664,
+      "peak_footprint": 1138624096,
+      "exceeded_bytes": 367420124,
+      "overruns": 1,
+      "activations_moved": 0,
+      "activations_over_ceiling": 0,
+      "runtimes": [],
+      "predictions": []
+     },
+     "ceiling": 771203972
+    },
+    "same_as_plain": true
+   }
+  ]
+ },
+ "classify": {
+  "plain": [
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/python",
+     "experiments/e040_workloads/classify.py"
+    ],
+    "returncode": 1,
+    "wall_seconds": 0.14814166699943598,
+    "peak_footprint": 17596872,
+    "swap_delta": 0,
+    "result": null,
+    "stderr_tail": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e040_workloads/classify.py\", line 6, in <module>\n    import scipy.sparse as sp\nModuleNotFoundError: No module named 'scipy'\n        0.14 real         0.05 user         0.02 sys\n            28524544  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                2259  page reclaims\n                 406  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                 337  voluntary context switches\n                 111  involuntary context switches\n           660700969  instructions retired\n           264977717  cycles elapsed\n            17596872  peak memory footprint\n"
+   },
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/python",
+     "experiments/e040_workloads/classify.py"
+    ],
+    "returncode": 1,
+    "wall_seconds": 0.06964833299571183,
+    "peak_footprint": 17646024,
+    "swap_delta": 0,
+    "result": null,
+    "stderr_tail": "Traceback (most recent call last):\n  File \"/Users/imhyeonseok/Desktop/memopro/experiments/e040_workloads/classify.py\", line 6, in <module>\n    import scipy.sparse as sp\nModuleNotFoundError: No module named 'scipy'\n        0.06 real         0.05 user         0.01 sys\n            28573696  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                2503  page reclaims\n                  44  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  13  involuntary context switches\n           552061957  instructions retired\n           204952192  cycles elapsed\n            17646024  peak memory footprint\n"
+   }
+  ],
+  "ceiling": 8810724,
+  "runs": [
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/memopro",
+     "run",
+     "--budget",
+     "8810724",
+     "--no-torch",
+     "--report-json",
+     "/var/folders/sj/pvxtwzlx5t79rnt58lgylnc80000gn/T/tmpv6i59rf_/report.json",
+     "experiments/e040_workloads/classify.py"
+    ],
+    "returncode": 1,
+    "wall_seconds": 0.18783704200177453,
+    "peak_footprint": 22086088,
+    "swap_delta": 0,
+    "result": null,
+    "stderr_tail": "memopro: restarting with PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1 so that freed memory returns to macOS (--keep-mps-heap to skip)\nmemopro report:\n  [skipped] elastic - watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on\n  [applied] enable.rt - runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it\n  [warning] enable.budget - the process already holds more than the ceiling\n  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)\n  [applied] enable.transformers - from_pretrained loads models that do not fit as memopro.load\n  [applied] transparent - budget 8.40 MiB, peak 0 B; 0 faults, 0 chunks compressed (0 B to 0 B), 0 brought back, 0 over budget; nothing written\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/__main__.py\", line 5, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/cli.py\", line 233, in main\n    handler(args)\n    ~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/cli.py\", line 168, in _run\n    run(\n    ~~~^\n        args.script,\n        ^^^^^^^^^^^^\n    ...<7 lines>...\n        torch=not args.no_torch,\n        ^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/_run.py\", line 277, in run\n    runpy.run_path(str(path), run_name=\"__main__\")\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen runpy>\", line 287, in run_path\n  File \"<frozen runpy>\", line 98, in _run_module_code\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"experiments/e040_workloads/classify.py\", line 6, in <module>\n    import scipy.sparse as sp\nModuleNotFoundError: No module named 'scipy'\n        0.18 real         0.13 user         0.02 sys\n            34422784  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                5079  page reclaims\n                 152  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                  53  voluntary context switches\n                 132  involuntary context switches\n          1353092510  instructions retired\n           505739518  cycles elapsed\n            22086088  peak memory footprint\n",
+    "report": {
+     "report": {
+      "entries": [
+       {
+        "technique": "elastic",
+        "action": "skipped",
+        "detail": "watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003802.866739
+       },
+       {
+        "technique": "enable.rt",
+        "action": "applied",
+        "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003802.912765
+       },
+       {
+        "technique": "enable.budget",
+        "action": "warning",
+        "detail": "the process already holds more than the ceiling",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003802.912766
+       },
+       {
+        "technique": "enable.numpy",
+        "action": "applied",
+        "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003802.912767
+       },
+       {
+        "technique": "enable.transformers",
+        "action": "applied",
+        "detail": "from_pretrained loads models that do not fit as memopro.load",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003802.912767
+       },
+       {
+        "technique": "transparent",
+        "action": "applied",
+        "detail": "budget 8.40 MiB, peak 0 B; 0 faults, 0 chunks compressed (0 B to 0 B), 0 brought back, 0 over budget; nothing written",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003802.913789
+       }
+      ]
+     },
+     "transparent": {
+      "budget": 8810724,
+      "limit": 7762148,
+      "used": 0,
+      "peak_used": 0,
+      "regions": 0,
+      "mapped_bytes": 0,
+      "resident_bytes": 0,
+      "compressed_bytes": 0,
+      "faults": 0,
+      "zero_fills": 0,
+      "restores": 0,
+      "restore_seconds": 0.0,
+      "evictions": 0,
+      "compress_in": 0,
+      "compress_out": 0,
+      "compress_seconds": 0.0,
+      "incompressible": 0,
+      "overruns": 0,
+      "spurious": 0,
+      "outside_peak": 0,
+      "limit_low": 7762148,
+      "trims": 0,
+      "holds": 0,
+      "written_bytes": 0
+     },
+     "session": {
+      "elapsed_seconds": 0.029900000008638017,
+      "memopro_seconds": 0.0,
+      "slowdown": 1.0,
+      "ceiling": 8810724,
+      "footprint": 21840352,
+      "peak_footprint": 21840352,
+      "exceeded_bytes": 13029628,
+      "overruns": 0,
+      "activations_moved": 0,
+      "activations_over_ceiling": 0,
+      "runtimes": [],
+      "predictions": []
+     },
+     "ceiling": 8810724
+    },
+    "same_as_plain": false
+   },
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/memopro",
+     "run",
+     "--budget",
+     "8810724",
+     "--no-torch",
+     "--report-json",
+     "/var/folders/sj/pvxtwzlx5t79rnt58lgylnc80000gn/T/tmp3hxno1uu/report.json",
+     "experiments/e040_workloads/classify.py"
+    ],
+    "returncode": 1,
+    "wall_seconds": 0.16503404200193472,
+    "peak_footprint": 22036936,
+    "swap_delta": 0,
+    "result": null,
+    "stderr_tail": "memopro: restarting with PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1 so that freed memory returns to macOS (--keep-mps-heap to skip)\nmemopro report:\n  [skipped] elastic - watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on\n  [applied] enable.rt - runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it\n  [warning] enable.budget - the process already holds more than the ceiling\n  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)\n  [applied] enable.transformers - from_pretrained loads models that do not fit as memopro.load\n  [applied] transparent - budget 8.40 MiB, peak 0 B; 0 faults, 0 chunks compressed (0 B to 0 B), 0 brought back, 0 over budget; nothing written\nTraceback (most recent call last):\n  File \"<frozen runpy>\", line 198, in _run_module_as_main\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/__main__.py\", line 5, in <module>\n    sys.exit(main())\n             ~~~~^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/cli.py\", line 233, in main\n    handler(args)\n    ~~~~~~~^^^^^^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/cli.py\", line 168, in _run\n    run(\n    ~~~^\n        args.script,\n        ^^^^^^^^^^^^\n    ...<7 lines>...\n        torch=not args.no_torch,\n        ^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/Users/imhyeonseok/Desktop/memopro/python/memopro/_run.py\", line 277, in run\n    runpy.run_path(str(path), run_name=\"__main__\")\n    ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"<frozen runpy>\", line 287, in run_path\n  File \"<frozen runpy>\", line 98, in _run_module_code\n  File \"<frozen runpy>\", line 88, in _run_code\n  File \"experiments/e040_workloads/classify.py\", line 6, in <module>\n    import scipy.sparse as sp\nModuleNotFoundError: No module named 'scipy'\n        0.16 real         0.13 user         0.02 sys\n            34373632  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n                5134  page reclaims\n                  88  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                   0  voluntary context switches\n                  54  involuntary context switches\n          1363838191  instructions retired\n           494513251  cycles elapsed\n            22036936  peak memory footprint\n",
+    "report": {
+     "report": {
+      "entries": [
+       {
+        "technique": "elastic",
+        "action": "skipped",
+        "detail": "watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003803.051332
+       },
+       {
+        "technique": "enable.rt",
+        "action": "applied",
+        "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003803.090626
+       },
+       {
+        "technique": "enable.budget",
+        "action": "warning",
+        "detail": "the process already holds more than the ceiling",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003803.0906281
+       },
+       {
+        "technique": "enable.numpy",
+        "action": "applied",
+        "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003803.0906281
+       },
+       {
+        "technique": "enable.transformers",
+        "action": "applied",
+        "detail": "from_pretrained loads models that do not fit as memopro.load",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003803.090629
+       },
+       {
+        "technique": "transparent",
+        "action": "applied",
+        "detail": "budget 8.40 MiB, peak 0 B; 0 faults, 0 chunks compressed (0 B to 0 B), 0 brought back, 0 over budget; nothing written",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003803.0914528
+       }
+      ]
+     },
+     "transparent": {
+      "budget": 8810724,
+      "limit": 7762148,
+      "used": 0,
+      "peak_used": 0,
+      "regions": 0,
+      "mapped_bytes": 0,
+      "resident_bytes": 0,
+      "compressed_bytes": 0,
+      "faults": 0,
+      "zero_fills": 0,
+      "restores": 0,
+      "restore_seconds": 0.0,
+      "evictions": 0,
+      "compress_in": 0,
+      "compress_out": 0,
+      "compress_seconds": 0.0,
+      "incompressible": 0,
+      "overruns": 0,
+      "spurious": 0,
+      "outside_peak": 0,
+      "limit_low": 7762148,
+      "trims": 0,
+      "holds": 0,
+      "written_bytes": 0
+     },
+     "session": {
+      "elapsed_seconds": 0.029127000001608394,
+      "memopro_seconds": 0.0,
+      "slowdown": 1.0,
+      "ceiling": 8810724,
+      "footprint": 21807584,
+      "peak_footprint": 21807584,
+      "exceeded_bytes": 12996860,
+      "overruns": 0,
+      "activations_moved": 0,
+      "activations_over_ceiling": 0,
+      "runtimes": [],
+      "predictions": []
+     },
+     "ceiling": 8810724
+    },
+    "same_as_plain": false
+   }
+  ]
+ },
+ "simulate": {
+  "plain": [
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/python",
+     "experiments/e040_workloads/simulate.py"
+    ],
+    "returncode": 0,
+    "wall_seconds": 16.7793335840106,
+    "peak_footprint": 2300938280,
+    "swap_delta": 792199168,
+    "result": {
+     "mean": "287379e07d0717d0e3583be9465625a60ab80ceda01d4b6e93a2d0e438a2ce90",
+     "peak": "b5f850840a9ba40942b0d594a56a1e671e36df48371155b96ffba88670b80bdd",
+     "history": "d74a29e53500969d2034e460da9166e1cf61970b6ba1af74d25ff48821e89f07",
+     "final": "b9b600788247e65e4fd8fdaf5a02e8860d9afe0d902d8d7a424c494f4e5c0b4d",
+     "seconds": 16.60956366600294,
+     "import_rss_bytes": 30949376,
+     "maxrss_bytes": 2293268480
+    },
+    "stderr_tail": "       16.77 real         8.86 user         5.78 sys\n          2293268480  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n             2970297  page reclaims\n                 173  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                 700  voluntary context switches\n               17599  involuntary context switches\n         83129523764  instructions retired\n         45227546511  cycles elapsed\n          2300938280  peak memory footprint\n"
+   },
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/python",
+     "experiments/e040_workloads/simulate.py"
+    ],
+    "returncode": 0,
+    "wall_seconds": 14.29531954099366,
+    "peak_footprint": 2300889128,
+    "swap_delta": -25165824,
+    "result": {
+     "mean": "287379e07d0717d0e3583be9465625a60ab80ceda01d4b6e93a2d0e438a2ce90",
+     "peak": "b5f850840a9ba40942b0d594a56a1e671e36df48371155b96ffba88670b80bdd",
+     "history": "d74a29e53500969d2034e460da9166e1cf61970b6ba1af74d25ff48821e89f07",
+     "final": "b9b600788247e65e4fd8fdaf5a02e8860d9afe0d902d8d7a424c494f4e5c0b4d",
+     "seconds": 14.15586058300687,
+     "import_rss_bytes": 30916608,
+     "maxrss_bytes": 2300542976
+    },
+    "stderr_tail": "       14.29 real         8.74 user         4.71 sys\n          2309275648  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n             2822786  page reclaims\n                  90  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n                   0  signals received\n                 140  voluntary context switches\n                4859  involuntary context switches\n         80781353827  instructions retired\n         41830555188  cycles elapsed\n          2300889128  peak memory footprint\n"
+   }
+  ],
+  "ceiling": 1150456852,
+  "runs": [
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/memopro",
+     "run",
+     "--budget",
+     "1150456852",
+     "--no-torch",
+     "--report-json",
+     "/var/folders/sj/pvxtwzlx5t79rnt58lgylnc80000gn/T/tmpgct9hqdc/report.json",
+     "experiments/e040_workloads/simulate.py"
+    ],
+    "returncode": 0,
+    "wall_seconds": 156.88752512499923,
+    "peak_footprint": 1157924664,
+    "swap_delta": 71240253,
+    "result": {
+     "mean": "287379e07d0717d0e3583be9465625a60ab80ceda01d4b6e93a2d0e438a2ce90",
+     "peak": "b5f850840a9ba40942b0d594a56a1e671e36df48371155b96ffba88670b80bdd",
+     "history": "d74a29e53500969d2034e460da9166e1cf61970b6ba1af74d25ff48821e89f07",
+     "final": "b9b600788247e65e4fd8fdaf5a02e8860d9afe0d902d8d7a424c494f4e5c0b4d",
+     "seconds": 156.6200627079961,
+     "import_rss_bytes": 37322752,
+     "maxrss_bytes": 1431896064
+    },
+    "stderr_tail": "memopro: restarting with PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1 so that freed memory returns to macOS (--keep-mps-heap to skip)\n/Users/imhyeonseok/Desktop/memopro/python/memopro/_enable.py:283: UserWarning: memopro: the ceiling of 1.07 GiB cannot be kept (the process holds 1022.91 MiB now). The paged arrays do not fit even compressed (they compressed to 0.48 of their size), so the pager lets the process grow rather than stop it. Raise the ceiling or hold less data at once; Session.estimate(sample, total=...) predicts whether data fits before running.\n  warnings.warn(_over_message(s.budget, now, pager), UserWarning, stacklevel=1)\nmemopro report:\n  [skipped] elastic - watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on\n  [applied] enable.rt - runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it\n  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)\n  [applied] enable.transformers - from_pretrained loads models that do not fit as memopro.load\n  [applied] transparent - budget 1.07 GiB, peak 1.22 GiB; 116048 faults, 90861 chunks compressed (88.73 GiB to 44.78 GiB), 73808 brought back, 36205 over budget; nothing written\n      156.88 real       134.35 user        24.15 sys\n          1436712960  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n            12542580  page reclaims\n                 312  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n              116048  signals received\n                 145  voluntary context switches\n             5151297  involuntary context switches\n       1464325463175  instructions retired\n        485185325541  cycles elapsed\n          1157924664  peak memory footprint\n",
+    "report": {
+     "report": {
+      "entries": [
+       {
+        "technique": "elastic",
+        "action": "skipped",
+        "detail": "watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003834.332813
+       },
+       {
+        "technique": "enable.rt",
+        "action": "applied",
+        "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003834.3895738
+       },
+       {
+        "technique": "enable.numpy",
+        "action": "applied",
+        "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003834.389576
+       },
+       {
+        "technique": "enable.transformers",
+        "action": "applied",
+        "detail": "from_pretrained loads models that do not fit as memopro.load",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003834.389576
+       },
+       {
+        "technique": "transparent",
+        "action": "applied",
+        "detail": "budget 1.07 GiB, peak 1.22 GiB; 116048 faults, 90861 chunks compressed (88.73 GiB to 44.78 GiB), 73808 brought back, 36205 over budget; nothing written",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003991.044791
+       }
+      ]
+     },
+     "transparent": {
+      "budget": 1150456852,
+      "limit": 1149408276,
+      "used": 0,
+      "peak_used": 1307296808,
+      "regions": 0,
+      "mapped_bytes": 0,
+      "resident_bytes": 0,
+      "compressed_bytes": 0,
+      "faults": 116048,
+      "zero_fills": 42240,
+      "restores": 73808,
+      "restore_seconds": 32.11131362799874,
+      "evictions": 90861,
+      "compress_in": 95274663936,
+      "compress_out": 48082598762,
+      "compress_seconds": 99.79773291199929,
+      "incompressible": 0,
+      "overruns": 36205,
+      "spurious": 0,
+      "outside_peak": 32163352,
+      "limit_low": 1117244924,
+      "trims": 0,
+      "holds": 0,
+      "written_bytes": 0
+     },
+     "session": {
+      "elapsed_seconds": 156.69800562500313,
+      "memopro_seconds": 131.90904653999803,
+      "slowdown": 6.321282192110685,
+      "ceiling": 1150456852,
+      "footprint": 32163352,
+      "peak_footprint": 1157924664,
+      "exceeded_bytes": 7467812,
+      "overruns": 36205,
+      "activations_moved": 0,
+      "activations_over_ceiling": 0,
+      "runtimes": [],
+      "predictions": []
+     },
+     "ceiling": 1150456852
+    },
+    "same_as_plain": true
+   },
+   {
+    "cmd": [
+     "/Users/imhyeonseok/Desktop/memopro/.venv/bin/memopro",
+     "run",
+     "--budget",
+     "1150456852",
+     "--no-torch",
+     "--report-json",
+     "/var/folders/sj/pvxtwzlx5t79rnt58lgylnc80000gn/T/tmpw59_aajo/report.json",
+     "experiments/e040_workloads/simulate.py"
+    ],
+    "returncode": 0,
+    "wall_seconds": 160.41933533399424,
+    "peak_footprint": 1224410744,
+    "swap_delta": -82900418,
+    "result": {
+     "mean": "287379e07d0717d0e3583be9465625a60ab80ceda01d4b6e93a2d0e438a2ce90",
+     "peak": "b5f850840a9ba40942b0d594a56a1e671e36df48371155b96ffba88670b80bdd",
+     "history": "d74a29e53500969d2034e460da9166e1cf61970b6ba1af74d25ff48821e89f07",
+     "final": "b9b600788247e65e4fd8fdaf5a02e8860d9afe0d902d8d7a424c494f4e5c0b4d",
+     "seconds": 160.06946079200134,
+     "import_rss_bytes": 37306368,
+     "maxrss_bytes": 1398243328
+    },
+    "stderr_tail": "memopro: restarting with PYTORCH_MPS_LOW_WATERMARK_RATIO=0.1 so that freed memory returns to macOS (--keep-mps-heap to skip)\n/Users/imhyeonseok/Desktop/memopro/python/memopro/_enable.py:283: UserWarning: memopro: the ceiling of 1.07 GiB cannot be kept (the process holds 1009.35 MiB now). The paged arrays do not fit even compressed (they compressed to 0.48 of their size), so the pager lets the process grow rather than stop it. Raise the ceiling or hold less data at once; Session.estimate(sample, total=...) predicts whether data fits before running.\n  warnings.warn(_over_message(s.budget, now, pager), UserWarning, stacklevel=1)\nmemopro report:\n  [skipped] elastic - watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on\n  [applied] enable.rt - runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it\n  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)\n  [applied] enable.transformers - from_pretrained loads models that do not fit as memopro.load\n  [applied] transparent - budget 1.07 GiB, peak 1.22 GiB; 115923 faults, 90871 chunks compressed (88.74 GiB to 44.73 GiB), 73681 brought back, 36204 over budget; nothing written\n  [exceeded] ceiling - peak 1.14 GiB against 1.07 GiB (+70.53 MiB)\n      160.41 real       135.45 user        25.49 sys\n          1398243328  maximum resident set size\n                   0  average shared memory size\n                   0  average unshared data size\n                   0  average unshared stack size\n            12606998  page reclaims\n                 858  page faults\n                   0  swaps\n                   0  block input operations\n                   0  block output operations\n                   0  messages sent\n                   0  messages received\n              115921  signals received\n                 325  voluntary context switches\n             5200850  involuntary context switches\n       1471258316461  instructions retired\n        491879401072  cycles elapsed\n          1224410744  peak memory footprint\n",
+    "report": {
+     "report": {
+      "entries": [
+       {
+        "technique": "elastic",
+        "action": "skipped",
+        "detail": "watching memory pressure is off by default (experimental): the macOS pressure level did not match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure and halved budgets; --elastic turns it on",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003991.254577
+       },
+       {
+        "technique": "enable.rt",
+        "action": "applied",
+        "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003991.352545
+       },
+       {
+        "technique": "enable.numpy",
+        "action": "applied",
+        "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003991.352546
+       },
+       {
+        "technique": "enable.transformers",
+        "action": "applied",
+        "detail": "from_pretrained loads models that do not fit as memopro.load",
+        "reclaimed_bytes": null,
+        "timestamp": 1793003991.3525472
+       },
+       {
+        "technique": "transparent",
+        "action": "applied",
+        "detail": "budget 1.07 GiB, peak 1.22 GiB; 115923 faults, 90871 chunks compressed (88.74 GiB to 44.73 GiB), 73681 brought back, 36204 over budget; nothing written",
+        "reclaimed_bytes": null,
+        "timestamp": 1793004151.475039
+       },
+       {
+        "technique": "ceiling",
+        "action": "exceeded",
+        "detail": "peak 1.14 GiB against 1.07 GiB (+70.53 MiB)",
+        "reclaimed_bytes": null,
+        "timestamp": 1793004151.47505
+       }
+      ]
+     },
+     "transparent": {
+      "budget": 1150456852,
+      "limit": 1149408276,
+      "used": 0,
+      "peak_used": 1307286431,
+      "regions": 0,
+      "mapped_bytes": 0,
+      "resident_bytes": 0,
+      "compressed_bytes": 0,
+      "faults": 115923,
+      "zero_fills": 42240,
+      "restores": 73681,
+      "restore_seconds": 32.876050390999644,
+      "evictions": 90871,
+      "compress_in": 95285149696,
+      "compress_out": 48029140723,
+      "compress_seconds": 101.06267695400024,
+      "incompressible": 0,
+      "overruns": 36204,
+      "spurious": 2,
+      "outside_peak": 32114200,
+      "limit_low": 1117294076,
+      "trims": 21,
+      "holds": 0,
+      "written_bytes": 0
+     },
+     "session": {
+      "elapsed_seconds": 160.20218587499403,
+      "memopro_seconds": 133.93872734499988,
+      "slowdown": 6.099813004141678,
+      "ceiling": 1150456852,
+      "footprint": 32114200,
+      "peak_footprint": 1224410744,
+      "exceeded_bytes": 73953892,
+      "overruns": 36204,
+      "activations_moved": 0,
+      "activations_over_ceiling": 0,
+      "runtimes": [],
+      "predictions": []
+     },
+     "ceiling": 1150456852
+    },
+    "same_as_plain": true
+   }
+  ]
+ }
+}
