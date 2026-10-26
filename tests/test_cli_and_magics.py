@@ -31,7 +31,7 @@ def test_version_via_module_entry_point():
 
 
 def test_run_validates_options_first(capsys):
-    assert main(["run", "--budget", "-2GB", "app.py"]) == EXIT_ERROR  # a form removed in 0.2.0
+    assert main(["run", "--budget", "6GB!", "app.py"]) == EXIT_ERROR  # a form removed in 0.2.0
     assert "removed in 0.2.0" in capsys.readouterr().err
     assert main(["run", "--disk-writes", "never", "missing_app.py", "--flag"]) == EXIT_ERROR
     assert "no such script" in capsys.readouterr().err
