@@ -1,9 +1,13 @@
 """Streamed MLX generation probe: keep the first layers that fit `budget`, re-read the rest."""
-import glob, sys, time, json
-import mlx.core as mx, mlx.nn as nn
+import glob
+import json
+import sys
+import time
+
+import mlx.core as mx
+from mlx import nn
 from mlx.utils import tree_unflatten
-from mlx_lm import load, generate
-from mlx_lm.models.cache import make_prompt_cache
+from mlx_lm import generate, load
 
 path, mode, budget = sys.argv[1], sys.argv[2], float(sys.argv[3]) * 2**30
 prompt_text = "Explain in a few sentences why the sky looks blue during the day and red at sunset."

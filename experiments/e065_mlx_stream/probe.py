@@ -1,5 +1,9 @@
-import time, glob, sys
+import glob
+import sys
+import time
+
 import mlx.core as mx
+
 d = sys.argv[1]
 files = sorted(glob.glob(d + "/*.safetensors"))
 mb = lambda x: x / 2**20
