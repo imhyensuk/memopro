@@ -214,6 +214,32 @@ fn buffers_without_a_file_are_compressed_and_come_back_exact() {
 }
 
 #[test]
+fn buffers_of_many_pieces_are_compressed_in_parallel_within_the_budget() {
+    // 4.5 pieces each, so batches of several pieces and a short last piece (0317)
+    let rt = runtime(48, Policy::ReuseDistance);
+    let mut ids = Vec::new();
+    for k in 0..4 {
+        let content = widened(codec::CHUNK * 9 / 8, 3 + k); // 18 MiB each, 72 MiB in total
+        let id = rt.alloc(content.len(), 4).unwrap();
+        rt.pin(id, true)
+            .unwrap()
+            .as_mut_slice()
+            .unwrap()
+            .copy_from_slice(&content);
+        ids.push((id, content));
+        assert!(rt.stats().used <= rt.limit());
+    }
+    for _ in 0..2 {
+        for (id, content) in &ids {
+            assert_eq!(rt.pin(*id, false).unwrap().as_slice(), &content[..]);
+        }
+    }
+    let s = rt.stats();
+    assert!(s.compressions > 0 && s.decompressions > 0, "{s:?}");
+    assert!(s.peak_used <= rt.limit(), "{s:?}");
+}
+
+#[test]
 fn incompressible_data_without_a_file_is_refused_not_overrun() {
     let rt = runtime(12, Policy::ReuseDistance);
     let mut refused = false;

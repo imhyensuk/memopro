@@ -4,6 +4,12 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: the runtime compresses and restores pieces in parallel (0317)
+- A compressed buffer's pieces are decompressed on every core at once, and compressed several at
+  a time when the budget has room for them (one at a time when it is full, so the ceiling holds
+  as before). Restoring bf16 weights: about 1.5x faster on an M1 (1.2-1.9 GB/s instead of
+  0.7-1.1); results unchanged.
+
 ### Changed: every default is lossless (0314)
 - `quality` now defaults to `"lossless"` (was `"balanced"`) and `fallback` to `"stream"` (was
   `"none"`): `memopro.load` no longer quantizes on its own; a model that does not fit as stored
