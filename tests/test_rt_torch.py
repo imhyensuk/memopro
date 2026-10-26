@@ -1044,12 +1044,24 @@ def _hub_cache(root, monkeypatch):
 
 
 def test_auto_draft_takes_the_closest_local_model_with_the_same_tokenizer(tmp_path, monkeypatch):
+    import huggingface_hub
+
     from memopro import llm
 
     target, tok, best = _hub_cache(tmp_path / "hub", monkeypatch)
     m = rtt.stream_model(target, budget="9MiB", device="cpu")
     name, path = llm._local_draft(m, tok)
     assert name == best and path.parent.parent.name == "models--org--small"
+    # a model kept in a folder of its own finds its neighbours (models/*), not only the cache
+    models = tmp_path / "models"
+    _tiny_qwen(models / "big", 1)
+    tok.save_pretrained(models / "big")
+    _tiny_qwen(models / "small", 1, hidden=128, layers=2)
+    tok.save_pretrained(models / "small")
+    monkeypatch.setattr(huggingface_hub.constants, "HF_HUB_CACHE", str(tmp_path / "empty"))
+    m2 = rtt.stream_model(models / "big", budget="9MiB", device="cpu")
+    name, path = llm._local_draft(m2, tok)
+    assert name == "small" and path == (models / "small").resolve()
     monkeypatch.setattr(llm, "AUTO_DRAFT_MAX", 0.01)
     assert llm._local_draft(m, tok) is None
     # on the CPU there is no draft and nothing to say
@@ -1097,6 +1109,8 @@ def test_generate_with_an_automatic_draft_returns_the_plain_text(tmp_path, monke
     reserve = m.memopro_runtime.stats()["reserve"]
     del m
     budget = reserve + largest + max(kept, 0) + draft_bytes // 2 + (2 << 20)
+    # first without the room check (the last line of defence: found out during generation)
+    monkeypatch.setattr(llm, "AUTO_DRAFT_SLACK", -1.0)
     m = rtt.stream_model(target, budget=budget, device="mps")
     seen = _Collect()
     with pytest.warns(UserWarning, match="cannot hold the draft as well"):
@@ -1105,6 +1119,13 @@ def test_generate_with_an_automatic_draft_returns_the_plain_text(tmp_path, monke
     prompt, *new = seen.puts
     assert prompt == tok("w2 w9 w16").input_ids and seen.ended == 1
     assert tok.decode([t for put in new for t in put], skip_special_tokens=True) == plain
+    # with it, a draft too big for the room is not even loaded, and the message says what
+    # budget would do (0322, E061; tiny models need far more slack than real ones)
+    monkeypatch.setattr(llm, "AUTO_DRAFT_SLACK", 100.0)
+    m = rtt.stream_model(target, budget="96MiB", device="mps")
+    with pytest.warns(UserWarning, match="could draft, but the budget leaves") as caught:
+        assert memopro.generate(m, "w2 w9 w16", **kw) == plain
+    assert not any("drafting with" in str(w.message) for w in caught)  # never loaded
     # nothing suitable on the disk: one hint, the same text
     monkeypatch.setattr(llm, "AUTO_DRAFT_MAX", 0.01)
     m = rtt.stream_model(target, budget="96MiB", device="mps")

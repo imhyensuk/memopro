@@ -29,6 +29,9 @@ __all__ = ["FinetuneResult", "finetune", "generate"]
 # measured pairs were 1.5B for 7B (3.8x, E038b, 0174) and 0.5B for 3B (3.1x, E039, 0184)
 AUTO_DRAFT_SIZE = 0.2
 AUTO_DRAFT_MAX = 1 / 3
+# free room a draft must leave, as a fraction of its own size: what the GPU keeps during
+# drafted generation beyond the draft and the estimate (E061: more than 102 MiB of 473)
+AUTO_DRAFT_SLACK = 0.5
 # the target's vocabulary may have this many padding rows beyond a draft's (Qwen2.5: 128, 0170)
 AUTO_DRAFT_PADDING = 1024
 _UNSET = object()
@@ -315,13 +318,13 @@ def generate(
             ids = tok(prompt, return_tensors="pt").input_ids
     else:
         ids = prompt
-    auto = isinstance(draft, str) and draft == "auto"
-    if auto:
-        draft = _auto_draft(m, tok)
-    elif draft is not None and not hasattr(draft, "memopro_draft_bytes"):
-        draft = rtt.draft_model(draft, target=m, device=m.device.type)
     tokens = ids.shape[1] + max_new_tokens
     estimate = int(_FIRST_STEP_MARGIN * _generation_estimate(m.config, tokens))
+    auto = isinstance(draft, str) and draft == "auto"
+    if auto:
+        draft = _auto_draft(m, tok, _room(m, estimate))
+    elif draft is not None and not hasattr(draft, "memopro_draft_bytes"):
+        draft = rtt.draft_model(draft, target=m, device=m.device.type)
     held = [estimate + (draft.memopro_draft_bytes if draft is not None else 0)]
     what = (
         "the draft, cache and intermediates" if draft is not None else "the cache and intermediates"
@@ -402,9 +405,24 @@ def _note(message: str) -> None:
     warnings.warn(message, UserWarning, stacklevel=4)
 
 
-def _auto_draft(m: Any, tok: Any) -> Any:
+def _room(m: Any, estimate: int) -> int | None:
+    """Budget bytes left beside the largest weight and ``estimate`` for a draft; None on CUDA,
+    where the draft takes GPU memory from the device cache instead (0276)."""
+    if m.device.type == "cuda":
+        return None
+    if m.device.type == "mps":  # what the GPU already keeps counts as it will be measured
+        estimate = max(estimate, _gpu_kept(m))
+    stats = m.memopro_runtime.stats()
+    largest = max(b[0].nbytes for b in m.memopro_weights.buffers.values())
+    return stats["budget"] - stats["reserve"] - largest - estimate
+
+
+def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:
     """The draft ``generate(draft="auto")`` uses for ``m``: found once per model and kept on it
-    (a chat calls generate again and again), or None (0322)."""
+    (a chat calls generate again and again), or None (0322). A draft that would leave less than
+    AUTO_DRAFT_SLACK of its size free in ``room`` is not loaded: measured on the GPU it would
+    not fit the generation after all, and finding that out mid-way costs more than it saves
+    (E061: 1.5B at 1 GiB, 2.0 instead of 1.5 s per token)."""
     import memopro.rt.torch as rtt
 
     found = _AUTO_DRAFTS.get(m, _UNSET)
@@ -422,6 +440,16 @@ def _auto_draft(m: Any, tok: Any) -> Any:
         )
         return None
     name, path = choice
+    need = int(rtt.draft_size(path, m.device.type) * (1 + AUTO_DRAFT_SLACK))
+    if room is not None and need > room:
+        budget = m.memopro_runtime.stats()["budget"]
+        _note(
+            f"memopro: {name} could draft, but the budget leaves {room >> 20} MiB beside the "
+            f"largest weight and the generation, and the draft needs about {need >> 20} MiB; "
+            f"a budget of at least {(budget + need - room + (1 << 20) - 1) >> 20} MiB lets it "
+            "draft (the text is the same either way)"
+        )
+        return None
     try:
         draft = rtt.draft_model(path, target=m, device=m.device.type)
     except MemoproError as e:  # e.g. no int4 kernel on this GPU
@@ -436,8 +464,8 @@ def _auto_draft(m: Any, tok: Any) -> Any:
 
 
 def _local_draft(m: Any, tok: Any) -> tuple[str, Path] | None:
-    """(name, snapshot folder) of the model in the Hugging Face cache that suits ``m`` best as a
-    draft: a causal LM with the same tokenizer, at most AUTO_DRAFT_MAX of ``m``'s bytes, the
+    """(name, folder) of the model in the Hugging Face cache, or next to ``m``'s own folder when
+    it was loaded from one, that suits ``m`` best as a draft: a causal LM with the same tokenizer, at most AUTO_DRAFT_MAX of ``m``'s bytes, the
     closest to AUTO_DRAFT_SIZE of them; None when there is none. Reads only config files and
     sizes until the tokenizer check."""
     import json
@@ -457,8 +485,12 @@ def _local_draft(m: Any, tok: Any) -> tuple[str, Path] | None:
     except Exception:  # noqa: BLE001 - no tokenizer files with the weights: the caller's
         want = tok.get_vocab()
     root = Path(huggingface_hub.constants.HF_HUB_CACHE)
+    folders = [(_hub_name(s), s) for s in root.glob("models--*/snapshots/*")]
+    own = Path(str(m.config._name_or_path))
+    if own.is_dir():  # a model kept in a folder of its own: its neighbours too (models/*)
+        folders += [(f.name, f) for f in sorted(own.resolve().parent.iterdir()) if f.is_dir()]
     candidates = []
-    for snap in root.glob("models--*/snapshots/*"):
+    for name, snap in folders:
         try:
             cfg = json.loads((snap / "config.json").read_text())
             names = [p.name for p in snap.iterdir()]
@@ -471,15 +503,20 @@ def _local_draft(m: Any, tok: Any) -> tuple[str, Path] | None:
             continue
         if not 0 < size <= AUTO_DRAFT_MAX * target:
             continue
-        candidates.append((abs(math.log(size / (AUTO_DRAFT_SIZE * target))), snap))
-    for _, snap in sorted(candidates):
+        candidates.append((abs(math.log(size / (AUTO_DRAFT_SIZE * target))), name, snap))
+    for _, name, snap in sorted(candidates):
         try:
             same = transformers.AutoTokenizer.from_pretrained(str(snap)).get_vocab() == want
         except Exception:  # noqa: BLE001 - no usable tokenizer: not shown to be shared
             same = False
         if same:
-            return snap.parent.parent.name.removeprefix("models--").replace("--", "/"), snap
+            return name, snap
     return None
+
+
+def _hub_name(snapshot: Path) -> str:
+    """``Org/Name`` of a Hugging Face cache snapshot folder."""
+    return snapshot.parent.parent.name.removeprefix("models--").replace("--", "/")
 
 
 class _Sent:

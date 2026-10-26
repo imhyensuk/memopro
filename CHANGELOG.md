@@ -10,8 +10,13 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   (the closest to a fifth) drafts tokens, found once per model and kept for later calls.
   Nothing is downloaded for it; when none is there, a one-time hint says how to name one. A
   budget that cannot hold the draft as well, found before or during generation, means
-  generating without it, and a streamer still gets every token once. The text is the same
-  with or without a draft; `draft=None` turns it off.
+  generating without it, and a streamer still gets every token once. A model loaded from a
+  folder also finds drafts in the folders next to it (`models/*`). A draft whose size (read
+  from its file headers) would leave too little room beside the generation is not loaded at
+  all, and the message says which budget would let it draft. The text is the same with or
+  without a draft; `draft=None` turns it off. Qwen2.5-1.5B streamed on an M1 with Qwen2.5-0.5B
+  found next to it: 1.43 -> 1.07 s per token at a 1.5 GiB budget, unchanged at 1 GiB (no room
+  for the draft).
 
 ### Changed: saved activations on the Apple GPU no longer pass through the CPU (0321)
 - When `memopro.enable` moves activations saved for backward into runtime buffers, an MPS
