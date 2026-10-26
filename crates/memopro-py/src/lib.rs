@@ -517,6 +517,11 @@ impl RtRuntime {
         self.rt.limit()
     }
 
+    /// The limit, or less when the machine cannot give that much without swapping (0332).
+    fn machine_limit(&self) -> u64 {
+        self.rt.machine_limit()
+    }
+
     /// Keep `nbytes` of the budget for memory the runtime does not own (0165).
     fn hold_back(&self, py: Python<'_>, nbytes: u64) -> PyResult<()> {
         let rt = self.rt.clone();
@@ -715,6 +720,7 @@ impl RtRuntime {
         d.set_item("written_bytes", s.written_bytes)?;
         d.set_item("outside_peak", s.outside_peak)?;
         d.set_item("limit_low", s.limit_low)?;
+        d.set_item("machine_limited", s.machine_limited)?;
         Ok(d)
     }
 }
@@ -1038,6 +1044,7 @@ impl RtPager {
         d.set_item("spurious", s.spurious)?;
         d.set_item("outside_peak", s.outside_peak)?;
         d.set_item("limit_low", s.limit_low)?;
+        d.set_item("machine_limited", s.machine_limited)?;
         d.set_item("trims", s.trims)?;
         d.set_item("holds", s.holds)?;
         d.set_item("written_bytes", 0u64)?;
