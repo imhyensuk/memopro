@@ -166,16 +166,6 @@ def test_using_is_public_and_per_call_options_win():
 
 
 # ---------------------------------------------------------------- where it takes effect
-def test_pressure_leaves_a_ceiling_the_user_set_alone(monkeypatch):
-    pytest.importorskip("torch")
-    import memopro.elastic
-    from memopro.access._common import setup
-
-    monkeypatch.setattr(memopro.elastic, "budget_factor", lambda: 0.5)
-    assert setup(device="cpu", budget="2GB").budget.host == 2 * GB
-    assert setup(device="cpu").budget.host < int(setup(device="cpu", budget=1.0).budget.host * 0.8)
-
-
 def test_doctor_and_cli_show_the_setting_and_notes():
     with using(budget="1000TB"):
         report = memopro.doctor(devices=False)

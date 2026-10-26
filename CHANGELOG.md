@@ -4,6 +4,13 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Removed: the internals of the removed features (0335)
+- The code behind hibernation, census, γ (elastic), `check`/`optimize`/`train_session`, the
+  technique registry and the Rust spill engine, write ledger, pressure signal and file mappings
+  is gone, with their tests and the Colab notebooks of past experiments that used them
+  (E021-E024, A2). `%load_ext memopro` (the `%hibernate`/`%wake` magics) and the settings
+  `hibernate_modes`, `idle_cells`, `idle_seconds` now raise an error that says what to use.
+
 ### Changed: a ceiling above what the machine can give no longer makes the system swap (0332)
 - The streaming runtime (`load`, `generate`, `finetune`) and the transparent pager (`memopro run`,
   `memopro.enable`) now also keep within what the machine can still give without swapping

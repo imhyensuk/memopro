@@ -33,56 +33,6 @@ def isolated(monkeypatch):
 gpt2 = functools.partial(helpers.gpt2, dropout=False)
 
 
-# ---------------------------------------------------------------- D1
-def test_d1_frozen_parameters_train_exactly_when_memtracker_fails(monkeypatch):
-    """LoRA-like: frozen parameters make torch's MemTracker fail to hook; train_session must
-    still train exactly (no gradient counted twice) and say it planned without it."""
-    from torch.distributed._tools import mem_tracker
-
-    def frozen(model):
-        for name, p in model.named_parameters():
-            p.requires_grad = "h.1" in name  # only the second block trains
-        return model
-
-    ref, model = frozen(gpt2()), frozen(gpt2())
-    x = torch.randint(0, 500, (4, 16), generator=torch.Generator().manual_seed(0))
-    ropt = torch.optim.SGD([p for p in ref.parameters() if p.requires_grad], lr=0.1)
-    ref(input_ids=x, labels=x).loss.backward()
-    ropt.step()
-
-    def refuse(*a, **k):
-        raise RuntimeError("cannot register a hook on a tensor that doesn't require gradient")
-
-    monkeypatch.setattr(mem_tracker.MemTracker, "track_external", refuse)
-    opt = torch.optim.SGD([p for p in model.parameters() if p.requires_grad], lr=0.1)
-    with memopro.access.train_session(model, opt) as s:
-        s.step(
-            {"input_ids": x},
-            lambda mb: model(input_ids=mb["input_ids"], labels=mb["input_ids"]).loss,
-        )
-    for a, b in zip(model.parameters(), ref.parameters(), strict=True):
-        assert torch.allclose(a, b, atol=1e-6), "a gradient was counted twice or lost"
-    plans = [e for e in memopro.report().entries if e.technique == "train_session.plan"]
-    assert plans and plans[0].action == "skipped"  # CPU: no allocator to measure with
-
-
-def test_d1_measuring_is_cuda_only():
-    from memopro.access._train import TrainSession
-
-    model = gpt2()
-    opt = torch.optim.SGD(model.parameters(), lr=0.1)
-    s = TrainSession(model, opt)
-    x = torch.randint(0, 500, (1, 8))
-    assert (
-        s._measure_first(
-            {"input_ids": x},
-            lambda mb: model(input_ids=mb["input_ids"], labels=mb["input_ids"]).loss,
-            1,
-        )
-        is None
-    )
-
-
 # ---------------------------------------------------------------- D2
 def _candidates(info, half, quality="balanced", budget=10**10):
     from memopro.orchestrator.candidates import infer_candidates

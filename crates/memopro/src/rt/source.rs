@@ -7,7 +7,7 @@
 //! write-free restore (0038, RS1, RS4, RS5). The file is never written.
 
 use crate::error::{Error, Result};
-use crate::spill::{Digest, read_region};
+use crate::verify::{Digest, read_region};
 use std::fs::File;
 use std::path::{Path, PathBuf};
 use std::time::SystemTime;
@@ -123,7 +123,7 @@ fn forget_cached(_file: &File, _offset: u64, _len: usize) {}
 #[cfg(test)]
 mod tests {
     use super::*;
-    use crate::spill::digest;
+    use crate::verify::digest;
     use std::io::Write;
 
     fn temp_file(name: &str, data: &[u8]) -> PathBuf {

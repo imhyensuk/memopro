@@ -13,7 +13,6 @@ from __future__ import annotations
 import contextlib
 import dataclasses
 import os
-import sys
 import tomllib
 from collections.abc import Iterator, Mapping
 from contextvars import ContextVar
@@ -35,8 +34,6 @@ POOLS = ("device", "host")
 # What load does when the model does not fit the budget as stored (0124, 0328): stream the
 # stored weights from their files (memopro.rt), or stop
 FALLBACKS = ("stream", "none")
-# Write-free, lossless hibernation methods that `mode="auto"` may pick, in order (0032 H1, 0328)
-AUTO_MODES = ("source", "host", "compress")
 
 
 # One pool's setting (0327): "auto" (80% of the machine's memory), bytes, or a fraction of it
@@ -59,14 +56,11 @@ class Config:
     # one pool value for device and host (see PoolValue), or settings per pool
     budget: PoolValue | PoolBudget = "auto"
     fallback: str = "stream"
-    hibernate_modes: tuple[str, ...] = AUTO_MODES
     download: str = "auto"
     over_ceiling: str = "error"
     # folders where the user keeps models (each one a model folder, or a folder of them):
     # generate(draft="auto") looks there first for a draft (0324)
     model_dirs: tuple[str, ...] = ()
-    idle_cells: int = 3
-    idle_seconds: float | None = None  # also suggest objects unused this long (0052 E8)
 
 
 _FIELDS = {f.name for f in dataclasses.fields(Config)}
@@ -87,20 +81,6 @@ def _dirs(value: Any) -> tuple[str, ...]:
 
     items = value.split(os.pathsep) if isinstance(value, str) else list(value)
     return tuple(str(d).strip() for d in items if str(d).strip())
-
-
-def _modes(value: Any) -> tuple[str, ...]:
-    items = value.split(",") if isinstance(value, str) else list(value)
-    modes = tuple(str(m).strip() for m in items if str(m).strip())
-    for m in modes:
-        if m == "bf16":
-            raise InvalidArgument("hibernate_modes cannot contain 'bf16': lossy, explicit only")
-        if m == "spill":
-            raise InvalidArgument("hibernate_modes cannot contain 'spill': memopro writes nothing")
-        _choice("hibernate_modes", m, AUTO_MODES)
-    if len(set(modes)) != len(modes):
-        raise InvalidArgument(f"hibernate_modes has duplicates: {modes}")
-    return modes
 
 
 def _fraction(value: Any) -> float | None:
@@ -164,7 +144,13 @@ _LOSSY = (
     "your original: memopro.load(name, dtype=..., quantization_config=...) (0328)"
 )
 _DISK = "memopro writes nothing to the disk besides downloads (0325 rule 1, 0328)"
+_HIBERNATE = (
+    "hibernation was removed in 0.2.0; memopro.enable() keeps idle memory within the ceiling"
+)
 _REMOVED = {
+    "hibernate_modes": _HIBERNATE,
+    "idle_cells": _HIBERNATE,
+    "idle_seconds": _HIBERNATE,
     "budget_basis": "the budget is now the ceiling as given, from the machine's memory",
     "headroom": 'the default "auto" already leaves 20% of the memory free; give a smaller budget',
     "quality": _LOSSY,
@@ -187,26 +173,12 @@ def _validate(key: str, value: Any) -> Any:
             return _budget(value)
         case "fallback":
             return _choice(key, value, FALLBACKS)
-        case "hibernate_modes":
-            return _modes(value)
         case "download":
             return _choice(key, value, DOWNLOADS)
         case "over_ceiling":
             return _choice(key, value, OVER_CEILINGS)
         case "model_dirs":
             return _dirs(value)
-        case "idle_cells":
-            cells = int(value)
-            if cells < 1:
-                raise InvalidArgument(f"idle_cells must be >= 1; got {value!r}")
-            return cells
-        case "idle_seconds":
-            if value in (None, "", "none"):
-                return None
-            seconds = float(value)
-            if seconds <= 0:
-                raise InvalidArgument(f"idle_seconds must be > 0; got {value!r}")
-            return seconds
     raise AssertionError(key)
 
 
@@ -241,17 +213,6 @@ def _env_layer() -> dict[str, Any]:
         if env in os.environ:
             values[key] = os.environ[env]
     return _layer("environment", values)
-
-
-def default_spill_dir() -> Path:
-    """Per-user cache location (memopro writes nothing there itself since 0328; kept for the
-    location a removed 0.1.x setting pointed to)."""
-    home = Path.home()
-    if sys.platform == "darwin":
-        return home / "Library" / "Caches" / "memopro"
-    if sys.platform == "win32":
-        return Path(os.environ.get("LOCALAPPDATA", home / "AppData" / "Local")) / "memopro"
-    return Path(os.environ.get("XDG_CACHE_HOME", home / ".cache")) / "memopro"
 
 
 def get_config() -> Config:

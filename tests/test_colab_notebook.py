@@ -9,12 +9,6 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[1]
 NOTEBOOKS = (
-    "train",
-    "infer",
-    "multi",
-    "remeasure",
-    "remeasure2",
-    "qlora",
     "suite",
     "suite_lm",
     "suite_vision",

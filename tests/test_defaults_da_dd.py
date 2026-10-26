@@ -75,14 +75,6 @@ def test_no_possible_setting_says_so(model_dir, monkeypatch):
     assert "No setting change" in _suggest.suggestions_text("m", [], "")
 
 
-def test_check_lists_suggestions(model_dir):
-    tight = int(stored_bytes(model_dir) * 0.9)
-    result = memopro.access.check(model_dir, goal="infer", device="cpu", budget=tight)
-    inf = result.to_json()["inference"]
-    assert inf.get("chosen") is None and inf["suggestions"]
-    assert "try budget=" in result.summary()
-
-
 def test_run_policy_records_suggestions_when_nothing_fits(model_dir):
     from memopro._run import _suggest
     from memopro.access._load import plan_load
@@ -98,10 +90,3 @@ def test_fallback_is_validated_and_stored_was_removed():
     for bad in ("anything", "stored"):
         with pytest.raises(ConfigError):
             configure(fallback=bad)
-
-
-def test_optimize_says_which_budget_fits_and_leaves_the_model_alone():
-    model = helpers.gpt2().eval()
-    with pytest.raises(BudgetExceeded, match="budget="):
-        memopro.access.optimize(model, budget="1KB")
-    assert next(model.parameters()).dtype == torch.float32

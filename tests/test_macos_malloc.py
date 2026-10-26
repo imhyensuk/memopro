@@ -11,7 +11,7 @@ import pytest
 import memopro
 import memopro.config
 import memopro.env
-from memopro import cli, hibernate
+from memopro import cli
 from memopro.config import reset_config
 from memopro.env import MALLOC_CACHE_NOTE, macos_malloc_cache_on
 
@@ -24,7 +24,6 @@ def isolated(tmp_path, monkeypatch):
     reset_config()
     memopro.report().clear()
     yield
-    hibernate._handles.clear()
     reset_config()
 
 
@@ -51,24 +50,6 @@ def test_doctor_mentions_the_cache_only_when_it_is_on(monkeypatch):
     assert MALLOC_CACHE_NOTE in memopro.doctor(devices=False).warnings()
     monkeypatch.setenv("MallocLargeCache", "0")
     assert MALLOC_CACHE_NOTE not in memopro.doctor(devices=False).warnings()
-
-
-def test_hibernating_cpu_memory_suggests_the_variable(monkeypatch):
-    torch = pytest.importorskip("torch")
-    pretend_macos(monkeypatch, cache=True)
-    monkeypatch.setattr(hibernate, "_malloc_note_shown", False)
-    h = hibernate.now(torch.randn(1 << 16), mode="compress")
-    notes = [e for e in memopro.report().entries if e.action == "suggested"]
-    assert len(notes) == 1 and "MallocLargeCache" in notes[0].detail
-    assert memopro.report().entries[-1].action == "applied"
-    h.wake()
-    hibernate.now(torch.randn(1 << 16), mode="compress").wake()  # once per process
-    assert len([e for e in memopro.report().entries if e.action == "suggested"]) == 1
-    memopro.report().clear()
-    monkeypatch.setattr(hibernate, "_malloc_note_shown", False)
-    monkeypatch.setenv("MallocLargeCache", "0")
-    hibernate.now(torch.randn(1 << 16), mode="compress").wake()
-    assert not any(e.action == "suggested" for e in memopro.report().entries)
 
 
 def _args(**kw):

@@ -1,14 +1,9 @@
 """The designed public API exists; unbuilt parts say so with a plan instead of doing nothing."""
 
 import pytest
-import torch
 
 import memopro
 import memopro.access
-import memopro.census
-import memopro.integrations
-import memopro.integrations.hf
-import memopro.integrations.lightning
 from memopro import NotYetImplemented
 
 
@@ -43,34 +38,12 @@ def test_no_designed_feature_is_left_as_a_stub():
     assert raising == []
 
 
-@pytest.mark.parametrize(
-    "call",
-    [
-        lambda: memopro.access.optimize(object()),
-        lambda: memopro.access.optimize(torch.nn.Linear(2, 2), goal="serve"),
-        lambda: memopro.access.check("app.py"),
-        lambda: memopro.load("x", device_map="auto"),
-        lambda: memopro.census.record(mode="deep"),
-        lambda: memopro.access.train_session(torch.nn.Linear(2, 2), None, micro_batch_size=0),
-    ],
-)
-def test_access_layer_rejects_bad_arguments_before_doing_anything(call):
+def test_load_rejects_bad_arguments_before_doing_anything():
     with pytest.raises(memopro.InvalidArgument):
-        call()
+        memopro.load("x", device_map="auto")
 
 
-def test_census_rejects_unknown_mode():
-    with pytest.raises(memopro.InvalidArgument):
-        memopro.census.record(mode="turbo")
-
-
-def test_integrations_do_not_import_frameworks():
-    import subprocess
-    import sys
-
-    code = (
-        "import sys, memopro.integrations.hf, memopro.integrations.lightning; "
-        "print(sorted(m for m in ('transformers', 'lightning', 'torch') if m in sys.modules))"
-    )
-    out = subprocess.run([sys.executable, "-c", code], capture_output=True, text=True, check=True)
-    assert out.stdout.strip() == "[]"
+def test_removed_names_say_what_to_use():
+    for name in ("optimize", "train_session", "check", "hibernate", "census", "elastic"):
+        with pytest.raises(AttributeError, match="removed in 0.2.0"):
+            getattr(memopro, name)

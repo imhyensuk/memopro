@@ -38,7 +38,7 @@ pub use source::SourceFile;
 
 use crate::codec;
 use crate::error::{Error, Result};
-use crate::spill::{Digest, digest};
+use crate::verify::{Digest, digest};
 use std::collections::{HashMap, HashSet, VecDeque};
 use std::path::{Path, PathBuf};
 use std::sync::atomic::{AtomicU64, Ordering};

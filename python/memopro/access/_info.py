@@ -188,7 +188,7 @@ def _from_module(model: Any) -> ModelInfo:
 
 
 def _from_files(files: list[Path]) -> tuple[TensorInfo, ...]:
-    from memopro.hibernate._source import read_header  # header only
+    from memopro._safetensors import read_header  # header only
 
     tensors = []
     for f in files:

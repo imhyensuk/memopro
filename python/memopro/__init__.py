@@ -67,6 +67,8 @@ _REMOVED = {
     "Technique": "techniques are no longer registered from outside",
     "register_technique": "techniques are no longer registered from outside",
     "registry": "techniques are no longer registered from outside",
+    "load_ipython_extension": "the %hibernate/%wake magics were removed; memopro.enable() keeps "
+    "idle memory within the ceiling",
 }
 
 
@@ -85,13 +87,6 @@ def __getattr__(name: str) -> Any:
 
 def __dir__() -> list[str]:
     return sorted(set(globals()) | set(_LAZY))
-
-
-def load_ipython_extension(shell: Any) -> None:
-    """Entry point for ``%load_ext memopro``."""
-    from memopro.integrations.ipython import load_ipython_extension as load
-
-    load(shell)
 
 
 __all__ = [
