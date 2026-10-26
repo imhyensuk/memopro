@@ -94,8 +94,7 @@ PyPI provides wheels for macOS arm64 and Linux x86_64/aarch64; other platforms b
 
 | Command | Description |
 |---|---|
-| `memopro doctor` | usable memory per device (GPU), host (RAM) and disk (`--json`, `--no-devices`) |
-| `memopro check MODEL` | whether a model fits the budget, and with which settings (`--goal infer\|train\|both`, `--batch-size`, `--seq-len`, `--optimizer`) |
+| `memopro doctor` | memory and the ceiling per device (GPU), host (RAM) and disk (`--json`, `--no-devices`, `--budget`) |
 | `memopro run [options] script.py [args]` | run a script unchanged within a memory ceiling |
 | `memopro --version` | version |
 
@@ -109,10 +108,10 @@ Main `memopro run` options: `--budget` (ceiling), `--dry-run` (print the setting
 | `memopro.generate(model, prompt, budget=, draft="auto", max_new_tokens=, streamer=, stopping_criteria=)` | generation with an LLM larger than memory, drafted by a smaller model of the same family already on the disk. `streamer` (e.g. Transformers' `TextIteratorStreamer`) and `stopping_criteria` go to `model.generate` as they are; the streamed text equals the returned text |
 | `memopro.enable(budget=)` / `memopro.disable()` | a ceiling on the whole process; `Session.estimate()`, `Session.measured()` |
 | `memopro.load(model_id, budget=, quality=)` | load a Hugging Face model. By default (`quality="lossless"`) nothing loses accuracy and a model that does not fit is streamed; `"high"`, `"balanced"` or `"low"` also allow half precision, int8 or int4 |
-| `memopro.check(...)` / `memopro.doctor()` | the same diagnostics as the CLI |
-| `memopro.train_session(model, optimizer)` | exact training with micro-batches and checkpointing chosen for the budget |
-| `memopro.optimize(model, goal=)` | fit a model you already have to the budget |
+| `memopro.doctor()` | the same memory and ceiling report as the CLI |
 | `memopro.configure(...)` / `memopro.using(...)` | global settings / settings for a block |
+
+In 0.2.0 `check`, `train_session`, `optimize`, `hibernate`, `census`, `elastic`, the technique registry and the `memopro check` command left the public API; using them raises an error that says what to use instead. Train with `finetune`, or with your own loop inside `memopro.enable()`.
 
 ### Runtime API
 
@@ -125,27 +124,18 @@ Main `memopro run` options: `--budget` (ceiling), `--dry-run` (print the setting
 | `memopro.rt.torch.draft_model(name, target=, device=)` | a draft model for faster generation (Apple GPU: int4, NVIDIA GPU: 16-bit) |
 | `memopro.rt.process_footprint()` | the process's current memory use |
 
-### Jupyter
-
-```text
-%load_ext memopro
-%hibernate name     # take an object out of memory for a while
-%wake name          # bring it back
-%memopro status
-```
-
 ### Budgets and settings
 
 Every function, `--budget`, the settings file `memopro.toml` (or `$MEMOPRO_CONFIG`) and the `MEMOPRO_BUDGET` variable accept the same forms. Other settings can be given as `MEMOPRO_<NAME>` variables.
 
 | Form | Meaning |
 |---|---|
-| `"auto"` | measured free memory − 10% (default) |
-| `"6GB"`, `"50%"`, `0.5` | a size, or a share of free memory |
-| `"-2GB"` | all but 2 GB |
-| `"2GB..6GB"` | at most 6 GB; refuse to start below 2 GB |
-| `"6GB!"` | 6 GB regardless of the measurement (may swap) |
-| `{"device": "80%", "host": "-2GB"}` | per kind of memory |
+| `"auto"` | 80% of this machine's memory (default) |
+| `"6GB"` | exactly 6 GB, on a 128 GB machine as on a 16 GB one |
+| `"50%"`, `0.5` | half of this machine's memory |
+| `"device=8GB,host=24GB"` or `{"device": "8GB", "host": "24GB"}` | NVIDIA GPU memory and RAM separately (shared on Apple silicon) |
+
+A ceiling above what is free right now is kept, with a note that other programs hold the rest and the system may swap. The 0.1.x forms `"-2GB"`, `"2GB..6GB"`, `"6GB!"`, `budget_basis` and `headroom` were removed in 0.2.0; using them raises an error that shows the new form.
 
 ## Quick start
 

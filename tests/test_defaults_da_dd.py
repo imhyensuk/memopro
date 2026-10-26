@@ -7,6 +7,8 @@ import warnings
 import pytest
 
 import memopro
+import memopro.access
+import memopro.config
 from memopro import BudgetExceeded, ConfigError
 from memopro.config import configure, reset_config
 
@@ -71,7 +73,7 @@ def test_nothing_fits_suggests_settings_that_really_load_it(model_dir):
         assert plan_load(model_dir, **options).chosen.name == s.config
     configs = {s.config: s for s in suggestions}
     assert configs["half"].settings == {"quality": "high"}
-    assert configs["stored"].settings["budget"].endswith("GB!")
+    assert configs["stored"].settings["budget"].endswith("GB")
     assert "fallback='stored'" in text
 
 
@@ -97,9 +99,9 @@ def test_suggested_settings_are_options_of_load_optimize_and_check(model_dir):
     from memopro.access._load import load
     from memopro.access._optimize import optimize
 
-    assert {"budget_basis", "disk_writes", "fallback"} <= set(inspect.signature(load).parameters)
-    assert {"budget_basis", "disk_writes", "fallback"} <= set(inspect.signature(check).parameters)
-    assert {"budget_basis", "fallback"} <= set(inspect.signature(optimize).parameters)
+    assert {"disk_writes", "fallback"} <= set(inspect.signature(load).parameters)
+    assert {"disk_writes", "fallback"} <= set(inspect.signature(check).parameters)
+    assert {"fallback"} <= set(inspect.signature(optimize).parameters)
 
 
 def test_suggestions_prefer_what_fits_in_free_memory_then_least_swapping(model_dir, monkeypatch):
@@ -126,12 +128,16 @@ def test_no_possible_setting_says_so(model_dir, monkeypatch):
 
 def test_check_lists_suggestions_and_the_fallback(model_dir):
     tight = int(stored_bytes(model_dir) * 0.9)
-    result = memopro.check(model_dir, goal="infer", device="cpu", budget=tight, quality="lossless")
+    result = memopro.access.check(
+        model_dir, goal="infer", device="cpu", budget=tight, quality="lossless"
+    )
     inf = result.to_json()["inference"]
     assert inf.get("chosen") is None and inf["suggestions"]
     assert "try quality='high'" in result.summary()
     configure(fallback="stored")
-    result = memopro.check(model_dir, goal="infer", device="cpu", budget=tight, quality="lossless")
+    result = memopro.access.check(
+        model_dir, goal="infer", device="cpu", budget=tight, quality="lossless"
+    )
     assert result.to_json()["inference"]["fallback"]["config"] == "stored"
     assert "fallback='stored' loads as stored" in result.summary()
 
@@ -181,17 +187,11 @@ def test_optimize_suggests_and_falls_back_to_leaving_the_model_alone():
     model = gpt2()
     before = {k: v.clone() for k, v in model.state_dict().items()}
     with pytest.raises(BudgetExceeded, match="Settings that would fit") as e:
-        memopro.optimize(model, budget="1KB", quality="lossless")
+        memopro.access.optimize(model, budget="1KB", quality="lossless")
     assert "quality='high'" in str(e.value) and "fallback='stored'" in str(e.value)
     configure(fallback="stored")
     with warnings.catch_warnings(record=True) as caught:
         warnings.simplefilter("always")
-        same = memopro.optimize(model, budget="1KB", quality="lossless")
+        same = memopro.access.optimize(model, budget="1KB", quality="lossless")
     assert same is model and any("fallback='stored'" in str(w.message) for w in caught)
     assert all(torch.equal(before[k], v) for k, v in model.state_dict().items())
-
-
-def test_cli_accepts_fallback(model_dir, capsys):
-    from memopro.cli import main
-
-    assert main(["check", model_dir, "--goal", "infer", "--fallback", "stored"]) == 0

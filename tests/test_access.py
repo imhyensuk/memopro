@@ -12,6 +12,13 @@ import pytest
 import torch
 
 import memopro
+import memopro.access
+import memopro.census
+import memopro.config
+import memopro.env
+import memopro.hibernate
+import memopro.orchestrator
+import memopro.techniques
 from memopro import BudgetExceeded, InvalidArgument
 from memopro.config import PoolBudget, configure, reset_config
 from memopro.env import detect
@@ -55,13 +62,14 @@ def model_dir(tmp_path_factory):
 # ---------------------------------------------------------------- budget forms
 def test_budget_forms():
     env = detect(devices=False)
-    base = compute_budget(env, memopro.get_config())
+    memory = env.host.cgroup_limit_bytes or env.host.total_bytes
+    assert compute_budget(env, memopro.get_config()).host == int(memory * 0.8)  # auto
     half = compute_budget(env, configure(budget=0.5))
-    assert half.host == int(base.host * 0.5) and half.capped_by_setting
+    assert half.host == int(memory * 0.5) and half.capped_by_setting
     assert configure(budget="50%").budget == 0.5
     pools = configure(budget={"host": "1MB"}).budget
     assert pools == PoolBudget(device=None, host=10**6)
-    assert compute_budget(env, memopro.get_config()).host == min(base.host, 10**6)
+    assert compute_budget(env, memopro.get_config()).host == 10**6  # as given
     assert configure(budget="device=2GB,host=1GB").budget == PoolBudget(2 * 10**9, 10**9)
     assert configure(budget="6GB").budget == 6 * 10**9
     for bad in ({"gpu": "1GB"}, 1.5, "0.0"):  # disk became a pool in 0059 D2
@@ -119,7 +127,7 @@ def test_prefer_orders_exact_offload_before_quantization():
 
 # ---------------------------------------------------------------- load
 def test_load_picks_a_fitting_configuration_and_generates(model_dir):
-    info_bytes = memopro.check(model_dir, goal="infer", device="cpu").stored_bytes
+    info_bytes = memopro.access.check(model_dir, goal="infer", device="cpu").stored_bytes
     model = memopro.load(model_dir, device="cpu", budget=int(info_bytes * 0.9))
     assert next(model.parameters()).dtype == torch.bfloat16
     out = model.generate(
@@ -157,40 +165,36 @@ def test_load_explains_what_does_not_fit(model_dir):
 
 # ---------------------------------------------------------------- check
 def test_check_predicts_training_above_inference(model_dir, capsys):
-    r = memopro.check(model_dir, batch_size=4, device="cpu")
+    r = memopro.access.check(model_dir, batch_size=4, device="cpu")
     tr = r.training
     assert tr["peak"] > r.inference["peak"] > 0
     assert tr["optimizer_state"] == pytest.approx(2 * tr["params"], rel=0.05)  # AdamW
     assert tr["grads"] == pytest.approx(tr["params"], rel=0.05)
     assert tr["checkpointing_peak"] < tr["peak"]
     json.dumps(r.to_json(), default=str)
-    small = memopro.check(
+    small = memopro.access.check(
         model_dir, goal="train", batch_size=4, device="cpu", budget=int(tr["peak"] * 0.8)
     )
     assert small.training["fits"] is False and small.training["micro_batch"] < 4
-    from memopro.cli import EXIT_OK, main
-
-    assert main(["check", model_dir, "--goal", "train", "--batch-size", "2", "--json"]) == EXIT_OK
-    assert json.loads(capsys.readouterr().out)["training"]["peak"] > 0
 
 
 # ---------------------------------------------------------------- optimize
 def test_optimize_infer_changes_only_what_is_needed():
     model = gpt2()
     stored = sum(p.numel() * 4 for p in model.parameters())
-    memopro.optimize(model, budget=stored * 10)
+    memopro.access.optimize(model, budget=stored * 10)
     assert next(model.parameters()).dtype == torch.float32  # fits already
-    memopro.optimize(model, budget=int(stored * 0.9))
+    memopro.access.optimize(model, budget=int(stored * 0.9))
     assert next(model.parameters()).dtype == torch.bfloat16
     untouched = gpt2()
     with pytest.raises(BudgetExceeded):
-        memopro.optimize(untouched, budget="1KB", quality="high")
+        memopro.access.optimize(untouched, budget="1KB", quality="high")
     assert next(untouched.parameters()).dtype == torch.float32
 
 
 def test_optimize_train_enables_checkpointing():
     model = gpt2()
-    memopro.optimize(model, goal="train")
+    memopro.access.optimize(model, goal="train")
     assert model.is_gradient_checkpointing
 
 
@@ -231,7 +235,7 @@ def test_out_of_memory_is_retried_exactly():
             raise torch.OutOfMemoryError("simulated: CUDA out of memory")
         return model(**mb, labels=mb["input_ids"]).loss
 
-    with memopro.train_session(model, opt, micro_batch_size=8) as s:
+    with memopro.access.train_session(model, opt, micro_batch_size=8) as s:
         for _ in range(2):
             s.step(batch, loss_fn)
         assert s.micro == 2 and s.retries == 2
@@ -245,7 +249,7 @@ def test_out_of_memory_that_never_ends_raises_with_suggestions():
     def always(mb):
         raise torch.OutOfMemoryError("simulated")
 
-    with memopro.train_session(model, opt, micro_batch_size=2) as s:
+    with memopro.access.train_session(model, opt, micro_batch_size=2) as s:
         with pytest.raises(BudgetExceeded, match="8-bit optimizer"):
             s.step(_batch(), always)
         assert s.checkpointing
@@ -260,13 +264,13 @@ def test_manual_form_and_planning():
     ropt.step()
     manual = copy.deepcopy(base)
     opt = torch.optim.SGD(manual.parameters(), lr=0.1)
-    with memopro.train_session(manual, opt, micro_batch_size=3) as s:
+    with memopro.access.train_session(manual, opt, micro_batch_size=3) as s:
         for mb in s.batches([batch]):
             s.backward(manual(**mb, labels=mb["input_ids"]).loss)
     assert _max_rel(list(manual.parameters()), list(ref.parameters())) < 1e-5
     planned = copy.deepcopy(base)
     opt = torch.optim.SGD(planned.parameters(), lr=0.1)
-    with memopro.train_session(planned, opt, budget="1MB") as s:
+    with memopro.access.train_session(planned, opt, budget="1MB") as s:
         s.step(batch, lambda mb: planned(**mb, labels=mb["input_ids"]).loss)
         assert s.micro is not None and s.micro < 8
     assert _max_rel(list(planned.parameters()), list(ref.parameters())) < 1e-5
@@ -276,7 +280,7 @@ def test_batchnorm_is_flagged_and_batches_of_any_shape_split():
     from memopro.access._train import split_batch
 
     model = torch.nn.Sequential(torch.nn.Linear(4, 4), torch.nn.BatchNorm1d(4))
-    with memopro.train_session(model, torch.optim.SGD(model.parameters(), lr=0.1)):
+    with memopro.access.train_session(model, torch.optim.SGD(model.parameters(), lr=0.1)):
         pass
     assert any("BatchNorm" in e.detail for e in memopro.report().entries)
     x, y = torch.randn(5, 4), torch.randn(5)
@@ -344,17 +348,17 @@ def test_gradient_clipping_matches_a_clipped_full_batch_step():
     ropt.step()
     model = copy.deepcopy(base)
     opt = torch.optim.SGD(model.parameters(), lr=0.1)
-    with memopro.train_session(model, opt, micro_batch_size=3, max_grad_norm=0.05) as s:
+    with memopro.access.train_session(model, opt, micro_batch_size=3, max_grad_norm=0.05) as s:
         s.step(batch, lambda mb: model(**mb, labels=mb["input_ids"]).loss)
     assert _max_rel(list(model.parameters()), list(ref.parameters())) < 1e-5
     with pytest.raises(InvalidArgument):
-        memopro.train_session(model, opt, max_grad_norm=0)
+        memopro.access.train_session(model, opt, max_grad_norm=0)
 
 
 def test_float16_autocast_always_comes_with_loss_scaling():
     model, batch = gpt2(), _batch()
     opt = torch.optim.SGD(model.parameters(), lr=0.1)
-    with memopro.train_session(model, opt, micro_batch_size=1, quality="high") as s:
+    with memopro.access.train_session(model, opt, micro_batch_size=1, quality="high") as s:
         s._setup = dataclasses.replace(s._setup, half_dtype=torch.float16)
         while not s.autocast:
             assert s.degrade("test")
@@ -373,7 +377,7 @@ def test_sum_reduction_adds_micro_batch_losses():
     torch.optim.SGD(ref.parameters(), lr=0.01).step()
     model = copy.deepcopy(base)
     opt = torch.optim.SGD(model.parameters(), lr=0.01)
-    with memopro.train_session(model, opt, micro_batch_size=2, reduction="sum") as s:
+    with memopro.access.train_session(model, opt, micro_batch_size=2, reduction="sum") as s:
         s.step((x, y), lambda b: ((model(b[0]) - b[1]) ** 2).sum())
     assert _max_rel(list(model.parameters()), list(ref.parameters())) < 1e-5
 
@@ -403,7 +407,7 @@ def test_memory_of_a_failed_attempt_is_freed_before_the_retry(monkeypatch):
             raise torch.OutOfMemoryError("CUDA out of memory (after allocating)")
         return model(**mb, labels=mb["input_ids"]).loss
 
-    with memopro.train_session(model, opt, micro_batch_size=8) as s:
+    with memopro.access.train_session(model, opt, micro_batch_size=8) as s:
         s.step(_batch(), loss_fn)
     assert s.micro == 2 and len(held) == 2
     assert alive_at_release == [[False], [False, False]]

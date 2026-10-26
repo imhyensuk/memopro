@@ -35,8 +35,6 @@ DOWNLOADS = ("auto", "never")
 # stop with BudgetExceeded ("error"), or give the data back over the ceiling with a warning
 # ("allow"; e.g. activations needed by backward, so a training run is not lost)
 OVER_CEILINGS = ("error", "allow")
-# What the measured host budget starts from (0059 D3); only "conservative" never needs swap
-BUDGET_BASES = ("conservative", "os", "total")
 POOLS = ("device", "host", "disk")
 # What load/optimize do when nothing fits the budget (0064 D-d): stop, or load as stored anyway;
 # `stream` (load only, 0124) streams the stored weights from their files on the CPU (memopro.rt)
@@ -48,30 +46,16 @@ RESIDENCIES = ("memory", "file")
 AUTO_MODES = ("source", "host", "compress")
 
 
-@dataclass(frozen=True)
-class Limit:
-    """A pool budget beyond a plain size or fraction (0059 D1).
+# One pool's setting (0327): "auto" (80% of the machine's memory), bytes, or a fraction of it
+PoolValue = str | int | float
 
-    ``use`` is "auto", a size in bytes or a fraction of the measured budget. ``reserve`` leaves that
-    many bytes of the measured budget unused ("-2GB"). ``force`` takes the size ``use`` as it is,
-    even above what is measured ("6GB!"). ``maximum`` caps the result; below ``minimum`` memopro
-    stops with `BudgetExceeded` instead of trying ever smaller configurations ("2GB..6GB").
-    """
-
-    use: str | int | float = "auto"
-    reserve: int = 0
-    force: bool = False
-    minimum: int | None = None
-    maximum: int | None = None
-
-
-# One pool's setting: "auto", bytes (a cap), a fraction of the measured budget, or a Limit
-PoolValue = str | int | float | Limit
+# the default ceiling: this share of the machine's memory (0325 rule 2)
+AUTO_FRACTION = 0.8
 
 
 @dataclass(frozen=True)
 class PoolBudget:
-    """Settings per pool (0052 E3, 0059 D2); None leaves that pool to the measured budget."""
+    """Settings per pool (0052 E3, 0059 D2); None leaves that pool at "auto"."""
 
     device: PoolValue | None = None
     host: PoolValue | None = None
@@ -82,9 +66,6 @@ class PoolBudget:
 class Config:
     # one pool value for device and host (see PoolValue), or settings per pool
     budget: PoolValue | PoolBudget = "auto"
-    budget_basis: str = "conservative"
-    # never budgeted (U3 prevention, 0035): a fraction of the measured memory, or bytes (0059 D4)
-    headroom: float = 0.10
     quality: str = "lossless"
     prefer: str = "speed"
     fallback: str = "stream"
@@ -151,68 +132,34 @@ def _fraction(value: Any) -> float | None:
     return fraction
 
 
-def _optional_size(text: str) -> int | None:
-    return parse_size(text.strip()) if text.strip() else None
-
-
-def _simple(limit: Limit) -> PoolValue:
-    """A Limit that only says ``use`` is that plain value (keeps old settings comparable)."""
-    if limit == Limit(use=limit.use):
-        return limit.use
-    return limit
+_OLD_FORMS = (
+    'budget is "auto" (80% of this machine\'s memory), a size such as "6GB", or a share of the '
+    'memory such as "50%" or 0.5, for all pools or per pool ("device=8GB,host=24GB"); the '
+    "value is the ceiling as given (0327)"
+)
 
 
 def _pool_value(value: Any) -> PoolValue:
-    """Parse one pool's budget (0059 D1): "auto", "6GB", 0.5 / "50%", "-2GB" (leave 2GB free),
-    "6GB!" (exactly 6GB, even above what is measured), "2GB..6GB" (at least / at most), or a
-    mapping {"use": ..., "min": ..., "max": ...}."""
-    if isinstance(value, Limit):
-        return _simple(value)
-    if isinstance(value, Mapping):
-        unknown = set(value) - {"use", "min", "max"}
-        if unknown:
-            raise InvalidArgument(f"a pool budget takes use, min and max; got {sorted(unknown)}")
-        base = _pool_value(value.get("use", "auto"))
-        if isinstance(base, Limit) and (base.minimum is not None or base.maximum is not None):
-            raise InvalidArgument("use cannot be a range; give min and max instead")
-        limit = base if isinstance(base, Limit) else Limit(use=base)
-        bounds = {k: value[k] for k in ("min", "max") if k in value}
-        limit = dataclasses.replace(
-            limit,
-            minimum=parse_size(bounds["min"]) if "min" in bounds else None,
-            maximum=parse_size(bounds["max"]) if "max" in bounds else None,
-        )
-        return _checked(limit)
+    """Parse one pool's budget (0327): "auto", "6GB" (exactly that), 0.5 / "50%" (of the
+    machine's memory). Forms removed in 0.2.0 ("-2GB", "2GB..6GB", "6GB!", {use, min, max})
+    say how to write them now."""
     if value == "auto":
         return "auto"
+    if isinstance(value, Mapping):
+        raise InvalidArgument(f"budget minimums and maximums were removed: {_OLD_FORMS}")
     if isinstance(value, str):
         text = value.strip()
-        if ".." in text:
-            low, high = (_optional_size(part) for part in text.split("..", 1))
-            if low is None and high is None:
-                raise InvalidArgument("a budget range needs a minimum, a maximum or both: 2GB..6GB")
-            return _checked(Limit(minimum=low, maximum=high))
-        if text.startswith("-"):
-            return Limit(reserve=parse_size(text[1:]))
-        if text.endswith("!"):
-            return Limit(use=parse_size(text[:-1]), force=True)
+        if ".." in text or text.startswith("-") or text.endswith("!"):
+            raise InvalidArgument(f"{value!r} is a budget form removed in 0.2.0: {_OLD_FORMS}")
     fraction = _fraction(value)
     if fraction is not None:
         return fraction
     return parse_size(value)
 
 
-def _checked(limit: Limit) -> PoolValue:
-    if limit.minimum is not None and limit.maximum is not None and limit.minimum > limit.maximum:
-        raise InvalidArgument(
-            f"budget minimum {limit.minimum} is larger than the maximum {limit.maximum}"
-        )
-    return _simple(limit)
-
-
 def _budget(value: Any) -> PoolValue | PoolBudget:
     """Parse a budget: one pool value for device and host (see `_pool_value`), or settings per
-    pool ({"device": "80%", "host": "-2GB", "disk": "20GB"} or "device=80%,host=-2GB")."""
+    pool ({"device": "8GB", "host": "24GB", "disk": "20GB"} or "device=8GB,host=24GB")."""
     if isinstance(value, PoolBudget):
         return value
     if isinstance(value, str) and "=" in value:
@@ -226,35 +173,21 @@ def _budget(value: Any) -> PoolValue | PoolBudget:
     return _pool_value(value)
 
 
-def _headroom(value: Any) -> float | int:
-    """A fraction (0.1, "10%") or a size ("1GB", or an integer number of bytes >= 1)."""
-    if isinstance(value, bool):
-        raise InvalidArgument(f"headroom must be a fraction or a size; got {value!r}")
-    if isinstance(value, str):
-        text = value.strip()
-        if text.endswith("%"):
-            fraction = float(text[:-1]) / 100
-        elif any(c.isalpha() for c in text):
-            return parse_size(text)
-        else:
-            fraction = float(text)
-    elif isinstance(value, int) and value >= 1:
-        return value
-    else:
-        fraction = float(value)
-    if not 0.0 <= fraction < 0.9:
-        raise InvalidArgument(f"headroom must be in [0, 0.9) or a size; got {value!r}")
-    return fraction
+# settings removed in 0.2.0 (0327): what to do instead
+_REMOVED = {
+    "budget_basis": "the budget is now the ceiling as given, from the machine's memory",
+    "headroom": 'the default "auto" already leaves 20% of the memory free; give a smaller budget',
+}
 
 
 def _validate(key: str, value: Any) -> Any:
+    if key in _REMOVED:
+        raise InvalidArgument(f"the setting {key!r} was removed in 0.2.0: {_REMOVED[key]}")
     if key not in _FIELDS:
         raise InvalidArgument(f"unknown setting {key!r}; known: {', '.join(sorted(_FIELDS))}")
     match key:
         case "budget":
             return _budget(value)
-        case "budget_basis":
-            return _choice(key, value, BUDGET_BASES)
         case "quality":
             return _choice(key, value, QUALITIES)
         case "prefer":
@@ -273,8 +206,6 @@ def _validate(key: str, value: Any) -> Any:
             return _choice(key, value, OVER_CEILINGS)
         case "daily_write_limit":
             return None if value in (None, "", "auto") else parse_size(value)
-        case "headroom":
-            return _headroom(value)
         case "min_free_disk_fraction":
             fraction = float(value)
             if not 0.0 <= fraction < 1.0:

@@ -5,6 +5,11 @@ import os
 import pytest
 
 import memopro
+import memopro.access
+import memopro.config
+import memopro.env
+import memopro.orchestrator
+import memopro.techniques
 from memopro.config import reset_config
 
 torch = pytest.importorskip("torch")

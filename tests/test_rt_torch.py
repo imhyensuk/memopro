@@ -14,6 +14,9 @@ pytest.importorskip("accelerate")
 rtt = pytest.importorskip("memopro.rt.torch")
 
 import memopro
+import memopro.access
+import memopro.env
+import memopro.hibernate
 
 
 @pytest.fixture(scope="module")
@@ -992,7 +995,7 @@ def test_drafts_and_load_download_through_the_same_path(tmp_path, monkeypatch):
     seen = []
     real = rtt._snapshot
     monkeypatch.setattr(rtt, "_snapshot", lambda name, rev: seen.append(name) or real(name, rev))
-    assert _load.load(str(src), budget="1GB!", quality="lossless") is not None
+    assert _load.load(str(src), budget="1GB", quality="lossless") is not None
     assert seen == [str(src)]  # memopro.load goes through the same path before loading
 
 

@@ -147,7 +147,6 @@ def load(
     deny: tuple[str, ...] = (),
     revision: str | None = None,
     device: str | None = None,
-    budget_basis: str | None = None,
     disk_writes: str | None = None,
     fallback: str | None = None,
     residency: str | None = None,
@@ -158,7 +157,7 @@ def load(
     ``quality`` bounds automatic loss ("lossless" < "high" < "balanced" < "low"), ``prefer``
     orders the rest ("speed", "quality", "memory"), ``allow``/``deny`` filter technique names
     (``dtype.half``, ``quant.int8``, ``quant.int4``, ``offload.cpu``, ``offload.disk``).
-    ``budget_basis``, ``disk_writes`` and ``fallback`` override those settings for this call
+    ``disk_writes`` and ``fallback`` override those settings for this call
     (every setting a `BudgetExceeded` suggestion names can be passed here, 0064).
     ``residency="file"`` keeps the weights as clean file-backed pages on MPS (0072).
     Other keyword arguments go to ``from_pretrained`` unchanged.
@@ -178,7 +177,6 @@ def load(
         deny=deny,
         revision=revision,
         device=device,
-        budget_basis=budget_basis,
         disk_writes=disk_writes,
         fallback=fallback,
         residency=residency,

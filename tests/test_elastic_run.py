@@ -12,6 +12,9 @@ import pytest
 import torch
 
 import memopro
+import memopro.access
+import memopro.config
+import memopro.hibernate
 from memopro import elastic
 from memopro.config import configure, reset_config
 
@@ -115,13 +118,14 @@ def test_load_budget_follows_pressure(signal, tmp_path):
     transformers.GPT2LMHeadModel(
         transformers.GPT2Config(n_layer=1, n_embd=32, n_head=2, vocab_size=100, n_positions=32)
     ).save_pretrained(tmp_path)
-    configure(budget="100MB")  # fixed, so free memory moving around does not matter
-    calm = plan_load(str(tmp_path), device="cpu").ctx.host_budget
-    assert calm == 10**8
+    calm = plan_load(str(tmp_path), device="cpu").ctx.host_budget  # auto: 80% of the memory
     elastic.enable(interval=0.01, notebook=False)
     signal["level"] = "warning"
     wait_for("warning")
     assert plan_load(str(tmp_path), device="cpu").ctx.host_budget == calm // 2
+    # a ceiling the user set is theirs: pressure leaves it alone (0325 rule 2, 0327)
+    configure(budget="100MB")
+    assert plan_load(str(tmp_path), device="cpu").ctx.host_budget == 10**8
 
 
 class FakeSession:
@@ -186,7 +190,7 @@ def test_real_train_session_reacts_to_pressure(signal):
         return model(**mb, labels=mb["input_ids"]).loss
 
     elastic.enable(interval=0.01, up_after=0.0, notebook=False)
-    with memopro.train_session(model, opt, micro_batch_size=8) as s:
+    with memopro.access.train_session(model, opt, micro_batch_size=8) as s:
         s.step(batch, loss_fn)
         signal["level"] = "warning"
         wait_for("warning")
@@ -277,7 +281,6 @@ def test_run_applies_the_loading_policy_only_where_the_script_did_not_choose(tin
         budget,
         "--quality",
         "balanced",
-        "--no-elastic",
         "app.py",
         tiny_dir,
         "hello",
@@ -306,9 +309,9 @@ def test_run_dry_run_and_errors(tmp_path, capsys):
     from memopro.cli import EXIT_ERROR, main
 
     (tmp_path / "app.py").write_text("raise SystemExit('should not run')")
-    assert main(["run", "--dry-run", "--census", str(tmp_path / "app.py")]) == 0
+    assert main(["run", "--dry-run", str(tmp_path / "app.py")]) == 0
     out = capsys.readouterr().out
-    assert "from_pretrained" in out and "census" in out
+    assert "from_pretrained" in out
     assert main(["run", str(tmp_path / "missing.py")]) == EXIT_ERROR
     configure(budget="auto")
 
@@ -341,19 +344,6 @@ def test_run_on_macos_leaves_gamma_off_unless_asked(monkeypatch, tmp_path):
     run(str(tmp_path / "app.py"), elastic=True)  # explicit: on, no note
     assert len(started) == 1
     assert not [e for e in memopro.report().entries if e.technique == "elastic"]
-
-
-def test_cli_elastic_flags(monkeypatch, tmp_path):
-    from memopro import _run, cli
-
-    seen = []
-    monkeypatch.setattr(_run, "run", lambda script, argv, **kw: seen.append(kw["elastic"]))
-    (tmp_path / "app.py").write_text("x = 1\n")
-    for flags, expected in (([], None), (["--elastic"], True), (["--no-elastic"], False)):
-        assert cli.main(["run", *flags, str(tmp_path / "app.py")]) == 0
-        assert seen[-1] is expected
-    with pytest.raises(SystemExit):
-        cli.main(["run", "--elastic", "--no-elastic", str(tmp_path / "app.py")])
 
 
 def test_dry_run_says_gamma_is_off_on_macos(monkeypatch, tmp_path, capsys):

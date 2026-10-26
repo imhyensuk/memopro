@@ -59,7 +59,7 @@ def over_free(plan: Any, cfg: Any) -> int:
 def _forced_budget(cfg: Any, shared: bool) -> str:
     device_need, host_need = _memory_needs(cfg, shared)
     need = max(device_need, host_need)
-    return f"{math.ceil(need / 1e8) / 10:.1f}GB!"
+    return f"{math.ceil(need / 1e8) / 10:.1f}GB"
 
 
 def _tries(plan: Any) -> list[dict[str, str]]:
@@ -68,12 +68,8 @@ def _tries(plan: Any) -> list[dict[str, str]]:
     lower = list(QUALITIES[current + 1 :])
     shared = plan.ctx.unified or plan.ctx.device == "cpu"
     tries: list[dict[str, str]] = []
-    if cfg.budget_basis == "conservative":
-        tries.append({"budget_basis": "os"})
     for q in lower:
         tries.append({"quality": q})
-        if cfg.budget_basis == "conservative":
-            tries.append({"quality": q, "budget_basis": "os"})
     if cfg.disk_writes != "allow":
         tries.append({"disk_writes": "allow"})
     for c in plan.candidates:

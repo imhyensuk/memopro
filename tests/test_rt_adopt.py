@@ -5,6 +5,7 @@ import pytest
 import torch
 
 import memopro
+import memopro.env
 from memopro.rt import Runtime
 from memopro.rt.adopt import Asleep
 

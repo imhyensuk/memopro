@@ -132,7 +132,7 @@ def _require_minimums(budget: Budget, cfg: Config) -> None:
     )
     raise BudgetExceeded(
         f"the budget setting ({describe_setting(cfg.budget)}) asks for more than is available: "
-        f"{short}. Free memory, lower the minimum, or choose budget_basis='os' to count memory "
+        f"{short}. Free memory, or give a larger budget "
         "the OS can reclaim by compressing or swapping"
     )
 

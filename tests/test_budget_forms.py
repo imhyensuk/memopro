@@ -1,7 +1,7 @@
-"""Budget forms (0059): reserve, forced size, ranges, per-pool values incl. disk, basis, headroom
-as a size, and `using()` blocks."""
+"""Budgets (0327): "auto" = 80% of the machine's memory, a size kept as given, a share of the
+memory, per pool; forms and settings removed in 0.2.0 say how to write them now; `using()`
+blocks."""
 
-import dataclasses
 import os
 import subprocess
 import sys
@@ -10,8 +10,9 @@ import threading
 import pytest
 
 import memopro
-from memopro import BudgetExceeded, ConfigError
-from memopro.config import Config, Limit, PoolBudget, configure, get_config, reset_config, using
+import memopro.access
+from memopro import ConfigError
+from memopro.config import PoolBudget, configure, get_config, reset_config, using
 from memopro.env import Device, Disk, Env, HostMemory
 from memopro.orchestrator.budget import compute_budget, describe_setting
 
@@ -30,11 +31,11 @@ def isolated(monkeypatch, tmp_path):
     reset_config()
 
 
-def env(usable=8 * GiB, kernel=None, total=16 * GiB, devices=(), cgroup=None, disk_free=100 * GiB):
+def env(usable=8 * GiB, total=16 * GiB, devices=(), cgroup=None, disk_free=100 * GiB):
     host = HostMemory(
         total_bytes=total,
         available_bytes=usable,
-        kernel_available_bytes=usable if kernel is None else kernel,
+        kernel_available_bytes=usable,
         swap_total_bytes=0,
         swap_free_bytes=0,
         cgroup_limit_bytes=cgroup,
@@ -45,8 +46,8 @@ def env(usable=8 * GiB, kernel=None, total=16 * GiB, devices=(), cgroup=None, di
     return Env("Test", "Test 1", "x86_64", "cpu", 8, host, disk, tuple(devices))
 
 
-def cuda(free):
-    return Device("cuda", "cuda:0 Test GPU", 24 * GiB, free, None, 0, False)
+def cuda(free, total=24 * GiB):
+    return Device("cuda", "cuda:0 Test GPU", total, free, None, 0, False)
 
 
 def mps(limit):
@@ -54,136 +55,74 @@ def mps(limit):
 
 
 def budget(e, **settings):
-    return compute_budget(e, dataclasses.replace(configure(**settings), headroom=0.0))
+    reset_config()  # each case from the defaults: configure() accumulates
+    return compute_budget(e, configure(**settings))
 
 
 # ---------------------------------------------------------------- parsing
-def test_new_forms_parse_and_old_forms_are_unchanged():
-    parse = lambda v: configure(budget=v).budget
-    assert parse("-2GB") == Limit(reserve=2 * GB)
-    assert parse("6GB!") == Limit(use=6 * GB, force=True)
-    assert parse("2GB..6GB") == Limit(minimum=2 * GB, maximum=6 * GB)
-    assert parse("3GB..") == Limit(minimum=3 * GB)
-    assert parse("..6GB") == Limit(maximum=6 * GB)
-    assert parse({"use": "50%", "min": "1GB"}) == Limit(use=0.5, minimum=GB)
-    assert parse({"use": "6GB"}) == 6 * GB  # a Limit that says only "6GB" is the plain value
-    pools = parse({"device": "80%", "host": "-2GB", "disk": "20GB"})
-    assert pools == PoolBudget(device=0.8, host=Limit(reserve=2 * GB), disk=20 * GB)
-    assert parse("device=80%,host=2GB..,disk=20GB") == PoolBudget(
-        device=0.8, host=Limit(minimum=2 * GB), disk=20 * GB
+def test_the_three_forms_and_per_pool_values_parse():
+    assert configure(budget="auto").budget == "auto"
+    assert configure(budget="6GB").budget == 6 * GB
+    assert configure(budget="50%").budget == configure(budget=0.5).budget == 0.5
+    pools = configure(budget="device=8GB,host=24GB").budget
+    assert pools == PoolBudget(device=8 * GB, host=24 * GB)
+    assert configure(budget={"host": "50%", "disk": "20GB"}).budget == PoolBudget(
+        host=0.5, disk=20 * GB
     )
-    # 0052 E3 forms, as before
-    assert parse("6GB") == 6 * GB and parse("50%") == 0.5 and parse("auto") == "auto"
-    assert parse({"host": "1MB"}) == PoolBudget(host=10**6)
 
 
-@pytest.mark.parametrize(
-    "bad",
-    [
-        "..",
-        "6GB..2GB",
-        {"use": "1GB..2GB"},
-        {"use": "1GB", "foo": 1},
-        {"gpu": "1GB"},
-        "-50%",
-        "150%",
-        "lots!",
-        {"host": {"use": "1GB", "max": "lots"}},
-    ],
-)
-def test_bad_forms_are_rejected_with_config_errors(bad):
-    with pytest.raises(ConfigError):
-        configure(budget=bad)
+@pytest.mark.parametrize("old", ["-2GB", "2GB..6GB", "6GB!", {"use": "auto", "min": "1GB"}])
+def test_forms_removed_in_0_2_0_say_how_to_write_them_now(old):
+    with pytest.raises(ConfigError, match="80% of this machine"):
+        configure(budget=old)
 
 
-def test_headroom_takes_fractions_and_sizes():
-    assert configure(headroom="1GB").headroom == GB
-    assert configure(headroom="5%").headroom == 0.05
-    assert configure(headroom=0.2).headroom == 0.2
-    assert configure(headroom=0).headroom == 0.0
-    for bad in (0.95, "95%", True, "-1GB"):
-        with pytest.raises(ConfigError):
-            configure(headroom=bad)
-
-
-def test_budget_table_in_toml(tmp_path):
-    (tmp_path / "memopro.toml").write_text(
-        'budget_basis = "os"\n[budget]\ndevice = "80%"\n'
-        'host = { use = "-2GB", min = "1GB" }\ndisk = "20GB"\n'
-    )
-    cfg = get_config()
-    assert cfg.budget_basis == "os"
-    assert cfg.budget == PoolBudget(0.8, Limit(reserve=2 * GB, minimum=GB), 20 * GB)
-
-
-# ---------------------------------------------------------------- computing budgets
-def test_reserve_leaves_memory_free_and_forced_size_goes_above_measured():
-    e = env(usable=8 * GiB)
-    b = budget(e, budget="-2GiB")
-    assert b.host == 6 * GiB and b.capped_by_setting and not b.forced
-    b = budget(e, budget="20GiB!")
-    assert b.host == 20 * GiB and b.forced == ("host",)
-    assert any("above the measured" in n for n in b.notes)
-    b = budget(e, budget="1GiB!")  # forced below measured: no warning
-    assert b.host == GiB and not any("above" in n for n in b.notes)
-
-
-def test_range_caps_at_maximum_and_reports_an_unmet_minimum():
-    e = env(usable=8 * GiB)
-    b = budget(e, budget="1GiB..4GiB")
-    assert b.host == 4 * GiB and not b.shortfalls
-    b = budget(e, budget="10GiB..")
-    assert b.host == 8 * GiB
-    assert [(s.pool, s.required, s.available) for s in b.shortfalls] == [
-        ("host", 10 * GiB, 8 * GiB)
-    ]
-    b = budget(e, budget={"use": "-7GiB", "min": "2GiB"})
-    assert b.host == GiB and b.shortfalls[0].required == 2 * GiB
-
-
-def test_each_pool_takes_any_form_and_disk_is_a_pool():
-    e = env(usable=8 * GiB, devices=[cuda(20 * GiB)], disk_free=100 * GiB)
-    b = budget(e, budget={"device": "50%", "host": "-1GiB", "disk": "10GiB"})
-    assert (b.device, b.host, b.disk) == (10 * GiB, 7 * GiB, 10 * GiB)
-    b = budget(e, budget="4GiB")  # one value still leaves the disk alone
-    assert b.disk == 100 * GiB - int(200 * GiB * 0.2)
-
-
-def test_basis_chooses_what_the_host_budget_starts_from():
-    e = env(usable=2 * GiB, kernel=5 * GiB, total=8 * GiB, devices=[mps(6 * GiB)])
-    assert budget(e).host == 2 * GiB and budget(e).device == 2 * GiB  # conservative
-    b = budget(e, budget_basis="os")
-    assert b.host == 5 * GiB and b.device == 5 * GiB and b.basis == "os"
-    assert any("basis 'os'" in n for n in b.notes)
-    b = budget(e, budget_basis="total")
-    assert b.host == 8 * GiB and b.device == 6 * GiB  # MPS limit still binds
-    # the container limit always applies
-    c = env(usable=2 * GiB, kernel=5 * GiB, total=8 * GiB, cgroup=3 * GiB)
-    assert budget(c, budget_basis="os").host == 3 * GiB
-    assert budget(c, budget_basis="total").host == 3 * GiB
-    # cuda keeps using the driver's free memory
-    g = env(usable=2 * GiB, kernel=5 * GiB, devices=[cuda(10 * GiB)])
-    assert budget(g, budget_basis="total").device == 10 * GiB
-
-
-def test_headroom_as_size_is_subtracted_per_pool():
-    e = env(usable=8 * GiB, devices=[cuda(10 * GiB)])
-    b = compute_budget(e, Config(headroom=GiB))
-    assert (b.host, b.device) == (7 * GiB, 9 * GiB)
-    assert compute_budget(env(usable=GiB // 2), Config(headroom=GiB)).host == 0
+@pytest.mark.parametrize("key", ["budget_basis", "headroom"])
+def test_removed_settings_are_refused_with_a_reason(key):
+    with pytest.raises(ConfigError, match="removed in 0.2.0"):
+        configure(**{key: "os" if key == "budget_basis" else 0.1})
 
 
 def test_describe_setting_reads_like_the_setting():
-    cases = {
-        "-2GiB": "leaving 2.00 GiB free",
-        "6GiB!": "exactly 6.00 GiB",
-        "2GiB..6GiB": "at least 2.00 GiB, at most 6.00 GiB",
-        "50%": "50% of the measured budget",
-    }
-    for value, text in cases.items():
-        assert describe_setting(configure(budget=value).budget) == text
-    pools = configure(budget={"host": "-1GiB", "disk": "20GiB"}).budget
-    assert describe_setting(pools) == "host leaving 1.00 GiB free; disk 20.00 GiB"
+    assert describe_setting(configure(budget="auto").budget) == "auto (80% of the memory)"
+    assert describe_setting(configure(budget="50%").budget) == "50% of the memory"
+    pools = configure(budget={"host": "6GiB", "disk": "20GiB"}).budget
+    assert describe_setting(pools) == "host 6.00 GiB; disk 20.00 GiB"
+
+
+# ---------------------------------------------------------------- the ceiling
+def test_auto_is_80_percent_of_the_machine_not_of_what_is_free():
+    b = budget(env(usable=2 * GiB, total=16 * GiB))
+    assert b.host == int(16 * GiB * 0.8)
+    assert any("free now" in n for n in b.notes)  # above what is free: said, not refused
+    assert budget(env(usable=15 * GiB)).notes == ()
+
+
+def test_a_size_is_the_ceiling_as_given_on_any_machine():
+    assert budget(env(total=128 * GiB, usable=120 * GiB), budget="6GB").host == 6 * GB
+    b = budget(env(total=16 * GiB, usable=4 * GiB), budget="12GB")
+    assert b.host == 12 * GB and b.forced == ("device", "host")
+    assert budget(env(total=64 * GiB), budget="25%").host == 16 * GiB
+
+
+def test_a_container_limit_is_the_machine():
+    assert budget(env(total=64 * GiB, cgroup=8 * GiB)).host == int(8 * GiB * 0.8)
+
+
+def test_cuda_takes_its_own_memory_and_mps_shares_the_host():
+    b = budget(env(devices=[cuda(free=10 * GiB)]))
+    assert b.device == int(24 * GiB * 0.8) and not b.unified
+    assert any("free on cuda:0" in n for n in b.notes)
+    b = budget(env(devices=[cuda(free=20 * GiB)]), budget="device=8GB,host=12GB")
+    assert (b.device, b.host) == (8 * GB, 12 * GB)
+    b = budget(env(devices=[mps(limit=10 * GiB)]))
+    assert b.unified and b.device == min(int(16 * GiB * 0.8), 10 * GiB)
+    assert budget(env(devices=[mps(limit=12 * GiB)]), budget="6GB").device == 6 * GB
+
+
+def test_the_disk_pool_is_capped_by_its_setting():
+    assert budget(env(disk_free=100 * GiB)).disk == 100 * GiB - int(200 * GiB * 0.2)
+    assert budget(env(), budget={"disk": "20GB"}).disk == 20 * GB
 
 
 # ---------------------------------------------------------------- using()
@@ -232,23 +171,14 @@ def test_using_is_public_and_per_call_options_win():
 
 
 # ---------------------------------------------------------------- where it takes effect
-def test_unmet_minimum_stops_the_access_layer():
-    pytest.importorskip("torch")
-    from memopro.access._common import setup
-
-    with pytest.raises(BudgetExceeded, match="needs at least"):
-        setup(device="cpu", budget="1000TB..")
-    assert setup(device="cpu", budget="1KB..").budget.host > 0
-
-
-def test_pressure_leaves_forced_pools_alone(monkeypatch):
+def test_pressure_leaves_a_ceiling_the_user_set_alone(monkeypatch):
     pytest.importorskip("torch")
     import memopro.elastic
     from memopro.access._common import setup
 
     monkeypatch.setattr(memopro.elastic, "budget_factor", lambda: 0.5)
-    assert setup(device="cpu", budget="2GB!").budget.host == 2 * GB
-    assert setup(device="cpu", budget="2GB").budget.host <= GB
+    assert setup(device="cpu", budget="2GB").budget.host == 2 * GB
+    assert setup(device="cpu").budget.host < int(setup(device="cpu", budget=1.0).budget.host * 0.8)
 
 
 def test_spill_respects_the_disk_budget(tmp_path):
@@ -268,26 +198,16 @@ def test_spill_respects_the_disk_budget(tmp_path):
     h.wake()
 
 
-def test_doctor_and_cli_show_the_setting_basis_and_notes():
-    with using(budget={"host": "1000TB.."}, budget_basis="os"):
+def test_doctor_and_cli_show_the_setting_and_notes():
+    with using(budget="1000TB"):
         report = memopro.doctor(devices=False)
-    text = report.summary()
-    assert "from the OS estimate" in text and "at least" in text
-    assert any("required minimum" in w for w in report.warnings())
-    assert report.to_json()["policy"]["budget_basis"] == "os"
+    setting = report.to_json()["policy"]["budget"]
+    assert setting == "909.49 TiB" and setting in report.summary()
+    assert any("free now" in w for w in report.warnings())
     out = subprocess.run(
-        [
-            sys.executable,
-            "-m",
-            "memopro",
-            "doctor",
-            "--no-devices",
-            "--budget=-1GB",  # "=": argparse before 3.12 reads "-1GB" as an option
-            "--budget-basis",
-            "total",
-        ],
+        [sys.executable, "-m", "memopro", "doctor", "--no-devices", "--budget", "6GB"],
         capture_output=True,
         text=True,
         check=True,
     ).stdout
-    assert "from total physical memory" in out and "leaving" in out
+    assert "Budget (the ceiling" in out and "host           5.59 GiB" in out  # 6 GB

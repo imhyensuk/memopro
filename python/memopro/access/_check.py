@@ -256,7 +256,6 @@ def check(
     quality: str | None = None,
     prefer: str | None = None,
     device: str | None = None,
-    budget_basis: str | None = None,
     disk_writes: str | None = None,
     fallback: str | None = None,
 ) -> CheckResult:
@@ -264,11 +263,11 @@ def check(
 
     ``seq_len`` defaults to the model's context length capped at 1024. ``example`` gives the
     inputs for an ``nn.Module``: a dict of tensors, or a callable ``model -> inputs``.
-    ``budget_basis``, ``disk_writes`` and ``fallback`` override those settings for this call.
+    ``disk_writes`` and ``fallback`` override those settings for this call.
     """
     from memopro.config import using
 
-    scoped = {"budget_basis": budget_basis, "disk_writes": disk_writes, "fallback": fallback}
+    scoped = {"disk_writes": disk_writes, "fallback": fallback}
     with using(**{k: v for k, v in scoped.items() if v is not None}):
         return _check(
             target, goal, batch_size, seq_len, optimizer, example, budget, quality, prefer, device

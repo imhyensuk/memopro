@@ -4,6 +4,9 @@ import pytest
 import torch
 
 import memopro
+import memopro.access
+import memopro.census
+import memopro.integrations
 import memopro.integrations.hf
 import memopro.integrations.lightning
 from memopro import NotYetImplemented
@@ -43,12 +46,12 @@ def test_no_designed_feature_is_left_as_a_stub():
 @pytest.mark.parametrize(
     "call",
     [
-        lambda: memopro.optimize(object()),
-        lambda: memopro.optimize(torch.nn.Linear(2, 2), goal="serve"),
-        lambda: memopro.check("app.py"),
+        lambda: memopro.access.optimize(object()),
+        lambda: memopro.access.optimize(torch.nn.Linear(2, 2), goal="serve"),
+        lambda: memopro.access.check("app.py"),
         lambda: memopro.load("x", device_map="auto"),
         lambda: memopro.census.record(mode="deep"),
-        lambda: memopro.train_session(torch.nn.Linear(2, 2), None, micro_batch_size=0),
+        lambda: memopro.access.train_session(torch.nn.Linear(2, 2), None, micro_batch_size=0),
     ],
 )
 def test_access_layer_rejects_bad_arguments_before_doing_anything(call):

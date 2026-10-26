@@ -6,6 +6,9 @@ import sys
 import pytest
 
 import memopro
+import memopro.config
+import memopro.integrations
+import memopro.orchestrator
 from memopro import MemoproError
 from memopro.cli import EXIT_ERROR, main
 from memopro.config import reset_config
@@ -28,8 +31,8 @@ def test_version_via_module_entry_point():
 
 
 def test_run_validates_options_first(capsys):
-    assert main(["run", "--modes", "source,bf16", "app.py"]) == EXIT_ERROR
-    assert "bf16" in capsys.readouterr().err
+    assert main(["run", "--budget", "-2GB", "app.py"]) == EXIT_ERROR  # a form removed in 0.2.0
+    assert "removed in 0.2.0" in capsys.readouterr().err
     assert main(["run", "--disk-writes", "never", "missing_app.py", "--flag"]) == EXIT_ERROR
     assert "no such script" in capsys.readouterr().err
 

@@ -32,9 +32,9 @@ def test_quickstart_notebook_runs(capsys, tmp_path, monkeypatch):
             if h.asleep:
                 h.wake()
         hibernate._handles.clear()
+        shell.reset()  # the shell is shared: leave none of the notebook's objects to later tests
         reset_config()
     out = capsys.readouterr().out
-    assert "identical to before: True" in out
-    assert "memopro census" in out
-    assert "hibernated model_a: source" in out
-    assert "what each method would do" in out
+    assert "identical to the plain model: True" in out
+    assert "same text: True" in out
+    assert "ceiling 1907 MiB" in out  # 2 GB

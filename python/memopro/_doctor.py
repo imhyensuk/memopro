@@ -40,13 +40,6 @@ class DoctorReport:
         host = env.host
         if host.swap_used_bytes > 0:
             out.append(f"swap in use: {format_size(host.swap_used_bytes)}")
-        gap = host.kernel_available_bytes - host.available_bytes
-        if gap > _KERNEL_GAP_NOTE * host.total_bytes and cfg.budget_basis == "conservative":
-            out.append(
-                f"the OS reports {format_size(host.kernel_available_bytes)} available, including "
-                "memory other apps are actively using; memopro budgets with the conservative "
-                f"{format_size(host.available_bytes)} (budget_basis='os' counts the larger number)"
-            )
         if env.disk.free_fraction < cfg.min_free_disk_fraction:
             out.append(
                 f"free disk space is below the {cfg.min_free_disk_fraction:.0%} floor: memopro "
@@ -69,9 +62,7 @@ class DoctorReport:
                 "disk_writes": self.config.disk_writes,
                 "hibernate_modes": list(self.config.hibernate_modes),
                 "min_free_disk_fraction": self.config.min_free_disk_fraction,
-                "headroom": self.config.headroom,
                 "budget": describe_setting(self.config.budget),
-                "budget_basis": self.config.budget_basis,
             },
             "warnings": self.warnings(),
         }
@@ -125,7 +116,7 @@ class DoctorReport:
         device = "-" if budget.device is None else format_size(budget.device) + shared
         lines += [
             "",
-            f"Budget ({_basis(budget.basis)}, headroom {_headroom(budget.headroom)})",
+            "Budget (the ceiling; auto = 80% of the memory)",
             f"  setting        {describe_setting(cfg.budget)}",
             f"  device         {device}",
             f"  host           {format_size(budget.host)}",
@@ -150,20 +141,6 @@ class DoctorReport:
 
     def __str__(self) -> str:
         return self.summary()
-
-
-def _headroom(value: float) -> str:
-    if isinstance(value, int) and not isinstance(value, bool) and value >= 1:
-        return format_size(value)
-    return f"{value:.0%}"
-
-
-def _basis(basis: str) -> str:
-    return {
-        "conservative": "from conservative available memory",
-        "os": "from the OS estimate of available memory",
-        "total": "from total physical memory",
-    }[basis]
 
 
 def doctor(*, devices: bool = True) -> DoctorReport:
