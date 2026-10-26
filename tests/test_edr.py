@@ -51,3 +51,16 @@ def test_escapes_and_slices_across_the_device_slice(monkeypatch):
 def test_only_bfloat16_is_encoded():
     with pytest.raises(ValueError, match="bfloat16"):
         edr.encode(torch.zeros(4))
+
+
+def test_v2_codes_the_exponents_below_v1_and_keeps_every_bit():
+    g = torch.Generator().manual_seed(0)
+    t = (torch.randn(1000, 777, generator=g) * 0.02).to(torch.bfloat16)  # odd count, many blocks
+    p = edr.encode2(t)
+    assert p.nbytes * 8 / t.numel() < 11.5  # v1 is 12
+    assert torch.equal(_bits(edr.decode2(p)), _bits(t))
+    assert torch.equal(_bits(edr.decode2(p, draft=True)), _bits(t) & -16)
+    one = torch.full((5,), 1.5, dtype=torch.bfloat16)  # a single exponent value
+    assert torch.equal(_bits(edr.decode2(edr.encode2(one))), _bits(one))
+    allbits = torch.arange(-32768, 32768, dtype=torch.int32).to(torch.int16).view(torch.bfloat16)
+    assert torch.equal(_bits(edr.decode2(edr.encode2(allbits))), _bits(allbits))
