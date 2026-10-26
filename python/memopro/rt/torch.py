@@ -322,7 +322,19 @@ class StreamedWeights:
         # device copies held for a whole layer while a verification runs its rows one at a time
         # (`_row_invariant`): each row's leaves reuse them instead of copying again (0276)
         self._holding: dict[int, Any] = {}
-        self.copy_stats = {"copies": 0, "copy_bytes": 0, "hits": 0, "prefetched": 0}
+        self.copy_stats = {
+            "copies": 0,
+            "copy_bytes": 0,
+            "hits": 0,
+            "prefetched": 0,
+            "edr_hits": 0,
+            "edr_bytes": 0,
+        }
+        # EDR tier of the device cache (0313): bf16 weights that do not fit as copies are kept
+        # on the device in EDR form (3/4 of their size) and rebuilt there at each use; set by
+        # stream_model(edr=True)
+        self.edr = False
+        self.gpu_edr: dict[int, Any] = {}
         prefix = getattr(model, "base_model_prefix", "") or ""
         # one runtime buffer per distinct parameter object (tied weights share one)
         self.buffers: dict[int, tuple[Any, torch.dtype, tuple[int, ...]]] = {}
@@ -438,9 +450,54 @@ class StreamedWeights:
         self.copy_stats["copy_bytes"] += buf.nbytes
         return t
 
-    def _device_copy(self, pid: int) -> Any:
-        """The device copy of a weight: from the cache, from the prefetch, or made now."""
+    @property
+    def _raw_cap(self) -> int:
+        """Bytes of the device cache kept as plain copies when the EDR tier is on: as many as
+        still lets every other bf16 weight fit in EDR form (3/4 of its size) next to them; all
+        of it when the whole model fits as copies (0313)."""
         import torch
+
+        whole = sum(b.nbytes for b, _, _ in self.buffers.values())
+        edr_able = sum(b.nbytes for b, d, _ in self.buffers.values() if d == torch.bfloat16)
+        if whole <= self.gpu_budget:
+            return self.gpu_budget
+        # copies X of the bf16 bytes, EDR for the rest: (whole - edr_able) + X + 3/4 (edr_able - X)
+        room = (self.gpu_budget - (whole - edr_able) - 0.75 * edr_able) / 0.25
+        return int(max(0, min(self.gpu_budget, (whole - edr_able) + room)))
+
+    def _edr_copy(self, pid: int) -> Any | None:
+        """Keep a bf16 weight on the device in EDR form when the copies are full but its EDR
+        form fits, and return it rebuilt there; None otherwise. Encoded once on the CPU from the
+        runtime buffer, so only 3/4 of its bytes cross to the device."""
+        import torch
+
+        from memopro.rt import edr
+
+        buf, dtype, shape = self.buffers[pid]
+        if not self.edr or dtype != torch.bfloat16:
+            return None
+        if self.gpu_cache_bytes + buf.nbytes * 3 // 4 + 64 > self.gpu_budget:
+            return None
+        numel = 1
+        for d in shape:
+            numel *= d
+        pin = self.runtime._rt.pin(buf.id, False)
+        parts = edr.encode(torch.frombuffer(pin, dtype=dtype, count=numel).view(shape))
+        del pin
+        dev = edr.device_parts(parts, self.device)
+        self.gpu_edr[pid] = dev
+        self.gpu_cache_bytes += parts.nbytes
+        self.copy_stats["edr_bytes"] += parts.nbytes
+        self.copy_stats["copies"] += 1
+        self.copy_stats["copy_bytes"] += parts.nbytes
+        return edr.decode_on(dev)
+
+    def _device_copy(self, pid: int) -> Any:
+        """The device copy of a weight: from the cache (a copy, or rebuilt from its EDR form),
+        from the prefetch, or made now."""
+        import torch
+
+        from memopro.rt import edr
 
         t = self.gpu_cache.get(pid)
         if t is not None:
@@ -449,6 +506,16 @@ class StreamedWeights:
         t = self._holding.get(pid)
         if t is not None:
             return t
+        e = self.gpu_edr.get(pid)
+        if e is not None:
+            self.copy_stats["edr_hits"] += 1
+            return edr.decode_on(e)
+        buf = self.buffers[pid][0]
+        raw_full = self.edr and self.gpu_cache_bytes + buf.nbytes > self._raw_cap
+        if raw_full and pid not in self._prefetched:
+            t = self._edr_copy(pid)
+            if t is not None:
+                return t
         t = self._prefetched.pop(pid, None)
         if t is not None:
             self.copy_stats["prefetched"] += 1
@@ -458,7 +525,8 @@ class StreamedWeights:
         else:
             t = self._copy_now(pid)
         nbytes = t.numel() * t.element_size()
-        if self.gpu_cache_bytes + nbytes <= self.gpu_budget:
+        cap = self._raw_cap if self.edr else self.gpu_budget
+        if self.gpu_cache_bytes + nbytes <= min(cap, self.gpu_budget):
             self.gpu_cache[pid] = t
             self.gpu_cache_bytes += nbytes
         return t
@@ -475,7 +543,11 @@ class StreamedWeights:
         i = self._order.index(module)
         nxt = self._order[(i + 1) % len(self._order)]
         self._prefetched.clear()
-        want = [id(p) for _, _, p in self._own.get(nxt, ()) if id(p) not in self.gpu_cache]
+        want = [
+            id(p)
+            for _, _, p in self._own.get(nxt, ())
+            if id(p) not in self.gpu_cache and id(p) not in self.gpu_edr
+        ]
         if not want:
             return
         if self.device.type == "cuda":
@@ -492,6 +564,7 @@ class StreamedWeights:
     def drop_gpu_cache(self) -> None:
         """Give back the device copies kept by the cache and the prefetch."""
         self.gpu_cache.clear()
+        self.gpu_edr.clear()
         self.gpu_cache_bytes = 0
         self._prefetched.clear()
 
@@ -611,6 +684,7 @@ def stream_model(
     device: str = "cpu",
     gpu_budget: str | int = "auto",
     precision: str = "stored",
+    edr: bool = False,
 ) -> Any:
     """A Hugging Face model whose weights stay on disk and are streamed through a runtime with
     ``budget`` bytes (or the given ``runtime``). Weights keep their stored dtype; results equal
@@ -620,7 +694,9 @@ def stream_model(
     On CUDA up to ``gpu_budget`` bytes of those copies stay on the GPU for the next use, and the
     next module's weights are copied while the current one computes (0201). ``"auto"`` keeps
     the GPU's free memory minus room for activations (2 GiB or 15% of the GPU, the larger); 0
-    keeps one module's weights at a time. ``precision`` is ``"stored"``: results stay
+    keeps one module's weights at a time. With ``edr=True`` (CUDA) the bf16 weights that do
+    not fit as copies are kept on the GPU in EDR form, 3/4 of their size, and rebuilt there at
+    each use; copies fill what is left (0313). ``precision`` is ``"stored"``: results stay
     lossless (the experimental lossy ``precision="int4"`` of 0.1.9 was removed in 0.2.0,
     0309)."""
     import torch
@@ -631,6 +707,12 @@ def stream_model(
 
     if device not in ("cpu", "mps", "cuda"):
         raise InvalidArgument(f"device must be 'cpu', 'mps' or 'cuda', not {device!r}")
+    if edr and device != "cuda":
+        raise ModeUnavailable(
+            "memopro.rt.torch.stream_model(edr=True)",
+            f"the EDR device cache is built for CUDA; the device is {device!r}",
+            ("edr=False",),
+        )
     if precision != "stored":
         raise InvalidArgument(
             f"precision must be 'stored', not {precision!r}: results stay lossless (the "
@@ -685,6 +767,7 @@ def stream_model(
     weights = StreamedWeights(model, rt, regions, device=device)
     if weights.copy:
         weights.gpu_budget = _gpu_budget(gpu_budget, torch.device(device))
+        weights.edr = edr
     model.memopro_weights = weights
     model.memopro_runtime = rt
     # parameters live on the meta device between uses; the model computes on `device`

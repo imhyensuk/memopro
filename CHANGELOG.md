@@ -12,6 +12,16 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   (`memopro run --quality ...`). A budget too small even for streaming still gets the usual
   explanation with settings that would fit.
 
+### Added: EDR, a lossless 12-bit form of bf16 weights (0308, 0310, 0313)
+- `memopro.rt.edr`: a bf16 weight as a 1-byte base (sign | exponent index | top 3 mantissa
+  bits) and a 4-bit residual, with a 15-entry exponent table and a short escape list. Base and
+  residual give back every bit; the base alone is a draft (the same values with their low 4
+  mantissa bits cleared). Encoded and decoded in the Rust core (decode 4.6-9.4 GB/s on an M1),
+  or rebuilt on any torch device with integer operations. Qwen2.5-0.5B: 75.1% of its size.
+- `stream_model(edr=True)` (CUDA): the device cache keeps copies first and the other bf16
+  weights in EDR form, so a model up to 4/3 of the cache stays on the GPU and nothing crosses
+  PCIe after the first pass. Results are unchanged.
+
 ### Removed: lossy int4 streaming (0309)
 - `stream_model(precision="int4")` (experimental since 0.1.9) is gone: results stay lossless.
   `precision` keeps only `"stored"`, and `"int4"` raises `InvalidArgument`. Fast drafts come
