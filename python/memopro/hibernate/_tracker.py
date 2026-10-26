@@ -4,7 +4,7 @@ A name counts as used in a cell if it appears as an identifier in the cell's cod
 its raw text (as in the E006 probe), so idle time is never overstated. After a cell, memopro
 prints one suggestion line when idle objects hold at least ``SUGGEST_MIN_BYTES``; each object is
 suggested once until it is used again. With ``auto=True`` idle objects are hibernated right
-away with write-free methods (SSD only under ``disk_writes="allow"``).
+away with the lossless, write-free methods.
 
 An object is idle after ``idle_cells`` cells without use, or after ``idle_seconds`` of wall-clock
 time since the end of the last cell that used it (0052 E8), whichever comes first. A cell
@@ -127,13 +127,11 @@ class Tracker:
         from memopro import hibernate
         from memopro._errors import MemoproError
         from memopro._units import format_size
-        from memopro.config import get_config
         from memopro.integrations.ipython import sleep_in_namespace
 
-        allow = get_config().disk_writes == "allow"
         for name, obj, n, _ in idle:
             try:
-                handle = hibernate.now(obj, allow_spill=allow, name=name)
+                handle = hibernate.now(obj, name=name)
             except MemoproError:
                 continue
             sleep_in_namespace(self.shell, name, obj, handle)

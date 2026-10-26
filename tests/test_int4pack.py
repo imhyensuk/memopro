@@ -54,16 +54,6 @@ def qwen_dir(tmp_path_factory):
     return str(d)
 
 
-def test_backend_order_puts_torch_int4pack_first_on_mps_only():
-    from memopro.techniques.integrations import loading
-
-    assert loading.quantization_backend("cpu", 4)[0] != "torch-int4pack"
-    assert "MPS only" in loading._int4pack_works("cpu", 4)
-    assert loading._int4pack_works("mps", 8)  # an int4 back end only
-    if mps_usable():
-        assert loading.quantization_backend("mps", 4)[0] == "torch-int4pack"
-
-
 @needs_mps
 def test_packed_linear_matches_the_dequantized_weight():
     from torchao.quantization.utils import (
@@ -111,22 +101,6 @@ def test_convert_keeps_embeddings_and_head_and_matches_the_dequantized_model():
     ref = reference.to("mps")(ids.to("mps")).logits.float().cpu()
     out = model(ids.to("mps")).logits.float().cpu()
     assert ((out - ref).norm() / ref.norm()).item() < 0.03
-
-
-@needs_mps
-def test_load_picks_torch_int4pack_and_generates(qwen_dir):
-    from memopro.access._load import plan_load
-
-    int4 = next(c for c in plan_load(qwen_dir, device="mps").candidates if c.name == "quant.int4")
-    budget = int4.needs.device + int4.needs.host + 1024
-    model = memopro.load(qwen_dir, device="mps", quality="low", budget=budget)
-    entry = [e for e in memopro.report().entries if e.action == "applied"][-1]
-    assert entry.technique == "load.quant.int4" and "torch-int4pack" in entry.detail
-    assert next(model.parameters()).device.type == "mps"
-    out = model.generate(
-        torch.tensor([[1, 2, 3]], device="mps"), max_new_tokens=4, do_sample=False, pad_token_id=0
-    )
-    assert out.shape == (1, 7)
 
 
 # ---- 0084/0085: group 32 (Q-b), the long-input path (Q-c) and the quality note (Q-a)
@@ -192,19 +166,6 @@ def test_long_inputs_unpack_in_slices_with_the_whole_weights_result(monkeypatch)
     want = torch.nn.functional.linear(long, layer.dequantized()) + layer.bias
     monkeypatch.setattr(int4pack, "UNPACK_BYTES", 4 * 512 * 100)  # 100 rows per piece
     assert torch.equal(layer(long), want)  # slices of 512, 512, 256 rows
-
-
-@needs_mps
-def test_loading_int4_reports_its_quality_cost(qwen_dir):
-    from memopro.access._load import plan_load
-    from memopro.orchestrator.candidates import INT4PACK_QUALITY_NOTE
-
-    int4 = next(c for c in plan_load(qwen_dir, device="mps").candidates if c.name == "quant.int4")
-    memopro.load(
-        qwen_dir, device="mps", quality="low", budget=int4.needs.device + int4.needs.host + 1024
-    )
-    entry = [e for e in memopro.report().entries if e.action == "applied"][-1]
-    assert INT4PACK_QUALITY_NOTE in entry.detail
 
 
 def test_int4_size_estimate_uses_the_group():

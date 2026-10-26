@@ -102,11 +102,12 @@ class _LoadingPolicy:
             self.cls = None
 
     def load(self, klass: Any, name: Any, args: tuple, kwargs: dict[str, Any]) -> Any:
-        from memopro.access._load import RESERVED, plan_load
-        from memopro.orchestrator.candidates import from_pretrained_kwargs, post_load, speed_hint
+        from memopro.access._load import ORIGINAL, RESERVED, plan_load
+        from memopro.orchestrator.candidates import from_pretrained_kwargs
 
         original = self.original.__func__
-        explicit = sorted(set(kwargs) & set(RESERVED))
+        # placement or precision the script chose (its original model, 0328) is left alone
+        explicit = sorted(set(kwargs) & (set(RESERVED) | set(ORIGINAL)))
         if args or explicit:
             return original(klass, name, *args, **kwargs)
         try:
@@ -125,23 +126,17 @@ class _LoadingPolicy:
                 _suggest(plan)
             return original(klass, name, **kwargs)
         extra = from_pretrained_kwargs(chosen, plan.ctx)
-        post = post_load(chosen, plan.ctx)
         try:
             model = original(klass, name, **kwargs, **extra)
-            if post is not None:
-                model = post(model)
         except Exception as e:  # noqa: BLE001 - fail-open: load as the script asked
             report().add("run.from_pretrained", "failed", f"{name}: {type(e).__name__}: {e}"[:200])
             return original(klass, name, **kwargs)
         self.decisions.append(f"{name}: {chosen.describe()}")
-        if hint := speed_hint(chosen, plan.candidates, plan.ctx):  # in run: the CLI option
-            hint = hint.replace("quality='low'", "memopro run --quality low")
-            report().add("run.from_pretrained", "suggested", f"{name}: {hint}")
         report().add(
             "run.from_pretrained",
             "applied",
-            f"{name} does not fit as stored: loaded as {chosen.describe()} "
-            f"({chosen.quality.name.lower()})",
+            f"{name} does not fit on the device as stored: loaded as {chosen.describe()} "
+            "(exactly as stored)",
         )
         return model
 
@@ -167,19 +162,18 @@ def plan_text(script: str, *, elastic: bool, census: bool) -> str:
     s = setup()
     device = "-" if s.budget.device is None else format_size(s.budget.device)
     setting = describe_setting(s.config.budget)
-    cfg = s.config
     lines = [
         f"memopro run {script}",
         (
             f"  device         {s.device}, budget {setting} "
             f"(device {device}, host {format_size(s.budget.host)})"
         ),
-        f"  quality        {cfg.quality}, prefer {cfg.prefer}, disk writes {cfg.disk_writes}",
+        "  results        exactly as without memopro; nothing written to the disk",
         "  ceiling        the budget bounds the whole process (memopro.enable)",
         "  numpy          arrays >= 16 MiB paged within it (Linux userfaultfd, macOS signals)",
         "  torch          saved activations move into runtime buffers above 75% of it",
         "  from_pretrained  only when the script chose no placement or precision and the model",
-        "                   does not fit as stored: loaded as memopro.load would",
+        "                   does not fit on the device as stored: split with host RAM, unchanged",
         f"  elastic        {'on: memory pressure is watched (experimental)' if elastic else 'off'}"
         + ("" if elastic else " (default; --elastic)"),
         f"  census         {'on: saved activations of the whole run' if census else 'off'}",

@@ -66,9 +66,9 @@ def test_the_three_forms_and_per_pool_values_parse():
     assert configure(budget="50%").budget == configure(budget=0.5).budget == 0.5
     pools = configure(budget="device=8GB,host=24GB").budget
     assert pools == PoolBudget(device=8 * GB, host=24 * GB)
-    assert configure(budget={"host": "50%", "disk": "20GB"}).budget == PoolBudget(
-        host=0.5, disk=20 * GB
-    )
+    assert configure(budget={"host": "50%"}).budget == PoolBudget(host=0.5)
+    with pytest.raises(ConfigError, match="device, host"):
+        configure(budget={"host": "6GB", "disk": "20GB"})  # the disk pool went with the writes
 
 
 @pytest.mark.parametrize("old", ["-2GB", "2GB..6GB", "6GB!", {"use": "auto", "min": "1GB"}])
@@ -86,8 +86,8 @@ def test_removed_settings_are_refused_with_a_reason(key):
 def test_describe_setting_reads_like_the_setting():
     assert describe_setting(configure(budget="auto").budget) == "auto (80% of the memory)"
     assert describe_setting(configure(budget="50%").budget) == "50% of the memory"
-    pools = configure(budget={"host": "6GiB", "disk": "20GiB"}).budget
-    assert describe_setting(pools) == "host 6.00 GiB; disk 20.00 GiB"
+    pools = configure(budget={"device": "2GiB", "host": "6GiB"}).budget
+    assert describe_setting(pools) == "device 2.00 GiB; host 6.00 GiB"
 
 
 # ---------------------------------------------------------------- the ceiling
@@ -120,20 +120,15 @@ def test_cuda_takes_its_own_memory_and_mps_shares_the_host():
     assert budget(env(devices=[mps(limit=12 * GiB)]), budget="6GB").device == 6 * GB
 
 
-def test_the_disk_pool_is_capped_by_its_setting():
-    assert budget(env(disk_free=100 * GiB)).disk == 100 * GiB - int(200 * GiB * 0.2)
-    assert budget(env(), budget={"disk": "20GB"}).disk == 20 * GB
-
-
 # ---------------------------------------------------------------- using()
 def test_using_scopes_settings_and_restores_them_even_on_errors():
-    configure(budget="6GB", quality="high")
+    configure(budget="6GB", download="never")
     with using(budget="3GB") as cfg:
         assert cfg.budget == get_config().budget == 3 * GB
-        assert get_config().quality == "high"  # untouched settings come from below
-        with using(quality="low"):
-            assert (get_config().budget, get_config().quality) == (3 * GB, "low")
-        assert get_config().quality == "high"
+        assert get_config().download == "never"  # untouched settings come from below
+        with using(download="auto"):
+            assert (get_config().budget, get_config().download) == (3 * GB, "auto")
+        assert get_config().download == "never"
     assert get_config().budget == 6 * GB
     with pytest.raises(RuntimeError), using(budget="1GB"):
         raise RuntimeError("inside")
@@ -165,9 +160,9 @@ def test_using_is_public_and_per_call_options_win():
     assert memopro.using is using
     from memopro.access._common import settings
 
-    with using(budget="3GB", quality="high"):
+    with using(budget="3GB", download="never"):
         assert settings(budget="1GB").budget == GB
-        assert settings().quality == "high"
+        assert settings().download == "never"
 
 
 # ---------------------------------------------------------------- where it takes effect
@@ -179,23 +174,6 @@ def test_pressure_leaves_a_ceiling_the_user_set_alone(monkeypatch):
     monkeypatch.setattr(memopro.elastic, "budget_factor", lambda: 0.5)
     assert setup(device="cpu", budget="2GB").budget.host == 2 * GB
     assert setup(device="cpu").budget.host < int(setup(device="cpu", budget=1.0).budget.host * 0.8)
-
-
-def test_spill_respects_the_disk_budget(tmp_path):
-    torch = pytest.importorskip("torch")
-    from memopro import ModeUnavailable, hibernate
-
-    configure(spill_dir=str(tmp_path / "spill"), min_free_disk_fraction=0.0, disk_writes="allow")
-    t = torch.randn(1 << 16)  # 256 KiB
-    configure(budget={"disk": "100KB"})
-    with pytest.raises(ModeUnavailable, match="disk budget"):
-        hibernate.now(t, mode="spill")
-    configure(budget={"disk": "1MB"})
-    h = hibernate.now(t, mode="spill")
-    u = torch.randn(1 << 18)  # 1 MiB more would pass 1 MB
-    with pytest.raises(ModeUnavailable, match="disk budget"):
-        hibernate.now(u, mode="spill")
-    h.wake()
 
 
 def test_doctor_and_cli_show_the_setting_and_notes():

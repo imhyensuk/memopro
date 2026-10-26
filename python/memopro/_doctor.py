@@ -40,11 +40,6 @@ class DoctorReport:
         host = env.host
         if host.swap_used_bytes > 0:
             out.append(f"swap in use: {format_size(host.swap_used_bytes)}")
-        if env.disk.free_fraction < cfg.min_free_disk_fraction:
-            out.append(
-                f"free disk space is below the {cfg.min_free_disk_fraction:.0%} floor: memopro "
-                "will not spill to this disk"
-            )
         if budget.capped_by_setting:
             out.append(f"budget capped by the budget setting ({describe_setting(cfg.budget)})")
         if macos_malloc_cache_on():
@@ -58,12 +53,7 @@ class DoctorReport:
             "version": self.version,
             "env": dataclasses.asdict(self.env),
             "budget": dataclasses.asdict(self.budget),
-            "policy": {
-                "disk_writes": self.config.disk_writes,
-                "hibernate_modes": list(self.config.hibernate_modes),
-                "min_free_disk_fraction": self.config.min_free_disk_fraction,
-                "budget": describe_setting(self.config.budget),
-            },
+            "policy": {"budget": describe_setting(self.config.budget)},
             "warnings": self.warnings(),
         }
 
@@ -91,7 +81,7 @@ class DoctorReport:
         )
         lines += [
             "",
-            f"Disk (spill location {d.spill_dir})",
+            "Disk (memopro writes nothing to it besides downloads)",
             (
                 f"  free           {format_size(d.available_bytes)} of "
                 f"{format_size(d.total_bytes)} ({d.free_fraction:.1%})"
@@ -120,19 +110,6 @@ class DoctorReport:
             f"  setting        {describe_setting(cfg.budget)}",
             f"  device         {device}",
             f"  host           {format_size(budget.host)}",
-            (
-                f"  disk           {format_size(budget.disk)}  (above the "
-                f"{cfg.min_free_disk_fraction:.0%} free-space floor)"
-            ),
-            "",
-            "Policy",
-            f"  disk_writes    {cfg.disk_writes}"
-            + {
-                "ask": "  (SSD spill only with your consent)",
-                "never": "  (SSD spill disabled)",
-                "allow": "  (SSD spill allowed)",
-            }[cfg.disk_writes],
-            f"  auto methods   {' -> '.join(cfg.hibernate_modes)}",
         ]
         warnings = self.warnings()
         if warnings:

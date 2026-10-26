@@ -5,7 +5,6 @@ import copy
 import dataclasses
 import functools
 import json
-import math
 import os
 
 import pytest
@@ -30,11 +29,9 @@ import helpers
 
 
 @pytest.fixture(autouse=True)
-def _quantizing_settings(isolated, monkeypatch):
-    """These tests cover the quality machinery: they keep the pre-0.2.0 defaults explicitly
-    (quality "balanced", no fallback; environment variables, so configure() in a test still
-    wins); the lossless defaults are tested on their own (0314)."""
-    monkeypatch.setenv("MEMOPRO_QUALITY", "balanced")
+def _no_fallback(isolated, monkeypatch):
+    """These tests see what happens when the model does not fit: no streaming fallback
+    (an environment variable, so configure() in a test still wins)."""
     monkeypatch.setenv("MEMOPRO_FALLBACK", "none")
 
 
@@ -94,7 +91,7 @@ def test_model_info_from_files_and_module_agree(model_dir):
 
 
 # ---------------------------------------------------------------- candidates
-def test_candidates_follow_budget_and_quality(model_dir):
+def test_candidates_keep_the_model_as_stored(model_dir):
     from memopro.access._load import plan_load
 
     def chosen(**kw):
@@ -103,62 +100,57 @@ def test_candidates_follow_budget_and_quality(model_dir):
 
     stored = plan_load(model_dir, device="cpu").info.weight_bytes()
     assert chosen() == "stored"
-    assert chosen(budget=int(stored * 0.9)) == "half"  # fp32 does not fit, half does
-    assert chosen(budget=int(stored * 0.9), quality="lossless") is None
-    plan = plan_load(model_dir, device="cpu", budget=int(stored * 0.9), deny=("dtype.half",))
-    assert plan.chosen is None or plan.chosen.name.startswith("quant")
-    reasons = {c.name: c.why for c in plan_load(model_dir, device="cpu").candidates}
-    assert "offload.cpu" not in reasons  # no device pool to offload from
-    assert "disk_writes" in reasons["offload.disk"]
+    assert chosen(budget=int(stored * 0.9)) is None  # nothing lossy to fall back on (0328)
+    names = [c.name for c in plan_load(model_dir, device="cpu").candidates]
+    assert names == ["stored"]  # no device pool to offload from, nothing written to disk
 
 
-def test_prefer_orders_exact_offload_before_quantization():
+def test_on_a_gpu_the_only_other_choice_is_exact_cpu_offload():
     from memopro.access._info import model_info
     from memopro.orchestrator.candidates import infer_candidates
     from memopro.techniques.integrations.loading import LoadContext
 
     info = model_info(gpt2())
-    ctx = LoadContext("cuda", torch.float16, 10**9, 10**10, "never", unified=False)
-    names = lambda prefer: [c.name for c in infer_candidates(info, ctx, prefer=prefer)]
-    speed, quality = names("speed"), names("quality")
-    assert speed.index("quant.int8") < speed.index("offload.cpu")
-    assert quality.index("offload.cpu") < quality.index("quant.int8")
+    ctx = LoadContext("cuda", torch.float16, 10**9, 10**10, unified=False)
+    cands = infer_candidates(info, ctx)
+    assert [c.name for c in cands] == ["stored", "offload.cpu"]
+    assert all(c.kwargs["dtype"] == "auto" for c in cands)
 
 
 # ---------------------------------------------------------------- load
-def test_load_picks_a_fitting_configuration_and_generates(model_dir):
-    info_bytes = memopro.access.check(model_dir, goal="infer", device="cpu").stored_bytes
-    model = memopro.load(model_dir, device="cpu", budget=int(info_bytes * 0.9))
-    assert next(model.parameters()).dtype == torch.bfloat16
-    out = model.generate(
-        torch.tensor([[1, 2, 3]]), max_new_tokens=3, do_sample=False, pad_token_id=0
-    )
-    assert out.shape == (1, 6)
-    entry = memopro.report().entries[-1]
-    assert entry.technique == "load.half" and entry.action == "applied"
-
-
-def test_load_falls_back_when_a_configuration_fails(model_dir, monkeypatch):
-    cls = transformers.GPT2LMHeadModel
-    original = cls.from_pretrained.__func__
-
-    def flaky(klass, *args, **kwargs):
-        if kwargs.get("dtype") == "auto":
-            raise RuntimeError("injected failure")
-        return original(klass, *args, **kwargs)
-
-    monkeypatch.setattr(cls, "from_pretrained", classmethod(flaky))
+def test_load_keeps_the_model_exactly_as_stored(model_dir):
     model = memopro.load(model_dir, device="cpu")
+    plain = transformers.GPT2LMHeadModel.from_pretrained(model_dir)
+    x = torch.tensor([[1, 2, 3]])
+    with torch.no_grad():
+        assert torch.equal(model(x).logits, plain(x).logits)
+    entry = memopro.report().entries[-1]
+    assert entry.technique == "load.stored" and "exactly as stored" in entry.detail
+
+
+def test_a_dtype_or_quantization_config_you_pass_is_your_original(model_dir):
+    """0328: memopro never converts on its own; a precision the caller passes defines the
+    original, loaded exactly as from_pretrained loads it."""
+    model = memopro.load(model_dir, device="cpu", dtype=torch.bfloat16)
+    plain = transformers.GPT2LMHeadModel.from_pretrained(model_dir, dtype=torch.bfloat16)
     assert next(model.parameters()).dtype == torch.bfloat16
-    actions = [(e.technique, e.action) for e in memopro.report().entries]
-    assert ("load.stored", "failed") in actions and ("load.half", "applied") in actions
+    x = torch.tensor([[1, 2, 3]])
+    with torch.no_grad():
+        assert torch.equal(model(x).logits, plain(x).logits)
+    entry = memopro.report().entries[-1]
+    assert entry.technique == "load.yours" and "as you defined it" in entry.detail
+    with pytest.raises(BudgetExceeded, match="as you defined it"):
+        memopro.load(model_dir, device="cpu", dtype=torch.bfloat16, budget="1KB")
 
 
 def test_load_explains_what_does_not_fit(model_dir):
     with pytest.raises(BudgetExceeded) as e:
-        memopro.load(model_dir, device="cpu", budget="1KB", quality="high")
+        memopro.load(model_dir, device="cpu", budget="1KB", fallback="none")
     text = str(e.value)
-    assert "stored" in text and "quality 'high'" in text and "disk_writes" in text
+    assert "stored" in text and "budget=" in text
+    for removed in ("quality", "prefer", "disk_writes", "residency"):
+        with pytest.raises(InvalidArgument, match="removed in 0.2.0"):
+            memopro.load(model_dir, device="cpu", **{removed: "x"})
     with pytest.raises(InvalidArgument, match="device_map"):
         memopro.load(model_dir, device_map="auto")
 
@@ -179,17 +171,14 @@ def test_check_predicts_training_above_inference(model_dir, capsys):
 
 
 # ---------------------------------------------------------------- optimize
-def test_optimize_infer_changes_only_what_is_needed():
+def test_optimize_infer_never_changes_precision():
     model = gpt2()
     stored = sum(p.numel() * 4 for p in model.parameters())
     memopro.access.optimize(model, budget=stored * 10)
     assert next(model.parameters()).dtype == torch.float32  # fits already
-    memopro.access.optimize(model, budget=int(stored * 0.9))
-    assert next(model.parameters()).dtype == torch.bfloat16
-    untouched = gpt2()
-    with pytest.raises(BudgetExceeded):
-        memopro.access.optimize(untouched, budget="1KB", quality="high")
-    assert next(untouched.parameters()).dtype == torch.float32
+    with pytest.raises(BudgetExceeded, match="budget="):
+        memopro.access.optimize(model, budget=int(stored * 0.9))
+    assert next(model.parameters()).dtype == torch.float32  # left as it is (0328)
 
 
 def test_optimize_train_enables_checkpointing():
@@ -355,19 +344,6 @@ def test_gradient_clipping_matches_a_clipped_full_batch_step():
         memopro.access.train_session(model, opt, max_grad_norm=0)
 
 
-def test_float16_autocast_always_comes_with_loss_scaling():
-    model, batch = gpt2(), _batch()
-    opt = torch.optim.SGD(model.parameters(), lr=0.1)
-    with memopro.access.train_session(model, opt, micro_batch_size=1, quality="high") as s:
-        s._setup = dataclasses.replace(s._setup, half_dtype=torch.float16)
-        while not s.autocast:
-            assert s.degrade("test")
-        assert s._scaler is not None
-        loss = s.step(batch, lambda mb: model(**mb, labels=mb["input_ids"]).loss)
-        assert math.isfinite(loss)
-    assert all(torch.isfinite(p).all() for p in model.parameters())
-
-
 def test_sum_reduction_adds_micro_batch_losses():
     torch.manual_seed(0)
     base = torch.nn.Linear(4, 1)
@@ -411,27 +387,6 @@ def test_memory_of_a_failed_attempt_is_freed_before_the_retry(monkeypatch):
         s.step(_batch(), loss_fn)
     assert s.micro == 2 and len(held) == 2
     assert alive_at_release == [[False], [False, False]]
-
-
-def test_memory_of_a_failed_load_is_freed_before_the_next_configuration(model_dir, monkeypatch):
-    import weakref
-
-    cls = transformers.GPT2LMHeadModel
-    original = cls.from_pretrained.__func__
-    held: list = []
-    alive: list = []
-
-    def flaky(klass, *args, **kwargs):
-        alive.append([r() is not None for r in held])  # checked after load (no assert here:
-        if kwargs.get("dtype") == "auto":  # fail-open would swallow it)
-            partial = torch.empty(1 << 20)  # a partly loaded model
-            held.append(weakref.ref(partial))
-            raise RuntimeError("injected failure after allocating")
-        return original(klass, *args, **kwargs)
-
-    monkeypatch.setattr(cls, "from_pretrained", classmethod(flaky))
-    memopro.load(model_dir, device="cpu")
-    assert alive == [[], [False]]
 
 
 def test_check_traces_the_optimizer_implementation_torch_picks_on_the_device():

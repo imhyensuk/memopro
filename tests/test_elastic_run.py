@@ -22,11 +22,9 @@ transformers = pytest.importorskip("transformers")
 
 
 @pytest.fixture(autouse=True)
-def _quantizing_settings(isolated, monkeypatch):
-    """These tests cover the quality machinery: they keep the pre-0.2.0 defaults explicitly
-    (quality "balanced", no fallback; environment variables, so configure() in a test still
-    wins); the lossless defaults are tested on their own (0314)."""
-    monkeypatch.setenv("MEMOPRO_QUALITY", "balanced")
+def _no_fallback(isolated, monkeypatch):
+    """These tests see what happens when the model does not fit: no streaming fallback
+    (an environment variable, so configure() in a test still wins)."""
     monkeypatch.setenv("MEMOPRO_FALLBACK", "none")
 
 
@@ -279,8 +277,6 @@ def test_run_applies_the_loading_policy_only_where_the_script_did_not_choose(tin
     args = [
         "--budget",
         budget,
-        "--quality",
-        "balanced",
         "app.py",
         tiny_dir,
         "hello",
@@ -290,9 +286,9 @@ def test_run_applies_the_loading_policy_only_where_the_script_did_not_choose(tin
     line = next(l for l in done.stdout.splitlines() if l.startswith("RESULT"))
     _, name, arg, chosen, explicit = line.split()
     assert (name, arg) == ("__main__", "hello")
-    assert chosen in ("torch.float16", "torch.bfloat16")  # did not fit as stored
+    assert chosen == "torch.float32"  # did not fit, and is still never converted (0328)
     assert explicit == "torch.float32"  # the script's explicit choice is kept
-    assert "does not fit as stored" in done.stderr and "loading policy installed" in done.stderr
+    assert "loaded as written" in done.stderr and "loading policy installed" in done.stderr
 
 
 def test_run_leaves_models_that_fit_alone_and_cleans_up(tiny_dir, tmp_path):

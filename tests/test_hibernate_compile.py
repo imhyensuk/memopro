@@ -14,7 +14,7 @@ import torch._dynamo
 from torch._dynamo.utils import counters
 
 from memopro import IntegrityError, hibernate
-from memopro.config import configure, reset_config
+from memopro.config import reset_config
 
 pytestmark = pytest.mark.skipif(
     not torch._dynamo.is_dynamo_supported(), reason="torch.compile is not supported here"
@@ -27,7 +27,6 @@ def isolated(tmp_path, monkeypatch):
         if key.startswith("MEMOPRO_"):
             monkeypatch.delenv(key)
     reset_config()
-    configure(spill_dir=str(tmp_path / "spill"), min_free_disk_fraction=0.0)
     torch._dynamo.reset()
     counters.clear()
     yield

@@ -13,10 +13,9 @@ def test_quickstart_notebook_runs(capsys, tmp_path, monkeypatch):
     pytest.importorskip("IPython")
     from IPython.testing.globalipapp import get_ipython, start_ipython
 
-    from memopro.config import configure, reset_config
+    from memopro.config import reset_config
 
     reset_config()
-    configure(spill_dir=str(tmp_path / "spill"))
     shell = start_ipython() or get_ipython()
     nb = json.loads((ROOT / "examples" / "quickstart.ipynb").read_text())
     try:

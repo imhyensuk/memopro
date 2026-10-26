@@ -393,77 +393,6 @@ fn engine_read_source_into<'py>(
     Ok(PyBytes::new(py, &d.0))
 }
 
-// ------------------------------------------------------------------ RCR F class (0072)
-
-/// A read-only mapping of a whole file (clean, file-backed pages; 0072). On macOS
-/// `metal_buffer()` wraps it as an MTLBuffer without copying.
-#[cfg(unix)]
-#[pyclass(frozen)]
-struct FileMap {
-    inner: memopro::residency::FileMap,
-}
-
-#[cfg(unix)]
-#[pymethods]
-impl FileMap {
-    #[new]
-    fn new(path: PathBuf) -> PyResult<Self> {
-        let inner = memopro::residency::FileMap::open(&path).map_err(to_py_err)?;
-        Ok(FileMap { inner })
-    }
-
-    /// Address of the first mapped byte.
-    #[getter]
-    fn addr(&self) -> usize {
-        self.inner.addr()
-    }
-
-    /// Mapped length in bytes (whole pages).
-    #[getter]
-    fn length(&self) -> usize {
-        self.inner.len()
-    }
-
-    /// File length in bytes.
-    #[getter]
-    fn file_length(&self) -> usize {
-        self.inner.file_len()
-    }
-
-    /// Share of the mapping's pages in RAM.
-    fn resident(&self) -> PyResult<f64> {
-        self.inner.resident().map_err(to_py_err)
-    }
-
-    /// Warm the page cache for `length` bytes at `offset` with large reads (GIL released).
-    fn prefetch(&self, py: Python<'_>, offset: usize, length: usize) -> PyResult<usize> {
-        py.detach(|| self.inner.prefetch(offset, length))
-            .map_err(to_py_err)
-    }
-
-    /// The retained MTLBuffer over the whole mapping (macOS; created once, released on drop).
-    fn metal_buffer(&self) -> PyResult<usize> {
-        self.inner.metal_buffer().map_err(to_py_err)
-    }
-}
-
-/// Write a buffer to a new `0600` spill file in `directory`; returns `(path, length, digest)`.
-#[pyfunction]
-fn engine_write<'py>(
-    py: Python<'py>,
-    data: &Bound<'py, PyAny>,
-    directory: PathBuf,
-) -> PyResult<(PathBuf, u64, Bound<'py, PyBytes>)> {
-    let (_keep, raw) = borrow(data, false)?;
-    let file = py
-        .detach(|| {
-            // SAFETY: `_keep` holds the buffer for the whole call.
-            memopro::spill::Engine::new().write(unsafe { raw.slice() }, &directory)
-        })
-        .map_err(to_py_err)?;
-    Ok((file.path, file.len, PyBytes::new(py, &file.digest.0)))
-}
-
 // ------------------------------------------------------------------ in-RAM codec
 
 /// Losslessly compressed copy of a buffer (byte shuffle + zstd), owned by Rust.
@@ -1232,9 +1161,6 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(engine_digest_parts, m)?)?;
     m.add_function(wrap_pyfunction!(engine_digest_combine, m)?)?;
     m.add_function(wrap_pyfunction!(engine_read_source_into, m)?)?;
-    m.add_function(wrap_pyfunction!(engine_write, m)?)?;
-    #[cfg(unix)]
-    m.add_class::<FileMap>()?;
     #[cfg(unix)]
     m.add_function(wrap_pyfunction!(metal_wrap, m)?)?;
     #[cfg(unix)]

@@ -1,11 +1,11 @@
 """Candidate configurations (architecture §3.3, 0052 E3): short lists of complete choices.
 
-Every candidate is a whole configuration (stored weights, half precision, int8, int4, CPU or
-disk offload) with its estimated bytes per pool, its quality grade and a speed class. The user's
-``quality`` bounds what may be applied automatically (U4, U5); ``prefer`` orders the rest; the
-first candidate that is available and fits the budget is chosen. Substitutes (int8 and int4)
-never appear in one configuration. Rejected candidates keep their reason, so ``check`` and
-``report()`` can say why something was not chosen.
+Since 0.2.0 every candidate keeps the model exactly as the user has it (0325 rule 4, 0328): the
+stored weights on the device, or the same weights split between the device and host RAM
+(accelerate's CPU offload). The first that is available and fits the budget is chosen; when none
+does, ``load`` streams the stored weights instead. A model the user defines with ``dtype`` or
+``quantization_config`` is their original: `user_original` sizes it, and it is loaded as given.
+Rejected candidates keep their reason, so ``report()`` can say why something was not chosen.
 """
 
 from __future__ import annotations
@@ -19,22 +19,12 @@ from memopro.techniques.integrations import loading
 from memopro.techniques.integrations.loading import LoadContext, Needs
 
 __all__ = [
-    "QUALITY_LIMIT",
     "Configuration",
-    "backend_of",
     "from_pretrained_kwargs",
     "infer_candidates",
-    "post_load",
     "select",
-    "speed_hint",
+    "user_original",
 ]
-
-QUALITY_LIMIT = {
-    "lossless": QualityGrade.LOSSLESS,
-    "high": QualityGrade.NEAR_LOSSLESS,
-    "balanced": QualityGrade.SMALL_LOSS,
-    "low": QualityGrade.MODERATE_LOSS,
-}
 
 
 @dataclass(frozen=True)
@@ -69,155 +59,55 @@ def _needs_on_one_pool(ctx: LoadContext, weights: int) -> Needs:
     return Needs(device=total)
 
 
-def _quant_config(bits: int, ctx: LoadContext) -> Any:
-    backend, _ = loading.quantization_backend(ctx.device, bits)
-    if backend == "bitsandbytes":
-        from transformers import BitsAndBytesConfig
-
-        if bits == 8:
-            return BitsAndBytesConfig(load_in_8bit=True)
-        return BitsAndBytesConfig(
-            load_in_4bit=True, bnb_4bit_quant_type="nf4", bnb_4bit_compute_dtype=ctx.half_dtype
-        )
-    from torchao.quantization import Int4WeightOnlyConfig, Int8WeightOnlyConfig
-    from transformers import TorchAoConfig
-
-    quant = Int8WeightOnlyConfig() if bits == 8 else Int4WeightOnlyConfig(group_size=64)
-    return TorchAoConfig(quant_type=quant)
-
-
 def infer_candidates(
     info: ModelInfo,
     ctx: LoadContext,
     *,
-    quality: str = "balanced",
-    prefer: str = "speed",
-    disk_budget: int = 0,
     allow: tuple[str, ...] | None = None,
     deny: tuple[str, ...] = (),
 ) -> list[Configuration]:
-    """All inference configurations for ``info`` in ``ctx``, ordered by ``prefer``."""
-    limit = QUALITY_LIMIT[quality]
-    stored_half = info.stored_dtype in ("float16", "bfloat16")
-    exact_dtype = "auto"
-    base_kwargs = {"device_map": _device_map(ctx), "dtype": exact_dtype}
-    half_kwargs = {"device_map": _device_map(ctx), "dtype": ctx.half_dtype}
+    """The lossless inference configurations for ``info`` in ``ctx``, fastest first."""
     stored = info.weight_bytes()
-    half = info.weight_bytes(half=True)
-
-    raw: list[tuple[Configuration, tuple[loading.LoadTechnique, ...]]] = []
-
-    def add(name, techs, quality_, speed, needs, kwargs, fidelity=Fidelity.EXACT):
+    raw: list[tuple[Configuration, tuple[loading.LoadTechnique, ...]]] = [
+        (
+            Configuration(
+                "stored",
+                (),
+                Fidelity.EXACT,
+                QualityGrade.LOSSLESS,
+                0,
+                _needs_on_one_pool(ctx, stored),
+                {"device_map": _device_map(ctx), "dtype": "auto"},
+            ),
+            (),
+        )
+    ]
+    if ctx.device_budget is not None:
+        on_device = max(0, min(stored, ctx.device_budget - ctx.runtime_bytes))
+        rest = stored - on_device
+        tech = loading.OFFLOAD_CPU
         raw.append(
             (
                 Configuration(
-                    name, tuple(t.name for t in techs), fidelity, quality_, speed, needs, kwargs
+                    tech.name,
+                    (tech.name,),
+                    Fidelity.EXACT,
+                    QualityGrade.LOSSLESS,
+                    tech.speed,
+                    Needs(device=on_device + ctx.runtime_bytes, host=rest),
+                    {
+                        "device_map": "auto",
+                        "dtype": "auto",
+                        "max_memory": {0: on_device or 1, "cpu": max(rest, ctx.host_budget)},
+                    },
                 ),
-                techs,
+                (tech,),
             )
         )
-
-    # bf16 weights on a CUDA GPU without bf16 hardware (compute capability < 8, e.g. the T4):
-    # prompts took 3.7-5.4x longer than in fp16 (E021, 0093). Offer fp16 too, and let `prefer`
-    # decide; quality="lossless" still keeps the stored bf16.
-    slow_bf16 = bool(
-        info.stored_dtype == "bfloat16"
-        and ctx.device == "cuda"
-        and str(ctx.half_dtype) == "torch.float16"
-    )
-    add(
-        "stored",
-        (),
-        QualityGrade.LOSSLESS,
-        SLOW_BF16_SPEED if slow_bf16 else 0,
-        _needs_on_one_pool(ctx, stored),
-        base_kwargs,
-    )
-    if not stored_half or slow_bf16:
-        add(
-            "half",
-            (loading.HALF,),
-            QualityGrade.NEAR_LOSSLESS,
-            0,
-            _needs_on_one_pool(ctx, half),
-            half_kwargs | ({"_note": SLOW_BF16_NOTE} if slow_bf16 else {}),
-            Fidelity.NUMERICS,
-        )
-    for tech, bits in ((loading.INT8, 8), (loading.INT4, 4)):
-        grade = max(tech.quality, QualityGrade.NEAR_LOSSLESS, key=lambda g: g.value)
-        add(
-            tech.name,
-            (tech,),
-            grade,
-            _quant_speed(tech, bits, ctx),
-            _needs_on_one_pool(ctx, info.weight_bytes(bits=bits, group=_int4_group(ctx, bits))),
-            {"device_map": _device_map(ctx), "dtype": ctx.half_dtype, "_quant_bits": bits},
-            Fidelity.NUMERICS,
-        )
-    # offload keeps the stored precision unless half precision is allowed and needed
-    offload_weights = half if (limit.value >= QualityGrade.NEAR_LOSSLESS.value) else stored
-    offload_grade = (
-        QualityGrade.NEAR_LOSSLESS
-        if offload_weights == half and not stored_half
-        else QualityGrade.LOSSLESS
-    )
-    offload_fidelity = Fidelity.NUMERICS if offload_grade.value else Fidelity.EXACT
-    dtype = ctx.half_dtype if offload_grade.value else exact_dtype
-    if ctx.device_budget is not None:
-        on_device = max(0, min(offload_weights, ctx.device_budget - ctx.runtime_bytes))
-        rest = offload_weights - on_device
-        add(
-            "offload.cpu",
-            (loading.OFFLOAD_CPU,),
-            offload_grade,
-            loading.OFFLOAD_CPU.speed,
-            Needs(device=on_device + ctx.runtime_bytes, host=rest),
-            {
-                "device_map": "auto",
-                "dtype": dtype,
-                "max_memory": {0: on_device or 1, "cpu": max(rest, ctx.host_budget)},
-            },
-            offload_fidelity,
-        )
-    place = ctx.device_budget if ctx.device_budget is not None else ctx.host_budget
-    first = max(0, min(offload_weights, place - ctx.runtime_bytes))
-    second = (
-        0
-        if ctx.device == "cpu" or ctx.unified
-        else max(0, min(offload_weights - first, ctx.host_budget))
-    )
-    rest = offload_weights - first - second
-    disk_needs = (
-        Needs(host=first + ctx.runtime_bytes, disk=rest)
-        if ctx.device == "cpu"
-        else Needs(device=first + ctx.runtime_bytes, host=second, disk=rest)
-    )
-    max_memory: dict[Any, int] = {"cpu": max(1, second if ctx.device != "cpu" else first)}
-    if ctx.device == "cuda":
-        max_memory[0] = max(1, first)
-    elif ctx.device == "mps":
-        max_memory["mps"] = max(1, first)
-    add(
-        "offload.disk",
-        (loading.OFFLOAD_DISK,),
-        offload_grade,
-        loading.OFFLOAD_DISK.speed,
-        disk_needs,
-        {
-            "device_map": "auto",
-            "dtype": dtype,
-            "max_memory": max_memory,
-            "offload_folder": ctx.offload_dir,
-        },
-        offload_fidelity,
-    )
-
     out = []
     for cfg, techs in raw:
         why = ""
-        if cfg.quality.value > limit.value:
-            why = f"quality {quality!r} does not allow {cfg.quality.name.lower()} ({cfg.name})"
-        elif allow is not None and any(t.name not in allow for t in techs):
+        if allow is not None and any(t.name not in allow for t in techs):
             why = "not in allow"
         elif any(t.name in deny for t in techs):
             why = "in deny"
@@ -227,12 +117,46 @@ def infer_candidates(
                 if not a.ok:
                     why = a.reason
                     break
-        fits, fit_why = _fits(cfg.needs, ctx, disk_budget)
+        fits, fit_why = _fits(cfg.needs, ctx)
         out.append(replace(cfg, ok=not why, fits=fits, why=why or fit_why))
-    return sorted(out, key=_order(prefer))
+    return sorted(out, key=lambda c: (c.speed, c.needs.device + c.needs.host))
 
 
-def _fits(needs: Needs, ctx: LoadContext, disk_budget: int) -> tuple[bool, str]:
+def user_original(info: ModelInfo, ctx: LoadContext, given: dict[str, Any]) -> Configuration:
+    """The configuration the user defined with ``dtype``/``quantization_config`` (0328): loaded as
+    given, so its results are the user's original's. Sized from metadata: a 16-bit ``dtype``
+    halves 32-bit weights, a bitsandbytes 8/4-bit config takes a byte or half a byte per linear
+    weight; other quantized formats (GPTQ, AWQ, ...) are stored quantized and keep their size."""
+    import torch
+
+    quant = given.get("quantization_config")
+    dtype = given.get("dtype", given.get("torch_dtype"))
+    bits = None
+    if quant is not None:
+        if getattr(quant, "load_in_4bit", False):
+            bits = 4
+        elif getattr(quant, "load_in_8bit", False):
+            bits = 8
+    if bits:
+        weights = info.weight_bytes(bits=bits)
+    elif dtype in (torch.float16, torch.bfloat16, "float16", "bfloat16"):
+        weights = info.weight_bytes(half=True)
+    else:
+        weights = info.weight_bytes()
+    cfg = Configuration(
+        "yours",
+        tuple(f"{k}={v!r}" for k, v in given.items()),
+        Fidelity.EXACT,
+        QualityGrade.LOSSLESS,
+        0,
+        _needs_on_one_pool(ctx, weights),
+        {"device_map": _device_map(ctx)} | given,
+    )
+    fits, why = _fits(cfg.needs, ctx)
+    return replace(cfg, fits=fits, why=why)
+
+
+def _fits(needs: Needs, ctx: LoadContext) -> tuple[bool, str]:
     from memopro._units import format_size as fs
 
     if ctx.unified and ctx.device_budget is not None:
@@ -243,21 +167,7 @@ def _fits(needs: Needs, ctx: LoadContext, disk_budget: int) -> tuple[bool, str]:
         return False, f"needs {fs(needs.device)} on the device, budget {fs(ctx.device_budget)}"
     if needs.host > ctx.host_budget:
         return False, f"needs {fs(needs.host)} of host RAM, budget {fs(ctx.host_budget)}"
-    if needs.disk > disk_budget:
-        return False, f"needs {fs(needs.disk)} of disk, budget {fs(disk_budget)}"
     return True, ""
-
-
-def _order(prefer: str):
-    def key(c: Configuration) -> tuple:
-        size = c.needs.device + c.needs.host
-        if prefer == "quality":
-            return (c.quality.value, c.speed, size)
-        if prefer == "memory":
-            return (c.needs.device if c.needs.device else c.needs.host, c.quality.value, c.speed)
-        return (c.speed, c.quality.value, size)
-
-    return key
 
 
 def select(candidates: list[Configuration]) -> Configuration | None:
@@ -265,110 +175,7 @@ def select(candidates: list[Configuration]) -> Configuration | None:
     return next((c for c in candidates if c.usable), None)
 
 
-def _int4_group(ctx: LoadContext, bits: int) -> int:
-    """Scale block size of the int4 back end used here (sizes from metadata, 0052 E3)."""
-    if bits != 4 or loading.quantization_backend(ctx.device, bits)[0] != "torch-int4pack":
-        return 64
-    from memopro.techniques.integrations.int4pack import GROUP
-
-    return GROUP
-
-
-# measured quality cost of int4 per back end (E022 D9: a CUDA load cited the MPS numbers)
-INT4PACK_QUALITY_NOTE = (
-    "quality cost: int4 raised WikiText-2 perplexity by 5.7-7.6% for Qwen2.5-1.5B/3B with torch "
-    "int4pack group 32; other models differ"
-)
-BNB_INT4_QUALITY_NOTE = (
-    "quality cost: bitsandbytes nf4 raised WikiText-2 perplexity by 7.6-8.4% for "
-    "Qwen2.5-1.5B/3B/7B on a T4; other models differ"
-)
-INT4_QUALITY_NOTE = (  # a back end without its own measurement
-    "quality cost: int4 raised WikiText-2 perplexity by 5.7-8.4% for Qwen2.5 models with the "
-    "back ends measured so far; this back end and other models differ"
-)
-BNB_INT4_SPEED_HINT = (
-    "quality='low' would load int4 (bitsandbytes nf4) instead: Qwen2.5-7B decoded 2.9x faster "
-    "on a T4 (15.8 vs 5.5 tok/s) for perplexity +7.7% instead of +0.8%"
-)
-
-
-SLOW_BF16_SPEED = 2  # between int4 (1) and offload (3): slow prompts, decoding unaffected
-SLOW_BF16_NOTE = (
-    "fp16 instead of the stored bf16: this GPU has no bf16 hardware, where bf16 prompts took "
-    "3.7-5.4x longer (T4); values beyond fp16's range would overflow "
-    "(quality='lossless' keeps bf16)"
-)
-BNB_INT8_SPEED = 2  # bitsandbytes int8 decoded 2.4-3.6x slower than nf4 on a T4 (E021/0093)
-
-
-def _quant_speed(tech: loading.LoadTechnique, bits: int, ctx: LoadContext) -> int:
-    """Speed rank of a quantized configuration with the back end used here (E021 D3)."""
-    if bits == 8 and loading.quantization_backend(ctx.device, bits)[0] == "bitsandbytes":
-        return BNB_INT8_SPEED
-    return tech.speed
-
-
-def quality_note(cfg: Configuration, ctx: LoadContext | None = None) -> str:
-    """What the report says about a configuration's measured cost or reason (0084 Q-a, 0093),
-    for the back end used in ``ctx`` (E022 D9)."""
-    if cfg.kwargs.get("_quant_bits") == 4:
-        backend = loading.quantization_backend(ctx.device, 4)[0] if ctx is not None else ""
-        return {
-            "torch-int4pack": INT4PACK_QUALITY_NOTE,
-            "bitsandbytes": BNB_INT4_QUALITY_NOTE,
-        }.get(backend, INT4_QUALITY_NOTE)
-    return cfg.kwargs.get("_note", "")
-
-
-def speed_hint(chosen: Configuration, candidates: list[Configuration], ctx: LoadContext) -> str:
-    """When int8 was chosen but int4 would fit, rank faster and is held back only by
-    ``quality``: say so, with the measured trade-off where there is one (E022 O1). The choice
-    itself does not change (``quality`` bounds automatic loss, 0052 E3)."""
-    if chosen.kwargs.get("_quant_bits") != 8:
-        return ""
-    int4 = next((c for c in candidates if c.kwargs.get("_quant_bits") == 4), None)
-    if (
-        int4 is None
-        or int4.ok
-        or not int4.fits
-        or not int4.why.startswith("quality ")
-        or int4.speed >= chosen.speed
-    ):
-        return ""
-    backend = backend_of(int4, ctx)
-    if backend == "bitsandbytes":
-        return BNB_INT4_SPEED_HINT
-    return f"quality='low' would load int4 ({backend}) instead, which ranks faster here"
-
-
-def backend_of(cfg: Configuration, ctx: LoadContext) -> str:
-    """The quantization back end a quantized configuration uses here ("" if not quantized)."""
-    bits = cfg.kwargs.get("_quant_bits")
-    return loading.quantization_backend(ctx.device, bits)[0] if bits else ""
-
-
 def from_pretrained_kwargs(cfg: Configuration, ctx: LoadContext) -> dict[str, Any]:
-    """Keyword arguments for ``from_pretrained`` (quantization configs built only now)."""
-    kwargs = {k: v for k, v in cfg.kwargs.items() if not k.startswith("_") and v is not None}
-    bits = cfg.kwargs.get("_quant_bits")
-    if bits and backend_of(cfg, ctx) == "torch-int4pack":
-        # load on the CPU as stored (memory-mapped safetensors), convert layer by layer after
-        kwargs["device_map"] = {"": "cpu"}
-        kwargs["dtype"] = "auto"
-    elif bits:
-        kwargs["quantization_config"] = _quant_config(bits, ctx)
-    return kwargs
-
-
-def post_load(cfg: Configuration, ctx: LoadContext) -> Any:
-    """What to apply to the model ``from_pretrained`` returned, or None (0069)."""
-    if backend_of(cfg, ctx) != "torch-int4pack":
-        return None
-    from memopro.techniques.integrations import int4pack
-
-    def apply(model: Any) -> Any:
-        int4pack.convert(model, ctx.device)
-        return model
-
-    return apply
+    """Keyword arguments for ``from_pretrained``."""
+    del ctx
+    return {k: v for k, v in cfg.kwargs.items() if not k.startswith("_") and v is not None}

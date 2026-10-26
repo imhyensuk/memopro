@@ -46,9 +46,9 @@ def test_pressure_shrinks_only_what_is_not_held(monkeypatch):
     from memopro.orchestrator.budget import Budget
 
     monkeypatch.setattr(elastic, "budget_factor", lambda: 0.5)
-    b = _under_pressure(Budget(device=10 * GiB, host=8 * GiB, disk=0), 6 * GiB, 2 * GiB)
+    b = _under_pressure(Budget(device=10 * GiB, host=8 * GiB), 6 * GiB, 2 * GiB)
     assert (b.device, b.host) == (8 * GiB, 5 * GiB)  # held + half of the rest
-    forced = Budget(device=10 * GiB, host=8 * GiB, disk=0, forced=("device",))
+    forced = Budget(device=10 * GiB, host=8 * GiB, forced=("device",))
     assert _under_pressure(forced, 6 * GiB, 0).device == 10 * GiB
 
 
@@ -119,30 +119,6 @@ def test_optimizer_state_to_come():
     p.grad = torch.ones(100)
     opt.step()
     assert optimizer_state_to_come(opt) == 0  # it exists: already counted as held
-
-
-# ---------------------------------------------------------------- run hint
-def test_run_hint_names_the_cli_option(monkeypatch):
-    from memopro import _run
-    from memopro.access import _load
-    from memopro.orchestrator import candidates
-
-    int8 = types.SimpleNamespace(
-        name="quant.int8",
-        usable=True,
-        describe=lambda: "quant.int8",
-        quality=types.SimpleNamespace(name="SMALL_LOSS"),
-    )
-    plan = types.SimpleNamespace(chosen=int8, candidates=[int8], ctx=None)
-    monkeypatch.setattr(_load, "plan_load", lambda *a, **k: plan)
-    monkeypatch.setattr(candidates, "speed_hint", lambda *a: "quality='low' would load int4")
-    monkeypatch.setattr(candidates, "from_pretrained_kwargs", lambda cfg, ctx: {})
-    monkeypatch.setattr(candidates, "post_load", lambda cfg, ctx: None)
-    policy = _run._LoadingPolicy()
-    policy.original = classmethod(lambda klass, name, **kw: "model")
-    assert policy.load(object, "m", (), {}) == "model"
-    hints = [e.detail for e in memopro.report().entries if e.action == "suggested"]
-    assert hints == ["m: memopro run --quality low would load int4"]
 
 
 # ---------------------------------------------------------------- 0103: P-a, P-b

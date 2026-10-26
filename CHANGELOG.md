@@ -4,6 +4,16 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Removed (breaking): automatic lossy choices and every disk-writing feature (0328)
+- `load` keeps the model exactly as stored (or splits it between the GPU and RAM with
+  accelerate, CUDA only) and streams it when it does not fit; it never picks half precision,
+  int8 or int4 for you. Pass `dtype=` / `quantization_config=` yourself and that model is your
+  original, loaded as given. The settings `quality` and `prefer` (and `run --quality`) are gone.
+- memopro writes nothing to the disk besides downloads: spill, the `residency="file"` cache,
+  disk offload, `fallback="stored"` and the settings `disk_writes`, `spill_dir`,
+  `daily_write_limit`, `min_free_disk_fraction` (and `run --fallback`, `--disk-writes`) are
+  removed. Using a removed name raises an error that says what to do instead.
+
 ### Changed (breaking): the budget is the ceiling you set, 80% of the memory by default (0327)
 - `"auto"` is now 80% of the machine's memory (the container's limit when there is one), not
   the memory free at the moment minus 10%. A size such as `"6GB"` is the ceiling as given, on

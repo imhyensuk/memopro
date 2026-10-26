@@ -96,54 +96,6 @@ def _chosen(cands):
     return next(c.name for c in cands if c.usable)
 
 
-def test_d2_bf16_on_a_gpu_without_bf16_hardware_prefers_fp16():
-    from memopro.access._info import model_info
-    from memopro.orchestrator.candidates import SLOW_BF16_NOTE, quality_note
-
-    info = model_info(gpt2(torch.bfloat16))
-    old_gpu = _candidates(info, torch.float16)  # compute capability < 8: half = fp16
-    assert _chosen(old_gpu) == "half"
-    half = next(c for c in old_gpu if c.name == "half")
-    assert quality_note(half) == SLOW_BF16_NOTE
-    assert _chosen(_candidates(info, torch.float16, quality="lossless")) == "stored"
-    new_gpu = _candidates(info, torch.bfloat16)  # Ampere or newer: bf16 is native
-    assert "half" not in [c.name for c in new_gpu] and _chosen(new_gpu) == "stored"
-
-
-def test_d2_note_never_reaches_from_pretrained():
-    from memopro.access._info import model_info
-    from memopro.orchestrator.candidates import from_pretrained_kwargs
-    from memopro.techniques.integrations.loading import LoadContext
-
-    info = model_info(gpt2(torch.bfloat16))
-    half = next(c for c in _candidates(info, torch.float16) if c.name == "half")
-    ctx = LoadContext("cuda", torch.float16, 10**10, 10**10, "never", unified=False)
-    assert not any(k.startswith("_") for k in from_pretrained_kwargs(half, ctx))
-
-
-# ---------------------------------------------------------------- D3
-def test_d3_bitsandbytes_int8_ranks_after_int4_but_before_offload(monkeypatch):
-    from memopro.access._info import model_info
-    from memopro.techniques.integrations import loading
-
-    monkeypatch.setattr(loading, "quantization_backend", lambda device, bits: ("bitsandbytes", ""))
-    info = model_info(gpt2())
-    names = [c.name for c in _candidates(info, torch.float16, quality="low")]
-    assert names.index("quant.int4") < names.index("quant.int8") < names.index("offload.cpu")
-    int8 = next(c for c in _candidates(info, torch.float16) if c.name == "quant.int8")
-    assert int8.speed == 2
-
-
-def test_d3_other_back_ends_keep_their_speed(monkeypatch):
-    from memopro.access._info import model_info
-    from memopro.techniques.integrations import loading
-
-    monkeypatch.setattr(loading, "quantization_backend", lambda device, bits: ("torchao", ""))
-    info = model_info(gpt2())
-    int8 = next(c for c in _candidates(info, torch.float16) if c.name == "quant.int8")
-    assert int8.speed == loading.INT8.speed
-
-
 # ---------------------------------------------------------------- D4 and run
 def test_d4_run_policy_leaves_a_model_that_fits_as_stored(monkeypatch, tmp_path):
     """With D2 the plan may prefer fp16 for speed; `memopro run` still intervenes only when the

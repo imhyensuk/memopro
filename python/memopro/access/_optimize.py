@@ -2,8 +2,8 @@
 
 Only run-time techniques apply to a loaded model, and only as far as needed:
 
-- inference: half precision (within ``quality``), then torchao int8 weight-only quantization
-  (within ``quality``), then CPU offload with accelerate (discrete GPUs only; exact)
+- inference: CPU offload with accelerate (discrete GPUs only; exact). Nothing else: memopro
+  never changes a model's precision (0328)
 - training: activation checkpointing (exact); an 8-bit optimizer or LoRA are suggested only
 
 The plan is checked before anything changes: if even the last allowed step does not fit,
@@ -18,10 +18,7 @@ from memopro._errors import BudgetExceeded, InvalidArgument
 from memopro._units import format_size
 from memopro.access._common import setup
 from memopro.access._info import model_info
-from memopro.orchestrator.candidates import QUALITY_LIMIT
 from memopro.report import report
-from memopro.techniques.base import QualityGrade
-from memopro.techniques.integrations import loading
 
 __all__ = ["optimize"]
 
@@ -31,10 +28,7 @@ def optimize(
     goal: str = "infer",
     *,
     budget: Any = None,
-    quality: str | None = None,
-    prefer: str | None = None,
     example: Any = None,
-    fallback: str | None = None,
 ) -> Any:
     """Fit ``model`` to the budget in place and return it (see module docstring)."""
     if goal not in ("infer", "train"):
@@ -43,10 +37,7 @@ def optimize(
         raise InvalidArgument(f"optimize takes an nn.Module; got {type(model).__name__}")
     s = setup(
         budget=budget,
-        quality=quality,
-        prefer=prefer,
         device=_where(model),
-        fallback=fallback,
         holding=(model,),  # the model is already in memory: counted once (E022 D8)
     )
     if goal == "infer":
@@ -61,49 +52,25 @@ def _where(model: Any) -> str:
 
 def _infer(model: Any, s: Any) -> Any:
     info = model_info(model)
-    limit = QUALITY_LIMIT[s.config.quality]
     device = _where(model)
     budget = s.budget.device if device in ("cuda", "mps") else s.budget.host
     if budget is None:
         budget = s.budget.host
     runtime = info.weight_bytes(half=True) // 10
     steps: list[tuple[str, int]] = [("stored", info.weight_bytes())]
-    if limit.value >= QualityGrade.NEAR_LOSSLESS.value and info.stored_dtype == "float32":
-        steps.append(("dtype.half", info.weight_bytes(half=True)))
-    if limit.value >= QualityGrade.SMALL_LOSS.value and not loading._torchao_works(device, 8):
-        steps.append(("quant.int8", info.weight_bytes(bits=8)))
     if device == "cuda":
         steps.append(("offload.cpu", 0))
     needed = next((i for i, (_, size) in enumerate(steps) if size + runtime <= budget), None)
     if needed is None:
-        if s.config.fallback == "stored":
-            detail = (
-                f"{info.source}: no allowed step fits {format_size(budget)}; fallback='stored': "
-                f"left as it is ({format_size(steps[0][1] + runtime)})"
-            )
-            import warnings
-
-            warnings.warn(f"memopro.optimize: {detail}", UserWarning, stacklevel=3)
-            report().add("optimize", "skipped", detail)
-            return model
+        need = steps[0][1] + runtime
         raise BudgetExceeded(
-            f"{info.source}: no allowed step fits {format_size(budget)} (quality "
-            f"{s.config.quality!r}): "
-            + ", ".join(f"{n} {format_size(b + runtime)}" for n, b in steps)
-            + _optimize_suggestions(info, device, runtime, budget, s)
+            f"{info.source}: needs {format_size(need)} as it is, the budget is "
+            f"{format_size(budget)}; budget='{-(-need // 10**8) / 10:.1f}GB' would fit it"
         )
     model.eval()
     rep = report()
     for name, size in steps[1 : needed + 1]:
-        if name == "dtype.half":
-            model.to(s.half_dtype)
-        elif name == "quant.int8":
-            from torchao.quantization import Int8WeightOnlyConfig, quantize_
-
-            if s.half_dtype is not None:
-                model.to(s.half_dtype)
-            quantize_(model, Int8WeightOnlyConfig())
-        elif name == "offload.cpu":
+        if name == "offload.cpu":
             from accelerate import cpu_offload
 
             cpu_offload(model, execution_device=next(model.parameters()).device)
@@ -111,32 +78,6 @@ def _infer(model: Any, s: Any) -> Any:
     if needed == 0:
         rep.add("optimize", "skipped", f"{info.source} already fits {format_size(budget)}")
     return model
-
-
-def _optimize_suggestions(info: Any, device: str, runtime: int, budget: int, s: Any) -> str:
-    """Settings under which a step would fit (0064 D-a), from the same step sizes."""
-    from memopro.config import QUALITIES
-
-    grades = [("stored", info.weight_bytes(), "lossless")]
-    if info.stored_dtype == "float32":
-        grades.append(("dtype.half", info.weight_bytes(half=True), "high"))
-    if not loading._torchao_works(device, 8):
-        grades.append(("quant.int8", info.weight_bytes(bits=8), "balanced"))
-    current = QUALITIES.index(s.config.quality)
-    lines = []
-    for name, size, quality in grades:
-        need = size + runtime
-        change = {}
-        if QUALITIES.index(quality) > current:
-            change["quality"] = quality
-        if need > budget:
-            change["budget"] = f"{-(-need // 10**8) / 10:.1f}GB!"
-        if change:
-            call = ", ".join(f"{k}={v!r}" for k, v in change.items())
-            lines.append(f"  {call:<34} -> {name}, {format_size(need)}")
-    if s.config.fallback == "none":
-        lines.append("  fallback='stored'                  -> warn and leave the model as it is")
-    return "\nSettings that would fit:\n" + "\n".join(lines) if lines else ""
 
 
 def _train(model: Any, s: Any, example: Any) -> Any:

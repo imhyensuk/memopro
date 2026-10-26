@@ -27,7 +27,6 @@ def isolated(tmp_path, monkeypatch):
         if key.startswith("MEMOPRO_"):
             monkeypatch.delenv(key)
     reset_config()
-    configure(spill_dir=str(tmp_path / "spill"), min_free_disk_fraction=0.0)
     yield
     for h in hibernate.handles():
         if h.asleep:
@@ -203,18 +202,6 @@ def test_wake_by_object_after_dropping_the_handle():
 # ---- T2: data that cannot come back stays guarded ---------------------------------------------
 
 
-def test_lost_spill_file_keeps_the_object_guarded_until_discarded():
-    t = torch.randn(10000)
-    h = hibernate.now(t, mode="spill", allow_spill=True)
-    os.remove(h.records[0].sleeping.form[0])
-    with pytest.raises(IntegrityError, match="discard"):
-        h.wake()
-    with pytest.raises(IntegrityError):
-        pickle.dumps(t)  # still refuses to save an empty tensor silently
-    h.discard()
-    assert not h.asleep and t.numel() == 0
-
-
 # ---- source coverage: renamed and sharded checkpoints ------------------------------------------
 
 
@@ -265,7 +252,6 @@ def test_source_reads_sharded_checkpoints(tmp_path):
 
 def test_kept_reasons_list_every_method_tried():
     t = torch.randint(-(2**62), 2**62, (1 << 12,), dtype=torch.int64)
-    configure(disk_writes="never")
     with pytest.raises(memopro.ModeUnavailable) as err:
         hibernate.now(t)
     assert "source:" in err.value.reason and "compress:" in err.value.reason
@@ -279,8 +265,8 @@ def test_kept_reasons_list_every_method_tried():
     [
         {"budget": [1, 2]},
         {"idle_cells": "abc"},
-        {"headroom": "x"},
-        {"min_free_disk_fraction": None},
+        {"headroom": "x"},  # removed in 0.2.0: also a ConfigError
+        {"spill_dir": "/tmp"},
     ],
 )
 def test_bad_setting_types_raise_config_error(bad):

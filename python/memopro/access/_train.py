@@ -5,9 +5,7 @@ Exact techniques first, in this order when memory runs out:
 1. micro-batches with gradient accumulation (halved on each out-of-memory error)
 2. activation checkpointing (Hugging Face models, or each block of the largest ModuleList)
 3. activation offload to host RAM (discrete GPUs, ``torch.autograd.graph.save_on_cpu``)
-4. mixed precision (``torch.autocast``) only if ``quality`` allows half precision; float16
-   (e.g. a T4) always runs with loss scaling (``torch.amp.GradScaler``) so small gradients do
-   not underflow to zero
+(Mixed precision was removed in 0.2.0: it changes the results, 0328.)
 
 Micro-batching is exact when every sample weighs the same in the loss: with
 ``reduction="mean"`` (the default, e.g. ``loss.mean()``, cross-entropy with equal-length
@@ -194,7 +192,7 @@ def _enable_checkpointing(model: Any) -> Callable[[], None] | None:
 class TrainSession:
     """See the module docstring. Use as a context manager."""
 
-    LADDER = ("micro_batch", "checkpointing", "activation_offload", "autocast")
+    LADDER = ("micro_batch", "checkpointing", "activation_offload")
 
     def __init__(
         self,
@@ -204,14 +202,11 @@ class TrainSession:
         batch_size: int | None = None,
         micro_batch_size: int | None = None,
         budget: Any = None,
-        quality: str | None = None,
         plan: bool = True,
         max_grad_norm: float | None = None,
         reduction: str = "mean",
     ) -> None:
         from memopro.access._common import resident_bytes, setup
-        from memopro.orchestrator.candidates import QUALITY_LIMIT
-        from memopro.techniques.base import QualityGrade
 
         if micro_batch_size is not None and micro_batch_size < 1:
             raise InvalidArgument(f"micro_batch_size must be >= 1; got {micro_batch_size}")
@@ -223,9 +218,7 @@ class TrainSession:
         first = next(model.parameters(), None) if hasattr(model, "parameters") else None
         where = first.device.type if first is not None else None
         released = release_cuda_cache() if where == "cuda" else 0
-        self._setup = setup(
-            budget=budget, quality=quality, device=where, holding=(model, optimizer)
-        )
+        self._setup = setup(budget=budget, device=where, holding=(model, optimizer))
         # what the model and optimizer already hold in the budgeted pool (E022 D8)
         pool = self._setup.device if self._setup.budget.device is not None else "cpu"
         self._held = resident_bytes(pool, model, optimizer)
@@ -236,9 +229,6 @@ class TrainSession:
                 f"returned {format_size(released)} of torch's unused CUDA cache before measuring "
                 "(cache left by loading was mostly not reused)",
             )
-        self._allow_half = (
-            QUALITY_LIMIT[self._setup.config.quality].value >= QualityGrade.NEAR_LOSSLESS.value
-        )
         if reduction not in ("mean", "sum"):
             raise InvalidArgument(f"reduction must be 'mean' or 'sum'; got {reduction!r}")
         self.reduction = reduction
@@ -247,8 +237,6 @@ class TrainSession:
         self.max_grad_norm = max_grad_norm
         self.checkpointing = False
         self.activation_offload = False
-        self.autocast = False
-        self._scaler: Any = None
         self._undo: list[Callable[[], None]] = []
         self.steps = 0
         self.retries = 0
@@ -285,7 +273,7 @@ class TrainSession:
         on = []
         if self.micro is not None and self.batch_size and self.micro < self.batch_size:
             on.append(f"micro-batch {self.micro}")
-        on += [n for n in ("checkpointing", "activation_offload", "autocast") if getattr(self, n)]
+        on += [n for n in ("checkpointing", "activation_offload") if getattr(self, n)]
         return on
 
     @property
@@ -299,8 +287,6 @@ class TrainSession:
         stack = contextlib.ExitStack()
         if self.activation_offload:
             stack.enter_context(torch.autograd.graph.save_on_cpu(pin_memory=True))
-        if self.autocast:
-            stack.enter_context(torch.autocast(self.device, dtype=self._setup.half_dtype))
         return stack
 
     # ------------------------------------------------------------ degrade / upgrade
@@ -323,26 +309,12 @@ class TrainSession:
             self.activation_offload = True
             rep.add("train_session.activation_offload", "applied", reason)
             return True
-        if not self.autocast and self._allow_half and self.device in ("cuda", "mps", "cpu"):
-            if not self._make_scaler():
-                return False
-            self.autocast = True
-            rep.add(
-                "train_session.autocast",
-                "applied",
-                f"{reason}: mixed precision (numerics change, allowed by quality "
-                f"{self._setup.config.quality!r})",
-            )
-            return True
         return False
 
     def upgrade(self) -> bool:
         """Undo the last memory-saving step (used by γ when pressure is gone)."""
         rep = report()
-        if self.autocast:
-            self.autocast = False
-            self._scaler = None
-        elif self.activation_offload:
+        if self.activation_offload:
             self.activation_offload = False
         elif self.checkpointing and self._undo:
             self._undo.pop()()
@@ -354,39 +326,20 @@ class TrainSession:
         rep.add("train_session", "reverted", f"memory pressure gone: {', '.join(self.active())}")
         return True
 
-    def _make_scaler(self) -> bool:
-        """float16 needs loss scaling; False if this device cannot provide it."""
-        import torch
-
-        if self._setup.half_dtype != torch.float16:
-            return True
-        try:
-            self._scaler = torch.amp.GradScaler(self.device)
-        except Exception as e:  # noqa: BLE001 - no scaler here: do not train in float16
-            report().add("train_session.autocast", "skipped", f"no loss scaling: {e}"[:160])
-            return False
-        return True
-
     def _share(self, size: int, n: int) -> float:
         """Weight of a micro-batch's loss so the sum over micro-batches is the batch loss."""
         return size / n if self.reduction == "mean" else 1.0
 
     def _backward(self, loss: Any) -> None:
-        (self._scaler.scale(loss) if self._scaler is not None else loss).backward()
+        loss.backward()
 
     def _optimizer_step(self) -> None:
         import torch
 
         if self.max_grad_norm is not None:
-            if self._scaler is not None:
-                self._scaler.unscale_(self.optimizer)
             params = [p for g in self.optimizer.param_groups for p in g["params"]]
             torch.nn.utils.clip_grad_norm_(params, self.max_grad_norm)
-        if self._scaler is not None:
-            self._scaler.step(self.optimizer)
-            self._scaler.update()
-        else:
-            self.optimizer.step()
+        self.optimizer.step()
         self.optimizer.zero_grad(set_to_none=True)
 
     # ------------------------------------------------------------ planning

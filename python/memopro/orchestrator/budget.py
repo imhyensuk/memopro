@@ -1,4 +1,4 @@
-"""Per-pool budget vector (architecture §3.2): {device, host, disk}.
+"""Per-pool budget vector (architecture §3.2): {device, host}.
 
 The budget is the ceiling the user sets, from the machine's memory (0325 rule 2, 0327):
 
@@ -6,8 +6,6 @@ The budget is the ceiling the user sets, from the machine's memory (0325 rule 2,
           a size is that size; a fraction is that share of the memory.
 - device: the same for a CUDA GPU's memory; on unified memory (MPS) it is the host budget (one
           pool, K5), at most the GPU's own limit.
-- disk:   free space above the ``min_free_disk_fraction`` floor (0032 H4). Whether memopro may
-          write there at all is a policy question (``disk_writes``), not part of the budget.
 
 A ceiling above what is free right now is kept as given, with a note: other programs hold the
 rest, and the operating system may swap to make room.
@@ -38,10 +36,8 @@ class Shortfall:
 class Budget:
     device: int | None  # None: no supported accelerator
     host: int
-    disk: int
     unified: bool = False  # device and host draw from the same physical memory
     device_name: str | None = None
-    disk_floor_bytes: int = 0
     capped_by_setting: bool = False
     forced: tuple[str, ...] = ()  # pools the user set to a value; γ leaves them alone
     shortfalls: tuple[Shortfall, ...] = ()
@@ -61,7 +57,7 @@ def _describe_value(value: PoolValue) -> str:
 def describe_setting(spec: object) -> str:
     """The budget setting as people write it."""
     if isinstance(spec, PoolBudget):
-        pools = (("device", spec.device), ("host", spec.host), ("disk", spec.disk))
+        pools = (("device", spec.device), ("host", spec.host))
         return "; ".join(f"{k} {_describe_value(v)}" for k, v in pools if v is not None)
     return _describe_value(spec)  # type: ignore[arg-type]
 
@@ -90,9 +86,9 @@ def compute_budget(
 
     spec = config.budget
     if isinstance(spec, PoolBudget):
-        specs = {"device": spec.device, "host": spec.host, "disk": spec.disk}
+        specs = {"device": spec.device, "host": spec.host}
     else:
-        specs = {"device": spec, "host": spec, "disk": None}
+        specs = {"device": spec, "host": spec}
     notes: list[str] = []
 
     memory = host_memory(env.host)
@@ -125,23 +121,13 @@ def compute_budget(
                 )
         device_name = primary.name
 
-    floor = int(env.disk.total_bytes * config.min_free_disk_fraction)
-    disk_free = max(0, env.disk.available_bytes - floor)
-    disk = (
-        disk_free
-        if specs["disk"] is None
-        else min(disk_free, resolve_pool(specs["disk"], disk_free))
-    )
-
     forced = tuple(p for p in ("device", "host") if specs[p] not in (None, "auto"))
     return Budget(
         device=device,
         host=host,
-        disk=disk,
         unified=unified,
         device_name=device_name,
-        disk_floor_bytes=floor,
-        capped_by_setting=bool(forced) or specs["disk"] is not None,
+        capped_by_setting=bool(forced),
         forced=forced,
         notes=tuple(notes),
     )

@@ -13,7 +13,7 @@ changing tensors that user code may be using at that moment would corrupt its wo
 happen at **safe points**, where none of the user's own code is running:
 
 - a notebook cell boundary: empty allocator caches, then hibernate idle objects with write-free
-  methods (source, host, compress); SSD spill only if ``disk_writes="allow"``
+  methods (source, host, compress); nothing is written to the disk
 - a ``train_session`` step boundary: one exact step down per level (micro-batch, checkpointing,
   activation offload), stepping back up one level after ``up_after`` seconds without pressure
 - ``memopro.load``: the budget shrinks while pressure lasts (x0.5 warning, x0.25 critical)
@@ -247,16 +247,14 @@ def at_cell_boundary(tracker: Any, idle: list[tuple[str, Any, int, int]]) -> Non
     from memopro import hibernate
     from memopro._errors import MemoproError
     from memopro._units import format_size
-    from memopro.config import get_config
     from memopro.integrations.ipython import sleep_in_namespace
     from memopro.report import report
 
     _release_caches()
-    allow_spill = level == "critical" and get_config().disk_writes == "allow"
     done = []
     for name, obj, n, _ in sorted(idle, key=lambda x: -x[2]):
         try:
-            handle = hibernate.now(obj, allow_spill=allow_spill, name=name)
+            handle = hibernate.now(obj, name=name)
         except MemoproError:
             continue
         sleep_in_namespace(tracker.shell, name, obj, handle)

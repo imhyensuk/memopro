@@ -6,7 +6,7 @@ import dataclasses
 from collections.abc import Iterator
 from typing import Any
 
-from memopro.config import Config, _validate, get_config, spill_location
+from memopro.config import Config, _validate, get_config
 from memopro.env import Env, detect
 from memopro.orchestrator.budget import Budget, compute_budget
 
@@ -20,10 +20,6 @@ class Setup:
     budget: Budget
     device: str  # "cuda" | "mps" | "cpu"
     half_dtype: Any
-
-    @property
-    def offload_dir(self) -> str:
-        return str(spill_location(self.config) / "offload")
 
 
 def settings(**options: Any) -> Config:

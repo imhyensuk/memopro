@@ -21,28 +21,27 @@ def isolated(monkeypatch, tmp_path):
 def test_defaults_are_conservative():
     cfg = get_config()
     assert cfg == Config()
-    assert cfg.disk_writes == "ask"
+    assert cfg.budget == "auto" and cfg.fallback == "stream" and cfg.over_ceiling == "error"
     assert cfg.hibernate_modes == ("source", "host", "compress")
-    assert cfg.min_free_disk_fraction == 0.20
 
 
 def test_layer_precedence(tmp_path, monkeypatch):
-    (tmp_path / "memopro.toml").write_text('disk_writes = "allow"\nidle_cells = 5\n')
-    assert get_config().disk_writes == "allow"
-    monkeypatch.setenv("MEMOPRO_DISK_WRITES", "never")
-    assert get_config().disk_writes == "never"
+    (tmp_path / "memopro.toml").write_text('download = "never"\nidle_cells = 5\n')
+    assert get_config().download == "never"
+    monkeypatch.setenv("MEMOPRO_DOWNLOAD", "auto")
+    assert get_config().download == "auto"
     assert get_config().idle_cells == 5
-    configure(disk_writes="ask")
-    assert get_config().disk_writes == "ask"
+    configure(download="never")
+    assert get_config().download == "never"
     reset_config()
-    assert get_config().disk_writes == "never"
+    assert get_config().download == "auto"
 
 
 def test_explicit_config_path(tmp_path, monkeypatch):
     other = tmp_path / "custom.toml"
-    other.write_text('spill_dir = "/Volumes/External/memopro"\n')
+    other.write_text('budget = "6GB"\n')
     monkeypatch.setenv("MEMOPRO_CONFIG", str(other))
-    assert get_config().spill_dir == "/Volumes/External/memopro"
+    assert get_config().budget == 6 * 10**9
     monkeypatch.setenv("MEMOPRO_CONFIG", str(tmp_path / "missing.toml"))
     with pytest.raises(ConfigError, match="missing file"):
         get_config()
@@ -50,22 +49,20 @@ def test_explicit_config_path(tmp_path, monkeypatch):
 
 def test_sizes_and_mode_lists_are_parsed(monkeypatch):
     monkeypatch.setenv("MEMOPRO_HIBERNATE_MODES", "host, source")
-    monkeypatch.setenv("MEMOPRO_DAILY_WRITE_LIMIT", "20GB")
     cfg = configure(budget="6GiB")
     assert cfg.hibernate_modes == ("host", "source")
-    assert cfg.daily_write_limit == 20 * 10**9
     assert cfg.budget == 6 * 2**30
 
 
 @pytest.mark.parametrize(
     "settings",
     [
-        {"disk_writes": "sometimes"},
-        {"hibernate_modes": "source,bf16"},  # lossy: explicit only
-        {"hibernate_modes": "spill"},  # governed by disk_writes
+        {"disk_writes": "allow"},  # removed in 0.2.0 (0328)
+        {"quality": "low"},  # removed in 0.2.0 (0328)
+        {"hibernate_modes": "source,bf16"},  # lossy: removed
+        {"hibernate_modes": "spill"},  # writes to the disk: removed
         {"hibernate_modes": "source,source"},
-        {"quality": "best"},
-        {"min_free_disk_fraction": 1.5},
+        {"fallback": "stored"},  # removed in 0.2.0 (0328)
         {"idle_cells": 0},
         {"budget": "lots"},
         {"no_such_setting": 1},

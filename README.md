@@ -98,7 +98,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 | `memopro run [옵션] script.py [인자]` | 스크립트를 수정 없이 메모리 상한 안에서 실행 |
 | `memopro --version` | 버전 |
 
-`memopro run`의 주요 옵션: `--budget`(상한), `--dry-run`(설정만 출력), `--report-json PATH`(결과 보고서), `--no-numpy` / `--no-torch`(해당 자동 처리 끔), `--quality lossless|high|balanced|low`(불러오기 품질 하한).
+`memopro run`의 주요 옵션: `--budget`(상한), `--dry-run`(설정만 출력), `--report-json PATH`(결과 보고서), `--no-numpy` / `--no-torch`(해당 자동 처리 끔).
 
 ### Python API
 
@@ -107,7 +107,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 | `memopro.finetune(model, texts, budget=, batch=, seq_len=, epochs=, lr=, rank=)` | 메모리보다 큰 LLM의 LoRA 학습. `FinetuneResult`(`model`, `adapter`, `losses`, `batch` 등) 반환 |
 | `memopro.generate(model, prompt, budget=, draft="auto", max_new_tokens=, streamer=, stopping_criteria=)` | 메모리보다 큰 LLM의 생성. 디스크에 있는 같은 계열의 작은 모델을 초안으로 자동 사용. `streamer`(예: Transformers `TextIteratorStreamer`)와 `stopping_criteria`는 `model.generate`에 그대로 넘어가며, 스트리머가 받는 텍스트는 반환값과 같음 |
 | `memopro.enable(budget=)` / `memopro.disable()` | 프로세스 전체 메모리 상한. `Session.estimate()`, `Session.measured()` |
-| `memopro.load(model_id, budget=, quality=)` | Hugging Face 모델 불러오기. 기본(`quality="lossless"`)은 무손실이며, 예산에 안 들어가면 흘려 쓰기로 불러옴. `"high"`·`"balanced"`·`"low"`를 고르면 반정밀도·int8·int4도 허용 |
+| `memopro.load(model_id, budget=, **from_pretrained)` | Hugging Face 모델을 저장된 그대로 불러오기(정밀도를 바꾸지 않음). 예산에 안 들어가면 흘려 쓰기로 불러옴. `dtype=`·`quantization_config=`를 직접 주면 그 모델이 원본이 되어 준 그대로 불러옴. 디스크에는 아무것도 쓰지 않음 |
 | `memopro.doctor()` | CLI와 같은 메모리·상한 보고 |
 | `memopro.configure(...)` / `memopro.using(...)` | 전역 설정 / 블록 단위 설정 |
 

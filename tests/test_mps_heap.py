@@ -14,8 +14,7 @@ import memopro.access
 import memopro.config
 import memopro.env
 from memopro import cli
-from memopro.access import _load
-from memopro.config import configure, reset_config
+from memopro.config import reset_config
 from memopro.env import (
     MPS_HEAP_NOTE,
     MPS_LOW_WATERMARK,
@@ -30,7 +29,6 @@ def isolated(tmp_path, monkeypatch):
         if key.startswith("MEMOPRO_"):
             monkeypatch.delenv(key)
     reset_config()
-    configure(spill_dir=str(tmp_path / "spill"), min_free_disk_fraction=0.0)
     memopro.report().clear()
     yield
     reset_config()
@@ -64,20 +62,6 @@ def test_doctor_mentions_the_heap_only_when_it_applies(monkeypatch):
     assert MPS_HEAP_NOTE in memopro.doctor(devices=False).warnings()
     monkeypatch.setenv(MPS_LOW_WATERMARK_VAR, MPS_LOW_WATERMARK)
     assert MPS_HEAP_NOTE not in memopro.doctor(devices=False).warnings()
-
-
-def test_file_backed_load_suggests_the_setting_once(monkeypatch):
-    pretend_apple_silicon(monkeypatch)
-    monkeypatch.setattr(_load, "_mps_heap_note_shown", False)
-    _load._suggest_mps_heap_setting()
-    _load._suggest_mps_heap_setting()
-    notes = [e for e in memopro.report().entries if e.action == "suggested"]
-    assert len(notes) == 1 and MPS_LOW_WATERMARK_VAR in notes[0].detail
-    memopro.report().clear()
-    monkeypatch.setattr(_load, "_mps_heap_note_shown", False)
-    monkeypatch.setenv(MPS_LOW_WATERMARK_VAR, "0.2")
-    _load._suggest_mps_heap_setting()
-    assert not memopro.report().entries
 
 
 def _args(**kw):

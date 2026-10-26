@@ -121,13 +121,6 @@ def mps(limit, allocated=0):
     return Device("mps", "Apple GPU (MPS)", None, limit - allocated, limit, allocated, True)
 
 
-def test_disk_budget_respects_free_space_floor():
-    b = compute_budget(env(disk_free=100 * GiB, disk_total=200 * GiB), Config())
-    assert b.disk == 60 * GiB and b.disk_floor_bytes == 40 * GiB
-    b = compute_budget(env(disk_free=20 * GiB, disk_total=200 * GiB), Config())
-    assert b.disk == 0
-
-
 def test_unsupported_devices_get_no_budget():
     xpu = Device("xpu", "xpu:0", None, None, None, None, False)
     assert compute_budget(env(devices=[xpu]), Config()).device is None
@@ -144,12 +137,11 @@ def report(e, cfg=None):
 def test_summary_and_json_cover_every_pool():
     r = report(env(devices=[mps(5 * GiB)], disk_free=10 * GiB))
     text = r.summary()
-    for needle in ("Host memory", "Disk", "Devices", "Budget", "Policy", "mps", "floor"):
+    for needle in ("Host memory", "Disk", "Devices", "Budget", "mps", "writes nothing"):
         assert needle in text
     data = json.loads(json.dumps(r.to_json()))
     assert data["budget"]["unified"] is True
-    assert data["policy"]["disk_writes"] == "ask"
-    assert any("below the 20% floor" in w for w in data["warnings"])
+    assert data["policy"] == {"budget": "auto (80% of the memory)"}
 
 
 def test_real_doctor_without_devices_does_not_import_torch():

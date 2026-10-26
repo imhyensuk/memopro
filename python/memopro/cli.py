@@ -19,7 +19,6 @@ _BUDGET_HELP = (
     "the memory ceiling: auto (80%% of this machine's memory), a size such as 6GB, or a share "
     "such as 50%%; per pool: device=8GB,host=24GB"
 )
-_FALLBACK_HELP = "when nothing fits: stop (none, default) or warn and load as stored (stored)"
 
 
 def _parser() -> argparse.ArgumentParser:
@@ -41,9 +40,6 @@ def _parser() -> argparse.ArgumentParser:
         help="run a script within one memory ceiling (memopro.enable), unchanged",
     )
     run.add_argument("--budget", default=None, help=_BUDGET_HELP)
-    run.add_argument("--quality", choices=("lossless", "high", "balanced", "low"), default=None)
-    run.add_argument("--fallback", choices=("none", "stored"), default=None, help=_FALLBACK_HELP)
-    run.add_argument("--disk-writes", choices=("ask", "never", "allow"), default=None)
     run.add_argument(
         "--no-numpy", action="store_true", help="do not page the script's NumPy arrays"
     )
@@ -87,16 +83,7 @@ def _run(args: argparse.Namespace) -> None:
     from memopro._run import run
     from memopro.config import configure
 
-    settings = {
-        k: v
-        for k, v in (
-            ("budget", args.budget),
-            ("quality", args.quality),
-            ("fallback", args.fallback),
-            ("disk_writes", args.disk_writes),
-        )
-        if v is not None
-    }
+    settings = {k: v for k, v in (("budget", args.budget),) if v is not None}
     configure(**settings)  # validate options before anything else
     run(
         args.script,

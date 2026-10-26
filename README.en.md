@@ -98,7 +98,7 @@ PyPI provides wheels for macOS arm64 and Linux x86_64/aarch64; other platforms b
 | `memopro run [options] script.py [args]` | run a script unchanged within a memory ceiling |
 | `memopro --version` | version |
 
-Main `memopro run` options: `--budget` (ceiling), `--dry-run` (print the settings only), `--report-json PATH` (result report), `--no-numpy` / `--no-torch` (turn that handling off), `--quality lossless|high|balanced|low` (lowest loading quality).
+Main `memopro run` options: `--budget` (ceiling), `--dry-run` (print the settings only), `--report-json PATH` (result report), `--no-numpy` / `--no-torch` (turn that handling off).
 
 ### Python API
 
@@ -107,7 +107,7 @@ Main `memopro run` options: `--budget` (ceiling), `--dry-run` (print the setting
 | `memopro.finetune(model, texts, budget=, batch=, seq_len=, epochs=, lr=, rank=)` | LoRA training of an LLM larger than memory; returns a `FinetuneResult` (`model`, `adapter`, `losses`, `batch`, …) |
 | `memopro.generate(model, prompt, budget=, draft="auto", max_new_tokens=, streamer=, stopping_criteria=)` | generation with an LLM larger than memory, drafted by a smaller model of the same family already on the disk. `streamer` (e.g. Transformers' `TextIteratorStreamer`) and `stopping_criteria` go to `model.generate` as they are; the streamed text equals the returned text |
 | `memopro.enable(budget=)` / `memopro.disable()` | a ceiling on the whole process; `Session.estimate()`, `Session.measured()` |
-| `memopro.load(model_id, budget=, quality=)` | load a Hugging Face model. By default (`quality="lossless"`) nothing loses accuracy and a model that does not fit is streamed; `"high"`, `"balanced"` or `"low"` also allow half precision, int8 or int4 |
+| `memopro.load(model_id, budget=, **from_pretrained)` | load a Hugging Face model exactly as stored (precision never changed); a model that does not fit is streamed. A `dtype=` or `quantization_config=` you pass makes that model your original, loaded as given. Nothing is written to the disk |
 | `memopro.doctor()` | the same memory and ceiling report as the CLI |
 | `memopro.configure(...)` / `memopro.using(...)` | global settings / settings for a block |
 
