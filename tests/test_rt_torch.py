@@ -252,13 +252,13 @@ def test_checkpointing_needs_a_streamed_model():
         rtt.enable_checkpointing(torch.nn.Linear(2, 2))
 
 
-def _tiny_qwen(path, seed, vocab=8000):
+def _tiny_qwen(path, seed, vocab=8000, hidden=256, layers=4):
     """A small Qwen2 in bfloat16 (about 12 MB, tied embeddings) whose layers int4 can take."""
     torch.manual_seed(seed)
     cfg = transformers.Qwen2Config(
-        hidden_size=256,
-        intermediate_size=1024,
-        num_hidden_layers=4,
+        hidden_size=hidden,
+        intermediate_size=4 * hidden,
+        num_hidden_layers=layers,
         num_attention_heads=4,
         num_key_value_heads=2,
         vocab_size=vocab,
@@ -1011,3 +1011,116 @@ def test_defaults_are_lossless_and_stream_when_nothing_fits(tiny_gpt2, monkeypat
     assert hasattr(m, "memopro_weights")
     with pytest.raises(memopro.BudgetExceeded):  # quantizing stays the user's explicit choice
         memopro.load(tiny_gpt2, device="cpu", budget=tight, fallback="none")
+
+
+def _word_tokenizer(shift=0):
+    tokenizers = pytest.importorskip("tokenizers")
+    vocab = {f"w{(i + shift) % 8000}": i for i in range(8000)}
+    core = tokenizers.Tokenizer(tokenizers.models.WordLevel(vocab, unk_token=f"w{shift}"))
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    return transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+
+
+def _hub_cache(root, monkeypatch):
+    """A Hugging Face cache with draft candidates for a 256-wide target (0322): returns the
+    target folder and the name of the one `draft="auto"` must take."""
+    import huggingface_hub
+
+    tok, other = _word_tokenizer(), _word_tokenizer(shift=5)
+    monkeypatch.setattr(huggingface_hub.constants, "HF_HUB_CACHE", str(root))
+
+    def put(name, hidden, layers, t):
+        snap = root / f"models--{name.replace('/', '--')}" / "snapshots" / "abc"
+        _tiny_qwen(snap, 1, hidden=hidden, layers=layers)
+        t.save_pretrained(snap)
+        return snap
+
+    target = put("org/target", 256, 4, tok)  # itself: too big to draft for itself
+    put("org/small", 128, 2, tok)  # about a fifth: the one
+    put("org/tiny", 64, 1, tok)  # same tokenizer, too small to be the closest
+    put("org/look-alike", 128, 2, other)  # the right size, another tokenizer
+    put("org/half", 192, 4, tok)  # more than a third
+    return target, tok, "org/small"
+
+
+def test_auto_draft_takes_the_closest_local_model_with_the_same_tokenizer(tmp_path, monkeypatch):
+    from memopro import llm
+
+    target, tok, best = _hub_cache(tmp_path / "hub", monkeypatch)
+    m = rtt.stream_model(target, budget="9MiB", device="cpu")
+    name, path = llm._local_draft(m, tok)
+    assert name == best and path.parent.parent.name == "models--org--small"
+    monkeypatch.setattr(llm, "AUTO_DRAFT_MAX", 0.01)
+    assert llm._local_draft(m, tok) is None
+    # on the CPU there is no draft and nothing to say
+    with warnings.catch_warnings():
+        warnings.simplefilter("error")
+        assert llm._auto_draft(m, tok) is None
+
+
+class _Collect:
+    """A streamer that keeps what it is given (the prompt first, then new tokens)."""
+
+    def __init__(self):
+        self.puts, self.ended = [], 0
+
+    def put(self, value):
+        self.puts.append(value.reshape(-1).tolist())
+
+    def end(self):
+        self.ended += 1
+
+
+def test_generate_with_an_automatic_draft_returns_the_plain_text(tmp_path, monkeypatch):
+    from memopro import llm
+    from memopro.env._torch import mps_usable
+
+    if not mps_usable():
+        pytest.skip("needs a usable Apple GPU")
+    pytest.importorskip("torchao")
+    target, tok, best = _hub_cache(tmp_path / "hub", monkeypatch)
+    kw = {"tokenizer": tok, "max_new_tokens": 12, "chat": False}
+    m = rtt.stream_model(target, budget="96MiB", device="mps")
+    plain = memopro.generate(m, "w2 w9 w16", draft=None, **kw)
+    with pytest.warns(UserWarning, match=f"drafting with {best}"):
+        assert memopro.generate(m, "w2 w9 w16", **kw) == plain
+    assert llm._AUTO_DRAFTS[m] is not None
+    with warnings.catch_warnings():  # found once per model: the next call says nothing
+        warnings.simplefilter("error")
+        assert memopro.generate(m, "w2 w9 w16", **kw) == plain
+    # a budget that holds the generation but not the draft as well: no draft, the same text,
+    # and a streamer that gets the prompt once and every new token once. Sized from what the
+    # GPU really keeps here (earlier tests in this process leave MPS memory behind)
+    draft_bytes = llm._AUTO_DRAFTS[m].memopro_draft_bytes
+    kept = llm._gpu_kept(m) - draft_bytes
+    largest = max(b[0].nbytes for b in m.memopro_weights.buffers.values())
+    reserve = m.memopro_runtime.stats()["reserve"]
+    del m
+    budget = reserve + largest + max(kept, 0) + draft_bytes // 2 + (2 << 20)
+    m = rtt.stream_model(target, budget=budget, device="mps")
+    seen = _Collect()
+    with pytest.warns(UserWarning, match="cannot hold the draft as well"):
+        assert memopro.generate(m, "w2 w9 w16", streamer=seen, **kw) == plain
+    assert llm._AUTO_DRAFTS[m] is None
+    prompt, *new = seen.puts
+    assert prompt == tok("w2 w9 w16").input_ids and seen.ended == 1
+    assert tok.decode([t for put in new for t in put], skip_special_tokens=True) == plain
+    # nothing suitable on the disk: one hint, the same text
+    monkeypatch.setattr(llm, "AUTO_DRAFT_MAX", 0.01)
+    m = rtt.stream_model(target, budget="96MiB", device="mps")
+    with pytest.warns(UserWarning, match="no smaller model with the same tokenizer"):
+        assert memopro.generate(m, "w2 w9 w16", **kw) == plain
+
+
+def test_a_resumed_streamer_gets_only_what_it_has_not_had():
+    from memopro.llm import _Sent
+
+    seen = _Collect()
+    first = _Sent(seen)
+    for v in ([5, 6, 7], [1], [2, 3]):  # the prompt, then new tokens
+        first.put(torch.tensor(v))
+    again = first.resumed()
+    for v in ([5, 6, 7], [1, 2], [3, 4], [8]):  # a second generation from the start
+        again.put(torch.tensor(v))
+    again.end()
+    assert seen.puts == [[5, 6, 7], [1], [2, 3], [4], [8]] and seen.ended == 1

@@ -4,6 +4,15 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: `memopro.generate` picks a draft on its own (0322)
+- `draft` now defaults to `"auto"`: on Apple and NVIDIA GPUs, a causal LM already in the
+  Hugging Face cache that shares the tokenizer and is at most a third of the model's size
+  (the closest to a fifth) drafts tokens, found once per model and kept for later calls.
+  Nothing is downloaded for it; when none is there, a one-time hint says how to name one. A
+  budget that cannot hold the draft as well, found before or during generation, means
+  generating without it, and a streamer still gets every token once. The text is the same
+  with or without a draft; `draft=None` turns it off.
+
 ### Changed: saved activations on the Apple GPU no longer pass through the CPU (0321)
 - When `memopro.enable` moves activations saved for backward into runtime buffers, an MPS
   tensor is now copied by the GPU straight into the runtime memory (wrapped as an MPS tensor,

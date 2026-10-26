@@ -106,7 +106,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 | 함수 | 설명 |
 |---|---|
 | `memopro.finetune(model, texts, budget=, batch=, seq_len=, epochs=, lr=, rank=)` | 메모리보다 큰 LLM의 LoRA 학습. `FinetuneResult`(`model`, `adapter`, `losses`, `batch` 등) 반환 |
-| `memopro.generate(model, prompt, budget=, draft=, max_new_tokens=, streamer=, stopping_criteria=)` | 메모리보다 큰 LLM의 생성. `streamer`(예: Transformers `TextIteratorStreamer`)와 `stopping_criteria`는 `model.generate`에 그대로 넘어가며, 스트리머가 받는 텍스트는 반환값과 같음 |
+| `memopro.generate(model, prompt, budget=, draft="auto", max_new_tokens=, streamer=, stopping_criteria=)` | 메모리보다 큰 LLM의 생성. 디스크에 있는 같은 계열의 작은 모델을 초안으로 자동 사용. `streamer`(예: Transformers `TextIteratorStreamer`)와 `stopping_criteria`는 `model.generate`에 그대로 넘어가며, 스트리머가 받는 텍스트는 반환값과 같음 |
 | `memopro.enable(budget=)` / `memopro.disable()` | 프로세스 전체 메모리 상한. `Session.estimate()`, `Session.measured()` |
 | `memopro.load(model_id, budget=, quality=)` | Hugging Face 모델 불러오기. 기본(`quality="lossless"`)은 무손실이며, 예산에 안 들어가면 흘려 쓰기로 불러옴. `"high"`·`"balanced"`·`"low"`를 고르면 반정밀도·int8·int4도 허용 |
 | `memopro.check(...)` / `memopro.doctor()` | CLI와 같은 진단 |
@@ -217,6 +217,8 @@ text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Inst
 ```
 
 작은 모델이 토큰을 제안하고 큰 모델이 검증합니다. 출력은 큰 모델만으로 생성한 결과와 같습니다. 초안은 Apple GPU(int4)와 NVIDIA GPU(16비트)에서 쓸 수 있고, 같은 토크나이저를 쓰는 모델이어야 합니다.
+
+`draft`를 주지 않으면(기본값 `"auto"`) 이 디스크의 Hugging Face 캐시에 이미 있는 모델 가운데, 같은 토크나이저를 쓰고 크기가 약 1/5인 모델을 골라 초안으로 씁니다. 초안 때문에 새로 내려받는 것은 없고, 맞는 모델이 없거나 예산이 초안까지 담지 못하면 초안 없이 생성합니다(출력은 같습니다). `draft=None`이면 초안을 쓰지 않습니다.
 
 ### 비전 모델
 
