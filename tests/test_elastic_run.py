@@ -19,6 +19,15 @@ transformers = pytest.importorskip("transformers")
 
 
 @pytest.fixture(autouse=True)
+def _quantizing_settings(isolated, monkeypatch):
+    """These tests cover the quality machinery: they keep the pre-0.2.0 defaults explicitly
+    (quality "balanced", no fallback; environment variables, so configure() in a test still
+    wins); the lossless defaults are tested on their own (0314)."""
+    monkeypatch.setenv("MEMOPRO_QUALITY", "balanced")
+    monkeypatch.setenv("MEMOPRO_FALLBACK", "none")
+
+
+@pytest.fixture(autouse=True)
 def isolated(monkeypatch):
     for key in list(os.environ):
         if key.startswith("MEMOPRO_"):
@@ -263,7 +272,17 @@ def test_run_applies_the_loading_policy_only_where_the_script_did_not_choose(tin
         f.stat().st_size for f in __import__("pathlib").Path(tiny_dir).glob("*.safetensors")
     )
     budget = str(int(stored * 0.8))
-    done = _run_cli(["--budget", budget, "--no-elastic", "app.py", tiny_dir, "hello"], tmp_path)
+    args = [
+        "--budget",
+        budget,
+        "--quality",
+        "balanced",
+        "--no-elastic",
+        "app.py",
+        tiny_dir,
+        "hello",
+    ]
+    done = _run_cli(args, tmp_path)
     assert done.returncode == 0, done.stderr[-2000:]
     line = next(l for l in done.stdout.splitlines() if l.startswith("RESULT"))
     _, name, arg, chosen, explicit = line.split()
