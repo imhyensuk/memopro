@@ -44,6 +44,19 @@ thread_local! {
 
 /// Whether the calling thread is a pager's own: an allocator that hands memory out of a pager
 /// must not do so to the pager itself (its lock is held while it allocates; 0189).
+/// The pager's own pool: as many threads as cores, at most 8, each marked a pager thread.
+fn pager_pool() -> Result<rayon::ThreadPool> {
+    let n = std::thread::available_parallelism()
+        .map_or(1, |n| n.get())
+        .min(8);
+    rayon::ThreadPoolBuilder::new()
+        .num_threads(n)
+        .thread_name(|i| format!("memopro-pager-{i}"))
+        .start_handler(|_| PAGER_THREAD.with(|c| c.set(true)))
+        .build()
+        .map_err(|e| Error::Unsupported(format!("pager threads: {e}")))
+}
+
 pub fn in_pager_thread() -> bool {
     PAGER_THREAD.with(|c| c.get())
 }
@@ -175,7 +188,6 @@ struct State {
     machine: super::MachineRoom,
     stats: PagerStats,
     scratch: Vec<u8>,
-    packed: Vec<u8>,
 }
 
 struct Shared {
@@ -184,6 +196,9 @@ struct Shared {
     uffd: OwnedFd,
     stop: OwnedFd,
     state: Mutex<State>,
+    /// Compresses chunks being evicted, several at once (0326); its threads count as the
+    /// pager's own (`in_pager_thread`), and it is not the process-wide pool user code runs on.
+    pool: rayon::ThreadPool,
 }
 
 /// Transparent paging under a budget; see the [module documentation](super).
@@ -258,8 +273,8 @@ impl Pager {
                 machine: Default::default(),
                 stats,
                 scratch: Vec::new(),
-                packed: Vec::new(),
             }),
+            pool: pager_pool()?,
         });
         let serving = shared.clone();
         let thread = std::thread::Builder::new()
@@ -615,12 +630,32 @@ impl Shared {
         }
         let hard = limit;
         let limit = limit.max(st.compressed + MIN_CHUNKS * self.config.chunk as u64);
+        let chunk = self.config.chunk as u64;
         while st.resident + st.compressed + need > limit {
-            let fits = (limit - st.compressed) / self.config.chunk as u64;
-            let Some((start, ci)) = self.choose(st, exclude, fits) else {
+            let fits = (limit - st.compressed) / chunk;
+            // the chunks this fault needs, then (cold ones only) up to one per pool thread:
+            // compressed side by side, and the next faults find room without waiting (0326)
+            let short = (st.resident + st.compressed + need - limit).div_ceil(chunk) as usize;
+            let mut victims: Vec<(usize, usize)> = Vec::new();
+            // ahead of need at most an eighth of what fits: more would wear away the chunks a
+            // repeated scan keeps (a_repeated_scan_keeps_a_budget_worth)
+            let ahead = self
+                .pool
+                .current_num_threads()
+                .min((fits / 8).max(1) as usize);
+            while victims.len() < short.max(ahead) {
+                let Some((start, ci, hot)) = self.choose(st, exclude, fits, &victims) else {
+                    break;
+                };
+                if hot && victims.len() >= short {
+                    break;
+                }
+                victims.push((start, ci));
+            }
+            if victims.is_empty() {
                 break;
-            };
-            self.evict(st, start, ci);
+            }
+            self.evict(st, &victims);
         }
         st.resident + st.compressed + need <= hard
     }
@@ -630,7 +665,13 @@ impl Shared {
     /// code works on them right now (two arrays read and written in step ping-ponged chunk for
     /// chunk otherwise, and CI tests took hours, 0128). If only such chunks are left, the one
     /// faulted in longest ago.
-    fn choose(&self, st: &State, exclude: (usize, usize), fits: u64) -> Option<(usize, usize)> {
+    fn choose(
+        &self,
+        st: &State,
+        exclude: (usize, usize),
+        fits: u64,
+        taken: &[(usize, usize)],
+    ) -> Option<(usize, usize, bool)> {
         let now = st.clock as f64;
         let hot = (fits / 4).clamp(2, HOT_CHUNKS) as f64;
         let (sum, count) = st
@@ -644,7 +685,11 @@ impl Shared {
         let mut oldest_hot: Option<(f64, usize, usize)> = None;
         for (&start, r) in &st.regions {
             for (ci, c) in r.chunks.iter().enumerate() {
-                if !matches!(c.data, Data::Resident) || c.incompressible || (start, ci) == exclude {
+                if !matches!(c.data, Data::Resident)
+                    || c.incompressible
+                    || (start, ci) == exclude
+                    || taken.contains(&(start, ci))
+                {
                     continue;
                 }
                 let age = now - c.last as f64;
@@ -665,58 +710,75 @@ impl Shared {
                 }
             }
         }
-        best.or(oldest_hot).map(|(_, s, c)| (s, c))
+        best.map(|(_, s, c)| (s, c, false))
+            .or(oldest_hot.map(|(_, s, c)| (s, c, true)))
     }
 
-    fn evict(&self, st: &mut State, start: usize, ci: usize) {
+    /// Evict `victims`: each is write-protected (readers go on, writers wait), all are
+    /// compressed at once on the pager's pool, then each is given back or, when it does not
+    /// compress enough, kept for good.
+    fn evict(&self, st: &mut State, victims: &[(usize, usize)]) {
         let chunk = self.config.chunk;
-        let cstart = start + ci * chunk;
         let t0 = Instant::now();
-        // from here on writers wait; readers go on
-        let protected = self.protect(cstart, chunk, true).is_ok();
-        let mut packed = std::mem::take(&mut st.packed);
-        let saved = protected && {
-            // SAFETY: the chunk is in memory and write-protected, so its bytes cannot change
-            // while they are read; the pager thread never faults on its own reads of it.
-            let src = unsafe { std::slice::from_raw_parts(cstart as *const u8, chunk) };
-            codec::pack_chunk(
-                src,
-                self.config.elem,
-                self.config.compress_level,
-                &mut packed,
-            )
-            .is_ok()
-                && (packed.len() as f64) < chunk as f64 * (1.0 - self.config.min_saving)
-        };
+        let protected: Vec<bool> = victims
+            .iter()
+            .map(|&(start, ci)| self.protect(start + ci * chunk, chunk, true).is_ok())
+            .collect();
+        let (elem, level, keep) = (
+            self.config.elem,
+            self.config.compress_level,
+            chunk as f64 * (1.0 - self.config.min_saving),
+        );
+        let packed: Vec<Option<Vec<u8>>> = self.pool.install(|| {
+            use rayon::prelude::*;
+            victims
+                .par_iter()
+                .zip(&protected)
+                .map(|(&(start, ci), &ok)| {
+                    if !ok {
+                        return None;
+                    }
+                    // SAFETY: the chunk is in memory and write-protected, so its bytes cannot
+                    // change while they are read; reading them never faults.
+                    let src = unsafe {
+                        std::slice::from_raw_parts((start + ci * chunk) as *const u8, chunk)
+                    };
+                    let mut out = Vec::new();
+                    let fine = codec::pack_chunk(src, elem, level, &mut out).is_ok()
+                        && (out.len() as f64) < keep;
+                    fine.then_some(out)
+                })
+                .collect()
+        });
         st.stats.compress_seconds += t0.elapsed().as_secs_f64();
-        let c = &mut st
-            .regions
-            .get_mut(&start)
-            .expect("chosen from the table")
-            .chunks[ci];
-        if !saved {
-            if protected {
-                let _ = self.protect(cstart, chunk, false);
-            }
-            c.incompressible = true;
-            st.packed = packed;
-            st.fixed += chunk as u64;
-            st.stats.incompressible += 1;
-            return;
+        for ((&(start, ci), ok), stored) in victims.iter().zip(protected).zip(packed) {
+            let cstart = start + ci * chunk;
+            let c = &mut st
+                .regions
+                .get_mut(&start)
+                .expect("chosen from the table")
+                .chunks[ci];
+            let Some(stored) = stored else {
+                if ok {
+                    let _ = self.protect(cstart, chunk, false);
+                }
+                c.incompressible = true;
+                st.fixed += chunk as u64;
+                st.stats.incompressible += 1;
+                continue;
+            };
+            // SAFETY: our own mapping; its content is saved in `stored`.
+            unsafe { libc::madvise(cstart as *mut libc::c_void, chunk, libc::MADV_DONTNEED) };
+            let n = stored.len() as u64;
+            c.data = Data::Compressed(stored);
+            st.resident -= chunk as u64;
+            st.compressed += n;
+            st.stats.evictions += 1;
+            st.stats.compress_in += chunk as u64;
+            st.stats.compress_out += n;
+            // threads that tried to write meanwhile wait on the write-protection; their faults
+            // are queued and bring the chunk back
         }
-        let stored = packed.clone();
-        // SAFETY: our own mapping; its content is saved in `stored`.
-        unsafe { libc::madvise(cstart as *mut libc::c_void, chunk, libc::MADV_DONTNEED) };
-        let n = stored.len() as u64;
-        c.data = Data::Compressed(stored);
-        st.packed = packed;
-        st.resident -= chunk as u64;
-        st.compressed += n;
-        st.stats.evictions += 1;
-        st.stats.compress_in += chunk as u64;
-        st.stats.compress_out += n;
-        // threads that tried to write meanwhile wait on the write-protection; their faults are
-        // queued and bring the chunk back
     }
 
     /// Fill `len` bytes at `dst` (all absent) from `src` and wake whoever waits on them.

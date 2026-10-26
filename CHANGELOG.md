@@ -4,6 +4,14 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: the transparent pager compresses several chunks at once (0326)
+- When a fault needs room, the pager (`memopro run`, `memopro.enable`) now picks the chunks it
+  needs plus a few cold ones (up to one per core, at most 8 and an eighth of what fits) and
+  compresses them side by side on its own threads, so the next faults find room without
+  waiting. Programs at half the memory they need on an M1, results unchanged: an image stack
+  4.5 -> 3.6-4.2 s, a pandas table 147-191 -> 125-135 s, a NumPy simulation 157-160 ->
+  104-110 s.
+
 ### Changed: `memopro.generate` picks a draft on its own (0322)
 - `draft` now defaults to `"auto"`: on Apple and NVIDIA GPUs, a causal LM already in the
   Hugging Face cache that shares the tokenizer and is at most a third of the model's size
