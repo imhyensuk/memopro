@@ -926,6 +926,47 @@ def test_only_one_layout_of_the_weights_is_downloaded():
     assert pick(["onnx/model.safetensors", "model.safetensors"]) == ["model.safetensors"]
 
 
+def test_edr_device_cache_keeps_results_and_holds_more(tmp_path):
+    """0313: with the EDR tier the device cache keeps copies first and the other bf16 weights
+    in EDR form (3/4 of their size), rebuilt at each use. Forced on the CPU: greedy text and
+    LoRA losses equal the in-place path bit for bit, the cache stays within its budget, and a
+    budget too small for copies of the whole model copies fewer bytes than without the tier."""
+    pytest.importorskip("peft")
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(3)]
+    probe = rtt.stream_model(path, budget="24MiB", device="cpu")
+    whole = sum(b.nbytes for b, _, _ in probe.memopro_weights.buffers.values())
+    budget = int(whole * 0.85)  # too small for copies of everything, enough with EDR
+    results, stats = [], {}
+    for name, copy, edr in (
+        ("in place", False, False),
+        ("copies", True, False),
+        ("edr", True, True),
+    ):
+        m = rtt.stream_model(path, budget="24MiB", device="cpu")
+        w = m.memopro_weights
+        w.copy, w.gpu_budget, w.edr = copy, budget, edr
+        text = memopro.generate(m, "w2 w9 w16", tokenizer=tok, max_new_tokens=6, chat=False)
+        r = memopro.finetune(m, texts, tokenizer=tok, seq_len=64, lr=1e-2)
+        results.append((text, r.losses))
+        stats[name] = dict(w.copy_stats)
+        assert w.gpu_cache_bytes <= budget
+    assert results[1] == results[0] and results[2] == results[0]
+    assert stats["edr"]["edr_hits"] > 0 and stats["edr"]["edr_bytes"] > 0
+    assert stats["edr"]["copy_bytes"] < stats["copies"]["copy_bytes"]
+
+
+def test_edr_device_cache_is_for_cuda(tmp_path):
+    with pytest.raises(memopro.ModeUnavailable):
+        rtt.stream_model(_tiny_qwen(tmp_path / "t", 0), budget="9MiB", device="cpu", edr=True)
+
+
 def test_drafts_and_load_download_through_the_same_path(tmp_path, monkeypatch):
     """0312: a hub name not on this disk is downloaded once through `_download` (notice,
     free-disk check, one layout) for drafts and memopro.load too; a local folder or a refusal
