@@ -4,6 +4,15 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Added: mlx-lm models within the ceiling (0337)
+- `memopro.generate(model, prompt, tokenizer=tok)` with a model from `mlx_lm.load` runs it with
+  mlx-lm as given (the text is mlx-lm's own) and keeps it within the ceiling: the decoder layers
+  that fit stay in memory, the others are read again from their files each token; a layer that
+  differs from its file is kept. It also keeps within what the machine can give without
+  swapping. Nothing is written. Qwen2.5-1.5B at 1 GiB on an 8 GB M1: 1.09 s/token (PyTorch path
+  1.30), peak 1,013 MiB; Qwen2.5-3B at 4.5 GiB with other apps open: 2.05 s/token (2.68), swap
+  +43 MiB. `pip install memopro[mlx]`.
+
 ### Removed: the internals of the removed features (0335)
 - The code behind hibernation, census, γ (elastic), `check`/`optimize`/`train_session`, the
   technique registry and the Rust spill engine, write ledger, pressure signal and file mappings

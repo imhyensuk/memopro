@@ -35,7 +35,7 @@ numpy = ["numpy"]
 torch = ["torch>=2.4", "numpy"]
 hf = ["torch>=2.4", "numpy", "transformers", "accelerate", "safetensors"]
 llm = ["torch>=2.4", "numpy", "transformers", "accelerate", "safetensors", "peft", "torchao"]
-notebook = ["ipython"]
+mlx = ["mlx", "mlx-lm"]
 dev = ["pytest>=8", "ruff>=0.6"]
 
 [project.scripts]

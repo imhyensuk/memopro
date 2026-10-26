@@ -291,7 +291,9 @@ def generate(
 ) -> str:
     """Greedy text from a model whose 16-bit weights stay in their files.
 
-    ``model`` is a name, a folder or a streamed model (reused as is). A string ``prompt`` goes
+    ``model`` is a name, a folder or a streamed model (reused as is), or a model loaded with
+    ``mlx_lm.load`` (pass its tokenizer): then mlx-lm runs it as given and memopro only keeps
+    it within the ceiling (0337). A string ``prompt`` goes
     through the chat template when the tokenizer has one and ``chat`` is true. ``draft`` (a
     name, folder or :func:`memopro.rt.torch.draft_model`) proposes tokens on Apple and NVIDIA
     GPUs; the text is the same with or without it. ``"auto"`` (the default) takes a smaller model
@@ -306,6 +308,21 @@ def generate(
     key/value cache and the prompt's intermediates (estimated first; on Apple GPUs measured
     after every pass and raised when more was kept), and budgets that cannot hold the largest
     weight next to that are refused with ``BudgetExceeded``."""
+    from memopro import _mlx
+
+    if _mlx.is_mlx_model(model):  # the user's mlx-lm model is the original (0334 C, 0337)
+        if draft not in (None, "auto") or streamer is not None or stopping_criteria is not None:
+            raise InvalidArgument(
+                "an MLX model takes prompt, tokenizer, budget, max_new_tokens and chat only"
+            )
+        return _mlx.generate(
+            model,
+            prompt,
+            tokenizer=tokenizer,
+            budget=budget,
+            max_new_tokens=max_new_tokens,
+            chat=chat,
+        )
     import memopro.rt.torch as rtt
 
     m = _streamed(model, budget, device)
