@@ -256,6 +256,68 @@ fn edr_decode<'py>(
     .map_err(to_py_err)
 }
 
+/// EDR v2 (0315) of bf16 `src`: (code lengths 256 B, block offsets as u64, exponent codes,
+/// sign + top mantissa nibbles, low mantissa nibbles), all bytes.
+#[pyfunction]
+#[allow(clippy::type_complexity)]
+fn edr2_encode<'py>(
+    py: Python<'py>,
+    src: &Bound<'py, PyAny>,
+) -> PyResult<(
+    Bound<'py, PyBytes>,
+    Bound<'py, PyBytes>,
+    Bound<'py, PyBytes>,
+    Bound<'py, PyBytes>,
+    Bound<'py, PyBytes>,
+)> {
+    let (_s, s) = borrow(src, false)?;
+    let (sp, n) = typed::<u16>(s, "src")?;
+    // SAFETY: `_s` holds the buffer; `typed` checked its size and alignment.
+    let e = py.detach(|| {
+        memopro::edr::v2::encode(unsafe { std::slice::from_raw_parts(sp as *const u16, n) })
+    });
+    let offsets: Vec<u8> = e.offsets.iter().flat_map(|o| o.to_le_bytes()).collect();
+    Ok((
+        PyBytes::new(py, &e.lens),
+        PyBytes::new(py, &offsets),
+        PyBytes::new(py, &e.exps),
+        PyBytes::new(py, &e.hi),
+        PyBytes::new(py, &e.lo),
+    ))
+}
+
+/// Decode EDR v2 into the bf16 buffer `out`: every bit with `lo`, the draft with `lo=None`.
+#[pyfunction]
+#[pyo3(signature = (lens, offsets, exps, hi, lo, out))]
+fn edr2_decode<'py>(
+    py: Python<'py>,
+    lens: &[u8],
+    offsets: &[u8],
+    exps: &[u8],
+    hi: &[u8],
+    lo: Option<&[u8]>,
+    out: &Bound<'py, PyAny>,
+) -> PyResult<()> {
+    let lens: [u8; 256] = lens
+        .try_into()
+        .map_err(|_| PyValueError::new_err("EDR v2 code lengths are 256 bytes"))?;
+    if offsets.len() % 8 != 0 {
+        return Err(PyValueError::new_err("block offsets are 8-byte values"));
+    }
+    let offsets: Vec<u64> = offsets
+        .chunks_exact(8)
+        .map(|c| u64::from_le_bytes(c.try_into().expect("8 bytes")))
+        .collect();
+    let (_o, o) = borrow(out, true)?;
+    let (op, n) = typed::<u16>(o, "out")?;
+    py.detach(|| {
+        // SAFETY: `out` is held by `_o`, ours, and checked by `typed`.
+        let out = unsafe { std::slice::from_raw_parts_mut(op as *mut u16, n) };
+        memopro::edr::v2::decode(&lens, &offsets, exps, hi, lo, out)
+    })
+    .map_err(to_py_err)
+}
+
 // ------------------------------------------------------------------ spill engine
 
 /// Digest (16 bytes) of a buffer.
@@ -1153,6 +1215,8 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(edr_table, m)?)?;
     m.add_function(wrap_pyfunction!(edr_encode, m)?)?;
     m.add_function(wrap_pyfunction!(edr_decode, m)?)?;
+    m.add_function(wrap_pyfunction!(edr2_encode, m)?)?;
+    m.add_function(wrap_pyfunction!(edr2_decode, m)?)?;
     m.add_function(wrap_pyfunction!(engine_digest, m)?)?;
     m.add_function(wrap_pyfunction!(engine_digest_parts, m)?)?;
     m.add_function(wrap_pyfunction!(engine_digest_combine, m)?)?;

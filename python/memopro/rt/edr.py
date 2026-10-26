@@ -1,4 +1,4 @@
-"""EDR v1 (0308): bf16 weights as a 1-byte base and a 4-bit residual, lossless.
+"""EDR (0308, 0315): bf16 weights as a 1-byte base and a 4-bit residual, lossless.
 
 - base byte: sign (bit 7) | exponent index (bits 3-6; 15 = escape) | top 3 mantissa bits
 - residual: the low 4 mantissa bits, two per byte (element ``2k`` in the low nibble)
@@ -127,3 +127,40 @@ def decode_on(d: dict[str, Any], draft: bool = False, out: Any = None) -> Any:
     if index.numel():
         out[index] = bits if not draft else bits & -16  # -16 = 0xFFF0
     return out.view(torch.bfloat16).reshape(d["shape"])
+
+
+@dataclass
+class Parts2:
+    """One bf16 tensor in EDR v2 form (0315): exponents Huffman-coded in independent blocks,
+    sign and mantissa as nibbles. About 10.7 bits per weight; ``exps`` + ``hi`` is the draft."""
+
+    shape: tuple[int, ...]
+    lens: bytes  # code length per exponent value
+    offsets: bytes  # little-endian u64 start of each block of codes
+    exps: bytes
+    hi: bytes  # sign | top 3 mantissa bits, a nibble per element
+    lo: bytes  # low 4 mantissa bits, a nibble per element
+
+    @property
+    def nbytes(self) -> int:
+        return sum(len(x) for x in (self.lens, self.offsets, self.exps, self.hi, self.lo))
+
+
+def encode2(t: Any) -> Parts2:
+    """EDR v2 form of a bfloat16 tensor (Rust core, CPU)."""
+    import numpy as np
+
+    return Parts2(tuple(t.shape), *_core.edr2_encode(_bits(t).view(np.uint8)))
+
+
+def decode2(p: Parts2, draft: bool = False) -> Any:
+    """The bf16 tensor back on the CPU: every bit, or the draft (low 4 mantissa bits cleared)."""
+    import math
+
+    import numpy as np
+    import torch
+
+    out = np.empty(math.prod(p.shape), np.uint16)
+    lo = None if draft else p.lo
+    _core.edr2_decode(p.lens, p.offsets, p.exps, p.hi, lo, out.view(np.uint8))
+    return torch.from_numpy(out.view(np.int16)).view(torch.bfloat16).reshape(p.shape)
