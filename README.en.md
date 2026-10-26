@@ -218,7 +218,17 @@ text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Inst
 
 The small model proposes tokens and the large model verifies them; the output equals generation with the large model alone. Drafts run on Apple GPUs (int4) and NVIDIA GPUs (16-bit) and must share the target's tokenizer.
 
-Without `draft` (the default `"auto"`), a model already in this disk's Hugging Face cache that shares the tokenizer and is about a fifth of the size becomes the draft. Nothing is downloaded for it; with no such model, or a budget that cannot hold it as well, generation goes without a draft (the output is the same). `draft=None` never drafts.
+Without `draft` (the default `"auto"`), a model already on this disk that shares the tokenizer and is about a fifth of the size becomes the draft. It is looked for in three places:
+
+1. the folders in the `model_dirs` setting (a model folder, or a folder of model folders)
+2. the folders next to a model loaded from a folder
+3. the Hugging Face cache, when there is one
+
+```python
+memopro.configure(model_dirs=["~/models", "/Volumes/SSD/llm"])  # or MEMOPRO_MODEL_DIRS=~/models:/Volumes/SSD/llm
+```
+
+Nothing is downloaded for it. With no such model, or a budget that cannot hold it as well, generation goes without a draft (the output is the same) and says which budget would let it draft. `draft=None` never drafts.
 
 ### Vision models
 

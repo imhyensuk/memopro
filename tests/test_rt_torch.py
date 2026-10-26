@@ -3,6 +3,7 @@ the weights in aligned memory), within the budget, for inference and frozen-weig
 
 import contextlib
 import math
+import os
 import warnings
 
 import pytest
@@ -1062,6 +1063,19 @@ def test_auto_draft_takes_the_closest_local_model_with_the_same_tokenizer(tmp_pa
     m2 = rtt.stream_model(models / "big", budget="9MiB", device="cpu")
     name, path = llm._local_draft(m2, tok)
     assert name == "small" and path == (models / "small").resolve()
+    # models kept anywhere else: named by model_dirs (a folder of models, or a model folder)
+    elsewhere = tmp_path / "elsewhere"
+    _tiny_qwen(elsewhere / "mine", 1, hidden=128, layers=2)
+    tok.save_pretrained(elsewhere / "mine")
+    m3 = rtt.stream_model(target, budget="9MiB", device="cpu")  # its neighbours: none
+    assert llm._local_draft(m3, tok) is None
+    for dirs in ([str(elsewhere)], [str(elsewhere / "mine")]):
+        with memopro.using(model_dirs=dirs):
+            assert llm._local_draft(m3, tok)[0] == "mine"
+    monkeypatch.setenv("MEMOPRO_MODEL_DIRS", os.pathsep.join(["/nowhere", str(elsewhere)]))
+    assert memopro.get_config().model_dirs == ("/nowhere", str(elsewhere))
+    assert llm._local_draft(m3, tok)[0] == "mine"
+    monkeypatch.delenv("MEMOPRO_MODEL_DIRS")
     monkeypatch.setattr(llm, "AUTO_DRAFT_MAX", 0.01)
     assert llm._local_draft(m, tok) is None
     # on the CPU there is no draft and nothing to say

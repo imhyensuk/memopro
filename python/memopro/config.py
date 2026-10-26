@@ -96,6 +96,9 @@ class Config:
     daily_write_limit: int | None = None  # None: derived from the disk size (decided in A1b)
     min_free_disk_fraction: float = 0.20  # 0032 H4
     spill_dir: str | None = None
+    # folders where the user keeps models (each one a model folder, or a folder of them):
+    # generate(draft="auto") looks there first for a draft (0324)
+    model_dirs: tuple[str, ...] = ()
     idle_cells: int = 3
     idle_seconds: float | None = None  # also suggest objects unused this long (0052 E8)
 
@@ -109,6 +112,15 @@ def _choice(key: str, value: Any, choices: tuple[str, ...]) -> str:
     if value not in choices:
         raise InvalidArgument(f"{key} must be one of {', '.join(choices)}; got {value!r}")
     return value
+
+
+def _dirs(value: Any) -> tuple[str, ...]:
+    """Folders as a list, or one string with the platform's path separator (``:`` on macOS and
+    Linux, ``;`` on Windows), as in ``MEMOPRO_MODEL_DIRS``."""
+    import os
+
+    items = value.split(os.pathsep) if isinstance(value, str) else list(value)
+    return tuple(str(d).strip() for d in items if str(d).strip())
 
 
 def _modes(value: Any) -> tuple[str, ...]:
@@ -268,6 +280,8 @@ def _validate(key: str, value: Any) -> Any:
             if not 0.0 <= fraction < 1.0:
                 raise InvalidArgument(f"min_free_disk_fraction must be in [0, 1); got {value!r}")
             return fraction
+        case "model_dirs":
+            return _dirs(value)
         case "spill_dir":
             return None if value in (None, "") else str(value)
         case "idle_cells":

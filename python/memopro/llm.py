@@ -296,7 +296,8 @@ def generate(
     name, folder or :func:`memopro.rt.torch.draft_model`) proposes tokens on Apple and NVIDIA
     GPUs; the text is the same with or without it. ``"auto"`` (the default) takes a smaller model
     already on this disk that shares the tokenizer, about a fifth of the size (0322; nothing is
-    downloaded for it), and goes without one when there is none, on the CPU, or when the budget
+    downloaded for it; looked for in the ``model_dirs`` setting, next to a model loaded from a
+    folder, and in the Hugging Face cache), and goes without one when there is none, on the CPU, or when the budget
     cannot hold it next to the generation; ``None`` never drafts. ``streamer`` (e.g. Transformers'
     ``TextIteratorStreamer``) and ``stopping_criteria`` go to ``model.generate`` as they are: the
     streamer receives the same tokens the returned text is decoded from.
@@ -436,7 +437,8 @@ def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:
         _note(
             "memopro: no smaller model with the same tokenizer is on this disk, so this "
             "generation has no draft; draft='<a model of the same family, about a fifth "
-            "of the size>' makes it faster (downloaded once, the text stays the same)"
+            "of the size>' makes it faster (downloaded once, the text stays the same), or "
+            "memopro.configure(model_dirs=[...]) names the folders where you keep models"
         )
         return None
     name, path = choice
@@ -464,14 +466,13 @@ def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:
 
 
 def _local_draft(m: Any, tok: Any) -> tuple[str, Path] | None:
-    """(name, folder) of the model in the Hugging Face cache, or next to ``m``'s own folder when
-    it was loaded from one, that suits ``m`` best as a draft: a causal LM with the same tokenizer, at most AUTO_DRAFT_MAX of ``m``'s bytes, the
+    """(name, folder) of the model, among those :func:`_model_folders` finds, that suits ``m``
+    best as a draft: a causal LM with the same tokenizer, at most AUTO_DRAFT_MAX of ``m``'s bytes, the
     closest to AUTO_DRAFT_SIZE of them; None when there is none. Reads only config files and
     sizes until the tokenizer check."""
     import json
     import math
 
-    import huggingface_hub
     import transformers
 
     import memopro.rt.torch as rtt
@@ -484,13 +485,8 @@ def _local_draft(m: Any, tok: Any) -> tuple[str, Path] | None:
         want = transformers.AutoTokenizer.from_pretrained(m.config._name_or_path).get_vocab()
     except Exception:  # noqa: BLE001 - no tokenizer files with the weights: the caller's
         want = tok.get_vocab()
-    root = Path(huggingface_hub.constants.HF_HUB_CACHE)
-    folders = [(_hub_name(s), s) for s in root.glob("models--*/snapshots/*")]
-    own = Path(str(m.config._name_or_path))
-    if own.is_dir():  # a model kept in a folder of its own: its neighbours too (models/*)
-        folders += [(f.name, f) for f in sorted(own.resolve().parent.iterdir()) if f.is_dir()]
     candidates = []
-    for name, snap in folders:
+    for name, snap in _model_folders(m):
         try:
             cfg = json.loads((snap / "config.json").read_text())
             names = [p.name for p in snap.iterdir()]
@@ -512,6 +508,40 @@ def _local_draft(m: Any, tok: Any) -> tuple[str, Path] | None:
         if same:
             return name, snap
     return None
+
+
+def _model_folders(m: Any) -> list[tuple[str, Path]]:
+    """Folders that may hold a draft for ``m``, each once (0324): the user's ``model_dirs``
+    (a model folder, or a folder of model folders), the folders next to ``m``'s own when it
+    was loaded from one, and the Hugging Face cache when there is one."""
+    from memopro.config import get_config
+
+    found: dict[Path, tuple[str, Path]] = {}
+
+    def add(name: str, folder: Path) -> None:
+        if (folder / "config.json").is_file():
+            found.setdefault(folder.resolve(), (name, folder))
+
+    def under(root: Path) -> None:
+        add(root.name, root)
+        if root.is_dir():
+            for f in sorted(root.iterdir()):
+                if f.is_dir():
+                    add(f.name, f)
+
+    for d in get_config().model_dirs:
+        under(Path(d).expanduser())
+    own = Path(str(m.config._name_or_path))
+    if own.is_dir():  # a model kept in a folder of its own: its neighbours (models/*)
+        under(own.resolve().parent)
+    try:
+        import huggingface_hub
+    except ImportError:  # no Hugging Face library: no cache to look in
+        return list(found.values())
+    root = Path(huggingface_hub.constants.HF_HUB_CACHE)
+    for snap in sorted(root.glob("models--*/snapshots/*")):
+        add(_hub_name(snap), snap)
+    return list(found.values())
 
 
 def _hub_name(snapshot: Path) -> str:

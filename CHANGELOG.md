@@ -10,8 +10,10 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   (the closest to a fifth) drafts tokens, found once per model and kept for later calls.
   Nothing is downloaded for it; when none is there, a one-time hint says how to name one. A
   budget that cannot hold the draft as well, found before or during generation, means
-  generating without it, and a streamer still gets every token once. A model loaded from a
-  folder also finds drafts in the folders next to it (`models/*`). A draft whose size (read
+  generating without it, and a streamer still gets every token once. Drafts are looked for in
+  the new `model_dirs` setting (folders where you keep models; `MEMOPRO_MODEL_DIRS` with the
+  platform's path separator), in the folders next to a model loaded from a folder, and in the
+  Hugging Face cache when there is one. A draft whose size (read
   from its file headers) would leave too little room beside the generation is not loaded at
   all, and the message says which budget would let it draft. The text is the same with or
   without a draft; `draft=None` turns it off. Qwen2.5-1.5B streamed on an M1 with Qwen2.5-0.5B
