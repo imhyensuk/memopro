@@ -49,7 +49,6 @@ def setup(*, device: str | None = None, holding: tuple[Any, ...] = (), **options
     held_host = resident_bytes("cpu", *holding)
     budget = compute_budget(env, cfg, resident_device=held_device, resident_host=held_host)
     _require_minimums(budget, cfg)
-    budget = _under_pressure(budget, held_device, held_host)
     if device == "cpu":
         kinds = []
     elif device is not None and device not in kinds:
@@ -131,26 +130,3 @@ def _require_minimums(budget: Budget, cfg: Config) -> None:
         f"{short}. Free memory, or give a larger budget "
         "the OS can reclaim by compressing or swapping"
     )
-
-
-def _under_pressure(budget: Budget, held_device: int = 0, held_host: int = 0) -> Budget:
-    """Shrink the budget while the OS reports memory pressure (γ, 0052 E6); forced pools keep
-    the exact size the user asked for (0059 D1). Only what memopro may still take shrinks: the
-    memory the caller's model already holds is not given back by shrinking (E022 D8)."""
-    try:
-        from memopro.elastic import budget_factor
-    except ImportError:
-        return budget
-    factor = budget_factor()
-    if factor >= 1.0:
-        return budget
-
-    def shrink(value: int, held: int) -> int:
-        held = min(held, value)
-        return held + int((value - held) * factor)
-
-    host = budget.host if "host" in budget.forced else shrink(budget.host, held_host)
-    device = budget.device
-    if device is not None and "device" not in budget.forced:
-        device = shrink(device, held_device)
-    return dataclasses.replace(budget, host=host, device=device)

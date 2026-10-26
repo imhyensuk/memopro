@@ -111,25 +111,6 @@ fn hwinfo_memory(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
     Ok(d)
 }
 
-/// Resident set size of this process in bytes.
-/// Current OS memory pressure: ``{"level", "source", "some_avg10", "full_avg10", "raw_level"}``.
-#[pyfunction]
-fn pressure_current(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
-    let p = py.detach(memopro::pressure::current).map_err(to_py_err)?;
-    let d = PyDict::new(py);
-    d.set_item("level", p.level.as_str())?;
-    d.set_item("source", p.source)?;
-    d.set_item("some_avg10", p.some_avg10)?;
-    d.set_item("full_avg10", p.full_avg10)?;
-    d.set_item("raw_level", p.raw_level)?;
-    Ok(d)
-}
-
-#[pyfunction]
-fn hwinfo_process_rss(py: Python<'_>) -> PyResult<u64> {
-    py.detach(memopro::hwinfo::process_rss).map_err(to_py_err)
-}
-
 /// CPU brand and logical CPU count.
 #[pyfunction]
 fn hwinfo_cpu(py: Python<'_>) -> PyResult<Bound<'_, PyDict>> {
@@ -316,145 +297,6 @@ fn edr2_decode<'py>(
         memopro::edr::v2::decode(&lens, &offsets, exps, hi, lo, out)
     })
     .map_err(to_py_err)
-}
-
-// ------------------------------------------------------------------ spill engine
-
-/// Digest (16 bytes) of a buffer.
-#[pyfunction]
-fn engine_digest<'py>(py: Python<'py>, data: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyBytes>> {
-    let (_keep, raw) = borrow(data, false)?;
-    // SAFETY: `_keep` holds the buffer for the whole call.
-    let d = py.detach(|| memopro::spill::digest(unsafe { raw.slice() }));
-    Ok(PyBytes::new(py, &d.0))
-}
-
-/// Per-chunk hashes of a buffer (16 bytes per `DIGEST_CHUNK`, concatenated); see
-/// `engine_digest_combine`. Lets Python verify large tensors piece by piece (0061 F1).
-#[pyfunction]
-fn engine_digest_parts<'py>(
-    py: Python<'py>,
-    data: &Bound<'py, PyAny>,
-) -> PyResult<Bound<'py, PyBytes>> {
-    let (_keep, raw) = borrow(data, false)?;
-    // SAFETY: `_keep` holds the buffer for the whole call.
-    let parts = py.detach(|| memopro::spill::digest_parts(unsafe { raw.slice() }));
-    let out: Vec<u8> = parts.iter().flat_map(|p| p.to_le_bytes()).collect();
-    Ok(PyBytes::new(py, &out))
-}
-
-/// Digest (16 bytes) of `length` bytes whose chunk hashes are `parts` (from `engine_digest_parts`
-/// over consecutive pieces whose lengths are multiples of `DIGEST_CHUNK`).
-#[pyfunction]
-fn engine_digest_combine<'py>(
-    py: Python<'py>,
-    length: usize,
-    parts: &[u8],
-) -> PyResult<Bound<'py, PyBytes>> {
-    if parts.len() % 16 != 0 {
-        return Err(PyValueError::new_err("parts must be 16 bytes each"));
-    }
-    let hashes: Vec<u128> = parts
-        .chunks_exact(16)
-        .map(|c| u128::from_le_bytes(c.try_into().expect("16 bytes")))
-        .collect();
-    let d = memopro::spill::digest_combine(length, &hashes);
-    Ok(PyBytes::new(py, &d.0))
-}
-
-/// Fill `dst` from `len(dst)` bytes of `path` at `offset`; verify against `expected` if given.
-/// Returns the digest of what was read.
-#[pyfunction]
-#[pyo3(signature = (path, offset, dst, expected = None))]
-fn engine_read_source_into<'py>(
-    py: Python<'py>,
-    path: PathBuf,
-    offset: u64,
-    dst: &Bound<'py, PyAny>,
-    expected: Option<Vec<u8>>,
-) -> PyResult<Bound<'py, PyBytes>> {
-    let (_keep, raw) = borrow(dst, true)?;
-    let source = memopro::spill::SourceRef {
-        path,
-        offset,
-        len: raw.len as u64,
-    };
-    let expected = expected.map(memopro::spill::Digest);
-    let d = py
-        .detach(|| {
-            // SAFETY: `_keep` holds the writable buffer for the whole call.
-            memopro::spill::Engine::new().read_source_into(
-                &source,
-                unsafe { raw.slice_mut() },
-                expected.as_ref(),
-            )
-        })
-        .map_err(to_py_err)?;
-    Ok(PyBytes::new(py, &d.0))
-}
-
-// ------------------------------------------------------------------ in-RAM codec
-
-/// Losslessly compressed copy of a buffer (byte shuffle + zstd), owned by Rust.
-#[pyclass(module = "memopro._core", frozen)]
-struct Compressed {
-    chunks: Vec<Vec<u8>>,
-    raw_len: usize,
-    itemsize: usize,
-}
-
-#[pymethods]
-impl Compressed {
-    /// Size of the original data.
-    #[getter]
-    fn raw_bytes(&self) -> usize {
-        self.raw_len
-    }
-
-    /// Size held in memory by the compressed chunks.
-    #[getter]
-    fn stored_bytes(&self) -> usize {
-        self.chunks.iter().map(Vec::len).sum()
-    }
-
-    /// Decompress into `dst` (a writable buffer of exactly `raw_bytes`).
-    fn unpack_into(&self, py: Python<'_>, dst: &Bound<'_, PyAny>) -> PyResult<()> {
-        let (_keep, raw) = borrow(dst, true)?;
-        if raw.len != self.raw_len {
-            return Err(PyValueError::new_err(format!(
-                "destination holds {} bytes, compressed data expands to {}",
-                raw.len, self.raw_len
-            )));
-        }
-        py.detach(|| {
-            // SAFETY: `_keep` holds the writable buffer for the whole call.
-            memopro::codec::unpack_into(&self.chunks, self.itemsize, unsafe { raw.slice_mut() })
-        })
-        .map_err(|e| PyValueError::new_err(e.to_string()))
-    }
-}
-
-/// Compress a buffer of `itemsize`-byte elements; returns a `Compressed` object.
-#[pyfunction]
-#[pyo3(signature = (data, itemsize, level = 1))]
-fn codec_pack(
-    py: Python<'_>,
-    data: &Bound<'_, PyAny>,
-    itemsize: usize,
-    level: i32,
-) -> PyResult<Compressed> {
-    let (_keep, raw) = borrow(data, false)?;
-    let chunks = py
-        .detach(|| {
-            // SAFETY: `_keep` holds the buffer for the whole call.
-            memopro::codec::pack(unsafe { raw.slice() }, itemsize, level)
-        })
-        .map_err(|e| PyValueError::new_err(e.to_string()))?;
-    Ok(Compressed {
-        chunks,
-        raw_len: raw.len,
-        itemsize,
-    })
 }
 
 // ---------------------------------------------------------------- runtime C-R (0112)
@@ -1152,28 +994,19 @@ fn metal_release(buffer: usize) {
 #[pymodule]
 fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add("__version__", memopro::VERSION)?;
-    m.add("DIGEST_CHUNK", memopro::spill::DIGEST_CHUNK)?;
     m.add_function(wrap_pyfunction!(core_version, m)?)?;
     m.add_function(wrap_pyfunction!(hwinfo_memory, m)?)?;
     m.add_function(wrap_pyfunction!(hwinfo_cpu, m)?)?;
-    m.add_function(wrap_pyfunction!(hwinfo_process_rss, m)?)?;
     m.add_function(wrap_pyfunction!(hwinfo_disk, m)?)?;
-    m.add_function(wrap_pyfunction!(pressure_current, m)?)?;
     m.add_function(wrap_pyfunction!(edr_table, m)?)?;
     m.add_function(wrap_pyfunction!(edr_encode, m)?)?;
     m.add_function(wrap_pyfunction!(edr_decode, m)?)?;
     m.add_function(wrap_pyfunction!(edr2_encode, m)?)?;
     m.add_function(wrap_pyfunction!(edr2_decode, m)?)?;
-    m.add_function(wrap_pyfunction!(engine_digest, m)?)?;
-    m.add_function(wrap_pyfunction!(engine_digest_parts, m)?)?;
-    m.add_function(wrap_pyfunction!(engine_digest_combine, m)?)?;
-    m.add_function(wrap_pyfunction!(engine_read_source_into, m)?)?;
     #[cfg(unix)]
     m.add_function(wrap_pyfunction!(metal_wrap, m)?)?;
     #[cfg(unix)]
     m.add_function(wrap_pyfunction!(metal_release, m)?)?;
-    m.add_class::<Compressed>()?;
-    m.add_function(wrap_pyfunction!(codec_pack, m)?)?;
     m.add_class::<RtRuntime>()?;
     m.add_class::<RtPin>()?;
     m.add_class::<RtPager>()?;

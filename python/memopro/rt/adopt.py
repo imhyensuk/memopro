@@ -82,7 +82,7 @@ def _walk(
             return
         if t.numel() * t.element_size() < threshold:
             return
-        from memopro.hibernate._tensors import shared_reason
+        from memopro.rt._tensors import shared_reason
 
         if t.device.type != "meta" and shared_reason(t) is None:
             tensors.setdefault(id(t), t)
@@ -161,7 +161,7 @@ class Adopted:
         import numpy as np
         import torch
 
-        from memopro.hibernate._tensors import cpu_bytes
+        from memopro.rt._tensors import cpu_bytes
 
         host, raw = cpu_bytes(t)
         buf = self._buffer(raw.nbytes, t.element_size())
@@ -230,7 +230,7 @@ class Adopted:
         import numpy as np
         import torch
 
-        from memopro.hibernate._tensors import cpu_bytes
+        from memopro.rt._tensors import cpu_bytes
 
         for leaf in self._tensors.values():
             t = leaf.tensor

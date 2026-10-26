@@ -9,11 +9,6 @@ buffers near it. What it does besides (architecture §4.2, 0052 E7), all listed 
    positional model arguments), and only when the model would not fit as stored: then memopro
    loads it the way ``memopro.load`` would. An explicit choice in the script is never changed.
    If memopro's choice fails to load, the script's own call runs as written (fail-open).
-2. **γ** (experimental, 0088, 0093): memory pressure is watched; ``memopro.load``/
-   ``train_session`` in the script and the loading policy react to it. Off by default (``--elastic``
-   turns it on): the macOS level marks pressure but not stalls a user feels (E013a), and on Linux
-   the I/O of loading a model raised PSI to "warning", halving budgets (E021).
-3. **census** (``--census``): saved activations of the whole run, summarised at the end.
 
 This is the only mode where memopro patches another library globally (P4 exception); the patch
 is installed when ``transformers.modeling_utils`` is imported and removed when the script ends.
@@ -22,7 +17,6 @@ The script runs in this process with ``__name__ == "__main__"`` and its own ``sy
 
 from __future__ import annotations
 
-import contextlib
 import importlib.abc
 import importlib.util
 import runpy
@@ -154,7 +148,7 @@ def _suggest(plan: Any) -> None:
         report().add("run.from_pretrained", "suggested", f"{plan.info.source}: {advice}")
 
 
-def plan_text(script: str, *, elastic: bool, census: bool) -> str:
+def plan_text(script: str) -> str:
     from memopro._units import format_size
     from memopro.access._common import setup
     from memopro.orchestrator.budget import describe_setting
@@ -174,9 +168,6 @@ def plan_text(script: str, *, elastic: bool, census: bool) -> str:
         "  torch          saved activations move into runtime buffers above 75% of it",
         "  from_pretrained  only when the script chose no placement or precision and the model",
         "                   does not fit on the device as stored: split with host RAM, unchanged",
-        f"  elastic        {'on: memory pressure is watched (experimental)' if elastic else 'off'}"
-        + ("" if elastic else " (default; --elastic)"),
-        f"  census         {'on: saved activations of the whole run' if census else 'off'}",
     ]
     return "\n".join(lines)
 
@@ -197,26 +188,11 @@ def _report_pager(pager: Any) -> None:
     )
 
 
-ELASTIC_OFF_NOTE = (
-    "watching memory pressure is off by default (experimental): the macOS pressure level did not "
-    "match the stalls a user feels, and on Linux the I/O of loading a model looked like pressure "
-    "and halved budgets; --elastic turns it on"
-)
-
-
-def default_elastic() -> bool:
-    """γ's default in ``memopro run``: off everywhere (0088 G1 on macOS, E021 D4 on Linux)."""
-    return False
-
-
 def run(
     script: str,
     argv: Sequence[str] = (),
     *,
-    elastic: bool | None = None,
-    census: bool = False,
     dry_run: bool = False,
-    transparent: str | None = None,
     report_json: str | None = None,
     numpy: bool = True,
     torch: bool = True,
@@ -225,50 +201,26 @@ def run(
 
     The configured budget is the ceiling on the whole process: NumPy arrays are paged within it
     (Linux, macOS), PyTorch activations move into runtime buffers near it, and the loading policy
-    applies to ``from_pretrained``. ``elastic=None`` takes the platform default
-    (`default_elastic`). ``transparent`` is the earlier name for the ceiling (used only when no
-    budget is configured). ``report_json`` writes the report, the pager's counters and the
+    applies to ``from_pretrained``. ``report_json`` writes the report, the pager's counters and the
     session's measurements to that file at the end."""
     from memopro._enable import OVER_TOLERANCE, enable
     from memopro._units import format_size
-    from memopro.config import configure, get_config
 
-    default = elastic is None
-    if default:
-        elastic = default_elastic()
     path = Path(script)
     if not path.is_file():
         raise InvalidArgument(f"no such script: {script}")
-    if transparent is not None:
-        if get_config().budget == "auto":
-            configure(budget=transparent)
-            report().add("run", "applied", f"--transparent {transparent}: the process ceiling")
-        else:
-            report().add("run", "skipped", "--transparent ignored: --budget sets the ceiling")
     if dry_run:
-        print(plan_text(script, elastic=elastic, census=census))
+        print(plan_text(script))
         return
-    if default and not elastic:
-        report().add("elastic", "skipped", ELASTIC_OFF_NOTE)
     session = enable(numpy=numpy, torch=torch, transformers=True)
     for part, status, detail in session.done:
         report().add(f"enable.{part}", status, detail)
-    if elastic:
-        from memopro import elastic as gamma
-
-        gamma.enable(notebook=False)
     saved_argv, saved_path0 = sys.argv[:], sys.path[0] if sys.path else None
     sys.argv = [str(path), *argv]
     sys.path.insert(0, str(path.resolve().parent))
-    recorder = None
     measured = None
     try:
-        with contextlib.ExitStack() as stack:
-            if census:
-                from memopro.census import record
-
-                recorder = stack.enter_context(record())
-            runpy.run_path(str(path), run_name="__main__")
+        runpy.run_path(str(path), run_name="__main__")
     finally:
         measured = session.measured()
         if session.pager is not None:
@@ -294,10 +246,4 @@ def run(
         sys.argv = saved_argv
         if sys.path and sys.path[0] == str(path.resolve().parent) and saved_path0 != sys.path[0]:
             sys.path.pop(0)
-        if elastic:
-            from memopro import elastic as gamma
-
-            gamma.disable()
         print(report().summary(), file=sys.stderr)
-        if recorder is not None and recorder._result is not None:
-            print(recorder.summary(), file=sys.stderr)

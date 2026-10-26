@@ -218,23 +218,9 @@ def environment(install_info):
     env["local_disk_free_bytes"] = shutil.disk_usage("/content" if IN_COLAB and not LOCAL_SMOKE
                                                      else os.getcwd()).free
     try:  # memopro build contents: which decisions this build includes
-        import memopro.access._load as L  # noqa: PLC0415
-        import memopro.orchestrator.candidates as C  # noqa: PLC0415
-
-        env["build_has"] = {"0085_quality_note": hasattr(C, "quality_note"),
-                            "0081_mps_heap_note": hasattr(L, "_suggest_mps_heap_setting")}
-        import memopro._run as R  # noqa: PLC0415
-
-        env["build_has"]["0089_elastic_default"] = hasattr(R, "default_elastic")
-        env["build_has"]["0094_fixes"] = hasattr(C, "SLOW_BF16_NOTE") and not R.default_elastic()
-        import memopro.access._train as T  # noqa: PLC0415
-
-        env["build_has"]["0099_fixes"] = hasattr(C, "speed_hint") and hasattr(T, "even_micro")
-        env["build_has"]["0100_fixes"] = hasattr(T, "optimizer_state_to_come")
-        env["build_has"]["0103_fixes"] = hasattr(T, "release_cuda_cache")
         import memopro.rt.torch as RT  # noqa: PLC0415
 
-        env["build_has"]["0195_cuda_stream"] = hasattr(RT, "_renamed")
+        env["build_has"] = {"0195_cuda_stream": hasattr(RT, "_renamed")}
         env["preload_lib"] = os.environ.get("MP_PRELOAD_LIB")
     except Exception as e:  # noqa: BLE001
         env["build_has"] = f"unknown: {e}"

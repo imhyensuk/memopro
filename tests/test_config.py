@@ -22,15 +22,14 @@ def test_defaults_are_conservative():
     cfg = get_config()
     assert cfg == Config()
     assert cfg.budget == "auto" and cfg.fallback == "stream" and cfg.over_ceiling == "error"
-    assert cfg.hibernate_modes == ("source", "host", "compress")
 
 
 def test_layer_precedence(tmp_path, monkeypatch):
-    (tmp_path / "memopro.toml").write_text('download = "never"\nidle_cells = 5\n')
+    (tmp_path / "memopro.toml").write_text('download = "never"\nover_ceiling = "allow"\n')
     assert get_config().download == "never"
     monkeypatch.setenv("MEMOPRO_DOWNLOAD", "auto")
     assert get_config().download == "auto"
-    assert get_config().idle_cells == 5
+    assert get_config().over_ceiling == "allow"
     configure(download="never")
     assert get_config().download == "never"
     reset_config()
@@ -47,10 +46,12 @@ def test_explicit_config_path(tmp_path, monkeypatch):
         get_config()
 
 
-def test_sizes_and_mode_lists_are_parsed(monkeypatch):
-    monkeypatch.setenv("MEMOPRO_HIBERNATE_MODES", "host, source")
+def test_sizes_and_folder_lists_are_parsed(monkeypatch):
+    import os
+
+    monkeypatch.setenv("MEMOPRO_MODEL_DIRS", os.pathsep.join(["/a", " /b "]))
     cfg = configure(budget="6GiB")
-    assert cfg.hibernate_modes == ("host", "source")
+    assert cfg.model_dirs == ("/a", "/b")
     assert cfg.budget == 6 * 2**30
 
 
@@ -59,11 +60,9 @@ def test_sizes_and_mode_lists_are_parsed(monkeypatch):
     [
         {"disk_writes": "allow"},  # removed in 0.2.0 (0328)
         {"quality": "low"},  # removed in 0.2.0 (0328)
-        {"hibernate_modes": "source,bf16"},  # lossy: removed
-        {"hibernate_modes": "spill"},  # writes to the disk: removed
-        {"hibernate_modes": "source,source"},
+        {"hibernate_modes": "source"},  # removed in 0.2.0 with hibernation
         {"fallback": "stored"},  # removed in 0.2.0 (0328)
-        {"idle_cells": 0},
+        {"idle_cells": 3},  # removed in 0.2.0 with hibernation
         {"budget": "lots"},
         {"no_such_setting": 1},
     ],

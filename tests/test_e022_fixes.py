@@ -110,38 +110,6 @@ def _plan(monkeypatch, n, samples_that_fit):
     return s
 
 
-def test_d8_plan_does_not_subtract_the_loaded_model_twice(monkeypatch):
-    s = _plan(monkeypatch, n=4, samples_that_fit=4)
-    assert s.micro == 4  # E022 QLoRA: chose 1 because the weights were subtracted again
-    entry = [e for e in memopro.report().entries if e.technique == "train_session.plan"][-1]
-    from memopro.access._train import ALLOCATOR_MARGIN
-
-    assert "model and optimizer state" in entry.detail and f"x{ALLOCATOR_MARGIN}" in entry.detail
-
-
-def test_d5_plan_keeps_an_allocator_margin_and_even_pieces(monkeypatch):
-    assert _plan(monkeypatch, n=4, samples_that_fit=3).micro == 2  # 2 + 2, not 3 + 1
-    assert _plan(monkeypatch, n=16, samples_that_fit=15).micro == 8  # E021: 15 + 1
-
-
-def test_d5_even_micro():
-    from memopro.access._train import even_micro
-
-    assert [even_micro(16, m) for m in (16, 15, 8, 7, 3, 1)] == [16, 8, 8, 6, 3, 1]
-    assert even_micro(5, 4) == 3 and even_micro(4, 3) == 2
-
-
-def test_d5_retry_after_out_of_memory_splits_evenly():
-    from memopro.access._train import TrainSession
-
-    model = gpt2()
-    s = TrainSession(model, torch.optim.SGD(model.parameters(), lr=0.1))
-    s.batch_size, s.micro = 12, 6
-    assert s.degrade("out of memory") and s.micro == 3
-    s.micro = 5  # half is 3: 3 + 3 + 3 + 3
-    assert s.degrade("out of memory") and s.micro == 3
-
-
 # ---------------------------------------------------------------- D9 + O1: what load says
 def _cands(monkeypatch, backend, quality="balanced"):
     from memopro.access._info import model_info

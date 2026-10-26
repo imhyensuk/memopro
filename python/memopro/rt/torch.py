@@ -705,7 +705,7 @@ def stream_model(
     import transformers
     from accelerate import init_empty_weights
 
-    from memopro.hibernate._source import read_header
+    from memopro._safetensors import read_header
 
     if device not in ("cpu", "mps", "cuda"):
         raise InvalidArgument(f"device must be 'cpu', 'mps' or 'cuda', not {device!r}")
@@ -939,7 +939,7 @@ def draft_size(name_or_dir: str | Path, device: str = "mps") -> int:
     headers alone: on Apple GPUs the decoder layers' matrices become int4 with group-32 scales
     and zero points (5/16 of their bf16 bytes), everything else stays as stored; on NVIDIA GPUs
     all of it stays 16-bit (0322). Qwen2.5-0.5B: 473 MiB, as measured."""
-    from memopro.hibernate._source import read_header
+    from memopro._safetensors import read_header
 
     total = 0
     for f in sorted(Path(name_or_dir).glob("*.safetensors")):

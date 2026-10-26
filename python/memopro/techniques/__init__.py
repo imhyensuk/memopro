@@ -1,4 +1,4 @@
-"""Technique interface and registry shared by native techniques and integrations."""
+"""Shared descriptions of the techniques memopro applies (stages, fidelity, pools)."""
 
 from memopro.techniques.base import (
     Availability,
@@ -6,24 +6,8 @@ from memopro.techniques.base import (
     Origin,
     Pool,
     QualityGrade,
-    Registry,
     Stage,
-    Technique,
     Timing,
-    register_technique,
-    registry,
 )
 
-__all__ = [
-    "Availability",
-    "Fidelity",
-    "Origin",
-    "Pool",
-    "QualityGrade",
-    "Registry",
-    "Stage",
-    "Technique",
-    "Timing",
-    "register_technique",
-    "registry",
-]
+__all__ = ["Availability", "Fidelity", "Origin", "Pool", "QualityGrade", "Stage", "Timing"]

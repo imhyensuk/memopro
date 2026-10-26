@@ -1,4 +1,4 @@
-"""CLI exit codes and notebook magics (magics must never break a cell)."""
+"""CLI exit codes, fail-open application, and the removed notebook magics."""
 
 import subprocess
 import sys
@@ -7,12 +7,9 @@ import pytest
 
 import memopro
 import memopro.config
-import memopro.integrations
 import memopro.orchestrator
-from memopro import MemoproError
 from memopro.cli import EXIT_ERROR, main
 from memopro.config import reset_config
-from memopro.integrations.ipython import parse_hibernate
 from memopro.orchestrator import fail_open
 
 
@@ -43,40 +40,9 @@ def test_usage_errors_exit_2():
     assert e.value.code == 2
 
 
-def test_hibernate_magic_arguments():
-    a = parse_hibernate("model_a")
-    assert (a.name, a.mode, a.plan) == ("model_a", "auto", False)
-    with pytest.raises(MemoproError):
-        parse_hibernate("opt --spill")  # removed in 0.2.0 (0328)
-    a = parse_hibernate("m --mode host --plan")
-    assert (a.mode, a.plan) == ("host", True)
-    with pytest.raises(MemoproError):
-        parse_hibernate("m --mode zip")
-
-
-class FakeShell:
-    def __init__(self):
-        self.user_ns = {"model_a": object()}
-        self.magics = {}
-
-    def register_magic_function(self, fn, kind, name):
-        assert kind == "line"
-        self.magics[name] = fn
-
-
-def test_magics_register_and_never_raise(capsys):
-    shell = FakeShell()
-    memopro.load_ipython_extension(shell)
-    assert set(shell.magics) == {"hibernate", "wake", "memopro"}
-    assert shell.magics["hibernate"]("model_a") is None  # not a tensor: printed, not raised
-    assert shell.magics["hibernate"]("missing") is None
-    assert shell.magics["hibernate"]("model_a --mode nope") is None
-    assert shell.magics["wake"]("model_a") is None
-    assert shell.magics["memopro"]("status") is None
-    out = capsys.readouterr().out
-    assert "cannot hibernate object" in out
-    assert "'missing' is not defined" in out
-    assert "not hibernated" in out
+def test_the_removed_magics_say_what_to_use():
+    with pytest.raises(AttributeError, match="magics were removed"):
+        memopro.load_ipython_extension  # noqa: B018
 
 
 def test_fail_open_records_and_continues():

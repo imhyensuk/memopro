@@ -9,7 +9,6 @@
 //! The E008 prototypes (a thread pool per call, `bytes` inputs) were removed in 0038; E008 is
 //! reproduced from commit 9fd9bd3.
 
-use rayon::prelude::*;
 use std::cell::RefCell;
 use std::io;
 
@@ -183,48 +182,6 @@ pub fn unpack_chunk(comp: &[u8], elem: usize, dst: &mut [u8]) -> io::Result<()> 
     })
 }
 
-/// Shuffle + zstd-compress `src` in independent [`CHUNK`]-sized chunks, in parallel.
-pub fn pack(src: &[u8], elem: usize, level: i32) -> io::Result<Vec<Vec<u8>>> {
-    check_elem(src.len(), elem)?;
-    src.par_chunks(CHUNK)
-        .map(|c| {
-            with_worker(level, |w| {
-                w.scratch.resize(c.len(), 0);
-                shuffle(c, elem, &mut w.scratch);
-                w.cctx.compress(&w.scratch)
-            })
-        })
-        .collect()
-}
-
-/// Decompress chunks from [`pack`] directly into `dst` (length = original length).
-pub fn unpack_into(chunks: &[Vec<u8>], elem: usize, dst: &mut [u8]) -> io::Result<()> {
-    check_elem(dst.len(), elem)?;
-    let expected = dst.len().div_ceil(CHUNK);
-    if chunks.len() != expected {
-        return Err(io::Error::new(
-            io::ErrorKind::InvalidInput,
-            format!("expected {expected} chunks, got {}", chunks.len()),
-        ));
-    }
-    dst.par_chunks_mut(CHUNK)
-        .zip(chunks.par_iter())
-        .try_for_each(|(out, comp)| {
-            with_worker(0, |w| {
-                w.scratch.resize(out.len(), 0);
-                let n = w.dctx.decompress_to_buffer(comp, &mut w.scratch)?;
-                if n != out.len() {
-                    return Err(io::Error::new(
-                        io::ErrorKind::InvalidData,
-                        "chunk length mismatch",
-                    ));
-                }
-                unshuffle(&w.scratch, elem, out);
-                Ok(())
-            })
-        })
-}
-
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -281,32 +238,32 @@ mod tests {
     }
 
     #[test]
-    fn pack_roundtrip_is_bit_exact_across_chunks_and_levels() {
-        // 2.5 chunks: exercises the ragged last chunk; NaN/Inf/subnormal included
-        let src = sample(CHUNK * 5 / 8 + 7);
+    fn piece_roundtrip_is_bit_exact_across_levels() {
+        // NaN/Inf/subnormal included
+        let src = sample(CHUNK / 4);
+        let mut comp = Vec::new();
         for (elem, level) in [(4usize, 1), (2, 3), (1, 1)] {
-            let n = src.len() / elem * elem;
-            let chunks = pack(&src[..n], elem, level).unwrap();
-            assert_eq!(chunks.len(), n.div_ceil(CHUNK));
-            let mut out = vec![0u8; n];
-            unpack_into(&chunks, elem, &mut out).unwrap();
-            assert_eq!(&src[..n], &out[..]);
+            pack_chunk(&src, elem, level, &mut comp).unwrap();
+            let mut out = vec![0u8; src.len()];
+            unpack_chunk(&comp, elem, &mut out).unwrap();
+            assert_eq!(src, out);
         }
     }
 
     #[test]
     fn compressible_data_shrinks() {
-        let src = vec![7u8; CHUNK + 100];
-        let chunks = pack(&src, 1, 1).unwrap();
-        assert!(chunks.iter().map(Vec::len).sum::<usize>() < src.len() / 100);
+        let mut comp = Vec::new();
+        pack_chunk(&vec![7u8; CHUNK], 1, 1, &mut comp).unwrap();
+        assert!(comp.len() < CHUNK / 100);
     }
 
     #[test]
-    fn bad_element_size_and_chunk_count_are_rejected() {
-        assert!(pack(&[0u8; 10], 4, 1).is_err());
-        assert!(pack(&[0u8; 12], 0, 1).is_err());
-        let chunks = pack(&[1u8; 16], 4, 1).unwrap();
-        let mut out = vec![0u8; CHUNK + 16];
-        assert!(unpack_into(&chunks, 4, &mut out).is_err());
+    fn bad_element_size_and_piece_size_are_rejected() {
+        let mut comp = Vec::new();
+        assert!(pack_chunk(&[0u8; 10], 4, 1, &mut comp).is_err());
+        assert!(pack_chunk(&[0u8; 12], 0, 1, &mut comp).is_err());
+        assert!(pack_chunk(&vec![0u8; CHUNK + 4], 4, 1, &mut comp).is_err());
+        pack_chunk(&[1u8; 16], 4, 1, &mut comp).unwrap();
+        assert!(unpack_chunk(&comp, 4, &mut [0u8; 32]).is_err());
     }
 }

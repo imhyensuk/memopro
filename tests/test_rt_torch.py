@@ -16,7 +16,6 @@ rtt = pytest.importorskip("memopro.rt.torch")
 import memopro
 import memopro.access
 import memopro.env
-import memopro.hibernate
 
 
 @pytest.fixture(scope="module")
@@ -799,7 +798,7 @@ def test_padded_draft_logits_keep_their_values_at_qwen_vocabulary_width(device):
 
 def test_a_file_that_is_not_safetensors_is_named_not_a_memory_error(tmp_path):
     """0220: a bad header length read as a size made `f.read` raise a bare MemoryError."""
-    from memopro.hibernate._source import read_header
+    from memopro._safetensors import read_header
 
     bad = tmp_path / "model.safetensors"
     bad.write_bytes((1 << 60).to_bytes(8, "little") + b"{}")

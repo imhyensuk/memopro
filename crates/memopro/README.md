@@ -28,13 +28,10 @@ println!("{:?}", rt.stats());                     // what was kept, compressed, 
 - `rt::pager` (Linux, macOS): transparent paging of anonymous memory for unchanged programs,
   compressed in memory. Linux serves the page faults with userfaultfd, macOS with signals; other
   systems get `Error::Unsupported` and use `rt::Runtime` buffers.
-- `codec`: byte shuffle + zstd, the lossless in-memory compression.
-- `spill`: re-reads of unchanged data from its original files with digest checks; spill files
-  are written only when the caller's policy allows it (off unless the user agrees).
-- `residency` (Unix): read-only file-backed mappings that the OS drops without writing, and on
-  macOS no-copy Apple GPU buffers.
-- `hwinfo`, `pressure`, `ledger`: host memory, container limits and disk capacity; the OS
-  memory-pressure signal; bookkeeping of hibernated buffers and bytes written.
+- `codec`, `edr`: byte shuffle + zstd, and EDR for bf16, the lossless in-memory compression.
+- `verify`: re-reads of unchanged data from its original files, checked by digest.
+- `residency` (Unix): no-copy Apple GPU buffers over runtime memory (macOS).
+- `hwinfo`: host memory, container limits and disk capacity.
 
 The C ABI (`mp_*`, `include/memopro.h`) lives in `memopro-c`; the Python package is
 [`memopro` on PyPI](https://pypi.org/project/memopro/), built from `memopro-py`.
