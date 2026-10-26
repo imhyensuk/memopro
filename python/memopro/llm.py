@@ -433,6 +433,12 @@ def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:
     if m.device.type not in ("mps", "cuda"):
         return None  # drafts stay in GPU memory
     choice = _local_draft(m, tok)
+    if choice is None and m.device.type == "mps" and _streams_every_token(m):
+        # no sibling: an int4 copy of the model itself, kept in memory only (0329, E033 S3:
+        # 3B 3.55 -> 0.89-1.04 s/token, the same text). Only when the weights do not fit the
+        # budget: when they do, streaming is cheap and the draft is pure cost (1.5B at 3 GiB:
+        # 0.29 -> 0.48 s/token). On CUDA a draft is 16-bit, a second copy of the whole model
+        choice = _own_folder(m)
     if choice is None:
         _note(
             "memopro: no smaller model with the same tokenizer is on this disk, so this "
@@ -457,9 +463,14 @@ def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:
     except MemoproError as e:  # e.g. no int4 kernel on this GPU
         _note(f"memopro: {name} cannot draft here ({e}); generating without a draft")
         return None
+    what = (
+        "an int4 copy of the model itself, in memory only"
+        if choice == _own_folder(m)
+        else f"{name} found on this disk"
+    )
     _note(
-        f"memopro: drafting with {name} found on this disk (the text is the same as without a "
-        "draft; draft=None turns it off)"
+        f"memopro: drafting with {what} (the text is the same as without a draft; "
+        "draft=None turns it off)"
     )
     _AUTO_DRAFTS[m] = draft
     return draft
@@ -542,6 +553,20 @@ def _model_folders(m: Any) -> list[tuple[str, Path]]:
     for snap in sorted(root.glob("models--*/snapshots/*")):
         add(_hub_name(snap), snap)
     return list(found.values())
+
+
+def _streams_every_token(m: Any) -> bool:
+    """Whether ``m``'s weights are larger than its budget, so each token re-reads some."""
+    weights = sum(buf.nbytes for buf, _, _ in m.memopro_weights.buffers.values())
+    return weights > m.memopro_runtime.stats()["budget"]
+
+
+def _own_folder(m: Any) -> tuple[str, Path] | None:
+    """(name, folder) of ``m``'s own weights on this disk, or None."""
+    name = str(m.config._name_or_path)
+    if Path(name).is_dir():
+        return Path(name).name, Path(name)
+    return next(((n, p) for n, p in _model_folders(m) if n == name), None)
 
 
 def _hub_name(snapshot: Path) -> str:

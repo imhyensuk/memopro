@@ -3,7 +3,7 @@
 Loading the extension turns on suggestions: after a cell, memopro names idle objects worth
 hibernating. Magics:
 
-- ``%hibernate NAME [--mode MODE] [--plan] [--spill]``  (``--spill``: consent to an SSD write)
+- ``%hibernate NAME [--mode MODE] [--plan]``
 - ``%wake NAME``
 - ``%memopro status``
 
@@ -38,7 +38,6 @@ class HibernateArgs:
     name: str
     mode: str
     plan: bool
-    allow_spill: bool
 
 
 class _Parser(argparse.ArgumentParser):
@@ -51,10 +50,8 @@ def parse_hibernate(line: str) -> HibernateArgs:
     parser.add_argument("name")
     parser.add_argument("--mode", default="auto", choices=hibernate.MODES)
     parser.add_argument("--plan", action="store_true")
-    parser.add_argument("--spill", action="store_true")
     ns = parser.parse_args(shlex.split(line))
-    mode = "spill" if ns.spill and ns.mode == "auto" else ns.mode
-    return HibernateArgs(ns.name, mode, ns.plan, ns.spill)
+    return HibernateArgs(ns.name, ns.mode, ns.plan)
 
 
 # ------------------------------------------------------------------ tensor proxy
@@ -187,16 +184,16 @@ def sleep_in_namespace(shell: Any, name: str, obj: Any, handle: Any) -> None:
 def format_plan(name: str, rows: list[Any]) -> str:
     lines = [
         f"{name}: what each method would do (nothing was changed)",
-        f"    {'mode':9s} {'reclaim':>11s} {'restore':>9s} {'SSD write':>11s} {'result':9s} note",
+        f"    {'mode':9s} {'reclaim':>11s} {'restore':>9s} {'result':9s} note",
     ]
     for r in rows:
         restore = f"~{r.restore_seconds:.1f}s" if r.restore_seconds is not None else "-"
         mark = " " if r.available else "x"
         lines.append(
             f"  {mark} {r.mode:9s} {format_size(r.reclaim_bytes):>11s} {restore:>9s} "
-            f"{format_size(r.disk_write_bytes):>11s} {r.fidelity:9s} {r.reason}"
+            f"{r.fidelity:9s} {r.reason}"
         )
-    lines.append("  x = not available now. bf16 changes numerics and is never chosen by auto")
+    lines.append("  x = not available now. Every method is lossless and writes nothing to the disk")
     return "\n".join(lines)
 
 
@@ -208,8 +205,6 @@ def _describe(handle: Any) -> str:
     if added:  # e.g. mode "host" moves GPU memory into host RAM (0045 F1)
         rec += ("; " if rec else "") + "added " + ", ".join(added)
     text = f"[memopro] hibernated {handle.name}: {modes}"
-    if handle.disk_write_bytes:
-        text += f"; wrote {format_size(handle.disk_write_bytes)} to SSD"
     text += f". Measured: {rec or 'no change yet (allocator may keep pages)'}"
     for reason, names in handle.kept.items():
         text += f"\n[memopro] kept awake ({len(names)} tensors): {reason}"
@@ -247,9 +242,7 @@ def load_ipython_extension(shell: Any) -> None:
             if args.plan:
                 print(format_plan(args.name, hibernate.plan(obj)))
                 return
-            handle = hibernate.now(
-                obj, mode=args.mode, allow_spill=args.allow_spill, name=args.name
-            )
+            handle = hibernate.now(obj, mode=args.mode, name=args.name)
             sleep_in_namespace(shell, args.name, obj, handle)
             print(_describe(handle))
 
@@ -278,10 +271,6 @@ def load_ipython_extension(shell: Any) -> None:
                 print(
                     f"[memopro] {o['name']:20s} {state:6s} {format_size(o['bytes']):>11s}  {modes}"
                 )
-            print(
-                f"[memopro] SSD writes: today {format_size(st['ssd_written_today'])}, total "
-                f"{format_size(st['ssd_written_total'])} (disk_writes={st['disk_writes']})"
-            )
 
         _run(go)
 

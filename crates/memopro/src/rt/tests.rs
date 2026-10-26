@@ -874,8 +874,8 @@ fn a_process_budget_counts_memory_outside_the_runtime() {
     // 64 MiB of buffers fit the 128 MiB budget alone; 40 MiB left in the process made them
     // compress (allocator memory the codec leaves behind counts as outside too: keep slack)
     assert!(s.compressions > 0, "{s:?}");
-    // the 16 MiB vector, less up to 1 MiB other threads may give back meanwhile
-    assert!(s.outside_peak >= 15 * MIB as u64, "{s:?}");
+    // the 16 MiB vector, less up to 2 MiB other threads may give back meanwhile (CI saw 1.2)
+    assert!(s.outside_peak >= 14 * MIB as u64, "{s:?}");
     assert!(s.limit_low < 40 * MIB as u64, "{s:?}");
     std::hint::black_box(&outside);
 }

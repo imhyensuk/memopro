@@ -33,7 +33,7 @@ def test_version_via_module_entry_point():
 def test_run_validates_options_first(capsys):
     assert main(["run", "--budget", "6GB!", "app.py"]) == EXIT_ERROR  # a form removed in 0.2.0
     assert "removed in 0.2.0" in capsys.readouterr().err
-    assert main(["run", "--disk-writes", "never", "missing_app.py", "--flag"]) == EXIT_ERROR
+    assert main(["run", "missing_app.py", "--flag"]) == EXIT_ERROR
     assert "no such script" in capsys.readouterr().err
 
 
@@ -45,9 +45,9 @@ def test_usage_errors_exit_2():
 
 def test_hibernate_magic_arguments():
     a = parse_hibernate("model_a")
-    assert (a.name, a.mode, a.plan, a.allow_spill) == ("model_a", "auto", False, False)
-    a = parse_hibernate("opt --spill")
-    assert (a.mode, a.allow_spill) == ("spill", True)
+    assert (a.name, a.mode, a.plan) == ("model_a", "auto", False)
+    with pytest.raises(MemoproError):
+        parse_hibernate("opt --spill")  # removed in 0.2.0 (0328)
     a = parse_hibernate("m --mode host --plan")
     assert (a.mode, a.plan) == ("host", True)
     with pytest.raises(MemoproError):

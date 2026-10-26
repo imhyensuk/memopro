@@ -12,7 +12,7 @@ import memopro
 import memopro.config
 import memopro.env
 from memopro import cli, hibernate
-from memopro.config import configure, reset_config
+from memopro.config import reset_config
 from memopro.env import MALLOC_CACHE_NOTE, macos_malloc_cache_on
 
 
@@ -22,7 +22,6 @@ def isolated(tmp_path, monkeypatch):
         if key.startswith("MEMOPRO_"):
             monkeypatch.delenv(key)
     reset_config()
-    configure(spill_dir=str(tmp_path / "spill"), min_free_disk_fraction=0.0)
     memopro.report().clear()
     yield
     hibernate._handles.clear()

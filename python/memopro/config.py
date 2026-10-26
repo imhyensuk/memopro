@@ -24,10 +24,6 @@ from typing import Any
 from memopro._errors import ConfigError, InvalidArgument
 from memopro._units import parse_size
 
-# Most loss that may be applied automatically (0052 E3): exact only < half precision < int8 < int4
-QUALITIES = ("lossless", "high", "balanced", "low")
-PREFERENCES = ("speed", "quality", "memory")
-DISK_WRITES = ("ask", "never", "allow")
 # a model streamed by name and not on this disk is downloaded once into the Hugging Face cache
 # ("auto", 0303) or refused ("never")
 DOWNLOADS = ("auto", "never")
@@ -35,14 +31,11 @@ DOWNLOADS = ("auto", "never")
 # stop with BudgetExceeded ("error"), or give the data back over the ceiling with a warning
 # ("allow"; e.g. activations needed by backward, so a training run is not lost)
 OVER_CEILINGS = ("error", "allow")
-POOLS = ("device", "host", "disk")
-# What load/optimize do when nothing fits the budget (0064 D-d): stop, or load as stored anyway;
-# `stream` (load only, 0124) streams the stored weights from their files on the CPU (memopro.rt)
-FALLBACKS = ("none", "stored", "stream")
-# What kind of memory holds loaded weights (0072): anonymous, or clean file-backed pages (MPS)
-RESIDENCIES = ("memory", "file")
-# Write-free hibernation methods that `mode="auto"` may pick, in order (0032 H1). `bf16` is lossy
-# and only ever explicit; `spill` writes to disk and is governed by `disk_writes` instead.
+POOLS = ("device", "host")
+# What load does when the model does not fit the budget as stored (0124, 0328): stream the
+# stored weights from their files (memopro.rt), or stop
+FALLBACKS = ("stream", "none")
+# Write-free, lossless hibernation methods that `mode="auto"` may pick, in order (0032 H1, 0328)
 AUTO_MODES = ("source", "host", "compress")
 
 
@@ -59,24 +52,16 @@ class PoolBudget:
 
     device: PoolValue | None = None
     host: PoolValue | None = None
-    disk: PoolValue | None = None
 
 
 @dataclass(frozen=True)
 class Config:
     # one pool value for device and host (see PoolValue), or settings per pool
     budget: PoolValue | PoolBudget = "auto"
-    quality: str = "lossless"
-    prefer: str = "speed"
     fallback: str = "stream"
-    residency: str = "memory"
     hibernate_modes: tuple[str, ...] = AUTO_MODES
-    disk_writes: str = "ask"
     download: str = "auto"
     over_ceiling: str = "error"
-    daily_write_limit: int | None = None  # None: derived from the disk size (decided in A1b)
-    min_free_disk_fraction: float = 0.20  # 0032 H4
-    spill_dir: str | None = None
     # folders where the user keeps models (each one a model folder, or a folder of them):
     # generate(draft="auto") looks there first for a draft (0324)
     model_dirs: tuple[str, ...] = ()
@@ -111,7 +96,7 @@ def _modes(value: Any) -> tuple[str, ...]:
         if m == "bf16":
             raise InvalidArgument("hibernate_modes cannot contain 'bf16': lossy, explicit only")
         if m == "spill":
-            raise InvalidArgument("hibernate_modes cannot contain 'spill': use disk_writes")
+            raise InvalidArgument("hibernate_modes cannot contain 'spill': memopro writes nothing")
         _choice("hibernate_modes", m, AUTO_MODES)
     if len(set(modes)) != len(modes):
         raise InvalidArgument(f"hibernate_modes has duplicates: {modes}")
@@ -159,7 +144,7 @@ def _pool_value(value: Any) -> PoolValue:
 
 def _budget(value: Any) -> PoolValue | PoolBudget:
     """Parse a budget: one pool value for device and host (see `_pool_value`), or settings per
-    pool ({"device": "8GB", "host": "24GB", "disk": "20GB"} or "device=8GB,host=24GB")."""
+    pool ({"device": "8GB", "host": "24GB"} or "device=8GB,host=24GB")."""
     if isinstance(value, PoolBudget):
         return value
     if isinstance(value, str) and "=" in value:
@@ -174,9 +159,21 @@ def _budget(value: Any) -> PoolValue | PoolBudget:
 
 
 # settings removed in 0.2.0 (0327): what to do instead
+_LOSSY = (
+    "memopro never changes results; to run a half-precision or quantized model, pass it as "
+    "your original: memopro.load(name, dtype=..., quantization_config=...) (0328)"
+)
+_DISK = "memopro writes nothing to the disk besides downloads (0325 rule 1, 0328)"
 _REMOVED = {
     "budget_basis": "the budget is now the ceiling as given, from the machine's memory",
     "headroom": 'the default "auto" already leaves 20% of the memory free; give a smaller budget',
+    "quality": _LOSSY,
+    "prefer": _LOSSY,
+    "residency": _DISK,
+    "disk_writes": _DISK,
+    "spill_dir": _DISK,
+    "daily_write_limit": _DISK,
+    "min_free_disk_fraction": _DISK,
 }
 
 
@@ -188,33 +185,16 @@ def _validate(key: str, value: Any) -> Any:
     match key:
         case "budget":
             return _budget(value)
-        case "quality":
-            return _choice(key, value, QUALITIES)
-        case "prefer":
-            return _choice(key, value, PREFERENCES)
         case "fallback":
             return _choice(key, value, FALLBACKS)
-        case "residency":
-            return _choice(key, value, RESIDENCIES)
         case "hibernate_modes":
             return _modes(value)
-        case "disk_writes":
-            return _choice(key, value, DISK_WRITES)
         case "download":
             return _choice(key, value, DOWNLOADS)
         case "over_ceiling":
             return _choice(key, value, OVER_CEILINGS)
-        case "daily_write_limit":
-            return None if value in (None, "", "auto") else parse_size(value)
-        case "min_free_disk_fraction":
-            fraction = float(value)
-            if not 0.0 <= fraction < 1.0:
-                raise InvalidArgument(f"min_free_disk_fraction must be in [0, 1); got {value!r}")
-            return fraction
         case "model_dirs":
             return _dirs(value)
-        case "spill_dir":
-            return None if value in (None, "") else str(value)
         case "idle_cells":
             cells = int(value)
             if cells < 1:
@@ -264,18 +244,14 @@ def _env_layer() -> dict[str, Any]:
 
 
 def default_spill_dir() -> Path:
-    """Per-user cache location for spill files (created only when something is spilled)."""
+    """Per-user cache location (memopro writes nothing there itself since 0328; kept for the
+    location a removed 0.1.x setting pointed to)."""
     home = Path.home()
     if sys.platform == "darwin":
         return home / "Library" / "Caches" / "memopro"
     if sys.platform == "win32":
         return Path(os.environ.get("LOCALAPPDATA", home / "AppData" / "Local")) / "memopro"
     return Path(os.environ.get("XDG_CACHE_HOME", home / ".cache")) / "memopro"
-
-
-def spill_location(config: Config) -> Path:
-    """Where spill files would go: ``spill_dir`` if set, otherwise `default_spill_dir()`."""
-    return Path(config.spill_dir).expanduser() if config.spill_dir else default_spill_dir()
 
 
 def get_config() -> Config:
@@ -292,7 +268,7 @@ def get_config() -> Config:
 def configure(**settings: Any) -> Config:
     """Set runtime overrides (highest priority) and return the effective configuration.
 
-    Example: ``memopro.configure(disk_writes="never", spill_dir="/Volumes/External/memopro")``
+    Example: ``memopro.configure(budget="6GB", download="never")``
     """
     _overrides.update(_layer("configure()", settings))
     return get_config()
@@ -302,7 +278,7 @@ def configure(**settings: Any) -> Config:
 def using(**settings: Any) -> Iterator[Config]:
     """Change settings inside one ``with`` block only (0059 D5); above `configure()`.
 
-    Example: ``with memopro.using(budget="3GB", quality="high"): model = memopro.load(...)``.
+    Example: ``with memopro.using(budget="3GB"): model = memopro.load(...)``.
     Each thread and asyncio task sees its own blocks (contextvars).
     """
     token = _scoped.set((*_scoped.get(), _layer("using()", settings)))

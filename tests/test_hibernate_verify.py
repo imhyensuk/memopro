@@ -7,7 +7,7 @@ import torch
 from safetensors.torch import save_file
 
 from memopro import _core, hibernate
-from memopro.config import configure, reset_config
+from memopro.config import reset_config
 from memopro.hibernate import _methods
 
 
@@ -17,7 +17,6 @@ def isolated(tmp_path, monkeypatch):
         if key.startswith("MEMOPRO_"):
             monkeypatch.delenv(key)
     reset_config()
-    configure(spill_dir=str(tmp_path / "spill"), min_free_disk_fraction=0.0)
     # small pieces so that a few-MB tensor takes several (still a multiple of the digest chunk)
     monkeypatch.setattr(_methods, "VERIFY_PIECE", _core.DIGEST_CHUNK)
     yield

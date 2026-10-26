@@ -20,22 +20,22 @@ def parts(s):
 
 
 def test_ceiling_becomes_the_default_and_disable_undoes_everything():
-    before = memopro.get_config().quality
+    before = memopro.get_config().download
     meta_path = list(sys.meta_path)
-    s = memopro.enable("2GB", quality="lossless", torch=False)
+    s = memopro.enable("2GB", download="never", torch=False)
     try:
         assert s.budget == 2_000_000_000
         assert rt.resolve_budget("auto") == s.budget
         r = rt.Runtime(budget="64MiB")
         assert r.process_budget == s.budget  # explicit budgets keep to the ceiling too
         assert rt.Runtime(process_budget=False).process_budget is None
-        assert memopro.get_config().quality == "lossless"
+        assert memopro.get_config().download == "never"
         assert "ceiling" in s.summary()
     finally:
         s.disable()
     assert rt._default_budget is None and rt._process_budget is None
     assert rt.Runtime(budget="64MiB").process_budget is None
-    assert memopro.get_config().quality == before
+    assert memopro.get_config().download == before
     assert sys.meta_path == meta_path
 
 

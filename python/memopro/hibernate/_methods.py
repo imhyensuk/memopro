@@ -7,24 +7,18 @@ A function raises ``ModeUnavailable`` when its method does not fit this tensor.
 
 from __future__ import annotations
 
-import weakref
 from dataclasses import dataclass
-from pathlib import Path
 from typing import Any
 
 import torch
 
 from memopro import _core
 from memopro._errors import IntegrityError, ModeUnavailable
-from memopro.config import Config
-from memopro.hibernate import _source, _ssd
+from memopro.hibernate import _source
 from memopro.hibernate._tensors import Slot, cpu_bytes, empty_cpu, put_back
 
 COMPRESS_WORTH = 0.9  # auto mode keeps compressing only if the result is at most 90% of the data
-_OTHERS = ("source", "host", "compress", "spill")
-
-# H3: spill files kept after waking, reused when the same bytes are hibernated again
-_kept_spills: dict[int, tuple[str, int, bytes]] = {}
+_OTHERS = ("source", "host", "compress")
 
 
 @dataclass
@@ -152,58 +146,8 @@ def wake_compress(slot: Slot, sleeping: Sleeping) -> None:
     put_back(slot, buf)
 
 
-# ---------------------------------------------------------------- bf16 (lossy, explicit only)
-
-
-def sleep_bf16(slot: Slot) -> Sleeping:
-    if slot.dtype not in (torch.float32, torch.float64):
-        raise _unavailable("bf16", f"{slot.dtype} is already 16-bit or not floating point")
-    low = slot.tensor.detach().to(torch.bfloat16)
-    return Sleeping("bf16", low, slot.nbytes, low.numel() * 2)
-
-
-def wake_bf16(slot: Slot, sleeping: Sleeping) -> None:
-    put_back(slot, sleeping.form)
-
-
-# ---------------------------------------------------------------- spill (SSD, last resort)
-
-
-def sleep_spill(slot: Slot, config: Config) -> Sleeping:
-    _live, view = cpu_bytes(slot.tensor)
-    kept = _kept_spills.get(id(slot.tensor))
-    if kept is not None and Path(kept[0]).exists() and _core.engine_digest(view) == kept[2]:
-        return Sleeping("spill", kept, slot.nbytes, 0, 0)  # H3: unchanged, no rewrite
-    directory = _ssd.check_room(config, slot.nbytes)
-    if kept is not None:
-        _ssd.remove(kept[0])
-    written = _ssd.write(view, directory)
-    _kept_spills[id(slot.tensor)] = written
-    # the kept file goes away with its tensor, not only at exit (0048 S4)
-    weakref.finalize(slot.tensor, _forget_spill, id(slot.tensor), written[0])
-    return Sleeping("spill", written, slot.nbytes, 0, written[1])
-
-
-def wake_spill(slot: Slot, sleeping: Sleeping) -> None:
-    path, _, digest = sleeping.form
-    buf, view = empty_cpu(slot.shape, slot.dtype)
-    try:
-        _core.engine_read_source_into(path, 0, view, digest)
-    except (RuntimeError, OSError) as e:
-        raise IntegrityError(f"spill file {path} could not be restored: {e}") from None
-    put_back(slot, buf)
-
-
-def _forget_spill(key: int, path: str) -> None:
-    if _kept_spills.get(key, ("",))[0] == path:
-        del _kept_spills[key]
-    _ssd.remove(path)
-
-
 WAKE = {
     "source": wake_source,
     "host": wake_host,
     "compress": wake_compress,
-    "bf16": wake_bf16,
-    "spill": wake_spill,
 }

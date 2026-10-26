@@ -16,7 +16,7 @@ import sys
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from memopro.config import Config, get_config, spill_location
+from memopro.config import Config, default_spill_dir
 
 __all__ = ["Device", "Disk", "Env", "HostMemory", "detect"]
 
@@ -128,10 +128,10 @@ def detect(*, devices: bool = True, config: Config | None = None) -> Env:
     """
     from memopro import _core
 
-    cfg = config if config is not None else get_config()
+    del config  # accepted for callers that pass one; nothing here depends on settings (0328)
     host = HostMemory(**_core.hwinfo_memory())
     cpu = _core.hwinfo_cpu()
-    target = spill_location(cfg)
+    target = default_spill_dir()  # where downloads and caches would go; memopro writes none
     measured = _nearest_existing(target)
     raw_disk = _core.hwinfo_disk(measured)
     disk = Disk(str(target), str(measured), raw_disk["total_bytes"], raw_disk["available_bytes"])

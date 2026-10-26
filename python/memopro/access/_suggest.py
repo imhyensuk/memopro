@@ -1,9 +1,9 @@
 """What would load a model that does not fit (0064 D-a): settings checked against the plan.
 
-Nothing here guesses. Each candidate change of settings (the OS estimate as basis, a lower
-quality, disk offload, or the exact forced budget a rejected configuration needs) is planned
-again from the same metadata, and only changes under which a configuration is really chosen are
-suggested, with how much of it would exceed memory free without compressing or swapping.
+Nothing here guesses. The budget each rejected configuration needs is planned again from the
+same metadata, and only budgets under which a configuration is really chosen are suggested, with
+how much of it would exceed memory free without compressing or swapping. Every configuration
+keeps the model exactly as stored (0328), so the budget is the only setting to change.
 """
 
 from __future__ import annotations
@@ -13,13 +13,10 @@ from dataclasses import dataclass, field
 from typing import Any
 
 from memopro._units import format_size
-from memopro.config import QUALITIES
 
 __all__ = ["Suggestion", "fallback_line", "over_free", "suggest_for_load", "suggestions_text"]
 
 MAX_SUGGESTIONS = 4
-# the lowest quality setting that allows each grade (QualityGrade.value -> quality)
-_QUALITY_FOR_GRADE = {0: "lossless", 1: "high", 2: "balanced", 3: "low"}
 
 
 @dataclass(frozen=True)
@@ -63,27 +60,9 @@ def _forced_budget(cfg: Any, shared: bool) -> str:
 
 
 def _tries(plan: Any) -> list[dict[str, str]]:
-    cfg = plan.setup.config
-    current = QUALITIES.index(cfg.quality)
-    lower = list(QUALITIES[current + 1 :])
+    """The budget each available configuration that does not fit now would need."""
     shared = plan.ctx.unified or plan.ctx.device == "cpu"
-    tries: list[dict[str, str]] = []
-    for q in lower:
-        tries.append({"quality": q})
-    if cfg.disk_writes != "allow":
-        tries.append({"disk_writes": "allow"})
-    for c in plan.candidates:
-        if c.usable or c.name.startswith("offload"):
-            continue  # offload is suggested through disk_writes, not by forcing memory
-        blocked_by_quality = c.why.startswith("quality ")
-        if not c.ok and not blocked_by_quality:
-            continue  # not available here (back end, allow/deny)
-        change = {"budget": _forced_budget(c, shared)}
-        needed = _QUALITY_FOR_GRADE[c.quality.value]
-        if QUALITIES.index(needed) > current:
-            change = {"quality": needed, **change}
-        tries.append(change)
-    return tries
+    return [{"budget": _forced_budget(c, shared)} for c in plan.candidates if c.ok and not c.usable]
 
 
 def suggest_for_load(plan: Any) -> list[Suggestion]:
@@ -113,7 +92,7 @@ def suggest_for_load(plan: Any) -> list[Suggestion]:
             config=chosen.name,
             describe=chosen.describe(),
             quality=chosen.quality.name.lower(),
-            needs=chosen.needs.device + chosen.needs.host + chosen.needs.disk,
+            needs=chosen.needs.device + chosen.needs.host,
             over_free=over,
             speed=chosen.speed,
         )
@@ -140,22 +119,13 @@ def _grade(name: str) -> int:
 
 
 def fallback_line(plan: Any) -> str:
-    """The `fallback` options that would apply: "stored" (0064 D-d) and "stream" (0124)."""
-    if plan.setup is None or plan.setup.config.fallback != "none":
+    """With ``fallback="none"``: say that the default "stream" would load it (0124)."""
+    if plan.setup is None or plan.setup.config.fallback != "none" or not plan.ctx.host_budget:
         return ""
-    lines = []
-    stored = next((c for c in plan.candidates if c.name == "stored" and c.ok), None)
-    if stored is not None:
-        over = over_free(plan, stored)
-        size = format_size(stored.needs.device + stored.needs.host)
-        risk = f", about {format_size(over)} over what is free" if over else ""
-        lines.append(f"  fallback='stored'  -> warn and load as stored anyway ({size}{risk})")
-    if plan.ctx.host_budget:
-        lines.append(
-            "  fallback='stream'  -> lossless on the CPU: the stored weights stream from their "
-            f"files within {format_size(int(plan.ctx.host_budget))} (slower)"
-        )
-    return "\n".join(lines)
+    return (
+        "  fallback='stream'  -> lossless: the stored weights stream from their files within "
+        f"{format_size(int(plan.ctx.host_budget))} (slower)"
+    )
 
 
 def suggestions_text(source: str, suggestions: list[Suggestion], fallback: str = "") -> str:

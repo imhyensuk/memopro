@@ -145,12 +145,10 @@ def test_load_streams_on_request_when_nothing_fits(tiny_gpt2):
     stored = next(c for c in plan.candidates if c.name == "stored")
     tight = int((stored.needs.device + stored.needs.host) * 0.9)  # stored does not fit
     with pytest.raises(memopro.BudgetExceeded) as e:
-        memopro.load(tiny_gpt2, device="cpu", budget=tight, quality="lossless", fallback="none")
+        memopro.load(tiny_gpt2, device="cpu", budget=tight, fallback="none")
     assert "fallback='stream'" in str(e.value)
     with pytest.warns(UserWarning, match="fallback='stream'"):
-        m = memopro.load(
-            tiny_gpt2, device="cpu", budget=tight, quality="lossless", fallback="stream"
-        )
+        m = memopro.load(tiny_gpt2, device="cpu", budget=tight, fallback="stream")
     ids = torch.randint(0, 2000, (1, 16), generator=torch.Generator().manual_seed(3))
     with torch.no_grad():
         assert torch.equal(m(input_ids=ids).logits, reference(tiny_gpt2)(input_ids=ids).logits)
@@ -995,25 +993,23 @@ def test_drafts_and_load_download_through_the_same_path(tmp_path, monkeypatch):
     seen = []
     real = rtt._snapshot
     monkeypatch.setattr(rtt, "_snapshot", lambda name, rev: seen.append(name) or real(name, rev))
-    assert _load.load(str(src), budget="1GB", quality="lossless") is not None
+    assert _load.load(str(src), budget="1GB") is not None
     assert seen == [str(src)]  # memopro.load goes through the same path before loading
 
 
 def test_defaults_are_lossless_and_stream_when_nothing_fits(tiny_gpt2, monkeypatch):
-    """0314: by default nothing loses accuracy: quality is "lossless" and a model that does not
-    fit as stored is streamed losslessly instead of quantized."""
+    """0314, 0328: nothing ever loses accuracy, and a model that does not fit as stored is
+    streamed losslessly."""
     from memopro.access._load import plan_load
 
-    for var in ("MEMOPRO_QUALITY", "MEMOPRO_FALLBACK"):
-        monkeypatch.delenv(var, raising=False)
-    cfg = memopro.get_config()
-    assert (cfg.quality, cfg.fallback) == ("lossless", "stream")
+    monkeypatch.delenv("MEMOPRO_FALLBACK", raising=False)
+    assert memopro.get_config().fallback == "stream"
     stored = next(c for c in plan_load(tiny_gpt2, device="cpu").candidates if c.name == "stored")
     tight = int((stored.needs.device + stored.needs.host) * 0.9)  # stored does not fit
     with pytest.warns(UserWarning, match="fallback='stream'"):  # not quantized: streamed
         m = memopro.load(tiny_gpt2, device="cpu", budget=tight)
     assert hasattr(m, "memopro_weights")
-    with pytest.raises(memopro.BudgetExceeded):  # quantizing stays the user's explicit choice
+    with pytest.raises(memopro.BudgetExceeded):
         memopro.load(tiny_gpt2, device="cpu", budget=tight, fallback="none")
 
 
@@ -1143,8 +1139,21 @@ def test_generate_with_an_automatic_draft_returns_the_plain_text(tmp_path, monke
     with pytest.warns(UserWarning, match="could draft, but the budget leaves") as caught:
         assert memopro.generate(m, "w2 w9 w16", **kw) == plain
     assert not any("drafting with" in str(w.message) for w in caught)  # never loaded
-    # nothing suitable on the disk: one hint, the same text
+    # no smaller model on the disk: an int4 copy of the model itself drafts, the same text,
+    # but only when the weights do not fit the budget (else streaming is already cheap)
+    monkeypatch.setattr(llm, "AUTO_DRAFT_SLACK", 0.5)
     monkeypatch.setattr(llm, "AUTO_DRAFT_MAX", 0.01)
+    m = rtt.stream_model(target, budget="96MiB", device="mps")
+    assert not llm._streams_every_token(m)
+    with pytest.warns(UserWarning, match="no smaller model with the same tokenizer"):
+        assert memopro.generate(m, "w2 w9 w16", **kw) == plain
+    monkeypatch.setattr(llm, "_streams_every_token", lambda m: True)
+    m = rtt.stream_model(target, budget="256MiB", device="mps")
+    with pytest.warns(UserWarning, match="an int4 copy of the model itself"):
+        assert memopro.generate(m, "w2 w9 w16", **kw) == plain
+    assert llm._AUTO_DRAFTS[m] is not None
+    # and when its own weights are not on the disk either: one hint, the same text
+    monkeypatch.setattr(llm, "_own_folder", lambda m: None)
     m = rtt.stream_model(target, budget="96MiB", device="mps")
     with pytest.warns(UserWarning, match="no smaller model with the same tokenizer"):
         assert memopro.generate(m, "w2 w9 w16", **kw) == plain

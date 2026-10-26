@@ -19,29 +19,19 @@ from memopro.access._info import ModelInfo, model_info
 from memopro.orchestrator.apply import fail_open
 from memopro.orchestrator.candidates import (
     Configuration,
-    backend_of,
     from_pretrained_kwargs,
     infer_candidates,
-    post_load,
-    quality_note,
-    speed_hint,
+    user_original,
 )
 from memopro.report import report
 from memopro.techniques.integrations.loading import LoadContext
 
-__all__ = ["RESERVED", "TASKS", "LoadPlan", "load", "plan_load"]
+__all__ = ["ORIGINAL", "RESERVED", "TASKS", "LoadPlan", "load", "plan_load"]
 
-# memopro chooses these; passing them means "load it yourself" (use from_pretrained directly)
-RESERVED = (
-    "device_map",
-    "dtype",
-    "torch_dtype",
-    "quantization_config",
-    "max_memory",
-    "offload_folder",
-    "load_in_8bit",
-    "load_in_4bit",
-)
+# memopro chooses where the weights go; passing these means "place it yourself"
+RESERVED = ("device_map", "max_memory", "offload_folder")
+# these define the user's original model (0328): loaded exactly as given, never changed
+ORIGINAL = ("dtype", "torch_dtype", "quantization_config", "load_in_8bit", "load_in_4bit")
 TASKS = {
     "text-generation": "AutoModelForCausalLM",
     "causal-lm": "AutoModelForCausalLM",
@@ -82,8 +72,6 @@ class LoadPlan:
     info: ModelInfo
     ctx: LoadContext
     candidates: list[Configuration]
-    quality: str
-    prefer: str
     setup: Any = None  # the Setup it was planned with (settings, environment, budget)
     options: dict[str, Any] = field(default_factory=dict)  # what plan_load was given
 
@@ -109,27 +97,19 @@ def plan_from_info(info: ModelInfo, **options: Any) -> LoadPlan:
         half_dtype=s.half_dtype,
         device_budget=s.budget.device,
         host_budget=s.budget.host,
-        disk_writes=s.config.disk_writes,
         unified=s.budget.unified,
         runtime_bytes=_runtime_bytes(info, info.weight_bytes(half=True)),
-        offload_dir=s.offload_dir,
     )
     candidates = infer_candidates(
-        info,
-        ctx,
-        quality=s.config.quality,
-        prefer=s.config.prefer,
-        disk_budget=s.budget.disk,
-        allow=tuple(allow) if allow is not None else None,
-        deny=deny,
+        info, ctx, allow=tuple(allow) if allow is not None else None, deny=deny
     )
-    return LoadPlan(info, ctx, candidates, s.config.quality, s.config.prefer, s, given)
+    return LoadPlan(info, ctx, candidates, s, given)
 
 
 def _table(candidates: list[Configuration]) -> str:
     rows = []
     for c in candidates:
-        need = c.needs.device + c.needs.host + c.needs.disk
+        need = c.needs.device + c.needs.host
         state = "fits" if c.usable else (c.why or "does not fit")
         rows.append(f"  {c.name:<13} {format_size(need):>11}  {state}")
     return "\n".join(rows)
@@ -141,62 +121,71 @@ def load(
     task: str | None = None,
     tokenizer: bool = False,
     budget: Any = None,
-    quality: str | None = None,
-    prefer: str | None = None,
     allow: tuple[str, ...] | None = None,
     deny: tuple[str, ...] = (),
     revision: str | None = None,
     device: str | None = None,
-    disk_writes: str | None = None,
     fallback: str | None = None,
-    residency: str | None = None,
     **from_pretrained: Any,
 ) -> Any:
-    """Load ``model_id`` so it fits the budget; returns the model, or ``(model, tokenizer)``.
+    """Load ``model_id`` within the budget, exactly as it is; returns the model, or
+    ``(model, tokenizer)``.
 
-    ``quality`` bounds automatic loss ("lossless" < "high" < "balanced" < "low"), ``prefer``
-    orders the rest ("speed", "quality", "memory"), ``allow``/``deny`` filter technique names
-    (``dtype.half``, ``quant.int8``, ``quant.int4``, ``offload.cpu``, ``offload.disk``).
-    ``disk_writes`` and ``fallback`` override those settings for this call
-    (every setting a `BudgetExceeded` suggestion names can be passed here, 0064).
-    ``residency="file"`` keeps the weights as clean file-backed pages on MPS (0072).
-    Other keyword arguments go to ``from_pretrained`` unchanged.
+    The stored weights go on the device, or between the device and host RAM (``offload.cpu``),
+    whichever fits first; when neither does they stay in their files and are streamed
+    (``fallback="stream"``, the default; ``"none"`` stops instead). Nothing is converted.
+    ``dtype``/``quantization_config`` (or ``load_in_8bit``/``load_in_4bit``) define *your*
+    original (a half-precision or quantized model): it is loaded as given, so its results are
+    exactly what ``from_pretrained`` with the same arguments gives (0328). Other keyword
+    arguments go to ``from_pretrained`` unchanged.
     """
+    from memopro.config import _REMOVED
+
+    removed = sorted(set(from_pretrained) & set(_REMOVED))
+    if removed:
+        key = removed[0]
+        raise InvalidArgument(f"memopro.load's {key!r} was removed in 0.2.0: {_REMOVED[key]}")
     reserved = sorted(set(from_pretrained) & set(RESERVED))
     if reserved:
         raise InvalidArgument(
-            f"memopro.load chooses {', '.join(reserved)} itself; steer it with quality, prefer, "
-            "allow, deny or budget, or call from_pretrained directly"
+            f"memopro.load places the weights itself ({', '.join(reserved)}); steer it with "
+            "budget, allow or deny, or call from_pretrained directly"
         )
+    given = {k: from_pretrained.pop(k) for k in ORIGINAL if k in from_pretrained}
     plan = plan_load(
         model_id,
         budget=budget,
-        quality=quality,
-        prefer=prefer,
         allow=allow,
         deny=deny,
         revision=revision,
         device=device,
-        disk_writes=disk_writes,
         fallback=fallback,
-        residency=residency,
     )
-    info, ctx, candidates = plan.info, plan.ctx, plan.candidates
-    usable = [c for c in candidates if c.usable]
-    fallback = None
-    if not usable and plan.setup.config.fallback == "stream" and not from_pretrained:
-        # the default since 0.2.0 (0314): lossless streaming when nothing fits; a budget too
-        # small even for the runtime gets the usual explanation and suggestions below
-        try:
-            return _load_streamed(plan, model_id, revision, task, tokenizer, from_pretrained)
-        except InvalidArgument as e:
-            if "too small" not in str(e) and "needs a host budget" not in str(e):
-                raise
+    info, ctx = plan.info, plan.ctx
+    if given:
+        yours = user_original(info, ctx, given)
+        if not yours.fits:
+            error = BudgetExceeded(
+                f"{info.source} as you defined it ({yours.describe()}) needs about "
+                f"{format_size(yours.needs.device + yours.needs.host)}: {yours.why}. Give a "
+                "larger budget, or load the stored model without dtype/quantization_config "
+                "(it is streamed when it does not fit)"
+            )
+            error.suggestions = []
+            raise error
+        usable = [yours]
+    else:
+        usable = [c for c in plan.candidates if c.usable]
     if not usable:
-        fallback = _fallback(plan)
-        if fallback is None:
-            raise _nothing_fits(plan, f"no configuration of {info.source} fits the budget")
-        usable = [fallback]
+        if plan.setup.config.fallback == "stream" and not from_pretrained:
+            # lossless streaming when nothing fits (0314); a budget too small even for the
+            # runtime gets the usual explanation below
+            try:
+                return _load_streamed(plan, model_id, revision, task, tokenizer, from_pretrained)
+            except InvalidArgument as e:
+                if "too small" not in str(e) and "needs a host budget" not in str(e):
+                    raise
+        raise _nothing_fits(plan, f"{info.source} does not fit the budget as stored")
     cls = _model_class(info, task)
     # a hub model not on this disk is downloaded once with a notice and a free-disk check, one
     # layout of its weights (0312); transformers then reads the snapshot
@@ -204,33 +193,17 @@ def load(
 
     model_id, revision = _snapshot(model_id, revision)
     rep = report()
-    if plan.setup.config.residency == "file":
-        return _load_file_backed(
-            plan, usable[0], fallback, cls, model_id, revision, from_pretrained, tokenizer
-        )
     for cfg in usable:
         kwargs = from_pretrained_kwargs(cfg, ctx) | from_pretrained
-        outcome = fail_open(
-            f"load.{cfg.name}", _attempt, cls, model_id, revision, kwargs, post_load(cfg, ctx)
-        )
+        outcome = fail_open(f"load.{cfg.name}", _attempt, cls, model_id, revision, kwargs, None)
         if outcome.ok:
             model = outcome.value
-            need = cfg.needs.device + cfg.needs.host + cfg.needs.disk
-            backend = backend_of(cfg, ctx)
+            need = cfg.needs.device + cfg.needs.host
+            what = "as you defined it" if cfg.name == "yours" else "exactly as stored"
             detail = (
-                f"{info.source}: {cfg.describe()}{f' via {backend}' if backend else ''} "
-                f"({cfg.quality.name.lower()}), estimated {format_size(need)}, weights "
-                f"{format_size(_footprint(model))} on {ctx.device}"
+                f"{info.source}: {cfg.describe()} ({what}), estimated {format_size(need)}, "
+                f"weights {format_size(_footprint(model))} on {ctx.device}"
             )
-            if note := quality_note(cfg, ctx):
-                detail += f"; {note}"
-            if cfg is fallback:
-                detail += "; " + _fallback_note(plan, cfg)
-                import warnings
-
-                warnings.warn(f"memopro.load: {detail}", UserWarning, stacklevel=2)
-            if hint := speed_hint(cfg, candidates, ctx):  # before "applied": the load is last
-                rep.add("load", "suggested", hint)
             rep.add(f"load.{cfg.name}", "applied", detail)
             if tokenizer:
                 from transformers import AutoTokenizer
@@ -244,60 +217,6 @@ def load(
     raise _nothing_fits(
         plan, f"every configuration that fits failed to load {info.source}; see memopro.report()"
     )
-
-
-_mps_heap_note_shown = False
-
-
-def _suggest_mps_heap_setting() -> None:
-    """0080 W2: after a file-backed load, say once per process that the MPS allocator may hold a
-    1 GiB heap on top of the (file-backed) weights, and how to avoid it."""
-    global _mps_heap_note_shown
-    from memopro.env import MPS_HEAP_NOTE, mps_heap_reserve_on
-
-    if not _mps_heap_note_shown and mps_heap_reserve_on():
-        _mps_heap_note_shown = True
-        report().add("load", "suggested", MPS_HEAP_NOTE)
-
-
-def _load_file_backed(
-    plan: LoadPlan,
-    cfg: Configuration,
-    fallback: Any,
-    cls: Any,
-    model_id: Any,
-    revision: Any,
-    from_pretrained: dict[str, Any],
-    tokenizer: bool,
-) -> Any:
-    """``residency="file"`` (0072): an explicit choice, so failures raise instead of falling
-    back to anonymous memory."""
-    from memopro.residency import load_file_backed
-
-    ctx, info = plan.ctx, plan.info
-
-    def build() -> Any:
-        kwargs = from_pretrained_kwargs(cfg, ctx) | from_pretrained
-        return _attempt(cls, model_id, revision, kwargs, post_load(cfg, ctx))
-
-    model, line = load_file_backed(plan, cfg, cls, model_id, revision, build)
-    backend = backend_of(cfg, ctx)
-    need = cfg.needs.device + cfg.needs.host + cfg.needs.disk
-    detail = (
-        f"{info.source}: {cfg.describe()}{f' via {backend}' if backend else ''} "
-        f"({cfg.quality.name.lower()}), estimated {format_size(need)} on {ctx.device}; {line}"
-    )
-    if note := quality_note(cfg, ctx):
-        detail += f"; {note}"
-    if cfg is fallback:
-        detail += "; " + _fallback_note(plan, cfg)
-    _suggest_mps_heap_setting()  # before "applied", as hibernate's note (the last entry is the load)
-    report().add(f"load.{cfg.name}", "applied", detail)
-    if tokenizer:
-        from transformers import AutoTokenizer
-
-        return model, AutoTokenizer.from_pretrained(model_id, revision=revision)
-    return model
 
 
 def _load_streamed(
@@ -350,34 +269,13 @@ def _nothing_fits(plan: LoadPlan, headline: str) -> BudgetExceeded:
 
     suggestions = suggest_for_load(plan)
     lines = [
-        f"{headline} with quality {plan.quality!r}:",
+        f"{headline}:",
         _table(plan.candidates),
         suggestions_text(plan.info.source, suggestions, fallback_line(plan)),
     ]
     error = BudgetExceeded("\n".join(line for line in lines if line))
     error.suggestions = suggestions
     return error
-
-
-def _fallback(plan: LoadPlan) -> Configuration | None:
-    """The stored configuration when ``fallback="stored"`` and it is allowed (0064 D-d)."""
-    if plan.setup is None or plan.setup.config.fallback != "stored":
-        return None
-    return next((c for c in plan.candidates if c.name == "stored" and c.ok), None)
-
-
-def _fallback_note(plan: LoadPlan, cfg: Configuration) -> str:
-    from memopro.access._suggest import over_free
-
-    budget = plan.ctx.device_budget if plan.ctx.device_budget is not None else plan.ctx.host_budget
-    over = over_free(plan, cfg)
-    note = (
-        f"fallback='stored': nothing fits the budget {format_size(budget or 0)}, loaded as stored "
-        "anyway"
-    )
-    if over:
-        note += f"; about {format_size(over)} more than is free may be compressed or swapped"
-    return note
 
 
 def _footprint(model: Any) -> int:

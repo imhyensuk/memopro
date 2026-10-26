@@ -152,31 +152,3 @@ def _cands(monkeypatch, backend, quality="balanced"):
     monkeypatch.setattr(loading, "quantization_backend", lambda device, bits: (backend, ""))
     ctx = LoadContext("cuda", torch.float16, 10**10, 10**10, "never", unified=False)
     return infer_candidates(model_info(gpt2()), ctx, quality=quality), ctx
-
-
-def test_d9_quality_note_follows_the_back_end(monkeypatch):
-    from memopro.orchestrator import candidates as c
-
-    for backend, note in (
-        ("bitsandbytes", c.BNB_INT4_QUALITY_NOTE),
-        ("torch-int4pack", c.INT4PACK_QUALITY_NOTE),
-        ("torchao", c.INT4_QUALITY_NOTE),
-    ):
-        cands, ctx = _cands(monkeypatch, backend, quality="low")
-        int4 = next(x for x in cands if x.name == "quant.int4")
-        assert c.quality_note(int4, ctx) == note
-    assert "int4pack" not in c.BNB_INT4_QUALITY_NOTE
-
-
-def test_o1_int8_choice_mentions_the_faster_int4(monkeypatch):
-    from memopro.orchestrator import candidates as c
-
-    cands, ctx = _cands(monkeypatch, "bitsandbytes")
-    int8 = next(x for x in cands if x.name == "quant.int8")
-    assert c.speed_hint(int8, cands, ctx) == c.BNB_INT4_SPEED_HINT
-    other, octx = _cands(monkeypatch, "torchao")  # torchao int8 ranks with int4: no hint
-    assert c.speed_hint(next(x for x in other if x.name == "quant.int8"), other, octx) == ""
-    low, lctx = _cands(monkeypatch, "bitsandbytes", quality="low")  # int4 allowed: no hint
-    assert c.speed_hint(next(x for x in low if x.name == "quant.int8"), low, lctx) == ""
-    half = next(x for x in cands if x.name == "stored")
-    assert c.speed_hint(half, cands, ctx) == ""

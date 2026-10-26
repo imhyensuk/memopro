@@ -1,8 +1,6 @@
 """β hibernate (N1c): methods, bit-exact restore, SSD policy, auto-wake, notebook magics."""
 
 import os
-import stat
-import sys
 
 import pytest
 import torch
@@ -13,9 +11,8 @@ import memopro.env
 import memopro.hibernate
 import memopro.integrations
 from memopro import IntegrityError, ModeUnavailable, PolicyError, hibernate
-from memopro.config import configure, reset_config
+from memopro.config import reset_config
 from memopro.env._torch import mps_usable
-from memopro.hibernate import _ssd
 
 transformers = pytest.importorskip("transformers")
 
@@ -28,7 +25,6 @@ def isolated(tmp_path, monkeypatch):
         if key.startswith("MEMOPRO_"):
             monkeypatch.delenv(key)
     reset_config()
-    configure(spill_dir=str(tmp_path / "spill"), min_free_disk_fraction=0.0)
     yield
     for h in hibernate.handles():
         if h.asleep:
@@ -111,7 +107,7 @@ def test_changed_source_file_is_refused_on_wake(tmp_path):
     assert not h.asleep
 
 
-# ---------- compress, bf16, spill ----------
+# ---------- compress ----------
 
 
 def test_compress_is_exact_and_holds_less_memory():
@@ -125,74 +121,19 @@ def test_compress_is_exact_and_holds_less_memory():
     assert h.wake() is t and torch.equal(t, ref)
 
 
-def test_auto_skips_compression_that_does_not_pay_and_asks_before_spill():
-    t = torch.randint(-(2**62), 2**62, (1 << 17,), dtype=torch.int64)  # incompressible
-    with pytest.raises(ModeUnavailable, match="need consent"):
+def test_auto_leaves_what_no_method_fits_awake():
+    t = torch.randint(-(2**62), 2**62, (1 << 17,), dtype=torch.int64)  # incompressible, CPU
+    with pytest.raises(ModeUnavailable):
         hibernate.now(t)
     assert t.numel() > 0
 
 
-def test_bf16_changes_numerics_only_when_asked():
+@pytest.mark.parametrize("mode", ["spill", "bf16"])
+def test_spill_and_bf16_were_removed(mode):
     t = torch.randn(1000)
-    ref = t.clone()
-    hibernate.now(t, mode="bf16").wake()
-    assert t.dtype == torch.float32
-    assert not torch.equal(t, ref) and torch.allclose(t, ref, rtol=1e-2, atol=1e-2)
-
-
-def test_spill_roundtrip_private_file_counted_and_reused(tmp_path):
-    t = torch.randn(1 << 18)
-    ref = t.clone()
-    h = hibernate.now(t, mode="spill", allow_spill=True)
-    path = h.records[0].sleeping.form[0]
-    if sys.platform != "win32":  # Windows: the per-user folder's ACL, not POSIX modes
-        assert stat.S_IMODE(os.stat(path).st_mode) == 0o600
-    assert h.disk_write_bytes == t.new_empty(0).element_size() * (1 << 18)
-    assert hibernate.status()["ssd_written_today"] == h.disk_write_bytes
-    h.wake()
-    assert torch.equal(t, ref)
-    again = hibernate.now(t, mode="spill", allow_spill=True)  # unchanged: file reused (H3)
-    assert again.disk_write_bytes == 0
-    again.wake()
-    assert torch.equal(t, ref)
-
-
-def test_spill_policy_never_floor_and_daily_limit():
-    t = torch.randn(1 << 16)
-    configure(disk_writes="never")
-    with pytest.raises(PolicyError):
-        hibernate.now(t, mode="spill", allow_spill=True)
-    configure(disk_writes="allow", min_free_disk_fraction=0.9999)
-    with pytest.raises(ModeUnavailable, match="floor"):
-        hibernate.now(t, mode="spill")
-    configure(min_free_disk_fraction=0.0, daily_write_limit=1)
-    with pytest.raises(ModeUnavailable, match="write limit"):
-        hibernate.now(t, mode="spill")
-    assert t.numel() == 1 << 16
-
-
-def test_corrupted_spill_file_raises_integrity_error():
-    t = torch.randn(1 << 16)
-    h = hibernate.now(t, mode="spill", allow_spill=True)
-    path = h.records[0].sleeping.form[0]
-    with open(path, "r+b") as f:
-        f.seek(100)
-        f.write(b"\xff\xfe")
-    with pytest.raises(IntegrityError):
-        h.wake()
-
-
-def test_stale_spill_files_of_dead_processes_are_removed(tmp_path):
-    spill = tmp_path / "old"
-    spill.mkdir()
-    stale = spill / "999999-1-0.mpspill"
-    stale.write_bytes(b"x")
-    mine = spill / f"{os.getpid()}-1-0.mpspill"
-    mine.write_bytes(b"x")
-    _ssd._cleaned.discard(str(spill))
-    configure(spill_dir=str(spill))
-    _ssd.spill_dir(memopro.get_config())
-    assert not stale.exists() and mine.exists()
+    with pytest.raises(PolicyError, match="removed in 0.2.0"):
+        hibernate.now(t, mode=mode)
+    assert t.numel() == 1000
 
 
 # ---------- objects ----------
@@ -211,24 +152,19 @@ def test_optimizer_state_wakes_on_step():
     assert not h.asleep and state.shape == ref.shape
 
 
-def test_explicit_mode_keeps_unfit_tensors_awake_and_says_why():
-    model = torch.nn.Sequential(torch.nn.Linear(64, 64), torch.nn.Linear(64, 64).double())
-    h = hibernate.now(model, mode="bf16")
-    assert h.bytes_by_mode()["bf16"] > 0
-    h.wake()
-    ints = torch.zeros(10, dtype=torch.int64)
-    with pytest.raises(ModeUnavailable, match="not floating point"):
-        hibernate.now(ints, mode="bf16")
+def test_explicit_mode_tries_no_other_method_and_says_why():
+    t = torch.zeros(1 << 16)  # compresses, but host is asked for and it is not on a GPU
+    with pytest.raises(ModeUnavailable):
+        hibernate.now(t, mode="host")
+    assert t.numel() == 1 << 16
 
 
 def test_plan_lists_every_method_without_changing_anything(tmp_path):
     model = transformers.GPT2LMHeadModel.from_pretrained(tiny_gpt2(tmp_path))
     rows = hibernate.plan(model)
-    assert [r.mode for r in rows] == ["source", "host", "compress", "bf16", "spill"]
-    source = rows[0]
-    assert source.available and source.disk_write_bytes == 0 and source.fidelity == "exact"
-    assert rows[3].fidelity == "numerics"
-    assert "consent" in rows[4].reason
+    assert [r.mode for r in rows] == ["source", "host", "compress"]
+    assert all(r.disk_write_bytes == 0 and r.fidelity == "exact" for r in rows)
+    assert rows[0].available
     assert model.transformer.wte.weight.numel() > 0
 
 
@@ -265,7 +201,7 @@ def test_notebook_magics_proxy_and_status(ipython, capsys):
     ipython.run_line_magic("memopro", "status")
     ipython.run_line_magic("hibernate", "weights --plan")
     out = capsys.readouterr().out
-    assert "hibernated weights" in out and "SSD writes" in out and "what each method" in out
+    assert "hibernated weights" in out and "what each method" in out and "SSD" not in out
 
 
 def test_notebook_suggests_idle_objects(ipython, capsys, monkeypatch):
@@ -333,7 +269,7 @@ def test_d3_meta_tensors_are_skipped_with_a_memopro_error():
     assert h.bytes_by_mode()["compress"] > 0
     assert "meta tensor: it holds no memory" in h.kept
     h.wake()
-    assert len(hibernate.plan(mixed)) == 5  # plan skips meta tensors instead of failing
+    assert len(hibernate.plan(mixed)) == 3  # plan skips meta tensors instead of failing
 
 
 def test_d3_unexpected_method_errors_keep_the_tensor_awake(monkeypatch):

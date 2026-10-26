@@ -1,14 +1,13 @@
 """β hibernate: reclaim memory held by idle tensors, modules and optimizers (0032, 0036).
 
-Methods, tried in this order by ``mode="auto"`` (no SSD writes before the last one):
+Methods, tried in this order by ``mode="auto"`` (all lossless, none writes to the disk):
 
 1. ``source``   drop the memory; restore by re-reading the original file (bit-exact, verified)
 2. ``host``     move a CUDA tensor to host RAM
 3. ``compress`` lossless compression in RAM (only if it pays off)
-4. ``spill``    write to SSD, only when ``disk_writes`` allows it (consent under "ask")
 
-``bf16`` (lossy, halves float32) is never chosen automatically. Methods apply per tensor, so a
-model can end up partly ``source`` and partly ``compress``.
+(``spill`` and ``bf16`` were removed in 0.2.0, 0328.) Methods apply per tensor, so a model can
+end up partly ``source`` and partly ``compress``.
 
 Two styles::
 
@@ -56,7 +55,7 @@ __all__ = [
 MIN_OBJECT_BYTES = 1 << 20  # objects under 1 MiB are not worth suggesting (architecture §5.1)
 
 # Rough transfer rates for restore-time estimates in plan(); orders of magnitude only (U6).
-_RATES = {"source": 2e9, "spill": 2e9, "host": 10e9, "compress": 1.5e9, "bf16": 20e9}
+_RATES = {"source": 2e9, "host": 10e9, "compress": 1.5e9}
 
 
 @dataclass(frozen=True)
@@ -241,19 +240,18 @@ def _guess_name(obj: Any) -> str:
     return type(obj).__name__
 
 
-def now(obj: Any, mode: str = "auto", *, allow_spill: bool = False, name: str | None = None):
+def now(obj: Any, mode: str = "auto", *, name: str | None = None):
     """Hibernate ``obj`` (tensor, ``nn.Module`` or optimizer) now and return a `Handle`.
 
-    ``allow_spill=True`` gives consent to write to SSD when ``disk_writes="ask"``.
     With an explicit ``mode`` no other method is used; tensors it does not fit stay in memory
     and are listed in ``handle.kept``. If it fits none, `ModeUnavailable` explains why.
     Safe to call from several threads; calls run one at a time.
     """
     with _now_lock:
-        return _now(obj, mode, allow_spill, name)
+        return _now(obj, mode, name)
 
 
-def _now(obj: Any, mode: str, allow_spill: bool, name: str | None) -> Handle:
+def _now(obj: Any, mode: str, name: str | None) -> Handle:
     import torch
 
     from memopro.hibernate import _source
@@ -261,7 +259,7 @@ def _now(obj: Any, mode: str, allow_spill: bool, name: str | None) -> Handle:
     from memopro.report import report
 
     cfg = get_config()
-    steps = resolve_modes(mode, cfg, allow_spill=allow_spill)
+    steps = resolve_modes(mode, cfg)
     existing = _lookup(obj)
     if existing is not None and existing.asleep:
         return existing
@@ -351,12 +349,6 @@ def _sleep_all(handle: Handle, slots: list, steps: list, regions: dict, cfg: Any
         reasons: list[str] = []
         for step in steps:
             try:
-                if step.needs_confirmation:
-                    raise ModeUnavailable(
-                        "spill",
-                        "SSD writes need consent (disk_writes='ask'): pass allow_spill=True "
-                        "or use %hibernate --spill",
-                    )
                 sleeping = _sleep(step.mode, slot, regions, cfg, explicit)
             except ModeUnavailable as e:
                 reasons.append(f"{step.mode}: {e.reason}")
@@ -385,10 +377,6 @@ def _sleep(mode: str, slot: Any, regions: dict, cfg: Any, explicit: bool) -> Any
             return _methods.sleep_host(slot)
         case "compress":
             return _methods.sleep_compress(slot, explicit=explicit)
-        case "bf16":
-            return _methods.sleep_bf16(slot)
-        case "spill":
-            return _methods.sleep_spill(slot, cfg)
     raise InvalidArgument(f"unknown mode {mode!r}")
 
 
@@ -417,7 +405,7 @@ def plan(obj: Any) -> list[PlanRow]:
     import torch
 
     from memopro import _core
-    from memopro.hibernate import _source, _ssd
+    from memopro.hibernate import _source
     from memopro.hibernate._methods import COMPRESS_WORTH
     from memopro.hibernate._tensors import collect, cpu_bytes
 
@@ -426,7 +414,6 @@ def plan(obj: Any) -> list[PlanRow]:
         raise InvalidArgument(
             "this object is hibernated; plan() compares methods before hibernating"
         )
-    cfg = get_config()
     slots = [s for s in collect(obj) if s.tensor.numel() and not s.tensor.is_meta]
     total = sum(s.nbytes for s in slots)
     rows = []
@@ -475,31 +462,6 @@ def plan(obj: Any) -> list[PlanRow]:
         )
     )
 
-    f32 = sum(s.nbytes for s in slots if s.dtype in (torch.float32, torch.float64))
-    rows.append(
-        PlanRow(
-            "bf16",
-            f32 > 0,
-            "" if f32 else "no float32 tensors",
-            f32 // 2,
-            f32 / _RATES["bf16"],
-            0,
-            "numerics",
-        )
-    )
-
-    reason = ""
-    ok = cfg.disk_writes != "never"
-    if not ok:
-        reason = "disk_writes='never'"
-    else:
-        try:
-            _ssd.check_room(cfg, total)
-        except ModeUnavailable as e:
-            ok, reason = False, e.reason
-    if ok and cfg.disk_writes == "ask":
-        reason = "needs consent (--spill / allow_spill=True)"
-    rows.append(PlanRow("spill", ok, reason, total, total / _RATES["spill"], total, "exact"))
     return rows
 
 
@@ -526,7 +488,7 @@ def enable(auto: bool = False, idle_cells: int | None = None, idle_seconds: floa
     """Notebook tracking: suggestions after cells, and optionally automatic hibernation.
 
     An object is idle after ``idle_cells`` cells or ``idle_seconds`` seconds without use.
-    Automatic hibernation only uses write-free methods unless ``disk_writes="allow"``.
+    Automatic hibernation uses the lossless, write-free methods.
     """
     from memopro.hibernate import _tracker
 
@@ -534,15 +496,7 @@ def enable(auto: bool = False, idle_cells: int | None = None, idle_seconds: floa
 
 
 def status() -> dict[str, Any]:
-    """Hibernated objects, reclaimed memory and SSD writes (0032 H5)."""
-    from memopro.hibernate import _ssd
-
-    cfg = get_config()
-    try:
-        directory = _ssd.spill_dir(cfg)
-        today, total = _ssd.written_today(directory), _ssd.written_total(directory)
-    except OSError:
-        directory, today, total = None, 0, 0
+    """Hibernated objects and reclaimed memory (0032 H5; nothing is written to the disk)."""
     return {
         "objects": [
             {
@@ -555,8 +509,4 @@ def status() -> dict[str, Any]:
             }
             for h in list(_handles.values())
         ],
-        "ssd_written_today": today,
-        "ssd_written_total": total,
-        "spill_dir": str(directory) if directory else None,
-        "disk_writes": cfg.disk_writes,
     }
