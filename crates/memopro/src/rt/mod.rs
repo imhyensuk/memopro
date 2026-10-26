@@ -166,6 +166,9 @@ pub struct Stats {
     /// buffers were held to (0 without one).
     pub outside_peak: u64,
     pub limit_low: u64,
+    /// Times the machine had less room than the budget allowed, so buffers were given up to
+    /// keep the system from swapping (0332, rule 1 of 0325); the ceiling still holds.
+    pub machine_limited: u64,
 }
 
 const SERVICE_THREADS: usize = 2;
@@ -228,6 +231,7 @@ struct Inner {
     /// Room ran out with EDR pieces stored: they were squeezed to zstd and every later
     /// compression uses zstd too (0318).
     tight: bool,
+    machine: pager::MachineRoom,
 }
 
 /// One pin, for prediction: which buffer, how big, when, and how long it waited.
@@ -494,6 +498,7 @@ impl Runtime {
                 trace: VecDeque::new(),
                 stop: false,
                 tight: false,
+                machine: Default::default(),
             }),
             cond: Condvar::new(),
         });
@@ -525,6 +530,14 @@ impl Runtime {
     /// back for other memory.
     pub fn limit(&self) -> u64 {
         self.shared.limit()
+    }
+
+    /// [`limit`](Self::limit), or less when the machine cannot give that much without swapping
+    /// (0332): what callers holding pins (the MPS wrap cache) should keep within.
+    pub fn machine_limit(&self) -> u64 {
+        let mut st = self.shared.lock();
+        let used = st.used;
+        self.shared.limit().min(st.machine.cap(used))
     }
 
     /// Keep `bytes` of the budget for memory the runtime does not own (a caller's activations,
@@ -1280,8 +1293,18 @@ impl Shared {
                 ),
             }));
         }
+        // the machine's room counts too: a ceiling above what the system can still give without
+        // swapping would make the OS swap these very buffers out (E063: 3B at 4.5 GiB on 8 GB,
+        // 39 MB resident, 8 GB of swap). Buffers that can go cheaply go first; when nothing
+        // more can, the ceiling alone decides (0332)
+        let used = st.used;
+        let room = st.machine.cap(used);
+        let soft = limit.min(room.max(need));
+        if soft < limit && st.used + need > soft {
+            st.stats.machine_limited += 1;
+        }
         loop {
-            if st.used + need <= limit {
+            if st.used + need <= soft {
                 return Ok(st);
             }
             match self.choose(&mut st, exclude, bound) {
@@ -1290,6 +1313,7 @@ impl Shared {
                 None if bound.is_some() => {
                     return Err(Error::Budget("prefetch would evict sooner needs".into()));
                 }
+                None if st.used + need <= limit => return Ok(st),
                 // wait for others' slow work, never for the buffer this room is for
                 None if st.bufs.iter().any(|(i, b)| b.busy && Some(*i) != exclude) => {
                     st = self.wait(st)

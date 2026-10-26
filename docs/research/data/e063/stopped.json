@@ -1,0 +1,1 @@
+{"case": "4.5GiB none", "stopped_after_minutes": 33, "result": "none (stopped by the researcher)", "process_rss_MiB_at_stop": 39, "system_swap_used_MiB_at_stop": 8033, "system_swap_used_MiB_after_stop": 3869, "other_apps": "Chrome, mysqld, Claude desktop open"}

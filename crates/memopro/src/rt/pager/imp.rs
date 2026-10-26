@@ -618,7 +618,7 @@ impl Shared {
             // room without swapping (and at least what they last had while it could be kept);
             // memopro.enable still warns and reports the excess (0306)
             if limit < st.compressed + st.fixed + MIN_CHUNKS * self.config.chunk as u64 {
-                let room = (st.resident + st.compressed).saturating_add(st.machine.bytes());
+                let room = st.machine.cap(st.resident + st.compressed);
                 let allowed = self.limit.min(room).max(st.held);
                 if allowed > limit {
                     limit = allowed;
@@ -629,7 +629,15 @@ impl Shared {
             }
         }
         let hard = limit;
-        let limit = limit.max(st.compressed + MIN_CHUNKS * self.config.chunk as u64);
+        // the machine's room too: never more than the system can still give without swapping,
+        // or it swaps these chunks out (0332); the ceiling alone still decides overruns
+        let room = st.machine.cap(st.resident + st.compressed);
+        if room < limit && st.resident + st.compressed + need > room {
+            st.stats.machine_limited += 1;
+        }
+        let limit = limit
+            .min(room)
+            .max(st.compressed + MIN_CHUNKS * self.config.chunk as u64);
         let chunk = self.config.chunk as u64;
         while st.resident + st.compressed + need > limit {
             let fits = (limit - st.compressed) / chunk;

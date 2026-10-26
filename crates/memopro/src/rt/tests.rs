@@ -932,3 +932,48 @@ fn the_same_ratio_behaves_the_same_at_every_scale() {
         );
     }
 }
+
+#[test]
+fn buffers_give_way_when_the_machine_has_less_room_than_the_budget() {
+    // E063: a 4.5 GiB ceiling on an 8 GB machine with other apps open made the OS swap the
+    // runtime's own buffers; the runtime now keeps within what the machine can give (0332)
+    let data = widened(MIB, 3); // 4 MiB that compress well
+    let run = |room: Option<u64>| {
+        crate::rt::pager::TEST_ROOM.with(|r| r.set(room));
+        let mut c = Config::new(128 * MIB as u64);
+        c.prefetch = false;
+        let rt = Runtime::new(c).unwrap();
+        let ids: Vec<_> = (0..16)
+            .map(|_| {
+                let id = rt.alloc(4 * MIB, 4).unwrap();
+                rt.pin(id, true)
+                    .unwrap()
+                    .as_mut_slice()
+                    .unwrap()
+                    .copy_from_slice(&data);
+                id
+            })
+            .collect();
+        for &id in &ids {
+            assert_eq!(rt.pin(id, false).unwrap().as_slice(), &data[..]);
+        }
+        crate::rt::pager::TEST_ROOM.with(|r| r.set(None));
+        rt.stats()
+    };
+    let ample = run(Some(u64::MAX / 2));
+    assert_eq!(
+        (ample.compressions, ample.machine_limited),
+        (0, 0),
+        "{ample:?}"
+    );
+    // 64 MiB of buffers fit the 128 MiB budget, but the machine has no room left (the test's
+    // room does not shrink as the runtime grows, as the machine's would): they compress
+    // instead, and nothing is refused (pinned buffers stay, whatever the machine says)
+    let short = run(Some(0));
+    assert!(
+        short.compressions > 0 && short.machine_limited > 0,
+        "{short:?}"
+    );
+    assert_eq!(short.refusals, 0, "{short:?}");
+    assert!(short.peak_used <= 128 * MIB as u64, "{short:?}");
+}

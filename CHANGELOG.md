@@ -4,6 +4,15 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: a ceiling above what the machine can give no longer makes the system swap (0332)
+- The streaming runtime (`load`, `generate`, `finetune`) and the transparent pager (`memopro run`,
+  `memopro.enable`) now also keep within what the machine can still give without swapping
+  (keeping 5% of the memory, at least 256 MiB, for everyone else). That room rises only by what
+  is really freed, not by what macOS frees by swapping other programs out. The ceiling you set
+  still holds; nothing is refused because of it. Qwen2.5-3B at a 4.5 GiB ceiling on an 8 GB M1
+  with other apps open: before, no result after 33 minutes (8 GB of swap); now 2.09 s/token,
+  peak 3.9 GB, swap +187 MiB.
+
 ### Added: a self-draft when no smaller model is on the disk (0329)
 - On Apple GPUs, `generate(draft="auto")` with no sibling model drafts with an int4 copy of the
   model itself, made in memory (never written to the disk), when the model is larger than its

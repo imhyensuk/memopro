@@ -241,7 +241,8 @@ class _MetalPins:
         buffer first."""
         import torch
 
-        limit = self.runtime.limit  # changes when room is held back (0165)
+        # changes when room is held back (0165), and when the machine has less room (0332)
+        limit = self.runtime._rt.machine_limit()
         if block or fence or limit - self.runtime._rt.stats()["used"] < limit // 4:
             batch = [
                 (bid, r["gen"])

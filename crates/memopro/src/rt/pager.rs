@@ -110,31 +110,60 @@ pub struct PagerStats {
     /// chunks were given the room the machine still has instead of being squeezed further
     /// (0306).
     pub holds: u64,
+    /// Faults or trims where the machine had less room than the budget allowed (0332).
+    pub machine_limited: u64,
 }
 
-/// What the machine can still give without swapping, keeping 5% of it (at least 256 MiB) for
-/// everything else; measured at most every half second (0306).
+/// The most memory `own` bytes may grow to before the machine has to swap: `own` plus what the
+/// machine can still give, keeping 5% of it (at least 256 MiB) for everyone else (0332).
+/// Measured at most every 500 ms and kept as that total, so `own` growing in between uses up
+/// the room instead of finding it again (a runtime filled 4.5 GiB in 2 s on stale room). After
+/// the first measurement it moves by what `own` plus the room gained, less what swap gained:
+/// macOS keeps memory free by swapping other programs out, so room that came with swap was
+/// made by swapping, not given (available stayed near 1.2 GB while swap grew 2.7 GB).
 #[derive(Default)]
 pub(crate) struct MachineRoom {
     at: Option<std::time::Instant>,
-    bytes: u64,
+    cap: u64,
+    total: u64, // own + room at the last measurement
+    swap_used: u64,
+}
+
+#[cfg(test)]
+thread_local! {
+    /// Tests set the machine's room for their own thread.
+    pub(crate) static TEST_ROOM: std::cell::Cell<Option<u64>> = const { std::cell::Cell::new(None) };
 }
 
 impl MachineRoom {
-    pub(crate) fn bytes(&mut self) -> u64 {
+    pub(crate) fn cap(&mut self, own: u64) -> u64 {
+        #[cfg(test)]
+        if let Some(room) = TEST_ROOM.with(|r| r.get()) {
+            return own.saturating_add(room);
+        }
         if self
             .at
             .is_none_or(|t| t.elapsed() > std::time::Duration::from_millis(500))
         {
-            self.bytes = crate::hwinfo::memory()
+            let (room, swap_used) = crate::hwinfo::memory()
                 .map(|m| {
                     let keep = (m.total_bytes / 20).max(256 << 20);
-                    m.usable_bytes().saturating_sub(keep)
+                    (m.usable_bytes().saturating_sub(keep), m.swap_used_bytes())
                 })
-                .unwrap_or(0);
+                .unwrap_or((0, 0));
+            let total = own.saturating_add(room);
+            self.cap = if self.at.is_none() {
+                total
+            } else {
+                let swapped = swap_used.saturating_sub(self.swap_used);
+                let gained = total as i128 - self.total as i128 - swapped as i128;
+                ((self.cap as i128 + gained).max(0) as u64).min(total)
+            };
+            self.total = total;
+            self.swap_used = swap_used;
             self.at = Some(std::time::Instant::now());
         }
-        self.bytes
+        self.cap
     }
 }
 
