@@ -10,6 +10,14 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   nibbles it is the same draft as EDR v1. Qwen2.5-0.5B: 66.7% of its size (EDR v1 75.1%, zstd
   level 1 77.9%); decoding runs at about 2.2 GB/s on an M1 (EDR v1 about 6.5).
 
+### Changed: every default is lossless (0314)
+- `quality` now defaults to `"lossless"` (was `"balanced"`) and `fallback` to `"stream"` (was
+  `"none"`): `memopro.load` no longer quantizes on its own; a model that does not fit as stored
+  is streamed, results unchanged. `memopro run` and `train_session` follow the same default.
+  Half precision, int8 or int4 stay available with `quality="high"`, `"balanced"` or `"low"`
+  (`memopro run --quality ...`). A budget too small even for streaming still gets the usual
+  explanation with settings that would fit.
+
 ### Added: EDR, a lossless 12-bit form of bf16 weights (0308, 0310, 0313)
 - `memopro.rt.edr`: a bf16 weight as a 1-byte base (sign | exponent index | top 3 mantissa
   bits) and a 4-bit residual, with a 15-entry exponent table and a short escape list. Base and
