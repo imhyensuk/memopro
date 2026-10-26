@@ -168,6 +168,85 @@ pub fn decode(
     Ok(())
 }
 
+/// One runtime piece of 2-byte elements in EDR v1 form, as one byte string (0318): table (15) |
+/// escape count (u32) | base | residual | escape positions (u32) | escape bits (u16), little
+/// endian. Elements are read in native byte order, as the runtime stores them.
+pub fn pack_piece(src: &[u8], out: &mut Vec<u8>) -> Result<()> {
+    let x = as_u16(src)?;
+    let n = x.len();
+    let t = table(&x);
+    let head = 15 + 4;
+    out.clear();
+    out.resize(head + n + n.div_ceil(2), 0);
+    let (base, resid) = out[head..].split_at_mut(n);
+    let esc = encode(&x, &t, base, resid)?;
+    out[..15].copy_from_slice(&t);
+    out[15..19].copy_from_slice(&(esc.index.len() as u32).to_le_bytes());
+    for &i in &esc.index {
+        out.extend_from_slice(&(i as u32).to_le_bytes());
+    }
+    for &b in &esc.bits {
+        out.extend_from_slice(&b.to_le_bytes());
+    }
+    Ok(())
+}
+
+/// Inverse of [`pack_piece`] into `dst` (the piece's original bytes).
+pub fn unpack_piece(packed: &[u8], dst: &mut [u8]) -> Result<()> {
+    let bad = || Error::InvalidArgument("edr::unpack_piece: damaged piece".into());
+    if dst.len() % 2 != 0 || packed.len() < 19 {
+        return Err(bad());
+    }
+    let n = dst.len() / 2;
+    let t: [u8; 15] = packed[..15].try_into().expect("15 bytes");
+    let k = u32::from_le_bytes(packed[15..19].try_into().expect("4 bytes")) as usize;
+    let body = &packed[19..];
+    if body.len() != n + n.div_ceil(2) + 6 * k {
+        return Err(bad());
+    }
+    let (base, rest) = body.split_at(n);
+    let (resid, rest) = rest.split_at(n.div_ceil(2));
+    let (pos, bits) = rest.split_at(4 * k);
+    let index: Vec<u64> = pos
+        .chunks_exact(4)
+        .map(|c| u32::from_le_bytes(c.try_into().expect("4 bytes")) as u64)
+        .collect();
+    let bits: Vec<u16> = bits
+        .chunks_exact(2)
+        .map(|c| u16::from_le_bytes(c.try_into().expect("2 bytes")))
+        .collect();
+    // SAFETY: u16 has no invalid bit patterns; `align_to_mut` only gives the aligned middle
+    let (pre, out, post) = unsafe { dst.align_to_mut::<u16>() };
+    if !pre.is_empty() || !post.is_empty() {
+        let mut tmp = vec![0u16; n];
+        decode(base, Some(resid), &t, (&index, &bits), &mut tmp)?;
+        for (d, x) in dst.chunks_exact_mut(2).zip(&tmp) {
+            d.copy_from_slice(&x.to_ne_bytes());
+        }
+        return Ok(());
+    }
+    decode(base, Some(resid), &t, (&index, &bits), out)
+}
+
+/// `src` as 2-byte elements: borrowed when aligned, copied otherwise.
+fn as_u16(src: &[u8]) -> Result<std::borrow::Cow<'_, [u16]>> {
+    if src.len() % 2 != 0 || src.len() / 2 > u32::MAX as usize {
+        return Err(Error::InvalidArgument(
+            "edr: a piece is a whole number of 2-byte elements below 2^32".into(),
+        ));
+    }
+    // SAFETY: as in `unpack_piece`
+    let (pre, x, post) = unsafe { src.align_to::<u16>() };
+    if pre.is_empty() && post.is_empty() {
+        return Ok(std::borrow::Cow::Borrowed(x));
+    }
+    Ok(std::borrow::Cow::Owned(
+        src.chunks_exact(2)
+            .map(|c| u16::from_ne_bytes([c[0], c[1]]))
+            .collect(),
+    ))
+}
+
 /// EDR v2 (0315): the exponents entropy-coded, everything else as in v1.
 ///
 /// - `exps`: canonical Huffman codes of the exponents (at most 15 bits), in blocks of [`BLOCK`]
@@ -645,5 +724,24 @@ mod tests {
         assert!(l.iter().all(|&x| (1..=v2::MAX_LEN as u8).contains(&x)));
         let kraft: u64 = l.iter().map(|&x| 1u64 << (v2::MAX_LEN - x as u32)).sum();
         assert!(kraft <= 1 << v2::MAX_LEN);
+    }
+
+    #[test]
+    fn pieces_round_trip_aligned_or_not_and_refuse_damage() {
+        let all: Vec<u8> = (0..=u16::MAX).flat_map(|x| x.to_ne_bytes()).collect();
+        let mut packed = Vec::new();
+        pack_piece(&all, &mut packed).unwrap();
+        let mut out = vec![0u8; all.len()];
+        unpack_piece(&packed, &mut out).unwrap();
+        assert_eq!(out, all);
+        let mut odd = vec![0u8; all.len() + 1]; // misaligned source and destination
+        odd[1..].copy_from_slice(&all);
+        pack_piece(&odd[1..], &mut packed).unwrap();
+        let mut dst = vec![0u8; all.len() + 1];
+        unpack_piece(&packed, &mut dst[1..]).unwrap();
+        assert_eq!(&dst[1..], &all[..]);
+        assert!(unpack_piece(&packed[..packed.len() - 1], &mut out).is_err());
+        assert!(unpack_piece(&packed, &mut out[..10]).is_err());
+        assert!(pack_piece(&all[..3], &mut packed).is_err());
     }
 }

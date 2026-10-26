@@ -239,6 +239,131 @@ fn buffers_of_many_pieces_are_compressed_in_parallel_within_the_budget() {
     assert!(s.peak_used <= rt.limit(), "{s:?}");
 }
 
+/// bf16-like 2-byte data: skewed exponents, random sign and mantissa (EDR codes it well).
+fn bf16_like(n: usize, seed: u32) -> Vec<u8> {
+    let mut x = seed.wrapping_mul(2_654_435_761).max(1);
+    (0..n)
+        .flat_map(|_| {
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            let e = 0x78 - (x % 7).min(x % 5);
+            ((((x >> 16) & 0x8000) | (e << 7) | ((x >> 9) & 0x7F)) as u16).to_ne_bytes()
+        })
+        .collect()
+}
+
+#[test]
+fn bf16_buffers_go_to_edr_and_squeeze_to_zstd_when_room_runs_out() {
+    // roomy: every compressed piece is EDR and restores exactly
+    let rt = runtime(48, Policy::ReuseDistance);
+    let mut ids = Vec::new();
+    for k in 0..6 {
+        let content = bf16_like(4 << 20, 11 + k); // 8 MiB each, 48 MiB in total
+        let id = rt.alloc(content.len(), 2).unwrap();
+        rt.pin(id, true)
+            .unwrap()
+            .as_mut_slice()
+            .unwrap()
+            .copy_from_slice(&content);
+        ids.push((id, content));
+    }
+    for (id, content) in &ids {
+        assert_eq!(rt.pin(*id, false).unwrap().as_slice(), &content[..]);
+    }
+    assert!(rt.stats().peak_used <= rt.limit());
+    // room for batches of pieces, each encoded on the pool too (a nested-steal panic, 0318)
+    let rt = runtime(96, Policy::ReuseDistance);
+    let big: Vec<Vec<u8>> = (0..3).map(|k| bf16_like(12 << 20, 51 + k)).collect(); // 24 MiB
+    let ids: Vec<_> = big
+        .iter()
+        .map(|c| {
+            let id = rt.alloc(c.len(), 2).unwrap();
+            rt.pin(id, true)
+                .unwrap()
+                .as_mut_slice()
+                .unwrap()
+                .copy_from_slice(c);
+            id
+        })
+        .collect();
+    for _ in 0..3 {
+        for (id, c) in ids.iter().zip(&big) {
+            let p = rt
+                .pin(*id, false)
+                .unwrap_or_else(|e| panic!("{e}: {:?}", rt.stats()));
+            assert_eq!(p.as_slice(), &c[..]);
+        }
+    }
+    assert!(rt.stats().peak_used <= rt.limit());
+    // tight: as many 2 MiB buffers as fit the limit compressed with zstd but not with EDR
+    let one = bf16_like(MIB, 5);
+    let mut out = Vec::new();
+    codec::pack_chunk(&one, 2, 1, &mut out).unwrap();
+    let zstd = out.len() as f64 / one.len() as f64;
+    crate::edr::pack_piece(&one, &mut out).unwrap();
+    let edr = out.len() as f64 / one.len() as f64;
+    assert!(
+        edr > zstd * 1.05 && edr <= zstd * EDR_SLACK,
+        "zstd {zstd} edr {edr}"
+    );
+    let rt = runtime(48, Policy::ReuseDistance);
+    let room = (rt.limit() - 2 * MIB as u64) as f64 / (2 * MIB) as f64; // one buffer kept raw
+    let n = ((room / edr + room / zstd) / 2.0) as u32; // between the two
+    let mut ids = Vec::new();
+    for k in 0..n {
+        let content = bf16_like(MIB, 31 + k);
+        let id = rt.alloc(content.len(), 2).unwrap();
+        rt.pin(id, true)
+            .unwrap()
+            .as_mut_slice()
+            .unwrap()
+            .copy_from_slice(&content);
+        ids.push((id, content));
+        assert!(rt.stats().used <= rt.limit());
+    }
+    for (id, content) in &ids {
+        assert_eq!(rt.pin(*id, false).unwrap().as_slice(), &content[..]);
+    }
+    let s = rt.stats();
+    assert!(s.peak_used <= rt.limit(), "{s:?}");
+}
+
+#[test]
+fn the_probe_picks_edr_for_bf16_and_zstd_for_float16() {
+    let bf16 = Region::from_bytes(&bf16_like(MIB, 3)).unwrap();
+    assert!(probe(&bf16, 2, 1).1);
+    // float16 weights: 5-bit exponent near 2^-6, 10 random mantissa bits
+    let mut x = 12_345u32;
+    let f16: Vec<u8> = (0..MIB)
+        .flat_map(|_| {
+            x ^= x << 13;
+            x ^= x >> 17;
+            x ^= x << 5;
+            let e = 9 - (x % 5).min(x % 3);
+            ((((x >> 16) & 0x8000) | (e << 10) | ((x >> 3) & 0x3FF)) as u16).to_ne_bytes()
+        })
+        .collect();
+    assert!(!probe(&Region::from_bytes(&f16).unwrap(), 2, 1).1);
+    assert!(!probe(&Region::from_bytes(&widened(MIB / 2, 1)).unwrap(), 4, 1).1);
+}
+
+#[test]
+fn edr_pieces_compress_many_at_once_and_come_back() {
+    // every piece of a batch encodes on the pool too: a thread that steals another piece
+    // meanwhile must not find a borrowed thread-local (0318)
+    let content = bf16_like(32 << 20, 77); // 64 MiB, 16 pieces
+    for _ in 0..4 {
+        let region = Region::from_bytes(&content).unwrap();
+        let packed = pack_region(region, content.len(), 2, 1, 16, true)
+            .map_err(|(_, e)| e)
+            .unwrap();
+        assert!(packed.pieces.iter().all(|p| p.kind == Kind::Edr));
+        let back = unpack_region(&packed, content.len(), 2).unwrap();
+        assert!(back.as_slice()[..content.len()] == content[..]);
+    }
+}
+
 #[test]
 fn incompressible_data_without_a_file_is_refused_not_overrun() {
     let rt = runtime(12, Policy::ReuseDistance);
