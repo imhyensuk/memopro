@@ -7,6 +7,12 @@ ceiling, a saved tensor stays as it is (no copy, no cost); above that, each save
 and its own memory is let go. The runtime compresses idle buffers losslessly when room is
 needed, and backward gets the exact bytes back, so gradients do not change.
 
+On the Apple GPU the copies never pass through the CPU (0321): the runtime buffer is wrapped
+as an MPS tensor (no copy, unified memory) and the GPU copies the activation into it, and back
+out of it for backward, queued like any other GPU work; no step waits for the GPU per tensor.
+Wrapped buffers are given back to the runtime (to be compressed) in batches behind one MPS
+event, as for streamed weights.
+
 Parameters and other leaf tensors are never moved (their modules hold them anyway), nor are
 non-contiguous or sparse tensors. If the runtime cannot take a tensor, it stays as it is. If
 backward needs a tensor back and the ceiling has no room for it, ``over_ceiling`` decides
@@ -27,6 +33,9 @@ __all__ = ["SavedActivations"]
 
 PRESSURE = 0.75
 THRESHOLD = 1 << 20
+# GPU copies queued between two fences (one MPS event each, ~1 ms): wrapped buffers go back to
+# the runtime this many bytes behind the GPU (0321)
+FENCE_BYTES = 64 << 20
 
 
 class _Packed:
@@ -59,6 +68,9 @@ class SavedActivations:
         self.moved_bytes = 0
         self.over_ceiling_count = 0
         self.over_ceiling_bytes = 0
+        self._metal: Any = None  # wrapped runtime buffers for MPS tensors, made on first use
+        self._dead: list[Any] = []  # buffers whose free waits for the GPU to let them go
+        self._queued = 0  # bytes of GPU copies since the last fence
 
     def hooks(self) -> Any:
         import torch
@@ -84,17 +96,22 @@ class SavedActivations:
             return t
         nbytes = t.numel() * t.element_size()
         size = t.element_size()
+        gpu = self._gpu() if t.device.type == "mps" else None
         try:
-            buf = self.runtime.alloc(
-                nbytes, dtype=f"uint{8 * size}" if size in (1, 2, 4, 8) else "uint8"
-            )
-            raw = t.detach().reshape(-1).view(torch.uint8).cpu().numpy()
-            with buf.view(write=True) as a:
-                a.reshape(-1).view("uint8")[...] = raw
+            buf = self._alloc(nbytes, f"uint{8 * size}" if size in (1, 2, 4, 8) else "uint8")
+            src = t.detach().reshape(-1).view(torch.uint8)
+            if gpu is not None:
+                # the GPU writes the runtime memory itself, queued behind the work that made t
+                # ponytail: through the read pin _MetalPins keeps; nothing else views it
+                gpu.tensor(buf, torch.uint8, nbytes).copy_(src)
+                self._queue(nbytes)
+            else:
+                with buf.view(write=True) as a:
+                    a.reshape(-1).view("uint8")[...] = src.cpu().numpy()
         except MemoproError:
             return t
         p = _Packed(buf, t.shape, t.dtype, t.device)
-        weakref.finalize(p, buf.free)
+        weakref.finalize(p, self._release, buf)
         self.moved += 1
         self.moved_bytes += nbytes
         return p
@@ -104,9 +121,15 @@ class SavedActivations:
 
         if not isinstance(p, _Packed):
             return p
-        out = torch.empty(p.shape, dtype=p.dtype)
-        dst = out.reshape(-1).view(torch.uint8).numpy()
+        nbytes = p.buf.nbytes
         try:
+            if p.device.type == "mps" and self._metal is not None:
+                out = torch.empty(nbytes, dtype=torch.uint8, device=p.device)
+                out.copy_(self._metal.tensor(p.buf, torch.uint8, nbytes))  # on the GPU
+                self._queue(nbytes)
+                return out.view(p.dtype).reshape(p.shape)
+            out = torch.empty(p.shape, dtype=p.dtype)
+            dst = out.reshape(-1).view(torch.uint8).numpy()
             with p.buf.view() as a:
                 dst[...] = a.reshape(-1).view("uint8")
         except BudgetExceeded as e:
@@ -115,9 +138,55 @@ class SavedActivations:
                     f"{e} (backward needs a saved activation back; set "
                     "over_ceiling='allow' to get it over the ceiling instead)"
                 ) from None
+            out = torch.empty(p.shape, dtype=p.dtype)
+            dst = out.reshape(-1).view(torch.uint8).numpy()
             p.buf.read_into(dst)
             self._over(dst.nbytes)
         return out if p.device.type == "cpu" else out.to(p.device)
+
+    def _gpu(self) -> Any:
+        if self._metal is None:
+            from memopro.rt.torch import _MetalPins
+
+            self._metal = _MetalPins(self.runtime)
+        return self._metal
+
+    def _queue(self, nbytes: int) -> None:
+        """Fence the wrapped buffers every FENCE_BYTES of GPU copies, and give back those the
+        GPU is done with: a saved activation is used once each way, so its wrap is not kept."""
+        self._queued += nbytes
+        if self._queued >= FENCE_BYTES:
+            self._queued = 0
+            self._metal.reap(fence=True)
+            self._free_dead()
+
+    def _alloc(self, nbytes: int, dtype: str) -> Any:
+        """A runtime buffer; when the runtime is full of buffers the GPU still holds, wait for
+        the GPU once and give them all back first."""
+        self._free_dead()
+        try:
+            return self.runtime.alloc(nbytes, dtype=dtype)
+        except BudgetExceeded:
+            if self._metal is None:
+                raise
+            self._metal.reap(block=True)
+            self._free_dead()
+            return self.runtime.alloc(nbytes, dtype=dtype)
+
+    def _release(self, buf: Any) -> None:
+        try:
+            buf.free()
+        except MemoproError:  # still wrapped for the GPU: freed once given back
+            self._dead.append(buf)
+
+    def _free_dead(self) -> None:
+        if not self._dead:
+            return
+        if self._metal is not None:
+            self._metal.reap()
+        dead, self._dead = self._dead, []
+        for buf in dead:
+            self._release(buf)
 
     def _over(self, nbytes: int) -> None:
         import warnings

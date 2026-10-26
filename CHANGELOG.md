@@ -4,6 +4,16 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: saved activations on the Apple GPU no longer pass through the CPU (0321)
+- When `memopro.enable` moves activations saved for backward into runtime buffers, an MPS
+  tensor is now copied by the GPU straight into the runtime memory (wrapped as an MPS tensor,
+  no copy on unified memory) and back out of it, queued like the rest of the step instead of
+  waiting for the GPU at every tensor. Wrapped buffers go back to the runtime in batches of
+  64 MiB behind one MPS event. Qwen2.5-0.5B LoRA, 512 tokens, about 2.1 GB moved per step on an
+  M1: 6.1-6.4 s per step when nothing needs compressing (was 11.9-17.9; 5.9-6.3 without moving
+  at all), 8.2-9.7 s with a 1.7 GB runtime (was 14.6-33.5), and about 2 GB less peak memory.
+  Gradients are unchanged.
+
 ### Added: `over_ceiling`, what happens when data must come back and the ceiling is full (0320)
 - A new setting (`memopro.configure(over_ceiling=...)`, `memopro.enable(..., over_ceiling=...)`,
   `MEMOPRO_OVER_CEILING`, `memopro.toml`). `"error"` (default) keeps the ceiling: when backward

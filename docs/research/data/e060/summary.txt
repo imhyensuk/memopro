@@ -1,0 +1,13 @@
+new 0 med 5.86 [5.049, 4.122, 5.189, 7.255, 6.535] peak 4381 swapΔ 710 comp None decomp None 0x1.61d5220000000p+1
+new 6000 med 6.08 [8.129, 5.667, 7.221, 6.087, 6.075] peak 3230 swapΔ 1011 comp 0.0 decomp 0.0 0x1.61d5220000000p+1
+new 1700 med 9.67 [9.395, 9.61, 8.935, 11.41, 9.721] peak 3819 swapΔ 346 comp 5.931 decomp 1.908 0x1.61d5220000000p+1
+old 6000 med 11.89 [9.816, 7.202, 10.836, 13.607, 12.947] peak 5729 swapΔ 582 comp 0.0 decomp 0.0 0x1.61d5220000000p+1
+old 1700 med 14.57 [10.511, 12.6, 16.034, 13.106, 19.782] peak 5480 swapΔ -376 comp 6.835 decomp 2.031 0x1.61d5220000000p+1
+new 0 med 6.34 [7.807, 13.174, 5.121, 4.298, 7.557] peak 4366 swapΔ 503 comp None decomp None 0x1.61d5220000000p+1
+new 6000 med 6.41 [7.258, 6.255, 7.723, 6.378, 6.449] peak 3207 swapΔ 615 comp 0.0 decomp 0.0 0x1.61d5220000000p+1
+new 1700 med 8.18 [11.986, 9.215, 8.38, 7.467, 7.985] peak 3712 swapΔ 755 comp 4.627 decomp 2.121 0x1.61d5220000000p+1
+old 6000 med 17.89 [11.427, 16.821, 26.544, 18.96, 15.315] peak 5850 swapΔ 262 comp 0.0 decomp 0.0 0x1.61d5220000000p+1
+old 1700 med 33.46 [10.673, 11.516, 37.381, 35.107, 31.805] peak 5483 swapΔ 52 comp 9.988 decomp 5.695 0x1.61d5220000000p+1
+ 2 files changed, 83 insertions(+), 13 deletions(-)
+
+[exited with code 0]

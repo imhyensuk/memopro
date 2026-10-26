@@ -235,13 +235,14 @@ class _MetalPins:
             self.core.metal_release(record["mtl"])
             record["pin"].release()
 
-    def reap(self, block: bool = False) -> None:
-        """Give back fenced buffers the GPU is done with; when room runs short (or ``block``),
-        fence every unused buffer first."""
+    def reap(self, block: bool = False, fence: bool = False) -> None:
+        """Give back fenced buffers the GPU is done with; when room runs short (or ``block``, or
+        ``fence``: for buffers used once, such as saved activations, 0321), fence every unused
+        buffer first."""
         import torch
 
         limit = self.runtime.limit  # changes when room is held back (0165)
-        if block or limit - self.runtime._rt.stats()["used"] < limit // 4:
+        if block or fence or limit - self.runtime._rt.stats()["used"] < limit // 4:
             batch = [
                 (bid, r["gen"])
                 for bid, r in self.shared.items()
