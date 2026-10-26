@@ -194,6 +194,11 @@ def load(
             raise _nothing_fits(plan, f"no configuration of {info.source} fits the budget")
         usable = [fallback]
     cls = _model_class(info, task)
+    # a hub model not on this disk is downloaded once with a notice and a free-disk check, one
+    # layout of its weights (0312); transformers then reads the snapshot
+    from memopro.rt.torch import _snapshot
+
+    model_id, revision = _snapshot(model_id, revision)
     rep = report()
     if plan.setup.config.residency == "file":
         return _load_file_backed(

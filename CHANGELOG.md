@@ -41,6 +41,8 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 - Only one layout of the weights is downloaded: the Hugging Face format files when a repository
   also holds the same weights in another layout (Mistral-7B-Instruct-v0.3 29.0 → 14.5 GB,
   CLIP-ViT-bigG 20.3 → 10.2 GB; 0311).
+- Draft models (`draft="name"`) and `memopro.load("name")` download the same way: once, with
+  the notice, the free-disk check and one layout of the weights (0312).
 
 ## 0.1.10 (alpha)
 
