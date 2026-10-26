@@ -17,6 +17,8 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 - On Apple GPUs, `generate(draft="auto")` with no sibling model drafts with an int4 copy of the
   model itself, made in memory (never written to the disk), when the model is larger than its
   budget and the budget holds the copy; the text is the same as without a draft.
+  The copy is made only when the machine can also hold it without swapping (0333); a note
+  says so when it cannot. Qwen2.5-3B at 4.5-5 GiB on an 8 GB M1: 2.7-2.8 -> 1.25-1.28 s/token.
 
 ### Removed (breaking): automatic lossy choices and every disk-writing feature (0328)
 - `load` keeps the model exactly as stored (or splits it between the GPU and RAM with
