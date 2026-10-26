@@ -1400,9 +1400,9 @@ impl Shared {
         drop(old);
     }
 
-    /// Compress a resident buffer piece by piece outside the lock. Memory stays within the
-    /// budget: each piece's pages are given back before the next piece is stored, so at most one
-    /// stored piece (the reserve) is extra at any time.
+    /// Compress a resident buffer piece by piece outside the lock, several pieces at a time when
+    /// the budget has room for them. Memory stays within the budget: a batch's pages are given
+    /// back once its pieces are stored, so at most the reserve plus the room left is extra.
     fn compress<'a>(
         &'a self,
         mut st: MutexGuard<'a, Inner>,
@@ -1419,9 +1419,13 @@ impl Shared {
         b.stayed = false;
         let (nbytes, elem) = (b.nbytes, b.elem);
         let cap = region.capacity() as u64;
+        // pieces compressed at once: each may hold one stored piece before its pages go back,
+        // so as many as the room left in the budget allows on top of the reserve (0317)
+        let room = self.limit_now(&mut st).0.saturating_sub(st.used);
+        let at_once = (1 + room / self.reserve).min(rayon::current_num_threads() as u64) as usize;
         drop(st);
         let t0 = Instant::now();
-        let result = pack_region(region, nbytes, elem, level);
+        let result = pack_region(region, nbytes, elem, level, at_once);
         let seconds = t0.elapsed().as_secs_f64();
         let mut st = self.lock();
         let b = st.bufs.get_mut(&id).expect("busy buffers are not freed");
@@ -1660,82 +1664,113 @@ thread_local! {
     static OUT: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
 }
 
-/// Compress `region` piece by piece, giving each piece's pages back once it is stored. On
-/// failure the data is put back whole into the region, which is returned with the error.
+/// Compress `region` piece by piece, `at_once` pieces in parallel, giving each batch's pages
+/// back once its pieces are stored. On failure the data is put back whole into the region,
+/// which is returned with the error.
 fn pack_region(
     mut region: Region,
     nbytes: usize,
     elem: usize,
     level: i32,
+    at_once: usize,
 ) -> std::result::Result<Packed, (Region, Error)> {
+    use rayon::prelude::*;
+
     let mut pieces: Vec<Piece> = Vec::new();
     let mut stored = 0u64;
     let mut off = 0usize;
     while off < nbytes {
-        let len = codec::CHUNK.min(nbytes - off);
-        let piece = OUT.with(|cell| -> Result<Piece> {
-            let mut out = cell.borrow_mut();
-            let src = &region.as_slice()[off..off + len];
-            codec::pack_chunk(src, elem, level, &mut out)?;
-            if out.len() < len {
-                Ok(Piece {
-                    region: Region::from_bytes(&out)?,
-                    len,
-                    raw: false,
-                })
-            } else {
-                Ok(Piece {
-                    region: Region::from_bytes(src)?,
-                    len,
-                    raw: true,
-                })
-            }
-        });
-        match piece {
-            Ok(p) => {
-                stored += p.region.capacity() as u64;
-                pieces.push(p);
-                region.release(off, len);
-                off += len;
-            }
-            Err(e) => {
-                // put back what was already given up
-                let mut at = 0;
-                for p in &pieces {
-                    let dst = &mut region.as_mut_slice()[at..at + p.len];
-                    if p.raw {
-                        dst.copy_from_slice(&p.region.as_slice()[..p.len]);
-                    } else if let Err(e2) = codec::unpack_chunk(p.region.as_slice(), elem, dst) {
-                        return Err((
-                            region,
-                            Error::Integrity(format!("could not undo compression: {e2}")),
-                        ));
+        let batch: Vec<(usize, usize)> = (0..at_once.max(1))
+            .map(|i| off + i * codec::CHUNK)
+            .take_while(|&at| at < nbytes)
+            .map(|at| (at, codec::CHUNK.min(nbytes - at)))
+            .collect();
+        let data = region.as_slice();
+        let done: Vec<Result<Piece>> = batch
+            .par_iter()
+            .map(|&(at, len)| {
+                OUT.with(|cell| -> Result<Piece> {
+                    let mut out = cell.borrow_mut();
+                    let src = &data[at..at + len];
+                    codec::pack_chunk(src, elem, level, &mut out)?;
+                    if out.len() < len {
+                        Ok(Piece {
+                            region: Region::from_bytes(&out)?,
+                            len,
+                            raw: false,
+                        })
+                    } else {
+                        Ok(Piece {
+                            region: Region::from_bytes(src)?,
+                            len,
+                            raw: true,
+                        })
                     }
-                    at += p.len;
+                })
+            })
+            .collect();
+        let mut failed = None;
+        for (p, &(at, len)) in done.into_iter().zip(&batch) {
+            match p {
+                Ok(p) if failed.is_none() => {
+                    stored += p.region.capacity() as u64;
+                    pieces.push(p);
+                    region.release(at, len);
+                    off = at + len;
                 }
-                return Err((region, e));
+                Ok(_) => {}
+                Err(e) => failed = failed.or(Some(e)),
             }
+        }
+        if let Some(e) = failed {
+            // put back what was already given up
+            let mut at = 0;
+            for p in &pieces {
+                let dst = &mut region.as_mut_slice()[at..at + p.len];
+                if p.raw {
+                    dst.copy_from_slice(&p.region.as_slice()[..p.len]);
+                } else if let Err(e2) = codec::unpack_chunk(p.region.as_slice(), elem, dst) {
+                    return Err((
+                        region,
+                        Error::Integrity(format!("could not undo compression: {e2}")),
+                    ));
+                }
+                at += p.len;
+            }
+            return Err((region, e));
         }
     }
     Ok(Packed { pieces, stored })
 }
 
+/// Decompress every piece into a new region, in parallel (pieces fill disjoint ranges).
 fn unpack_region(packed: &Packed, nbytes: usize, elem: usize) -> Result<Region> {
-    let mut region = Region::new(nbytes)?;
-    let mut at = 0;
-    for p in &packed.pieces {
-        let dst = &mut region.as_mut_slice()[at..at + p.len];
-        if p.raw {
-            dst.copy_from_slice(&p.region.as_slice()[..p.len]);
-        } else {
-            codec::unpack_chunk(p.region.as_slice(), elem, dst)
-                .map_err(|e| Error::Integrity(format!("compressed data is damaged: {e}")))?;
-        }
-        at += p.len;
-    }
-    if at != nbytes {
+    use rayon::prelude::*;
+
+    if packed.pieces.iter().map(|p| p.len).sum::<usize>() != nbytes {
         return Err(Error::Integrity("compressed pieces do not add up".into()));
     }
+    let mut region = Region::new(nbytes)?;
+    let mut dsts = Vec::with_capacity(packed.pieces.len());
+    let mut rest = &mut region.as_mut_slice()[..nbytes];
+    for p in &packed.pieces {
+        let (d, r) = rest.split_at_mut(p.len);
+        dsts.push(d);
+        rest = r;
+    }
+    packed
+        .pieces
+        .par_iter()
+        .zip(dsts)
+        .try_for_each(|(p, dst)| {
+            if p.raw {
+                dst.copy_from_slice(&p.region.as_slice()[..p.len]);
+                Ok(())
+            } else {
+                codec::unpack_chunk(p.region.as_slice(), elem, dst)
+                    .map_err(|e| Error::Integrity(format!("compressed data is damaged: {e}")))
+            }
+        })?;
     Ok(region)
 }
 

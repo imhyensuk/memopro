@@ -4,6 +4,12 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: the runtime compresses and restores pieces in parallel (0317)
+- A compressed buffer's pieces are decompressed on every core at once, and compressed several at
+  a time when the budget has room for them (one at a time when it is full, so the ceiling holds
+  as before). Restoring bf16 weights: about 1.5x faster on an M1 (1.2-1.9 GB/s instead of
+  0.7-1.1); results unchanged.
+
 ### Added: EDR v2, a lossless 10.7-bit form of bf16 weights (0315)
 - `memopro.rt.edr.encode2` / `decode2`: the exponents as per-tensor Huffman codes in blocks that
   decode in parallel, sign and mantissa as nibbles. Every bit comes back; without the low
