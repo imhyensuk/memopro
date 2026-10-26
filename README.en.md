@@ -218,7 +218,7 @@ Without `draft` (the default `"auto"`), a model already on this disk that shares
 memopro.configure(model_dirs=["~/models", "/Volumes/SSD/llm"])  # or MEMOPRO_MODEL_DIRS=~/models:/Volumes/SSD/llm
 ```
 
-Nothing is downloaded for it. With no such model, or a budget that cannot hold it as well, generation goes without a draft (the output is the same) and says which budget would let it draft. `draft=None` never drafts.
+With no such model, when the model is larger than its budget and so streamed every token (Apple GPUs), an int4 copy of the model itself, kept in memory only, drafts (nothing written to the disk, the same output). Nothing is downloaded for it. With no such model, or a budget that cannot hold it as well, generation goes without a draft (the output is the same) and says which budget would let it draft. `draft=None` never drafts.
 
 ### Vision models
 

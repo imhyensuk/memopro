@@ -4,6 +4,11 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Added: a self-draft when no smaller model is on the disk (0329)
+- On Apple GPUs, `generate(draft="auto")` with no sibling model drafts with an int4 copy of the
+  model itself, made in memory (never written to the disk), when the model is larger than its
+  budget and the budget holds the copy; the text is the same as without a draft.
+
 ### Removed (breaking): automatic lossy choices and every disk-writing feature (0328)
 - `load` keeps the model exactly as stored (or splits it between the GPU and RAM with
   accelerate, CUDA only) and streams it when it does not fit; it never picks half precision,

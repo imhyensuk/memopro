@@ -218,7 +218,7 @@ text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Inst
 memopro.configure(model_dirs=["~/models", "/Volumes/SSD/llm"])  # 또는 MEMOPRO_MODEL_DIRS=~/models:/Volumes/SSD/llm
 ```
 
-초안 때문에 새로 내려받는 것은 없습니다. 맞는 모델이 없거나 예산이 초안까지 담지 못하면 초안 없이 생성하고(출력은 같습니다), 어느 정도 예산이면 초안을 쓸 수 있는지 알려 줍니다. `draft=None`이면 초안을 쓰지 않습니다.
+그런 모델이 없고 모델이 예산보다 커서 매 토큰 흘려 읽어야 한다면(Apple GPU), 모델 자신의 int4 사본을 메모리에만 만들어 초안으로 씁니다(디스크에 쓰지 않음, 출력은 같음). 초안 때문에 새로 내려받는 것은 없습니다. 맞는 모델이 없거나 예산이 초안까지 담지 못하면 초안 없이 생성하고(출력은 같습니다), 어느 정도 예산이면 초안을 쓸 수 있는지 알려 줍니다. `draft=None`이면 초안을 쓰지 않습니다.
 
 ### 비전 모델
 

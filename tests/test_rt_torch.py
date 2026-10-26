@@ -1139,8 +1139,21 @@ def test_generate_with_an_automatic_draft_returns_the_plain_text(tmp_path, monke
     with pytest.warns(UserWarning, match="could draft, but the budget leaves") as caught:
         assert memopro.generate(m, "w2 w9 w16", **kw) == plain
     assert not any("drafting with" in str(w.message) for w in caught)  # never loaded
-    # nothing suitable on the disk: one hint, the same text
+    # no smaller model on the disk: an int4 copy of the model itself drafts, the same text,
+    # but only when the weights do not fit the budget (else streaming is already cheap)
+    monkeypatch.setattr(llm, "AUTO_DRAFT_SLACK", 0.5)
     monkeypatch.setattr(llm, "AUTO_DRAFT_MAX", 0.01)
+    m = rtt.stream_model(target, budget="96MiB", device="mps")
+    assert not llm._streams_every_token(m)
+    with pytest.warns(UserWarning, match="no smaller model with the same tokenizer"):
+        assert memopro.generate(m, "w2 w9 w16", **kw) == plain
+    monkeypatch.setattr(llm, "_streams_every_token", lambda m: True)
+    m = rtt.stream_model(target, budget="256MiB", device="mps")
+    with pytest.warns(UserWarning, match="an int4 copy of the model itself"):
+        assert memopro.generate(m, "w2 w9 w16", **kw) == plain
+    assert llm._AUTO_DRAFTS[m] is not None
+    # and when its own weights are not on the disk either: one hint, the same text
+    monkeypatch.setattr(llm, "_own_folder", lambda m: None)
     m = rtt.stream_model(target, budget="96MiB", device="mps")
     with pytest.warns(UserWarning, match="no smaller model with the same tokenizer"):
         assert memopro.generate(m, "w2 w9 w16", **kw) == plain
