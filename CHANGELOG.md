@@ -4,6 +4,16 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Added: `over_ceiling`, what happens when data must come back and the ceiling is full (0320)
+- A new setting (`memopro.configure(over_ceiling=...)`, `memopro.enable(..., over_ceiling=...)`,
+  `MEMOPRO_OVER_CEILING`, `memopro.toml`). `"error"` (default) keeps the ceiling: when backward
+  needs a saved activation back and there is no room, `BudgetExceeded` is raised, now with a
+  hint to this setting. `"allow"` gives the exact bytes back over the ceiling instead, warns
+  once and counts it (`Session.measured()["activations_over_ceiling"]`), so a training run is
+  not lost. Results are the same either way.
+- `memopro.rt.Buffer.read_into(out)` (Rust `Runtime::read_into`): a buffer's bytes copied or
+  decompressed straight into caller memory, without room in the budget.
+
 ### Changed: bf16 buffers are compressed with EDR in the runtime (0318)
 - When the runtime compresses a buffer of 2-byte elements, it tries EDR next to byte shuffle +
   zstd on the first MiB and keeps EDR when it is at most 1.15x the zstd size, which is the case

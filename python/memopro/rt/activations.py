@@ -8,7 +8,11 @@ and its own memory is let go. The runtime compresses idle buffers losslessly whe
 needed, and backward gets the exact bytes back, so gradients do not change.
 
 Parameters and other leaf tensors are never moved (their modules hold them anyway), nor are
-non-contiguous or sparse tensors. If the runtime cannot take a tensor, it stays as it is.
+non-contiguous or sparse tensors. If the runtime cannot take a tensor, it stays as it is. If
+backward needs a tensor back and the ceiling has no room for it, ``over_ceiling`` decides
+(0320): ``"error"`` raises :class:`memopro.BudgetExceeded` (the ceiling holds, the step is
+lost), ``"allow"`` gives the exact bytes back over the ceiling with a warning (counted in
+``over_ceiling_count``).
 Prior art: PyTorch ``save_on_cpu``, activation offloading and compression; no novelty claim.
 """
 
@@ -17,7 +21,7 @@ from __future__ import annotations
 import weakref
 from typing import Any
 
-from memopro._errors import MemoproError
+from memopro._errors import BudgetExceeded, MemoproError
 
 __all__ = ["SavedActivations"]
 
@@ -36,14 +40,25 @@ class SavedActivations:
     """The pack/unpack pair; ``hooks()`` is the context manager that installs it."""
 
     def __init__(
-        self, runtime: Any, ceiling: int, *, pressure: float = PRESSURE, threshold: int = THRESHOLD
+        self,
+        runtime: Any,
+        ceiling: int,
+        *,
+        pressure: float = PRESSURE,
+        threshold: int = THRESHOLD,
+        over_ceiling: str = "error",
     ) -> None:
+        from memopro.config import _validate
+
         self.runtime = runtime
         self.ceiling = ceiling
         self.pressure = pressure
         self.threshold = threshold
+        self.over_ceiling = _validate("over_ceiling", over_ceiling)
         self.moved = 0
         self.moved_bytes = 0
+        self.over_ceiling_count = 0
+        self.over_ceiling_bytes = 0
 
     def hooks(self) -> Any:
         import torch
@@ -90,6 +105,30 @@ class SavedActivations:
         if not isinstance(p, _Packed):
             return p
         out = torch.empty(p.shape, dtype=p.dtype)
-        with p.buf.view() as a:
-            out.reshape(-1).view(torch.uint8).numpy()[...] = a.reshape(-1).view("uint8")
+        dst = out.reshape(-1).view(torch.uint8).numpy()
+        try:
+            with p.buf.view() as a:
+                dst[...] = a.reshape(-1).view("uint8")
+        except BudgetExceeded as e:
+            if self.over_ceiling != "allow":
+                raise BudgetExceeded(
+                    f"{e} (backward needs a saved activation back; set "
+                    "over_ceiling='allow' to get it over the ceiling instead)"
+                ) from None
+            p.buf.read_into(dst)
+            self._over(dst.nbytes)
         return out if p.device.type == "cpu" else out.to(p.device)
+
+    def _over(self, nbytes: int) -> None:
+        import warnings
+
+        if self.over_ceiling_count == 0:
+            warnings.warn(
+                "memopro: backward needed saved activations back with no room under the "
+                "ceiling; they are given back over it (over_ceiling='allow'). Results are "
+                "unchanged; the process may pass the ceiling while this lasts.",
+                UserWarning,
+                stacklevel=3,
+            )
+        self.over_ceiling_count += 1
+        self.over_ceiling_bytes += nbytes

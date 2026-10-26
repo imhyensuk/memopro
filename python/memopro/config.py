@@ -31,6 +31,10 @@ DISK_WRITES = ("ask", "never", "allow")
 # a model streamed by name and not on this disk is downloaded once into the Hugging Face cache
 # ("auto", 0303) or refused ("never")
 DOWNLOADS = ("auto", "never")
+# What memopro does when data it holds must come back and the ceiling has no room for it (0320):
+# stop with BudgetExceeded ("error"), or give the data back over the ceiling with a warning
+# ("allow"; e.g. activations needed by backward, so a training run is not lost)
+OVER_CEILINGS = ("error", "allow")
 # What the measured host budget starts from (0059 D3); only "conservative" never needs swap
 BUDGET_BASES = ("conservative", "os", "total")
 POOLS = ("device", "host", "disk")
@@ -88,6 +92,7 @@ class Config:
     hibernate_modes: tuple[str, ...] = AUTO_MODES
     disk_writes: str = "ask"
     download: str = "auto"
+    over_ceiling: str = "error"
     daily_write_limit: int | None = None  # None: derived from the disk size (decided in A1b)
     min_free_disk_fraction: float = 0.20  # 0032 H4
     spill_dir: str | None = None
@@ -252,6 +257,8 @@ def _validate(key: str, value: Any) -> Any:
             return _choice(key, value, DISK_WRITES)
         case "download":
             return _choice(key, value, DOWNLOADS)
+        case "over_ceiling":
+            return _choice(key, value, OVER_CEILINGS)
         case "daily_write_limit":
             return None if value in (None, "", "auto") else parse_size(value)
         case "headroom":

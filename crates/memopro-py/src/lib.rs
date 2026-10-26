@@ -721,6 +721,17 @@ impl RtRuntime {
         Ok(Some(d))
     }
 
+    /// Copy the buffer into the writable buffer `out` without making it resident (0320).
+    fn read_into(&self, py: Python<'_>, id: u64, out: &Bound<'_, PyAny>) -> PyResult<()> {
+        let (_o, o) = borrow(out, true)?;
+        let rt = self.rt.clone();
+        py.detach(move || {
+            // SAFETY: `_o` holds the writable buffer for the whole call.
+            rt.read_into(id, unsafe { o.slice_mut() })
+        })
+        .map_err(rt_err)
+    }
+
     fn evict(&self, py: Python<'_>, id: u64) -> PyResult<bool> {
         let rt = self.rt.clone();
         py.detach(move || rt.evict(id)).map_err(rt_err)

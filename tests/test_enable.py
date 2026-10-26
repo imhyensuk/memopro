@@ -131,3 +131,46 @@ def test_saved_activations_move_losslessly():
         m(x).square().mean().backward()
         assert all(torch.equal(a, p.grad) for a, p in zip(moved, m.parameters(), strict=True))
         assert s.measured()["activations_moved"] == s.activations.moved
+
+
+def _no_room_backward(over_ceiling):
+    """A saved activation in a runtime whose budget is then filled by a pinned buffer: backward
+    needs it back with no room under the ceiling (0320)."""
+    torch = pytest.importorskip("torch")
+    from memopro.rt.activations import SavedActivations
+
+    runtime = rt.Runtime(budget="16MiB")
+    act = SavedActivations(runtime, 1, pressure=0.0, over_ceiling=over_ceiling)
+    a = (torch.arange(1 << 20) % 7).float().requires_grad_()  # compressible
+    with act.hooks():
+        h = a + 1  # not a leaf: saved for backward by square(), 4 MiB
+        y = h.square().sum()
+    assert act.moved == 1
+    big = runtime.alloc(runtime.limit - MIB)  # h has to be compressed to make room
+    with big.pin():
+        y.backward()
+    return act, a.grad
+
+
+def test_backward_over_a_full_ceiling_raises_unless_allowed():
+    pytest.importorskip("torch")
+    with pytest.raises(memopro.BudgetExceeded, match="over_ceiling='allow'"):
+        _no_room_backward("error")
+    with pytest.warns(UserWarning, match="given back over it"):
+        act, grad = _no_room_backward("allow")
+    assert act.over_ceiling_count == 1 and act.over_ceiling_bytes == 4 * MIB
+    import torch
+
+    want = 2 * ((torch.arange(1 << 20) % 7).float() + 1)
+    assert torch.equal(grad, want)  # the exact bytes came back
+
+
+def test_over_ceiling_is_a_setting():
+    with pytest.raises(memopro.ConfigError):
+        memopro.configure(over_ceiling="sometimes")
+    with memopro.enable("4GB!", numpy=False, transformers=False, over_ceiling="allow") as s:
+        if s.activations is None:
+            pytest.skip("torch part not applied")
+        assert s.activations.over_ceiling == "allow"
+        assert s.measured()["activations_over_ceiling"] == 0
+    assert memopro.get_config().over_ceiling == "error"

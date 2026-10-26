@@ -128,6 +128,10 @@ class Session:
             "exceeded_bytes": max(0, peak - self.budget),
             "overruns": overruns,
             "activations_moved": 0 if self.activations is None else self.activations.moved,
+            # given back over the ceiling (over_ceiling="allow", 0320)
+            "activations_over_ceiling": (
+                0 if self.activations is None else self.activations.over_ceiling_count
+            ),
             "pager": pager,
             "runtimes": runtimes,
             "predictions": [p for r in list(self.runtimes) if (p := r.predict()) is not None],
@@ -394,7 +398,9 @@ def _torch(s: Session, nbytes: int) -> None:
     except MemoproError as e:  # a ceiling too small for a runtime
         s._add("torch", "skipped", str(e))
         return
-    saved = SavedActivations(runtime, nbytes)
+    from memopro.config import get_config
+
+    saved = SavedActivations(runtime, nbytes, over_ceiling=get_config().over_ceiling)
     s.activations = saved
     done = s._stack
 
