@@ -4,6 +4,12 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Added: EDR v2, a lossless 10.7-bit form of bf16 weights (0315)
+- `memopro.rt.edr.encode2` / `decode2`: the exponents as per-tensor Huffman codes in blocks that
+  decode in parallel, sign and mantissa as nibbles. Every bit comes back; without the low
+  nibbles it is the same draft as EDR v1. Qwen2.5-0.5B: 66.7% of its size (EDR v1 75.1%, zstd
+  level 1 77.9%); decoding runs at about 2.2 GB/s on an M1 (EDR v1 about 6.5).
+
 ### Added: EDR, a lossless 12-bit form of bf16 weights (0308, 0310, 0313)
 - `memopro.rt.edr`: a bf16 weight as a 1-byte base (sign | exponent index | top 3 mantissa
   bits) and a 4-bit residual, with a 15-entry exponent table and a short escape list. Base and
