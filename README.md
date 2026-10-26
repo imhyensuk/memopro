@@ -94,8 +94,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 
 | 명령 | 설명 |
 |---|---|
-| `memopro doctor` | 장치(GPU)·호스트(RAM)·디스크별 사용 가능 메모리 (`--json`, `--no-devices`) |
-| `memopro check MODEL` | 모델이 예산에 들어가는지와 적합한 설정 (`--goal infer\|train\|both`, `--batch-size`, `--seq-len`, `--optimizer`) |
+| `memopro doctor` | 장치(GPU)·호스트(RAM)·디스크별 메모리와 상한 (`--json`, `--no-devices`, `--budget`) |
 | `memopro run [옵션] script.py [인자]` | 스크립트를 수정 없이 메모리 상한 안에서 실행 |
 | `memopro --version` | 버전 |
 
@@ -109,10 +108,10 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 | `memopro.generate(model, prompt, budget=, draft="auto", max_new_tokens=, streamer=, stopping_criteria=)` | 메모리보다 큰 LLM의 생성. 디스크에 있는 같은 계열의 작은 모델을 초안으로 자동 사용. `streamer`(예: Transformers `TextIteratorStreamer`)와 `stopping_criteria`는 `model.generate`에 그대로 넘어가며, 스트리머가 받는 텍스트는 반환값과 같음 |
 | `memopro.enable(budget=)` / `memopro.disable()` | 프로세스 전체 메모리 상한. `Session.estimate()`, `Session.measured()` |
 | `memopro.load(model_id, budget=, quality=)` | Hugging Face 모델 불러오기. 기본(`quality="lossless"`)은 무손실이며, 예산에 안 들어가면 흘려 쓰기로 불러옴. `"high"`·`"balanced"`·`"low"`를 고르면 반정밀도·int8·int4도 허용 |
-| `memopro.check(...)` / `memopro.doctor()` | CLI와 같은 진단 |
-| `memopro.train_session(model, optimizer)` | 예산에 맞춰 마이크로배치·체크포인팅을 고르는 정확한 학습 |
-| `memopro.optimize(model, goal=)` | 이미 가진 모델을 예산에 맞춤 |
+| `memopro.doctor()` | CLI와 같은 메모리·상한 보고 |
 | `memopro.configure(...)` / `memopro.using(...)` | 전역 설정 / 블록 단위 설정 |
+
+0.2.0에서 `check`, `train_session`, `optimize`, `hibernate`, `census`, `elastic`, 기법 등록 API, CLI `memopro check`가 공개 API에서 빠졌습니다. 쓰면 무엇으로 바꾸면 되는지 알려 주는 오류가 납니다. 학습은 `finetune`이나 `memopro.enable()` 안에서 평소 코드로 하면 됩니다.
 
 ### 런타임 API
 
@@ -125,27 +124,18 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 | `memopro.rt.torch.draft_model(name, target=, device=)` | 생성 속도용 초안 모델 (Apple GPU: int4, NVIDIA GPU: 16비트) |
 | `memopro.rt.process_footprint()` | 현재 프로세스 메모리 사용량 |
 
-### Jupyter
-
-```text
-%load_ext memopro
-%hibernate 변수     # 객체를 잠시 메모리에서 내림
-%wake 변수          # 되돌림
-%memopro status
-```
-
 ### 예산 형식과 설정
 
 예산은 모든 함수, `--budget`, 설정 파일 `memopro.toml`(또는 `$MEMOPRO_CONFIG`), 환경 변수 `MEMOPRO_BUDGET`에서 같은 형식을 씁니다. 다른 설정도 `MEMOPRO_<이름>` 환경 변수로 줄 수 있습니다.
 
 | 형식 | 의미 |
 |---|---|
-| `"auto"` | 측정한 여유 메모리 − 10% (기본값) |
-| `"6GB"`, `"50%"`, `0.5` | 크기, 또는 여유 메모리 대비 비율 |
-| `"-2GB"` | 2GB를 남기고 나머지 |
-| `"2GB..6GB"` | 최대 6GB, 2GB를 확보할 수 없으면 시작하지 않음 |
-| `"6GB!"` | 측정값과 관계없이 6GB (스왑 가능성 있음) |
-| `{"device": "80%", "host": "-2GB"}` | 메모리 종류별 지정 |
+| `"auto"` | 이 기계 메모리의 80% (기본값) |
+| `"6GB"` | 정확히 6GB. 128GB 기계에서도, 16GB 기계에서도 그대로 상한이 됩니다 |
+| `"50%"`, `0.5` | 이 기계 메모리의 절반 |
+| `"device=8GB,host=24GB"` 또는 `{"device": "8GB", "host": "24GB"}` | NVIDIA GPU 메모리와 RAM을 따로 지정 (Apple silicon은 하나로 공유) |
+
+정한 값이 지금 비어 있는 메모리보다 크면 상한은 그대로 두고, 다른 프로그램이 쓰는 몫 때문에 스왑이 생길 수 있다고 알려 줍니다. 0.1.x의 `"-2GB"`, `"2GB..6GB"`, `"6GB!"`, `budget_basis`, `headroom`은 0.2.0에서 빠졌고, 쓰면 새 표기법을 알려 주는 오류가 납니다.
 
 ## 빠른 시작
 

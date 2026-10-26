@@ -10,6 +10,9 @@ import sys
 import pytest
 
 import memopro
+import memopro.access
+import memopro.config
+import memopro.env
 from memopro import cli
 from memopro.access import _load
 from memopro.config import configure, reset_config
@@ -119,7 +122,7 @@ def test_real_run_sets_the_ratio_and_keeps_a_user_value(tmp_path):
     base = {k: v for k, v in os.environ.items() if k != MPS_LOW_WATERMARK_VAR}
     for extra, expected in (({}, MPS_LOW_WATERMARK), ({MPS_LOW_WATERMARK_VAR: "0.7"}, "0.7")):
         done = subprocess.run(
-            [sys.executable, "-m", "memopro", "run", "--no-elastic", "app.py"],
+            [sys.executable, "-m", "memopro", "run", "app.py"],
             cwd=tmp_path,
             env={**base, **extra},
             capture_output=True,
@@ -153,7 +156,7 @@ def test_streamed_mps_models_lower_the_ratio_run_set_but_not_a_user_value(tmp_pa
     base = {k: v for k, v in os.environ.items() if k != MPS_LOW_WATERMARK_VAR}
     for extra, expected in (({}, STREAMED_RATIO), ({MPS_LOW_WATERMARK_VAR: "0.7"}, "0.7")):
         done = subprocess.run(
-            [sys.executable, "-m", "memopro", "run", "--no-elastic", "app.py"],
+            [sys.executable, "-m", "memopro", "run", "app.py"],
             cwd=tmp_path,
             env={**base, **extra},
             capture_output=True,

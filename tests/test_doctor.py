@@ -10,6 +10,9 @@ import sys
 import pytest
 
 import memopro
+import memopro.config
+import memopro.env
+import memopro.orchestrator
 from memopro import _core
 from memopro._doctor import DoctorReport
 from memopro.cli import EXIT_OK, main
@@ -118,40 +121,11 @@ def mps(limit, allocated=0):
     return Device("mps", "Apple GPU (MPS)", None, limit - allocated, limit, allocated, True)
 
 
-def test_host_budget_keeps_headroom():
-    b = compute_budget(env(usable=10 * GiB), Config(headroom=0.10))
-    assert b.host == 9 * GiB and b.device is None and not b.unified
-
-
-def test_container_limit_caps_host():
-    b = compute_budget(env(usable=10 * GiB, cgroup=2 * GiB), Config(headroom=0.0))
-    assert b.host == 2 * GiB
-
-
-def test_cuda_budget_is_device_free_memory():
-    b = compute_budget(env(devices=[cuda(20 * GiB)]), Config(headroom=0.0))
-    assert b.device == 20 * GiB and not b.unified
-
-
-def test_unified_memory_is_the_smaller_of_mps_limit_and_host():
-    # plenty of host memory: the MPS recommended limit (K5) binds
-    b = compute_budget(env(usable=8 * GiB, devices=[mps(5 * GiB)]), Config(headroom=0.0))
-    assert b.device == 5 * GiB and b.unified
-    # little host memory left: host binds, even though MPS itself has room
-    b = compute_budget(env(usable=1 * GiB, devices=[mps(5 * GiB)]), Config(headroom=0.0))
-    assert b.device == 1 * GiB
-
-
 def test_disk_budget_respects_free_space_floor():
     b = compute_budget(env(disk_free=100 * GiB, disk_total=200 * GiB), Config())
     assert b.disk == 60 * GiB and b.disk_floor_bytes == 40 * GiB
     b = compute_budget(env(disk_free=20 * GiB, disk_total=200 * GiB), Config())
     assert b.disk == 0
-
-
-def test_explicit_budget_caps_device_and_host():
-    b = compute_budget(env(devices=[cuda(20 * GiB)]), Config(budget=6 * GiB, headroom=0.0))
-    assert (b.device, b.host, b.capped_by_setting) == (6 * GiB, 6 * GiB, True)
 
 
 def test_unsupported_devices_get_no_budget():
@@ -213,4 +187,4 @@ def test_mps_limit_matches_torch():
     r = memopro.doctor()
     dev = next(d for d in r.env.devices if d.kind == "mps")
     assert dev.limit_bytes == torch.mps.recommended_max_memory()
-    assert r.budget.unified and r.budget.device <= r.env.host.usable_bytes
+    assert r.budget.unified and r.budget.device <= min(r.budget.host, dev.limit_bytes)

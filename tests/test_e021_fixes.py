@@ -7,6 +7,10 @@ import os
 import pytest
 
 import memopro
+import memopro.access
+import memopro.config
+import memopro.orchestrator
+import memopro.techniques
 from memopro.config import reset_config
 
 torch = pytest.importorskip("torch")
@@ -51,7 +55,7 @@ def test_d1_frozen_parameters_train_exactly_when_memtracker_fails(monkeypatch):
 
     monkeypatch.setattr(mem_tracker.MemTracker, "track_external", refuse)
     opt = torch.optim.SGD([p for p in model.parameters() if p.requires_grad], lr=0.1)
-    with memopro.train_session(model, opt) as s:
+    with memopro.access.train_session(model, opt) as s:
         s.step(
             {"input_ids": x},
             lambda mb: model(input_ids=mb["input_ids"], labels=mb["input_ids"]).loss,

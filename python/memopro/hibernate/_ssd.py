@@ -135,7 +135,7 @@ def _disk_budget(config: Config, above_floor: int) -> int | None:
     if not isinstance(spec, PoolBudget) or spec.disk is None:
         return None
     # measured before this process wrote anything, so its own files do not shrink the cap
-    return resolve_pool(spec.disk, max(0, above_floor) + spilled_bytes())[0]
+    return resolve_pool(spec.disk, max(0, above_floor) + spilled_bytes())
 
 
 def check_room(config: Config, nbytes: int) -> Path:

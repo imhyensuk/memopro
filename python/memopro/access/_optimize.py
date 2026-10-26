@@ -34,7 +34,6 @@ def optimize(
     quality: str | None = None,
     prefer: str | None = None,
     example: Any = None,
-    budget_basis: str | None = None,
     fallback: str | None = None,
 ) -> Any:
     """Fit ``model`` to the budget in place and return it (see module docstring)."""
@@ -47,7 +46,6 @@ def optimize(
         quality=quality,
         prefer=prefer,
         device=_where(model),
-        budget_basis=budget_basis,
         fallback=fallback,
         holding=(model,),  # the model is already in memory: counted once (E022 D8)
     )

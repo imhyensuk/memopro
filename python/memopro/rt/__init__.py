@@ -71,13 +71,14 @@ _session_runtimes: Any = None  # a WeakSet the session reads its runtimes' count
 
 
 def resolve_budget(budget: str | float) -> int:
-    """Bytes for a budget: a size (``"2GB"``, bytes), a fraction of the memory available now
-    (``0.5``), or ``"auto"`` = the `memopro.enable` budget, else half of the conservatively
-    available host memory (0035)."""
+    """Bytes for a budget: a size (``"2GB"``, bytes), a share of the machine's memory (``0.5``),
+    or ``"auto"`` = the `memopro.enable` ceiling, else 80% of the machine's memory (0327)."""
+    from memopro.config import AUTO_FRACTION
+
     if isinstance(budget, str) and budget.strip().lower() == "auto":
-        return _default_budget if _default_budget is not None else _available() // 2
+        return _default_budget if _default_budget is not None else int(_memory() * AUTO_FRACTION)
     if isinstance(budget, float) and 0.0 < budget <= 1.0:
-        return int(_available() * budget)
+        return int(_memory() * budget)
     size = parse_size(budget)
     if size <= 0:
         raise InvalidArgument(f"budget must be positive: {budget!r}")
@@ -107,10 +108,12 @@ def process_peak_footprint() -> int | None:
     return _core.process_peak_footprint()
 
 
-def _available() -> int:
+def _memory() -> int:
+    """The machine's memory, or the container's limit when there is one."""
     from memopro.env import detect
+    from memopro.orchestrator.budget import host_memory
 
-    return detect(devices=False).host.usable_bytes
+    return host_memory(detect(devices=False).host)
 
 
 class Runtime:

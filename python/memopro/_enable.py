@@ -1,9 +1,9 @@
 """``memopro.enable()``: one call that fits this process to this machine (0228, 0229).
 
-It measures the machine and sets one **ceiling on the whole process**: ``"auto"`` = what the
-process holds now plus what is free, minus headroom; or the user's cap such as ``"8GB"`` (never
-above what is measured unless forced with ``!``). Then it turns on what this platform supports,
-so code written as usual stays within it:
+It measures the machine and sets one **ceiling on the whole process**: ``"auto"`` = 80% of the
+machine's memory, or the user's own such as ``"8GB"`` or ``"50%"``, kept as given (0327; above
+what is free right now it warns). Then it turns on what this platform supports, so code written
+as usual stays within it:
 
 - every runtime and pager made in the session keeps to the ceiling *together*: each one's limit
   shrinks by what the process holds outside it (macOS physical footprint, Linux resident set);
@@ -195,7 +195,7 @@ def enable(
 
     ``budget``: ``None`` keeps the configured one (``"auto"`` unless set elsewhere); otherwise
     any budget form (``"8GB"``, ``0.5``, ``"-2GB"``, ``"2GB..8GB"``, ``"8GB!"``), applied to the
-    whole process. Other settings (``quality``, ``budget_basis``, ...) go to
+    whole process. Other settings (``quality``, ``over_ceiling``, ...) go to
     `memopro.configure` for the session. ``numpy`` / ``torch`` / ``transformers`` turn their
     part off. Calling it again replaces the earlier session."""
     from memopro import config as cfgmod
@@ -223,15 +223,11 @@ def enable(
         _restore_config(saved)
         raise
     setting = describe_setting(cfg.budget)
-    if setting == "auto":
-        setting = "auto: in use + free, minus headroom"
-    elif not b.capped_by_setting and not b.forced:
-        setting += " asked; only this much is there"
     s = Session(_machine(env), b.host, setting, held)
     s._stack.callback(_restore_config, saved)
     _rt_default(s, b.host)
-    for shortfall in b.shortfalls:
-        s._add("budget", "warning", f"{shortfall.pool} minimum not met")
+    for note in b.notes:
+        s._add("budget", "warning", note)
     if held is not None and held >= b.host:
         s._add("budget", "warning", "the process already holds more than the ceiling")
     if b.device is not None and not b.unified:

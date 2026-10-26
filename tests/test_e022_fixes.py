@@ -7,9 +7,13 @@ import os
 import pytest
 
 import memopro
-from memopro.config import Config, reset_config
+import memopro.access
+import memopro.config
+import memopro.env
+import memopro.orchestrator
+import memopro.techniques
+from memopro.config import reset_config
 from memopro.env import Device, Disk, Env, HostMemory
-from memopro.orchestrator.budget import compute_budget
 
 torch = pytest.importorskip("torch")
 transformers = pytest.importorskip("transformers")
@@ -39,19 +43,6 @@ def env(usable=8 * GiB, free=10 * GiB):
 gpt2 = functools.partial(helpers.gpt2, resid_pdrop=0.0)
 
 
-# ---------------------------------------------------------------- D8: budgets
-def test_d8_memory_the_model_holds_is_added_back_before_the_setting_applies():
-    auto = compute_budget(env(), Config(headroom=0.0), resident_device=5 * GiB)
-    assert auto.device == 15 * GiB  # free after loading + the loaded model
-    capped = compute_budget(
-        env(), Config(budget=6 * GiB, headroom=0.0), resident_device=5 * GiB, resident_host=GiB
-    )
-    assert (capped.device, capped.host) == (6 * GiB, 6 * GiB)  # a cap bounds the total
-    half = compute_budget(env(), Config(budget=0.5, headroom=0.0), resident_device=6 * GiB)
-    assert half.device == 8 * GiB
-    assert compute_budget(env(), Config(headroom=0.1)).device == 9 * GiB  # nothing held: as before
-
-
 def test_d8_resident_bytes_counts_each_tensor_once_in_its_pool():
     from memopro.access._common import resident_bytes
 
@@ -77,8 +68,8 @@ def test_d8_setup_counts_what_it_is_holding():
     from memopro.access._common import setup
 
     model = gpt2()
-    cap = setup(device="cpu", budget="100GB!").budget.host
-    assert setup(device="cpu", budget="100GB!", holding=(model,)).budget.host == cap  # forced
+    cap = setup(device="cpu", budget="100GB").budget.host
+    assert setup(device="cpu", budget="100GB", holding=(model,)).budget.host == cap  # forced
 
 
 # ---------------------------------------------------------------- D8 + D5: the plan

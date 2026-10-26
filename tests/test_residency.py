@@ -8,6 +8,9 @@ import sys
 import pytest
 
 import memopro
+import memopro.access
+import memopro.config
+import memopro.env
 from memopro import ModeUnavailable
 from memopro.config import configure, reset_config
 
@@ -113,7 +116,7 @@ def test_stored_weights_map_the_original_file_and_match(qwen_dir):
 
 @needs_mps
 def test_int4_cache_is_built_once_reused_and_matches(qwen_dir):
-    opts = {"device": "mps", "quality": "low", "budget": "1KB!"}  # nothing but int4 fits
+    opts = {"device": "mps", "quality": "low", "budget": "1KB"}  # nothing but int4 fits
     from memopro.access._load import plan_load
 
     int4 = next(c for c in plan_load(qwen_dir, device="mps").candidates if c.name == "quant.int4")

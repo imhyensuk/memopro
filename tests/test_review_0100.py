@@ -8,9 +8,12 @@ import types
 import pytest
 
 import memopro
-from memopro.config import Config, reset_config
+import memopro.access
+import memopro.config
+import memopro.env
+import memopro.orchestrator
+from memopro.config import reset_config
 from memopro.env import Device, Disk, Env, HostMemory
-from memopro.orchestrator.budget import compute_budget
 
 torch = pytest.importorskip("torch")
 
@@ -35,34 +38,6 @@ def env(usable=8 * GiB, total=16 * GiB, device=None):
 
 def mps(limit, allocated=0):
     return Device("mps", "Apple GPU (MPS)", None, limit - allocated, limit, allocated, True)
-
-
-# ---------------------------------------------------------------- budget bases
-def test_total_basis_does_not_add_held_host_memory_twice():
-    b = compute_budget(env(), Config(budget_basis="total", headroom=0.0), resident_host=2 * GiB)
-    assert b.host == 16 * GiB  # all memory already contains the model
-    c = compute_budget(env(), Config(headroom=0.0), resident_host=2 * GiB)
-    assert c.host == 10 * GiB  # conservative available + the model
-
-
-def test_unified_memory_adds_held_memory_to_both_bounds():
-    # MPS limit left 3 GiB, host 8 GiB, the model holds 2 GiB on the GPU: min(3+2, 8+2)
-    b = compute_budget(
-        env(device=[mps(5 * GiB, 2 * GiB)]), Config(headroom=0.0), resident_device=2 * GiB
-    )
-    assert b.device == 5 * GiB
-    # little host memory left: the host bound (1 + 2) binds
-    b = compute_budget(
-        env(usable=GiB, device=[mps(8 * GiB)]), Config(headroom=0.0), resident_device=2 * GiB
-    )
-    assert b.device == 3 * GiB
-    # basis total: the host bound is all memory, the model is inside it
-    b = compute_budget(
-        env(device=[mps(20 * GiB)]),
-        Config(budget_basis="total", headroom=0.0),
-        resident_device=2 * GiB,
-    )
-    assert b.device == 16 * GiB
 
 
 def test_pressure_shrinks_only_what_is_not_held(monkeypatch):

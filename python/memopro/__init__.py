@@ -1,8 +1,10 @@
 """memopro: run work that needs more memory than the machine has, losslessly, within a ceiling.
 
-``memopro.enable()`` sets one memory ceiling for the whole process; ``finetune``/``generate``
-train and run LLMs whose weights exceed memory; ``memopro.rt`` manages large buffers within a
-budget; ``memopro.doctor()`` (and ``memopro doctor``) reports memory per pool and the budget.
+The public API (0.2.0, 0327): ``enable``/``disable`` set one memory ceiling for the whole
+process (``memopro run`` does it for a script); ``finetune``/``generate`` train and run LLMs
+whose weights exceed memory; ``load`` loads a model that fits; ``configure``/``using`` change
+settings; ``doctor()`` (and ``memopro doctor``) reports memory and the ceiling. ``memopro.rt``
+is the advanced layer (runtimes, streamed models, paging).
 
 ``import memopro`` is cheap and has no side effects (0032 I4): it loads only the Rust core and
 this module. Everything else, and torch in particular, is imported on first use.
@@ -29,18 +31,6 @@ from memopro._errors import (
     PolicyError,
 )
 from memopro.report import Report, report
-from memopro.techniques import (
-    Availability,
-    Fidelity,
-    Origin,
-    Pool,
-    QualityGrade,
-    Stage,
-    Technique,
-    Timing,
-    register_technique,
-    registry,
-)
 
 
 def _pep440(cargo: str) -> str:
@@ -55,9 +45,6 @@ __version__ = _pep440(_cargo_version)
 # name -> (module, attribute or None for the module itself), resolved on first access (PEP 562)
 _LAZY: dict[str, tuple[str, str | None]] = {
     "load": ("memopro.access", "load"),
-    "optimize": ("memopro.access", "optimize"),
-    "train_session": ("memopro.access", "train_session"),
-    "check": ("memopro.access", "check"),
     "finetune": ("memopro.llm", "finetune"),
     "generate": ("memopro.llm", "generate"),
     "doctor": ("memopro._doctor", "doctor"),
@@ -66,15 +53,20 @@ _LAZY: dict[str, tuple[str, str | None]] = {
     "configure": ("memopro.config", "configure"),
     "get_config": ("memopro.config", "get_config"),
     "using": ("memopro.config", "using"),
-    "access": ("memopro.access", None),
-    "census": ("memopro.census", None),
-    "config": ("memopro.config", None),
-    "elastic": ("memopro.elastic", None),
-    "env": ("memopro.env", None),
-    "hibernate": ("memopro.hibernate", None),
-    "integrations": ("memopro.integrations", None),
-    "orchestrator": ("memopro.orchestrator", None),
     "rt": ("memopro.rt", None),
+}
+
+# names removed from the public API in 0.2.0 (0327): what to use instead
+_REMOVED = {
+    "optimize": "use memopro.enable() (or memopro run), which applies the ceiling to any code",
+    "train_session": "use memopro.finetune(...), or memopro.enable() around your own loop",
+    "check": "memopro.doctor() shows the ceiling, and memopro.load(...) says what does not fit",
+    "hibernate": "memopro.enable() keeps idle memory within the ceiling",
+    "census": "use memopro.doctor() and the memopro.enable() session report",
+    "elastic": "set the ceiling with memopro.enable(budget=...)",
+    "Technique": "techniques are no longer registered from outside",
+    "register_technique": "techniques are no longer registered from outside",
+    "registry": "techniques are no longer registered from outside",
 }
 
 
@@ -82,6 +74,8 @@ def __getattr__(name: str) -> Any:
     try:
         module_name, attr = _LAZY[name]
     except KeyError:
+        if name in _REMOVED:
+            raise AttributeError(f"memopro.{name} was removed in 0.2.0: {_REMOVED[name]}") from None
         raise AttributeError(f"module 'memopro' has no attribute {name!r}") from None
     module = importlib.import_module(module_name)
     value = module if attr is None else getattr(module, attr)
@@ -101,42 +95,26 @@ def load_ipython_extension(shell: Any) -> None:
 
 
 __all__ = [
-    "Availability",
     "BudgetExceeded",
     "ConfigError",
-    "Fidelity",
     "IntegrityError",
     "InvalidArgument",
     "MemoproError",
     "ModeUnavailable",
     "NotYetImplemented",
-    "Origin",
     "PolicyError",
-    "Pool",
-    "QualityGrade",
     "Report",
-    "Stage",
-    "Technique",
-    "Timing",
     "__version__",
-    "census",
-    "check",
     "configure",
     "core_version",
     "disable",
     "doctor",
-    "elastic",
     "enable",
     "finetune",
     "generate",
     "get_config",
-    "hibernate",
     "load",
-    "load_ipython_extension",
-    "optimize",
-    "register_technique",
-    "registry",
     "report",
-    "train_session",
+    "rt",
     "using",
 ]

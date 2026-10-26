@@ -9,6 +9,8 @@ import sys
 import pytest
 
 import memopro
+import memopro.config
+import memopro.env
 from memopro import cli, hibernate
 from memopro.config import configure, reset_config
 from memopro.env import MALLOC_CACHE_NOTE, macos_malloc_cache_on
@@ -97,7 +99,7 @@ def test_calling_main_from_python_never_restarts(monkeypatch, tmp_path):
     monkeypatch.setattr(os, "execve", lambda *a: pytest.fail("restarted"))
     pretend_macos(monkeypatch, cache=True)
     (tmp_path / "app.py").write_text("print('ok')\n")
-    assert cli.main(["run", "--no-elastic", str(tmp_path / "app.py")]) == 0
+    assert cli.main(["run", str(tmp_path / "app.py")]) == 0
 
 
 @pytest.mark.skipif(sys.platform != "darwin", reason="the restart only happens on macOS")
@@ -107,7 +109,7 @@ def test_real_run_on_macos_has_the_cache_off(tmp_path):
     )
     env = {k: v for k, v in os.environ.items() if k != "MallocLargeCache"}
     done = subprocess.run(
-        [sys.executable, "-m", "memopro", "run", "--no-elastic", "app.py"],
+        [sys.executable, "-m", "memopro", "run", "app.py"],
         cwd=tmp_path,
         env=env,
         capture_output=True,

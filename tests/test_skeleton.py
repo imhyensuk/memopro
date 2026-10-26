@@ -5,7 +5,8 @@ from pathlib import Path
 import pytest
 
 import memopro
-from memopro import Fidelity, Origin, Pool, QualityGrade, Stage, Timing, registry
+from memopro import techniques
+from memopro.techniques import Fidelity, Origin, Pool, QualityGrade, Stage, Timing, registry
 
 ROOT = Path(__file__).resolve().parents[1]
 
@@ -23,7 +24,7 @@ def test_version_matches_cargo_workspace():
 def test_registry_starts_empty_and_accepts_techniques():
     assert len(registry) == 0
 
-    @memopro.register_technique("test.noop")
+    @techniques.register_technique("test.noop")
     class Noop:
         name = "test.noop"
         stages = frozenset({Stage.DEV})
@@ -34,7 +35,7 @@ def test_registry_starts_empty_and_accepts_techniques():
         quality = QualityGrade.LOSSLESS
 
         def available(self, env):
-            return memopro.Availability(True)
+            return techniques.Availability(True)
 
         def estimate(self, target, env):
             return {}
@@ -51,7 +52,7 @@ def test_registry_starts_empty_and_accepts_techniques():
     try:
         assert "test.noop" in registry
         technique = registry.create("test.noop")
-        assert isinstance(technique, memopro.Technique)
+        assert isinstance(technique, techniques.Technique)
         with pytest.raises(ValueError):
             registry.register("test.noop", Noop)
     finally:

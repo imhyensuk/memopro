@@ -4,6 +4,24 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed (breaking): the budget is the ceiling you set, 80% of the memory by default (0327)
+- `"auto"` is now 80% of the machine's memory (the container's limit when there is one), not
+  the memory free at the moment minus 10%. A size such as `"6GB"` is the ceiling as given, on
+  any machine and whatever is free; `"50%"` / `0.5` is a share of the machine's memory; per
+  pool `device=8GB,host=24GB`. A ceiling above what is free now is kept, with a note.
+- Removed: the budget forms `"-2GB"`, `"2GB..6GB"`, `"6GB!"` and `{use, min, max}`, and the
+  settings `budget_basis` and `headroom` (also `--budget-basis`); they raise an error that shows
+  the new form. A ceiling you set is never shrunk by memory-pressure watching.
+
+### Removed (breaking): a smaller public API (0327)
+- The top level keeps `enable`/`disable`, `finetune`, `generate`, `load`,
+  `configure`/`using`/`get_config`, `doctor`, the errors and `memopro.rt`; the CLI keeps
+  `memopro doctor` and `memopro run`. `check`, `train_session`, `optimize`, `hibernate`,
+  `census`, `elastic` and the technique registry (`Technique`, `register_technique`,
+  `registry`, ...) are gone from it, as are `memopro check` and the `run` options
+  `--census`, `--elastic`/`--no-elastic`, `--modes` and `--transparent`. Using a removed name
+  raises an error that says what to use instead.
+
 ### Changed: the transparent pager compresses several chunks at once (0326)
 - When a fault needs room, the pager (`memopro run`, `memopro.enable`) now picks the chunks it
   needs plus a few cold ones (up to one per core, at most 8 and an eighth of what fits) and

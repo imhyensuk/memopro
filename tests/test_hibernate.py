@@ -8,6 +8,10 @@ import pytest
 import torch
 
 import memopro
+import memopro.config
+import memopro.env
+import memopro.hibernate
+import memopro.integrations
 from memopro import IntegrityError, ModeUnavailable, PolicyError, hibernate
 from memopro.config import configure, reset_config
 from memopro.env._torch import mps_usable

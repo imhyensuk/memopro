@@ -22,7 +22,7 @@ def parts(s):
 def test_ceiling_becomes_the_default_and_disable_undoes_everything():
     before = memopro.get_config().quality
     meta_path = list(sys.meta_path)
-    s = memopro.enable("2GB!", quality="lossless", torch=False)
+    s = memopro.enable("2GB", quality="lossless", torch=False)
     try:
         assert s.budget == 2_000_000_000
         assert rt.resolve_budget("auto") == s.budget
@@ -49,8 +49,8 @@ def test_auto_ceiling_counts_what_the_process_holds():
 
 
 def test_enable_again_replaces_the_session():
-    a = memopro.enable("64MiB!", numpy=False, torch=False, transformers=False)
-    b = memopro.enable("32MiB!", numpy=False, torch=False, transformers=False)
+    a = memopro.enable("64MiB", numpy=False, torch=False, transformers=False)
+    b = memopro.enable("32MiB", numpy=False, torch=False, transformers=False)
     try:
         assert rt.resolve_budget("auto") == b.budget == 32 * MIB
     finally:
@@ -102,7 +102,7 @@ def test_passing_the_ceiling_is_warned_and_measured():
 
 
 def test_estimate_predicts_before_running():
-    with memopro.enable("2GB!", numpy=False, torch=False, transformers=False) as s:
+    with memopro.enable("2GB", numpy=False, torch=False, transformers=False) as s:
         sample = np.arange(4 * MIB, dtype=np.float32) % 251
         small = s.estimate(sample, total="64MiB", passes=2)
         assert small["fits"] and small["extra_seconds"] == 0
@@ -114,7 +114,7 @@ def test_estimate_predicts_before_running():
 
 def test_saved_activations_move_losslessly():
     torch = pytest.importorskip("torch")
-    with memopro.enable("4GB!", numpy=False, transformers=False) as s:
+    with memopro.enable("4GB", numpy=False, transformers=False) as s:
         if s.activations is None:
             pytest.skip("torch part not applied")
         torch.manual_seed(0)
@@ -168,7 +168,7 @@ def test_backward_over_a_full_ceiling_raises_unless_allowed():
 def test_over_ceiling_is_a_setting():
     with pytest.raises(memopro.ConfigError):
         memopro.configure(over_ceiling="sometimes")
-    with memopro.enable("4GB!", numpy=False, transformers=False, over_ceiling="allow") as s:
+    with memopro.enable("4GB", numpy=False, transformers=False, over_ceiling="allow") as s:
         if s.activations is None:
             pytest.skip("torch part not applied")
         assert s.activations.over_ceiling == "allow"

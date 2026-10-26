@@ -16,16 +16,15 @@ EXIT_OK, EXIT_ERROR, EXIT_USAGE, EXIT_NOT_YET = 0, 1, 2, 3
 
 
 _BUDGET_HELP = (
-    "auto; a cap such as 6GB; 50%%; --budget=-2GB (leave 2GB free); 2GB..6GB (stop below 2GB); "
-    "6GB! (exactly, even above what is measured); per pool: device=80%%,host=-2GB,disk=20GB"
+    "the memory ceiling: auto (80%% of this machine's memory), a size such as 6GB, or a share "
+    "such as 50%%; per pool: device=8GB,host=24GB"
 )
 _FALLBACK_HELP = "when nothing fits: stop (none, default) or warn and load as stored (stored)"
-_BASIS_HELP = "what the host budget starts from: conservative (default), os, or total"
 
 
 def _parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
-        prog="memopro", description="Memory relief and redundancy diagnostics for PyTorch."
+        prog="memopro", description="Run work larger than memory within a ceiling, losslessly."
     )
     parser.add_argument("--version", action="version", version=f"memopro {memopro.__version__}")
     sub = parser.add_subparsers(dest="command", required=True)
@@ -36,59 +35,15 @@ def _parser() -> argparse.ArgumentParser:
         "--no-devices", action="store_true", help="skip GPU detection (does not import torch)"
     )
     doctor.add_argument("--budget", default=None, help=_BUDGET_HELP)
-    doctor.add_argument(
-        "--budget-basis", choices=("conservative", "os", "total"), default=None, help=_BASIS_HELP
-    )
-
-    check = sub.add_parser(
-        "check", help="does a model fit my budget, and how? (inference, training)"
-    )
-    check.add_argument("target", help="Hugging Face model id or local model directory")
-    check.add_argument("--goal", choices=("both", "infer", "train"), default="both")
-    check.add_argument("--batch-size", type=int, default=1)
-    check.add_argument("--seq-len", type=int, default=None)
-    check.add_argument("--optimizer", choices=("adamw", "sgd", "none"), default="adamw")
-    check.add_argument("--budget", default=None, help=_BUDGET_HELP)
-    check.add_argument(
-        "--budget-basis", choices=("conservative", "os", "total"), default=None, help=_BASIS_HELP
-    )
-    check.add_argument("--quality", choices=("lossless", "high", "balanced", "low"), default=None)
-    check.add_argument("--fallback", choices=("none", "stored"), default=None, help=_FALLBACK_HELP)
-    check.add_argument("--json", action="store_true", help="machine-readable output")
 
     run = sub.add_parser(
         "run",
-        help="run a script within one memory ceiling (memopro.enable), with the loading policy, "
-        "memory-pressure watching and census (no code changes)",
+        help="run a script within one memory ceiling (memopro.enable), unchanged",
     )
     run.add_argument("--budget", default=None, help=_BUDGET_HELP)
-    run.add_argument(
-        "--budget-basis", choices=("conservative", "os", "total"), default=None, help=_BASIS_HELP
-    )
     run.add_argument("--quality", choices=("lossless", "high", "balanced", "low"), default=None)
     run.add_argument("--fallback", choices=("none", "stored"), default=None, help=_FALLBACK_HELP)
     run.add_argument("--disk-writes", choices=("ask", "never", "allow"), default=None)
-    run.add_argument("--modes", default=None, help="write-free hibernate modes, e.g. source,host")
-    gamma = run.add_mutually_exclusive_group()
-    gamma.add_argument(
-        "--elastic",
-        dest="elastic",
-        action="store_const",
-        const=True,
-        default=None,
-        help="watch memory pressure (experimental; off by default)",
-    )
-    gamma.add_argument(
-        "--no-elastic", dest="elastic", action="store_const", const=False, help="do not watch it"
-    )
-    run.add_argument("--census", action="store_true", help="census of the whole run")
-    run.add_argument(
-        "--transparent",
-        metavar="BUDGET",
-        default=None,
-        help="earlier name for --budget (the ceiling; NumPy arrays are paged within it on Linux "
-        "and macOS by default)",
-    )
     run.add_argument(
         "--no-numpy", action="store_true", help="do not page the script's NumPy arrays"
     )
@@ -122,30 +77,10 @@ def _doctor(args: argparse.Namespace) -> None:
     from memopro._doctor import doctor
     from memopro.config import using
 
-    settings = {"budget": args.budget, "budget_basis": args.budget_basis}
+    settings = {"budget": args.budget}
     with using(**{k: v for k, v in settings.items() if v is not None}):
         result = doctor(devices=not args.no_devices)
     print(json.dumps(result.to_json(), indent=2) if args.json else result.summary())
-
-
-def _check(args: argparse.Namespace) -> None:
-    import json
-
-    from memopro.access import check
-    from memopro.config import using
-
-    scoped = {"budget_basis": args.budget_basis, "fallback": args.fallback}
-    with using(**{k: v for k, v in scoped.items() if v is not None}):
-        result = check(
-            args.target,
-            goal=args.goal,
-            batch_size=args.batch_size,
-            seq_len=args.seq_len,
-            optimizer=args.optimizer,
-            budget=args.budget,
-            quality=args.quality,
-        )
-    print(json.dumps(result.to_json(), indent=2, default=str) if args.json else result.summary())
 
 
 def _run(args: argparse.Namespace) -> None:
@@ -156,11 +91,9 @@ def _run(args: argparse.Namespace) -> None:
         k: v
         for k, v in (
             ("budget", args.budget),
-            ("budget_basis", args.budget_basis),
             ("quality", args.quality),
             ("fallback", args.fallback),
             ("disk_writes", args.disk_writes),
-            ("hibernate_modes", args.modes),
         )
         if v is not None
     }
@@ -168,10 +101,7 @@ def _run(args: argparse.Namespace) -> None:
     run(
         args.script,
         args.script_args,
-        elastic=args.elastic,
-        census=args.census,
         dry_run=args.dry_run,
-        transparent=args.transparent,
         report_json=args.report_json,
         numpy=not args.no_numpy,
         torch=not args.no_torch,
@@ -228,7 +158,7 @@ def main(argv: Sequence[str] | None = None) -> int:
     args = _parser().parse_args(argv)
     if args.command == "run" and argv is None:  # a real command line, not a call from Python
         _restart_for_macos(args)
-    handler = {"doctor": _doctor, "check": _check, "run": _run}[args.command]
+    handler = {"doctor": _doctor, "run": _run}[args.command]
     try:
         handler(args)
     except NotYetImplemented as e:

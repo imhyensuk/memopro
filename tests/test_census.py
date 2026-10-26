@@ -6,6 +6,9 @@ import pytest
 import torch
 
 import memopro
+import memopro.census
+import memopro.env
+import memopro.integrations
 from memopro import InvalidArgument
 from memopro.census import _stats
 from memopro.env._torch import mps_usable

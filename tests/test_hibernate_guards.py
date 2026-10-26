@@ -13,6 +13,9 @@ import pytest
 import torch
 
 import memopro
+import memopro.census
+import memopro.config
+import memopro.hibernate
 from memopro import ConfigError, IntegrityError, hibernate
 from memopro.config import configure, reset_config
 from memopro.hibernate import _methods

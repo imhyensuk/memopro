@@ -839,7 +839,17 @@ fn holding_back_shrinks_the_limit_and_gives_up_unpinned_buffers() {
 #[ignore = "measures the whole process: run with --ignored --test-threads=1"]
 #[cfg(any(target_os = "macos", target_os = "linux"))]
 fn a_process_budget_counts_memory_outside_the_runtime() {
-    let outside = vec![7u8; 16 * MIB]; // memory the runtime does not own, touched
+    // memory the runtime does not own, touched and incompressible: macOS compresses idle pages
+    // of one repeated byte, and the footprint then counted them at a fraction (CI, 0327)
+    let mut x = 0x9E37_79B9_7F4A_7C15u64;
+    let outside: Vec<u8> = (0..16 * MIB)
+        .map(|_| {
+            x ^= x << 13;
+            x ^= x >> 7;
+            x ^= x << 17;
+            x as u8
+        })
+        .collect();
     let data = widened(MIB, 3); // 4 MiB that compress well
     let now = process_footprint().unwrap();
     let mut c = Config::new(128 * MIB as u64);
@@ -864,8 +874,7 @@ fn a_process_budget_counts_memory_outside_the_runtime() {
     // 64 MiB of buffers fit the 128 MiB budget alone; 40 MiB left in the process made them
     // compress (allocator memory the codec leaves behind counts as outside too: keep slack)
     assert!(s.compressions > 0, "{s:?}");
-    // the 16 MiB vector, less up to 1 MiB other threads may give back meanwhile (the pools of
-    // pagers dropped by earlier tests in this process let their codec state go late, 0326)
+    // the 16 MiB vector, less up to 1 MiB other threads may give back meanwhile
     assert!(s.outside_peak >= 15 * MIB as u64, "{s:?}");
     assert!(s.limit_low < 40 * MIB as u64, "{s:?}");
     std::hint::black_box(&outside);
