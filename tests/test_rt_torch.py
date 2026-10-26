@@ -1103,6 +1103,9 @@ def test_generate_with_an_automatic_draft_returns_the_plain_text(tmp_path, monke
         pytest.skip("needs a usable Apple GPU")
     pytest.importorskip("torchao")
     target, tok, best = _hub_cache(tmp_path / "hub", monkeypatch)
+    # what the machine has free changes with what ran before: the draft logic is tested with
+    # room; the machine's shortfall has a test of its own
+    monkeypatch.setattr(llm, "_machine_short", lambda rt: 0)
     kw = {"tokenizer": tok, "max_new_tokens": 12, "chat": False}
     m = rtt.stream_model(target, budget="96MiB", device="mps")
     plain = memopro.generate(m, "w2 w9 w16", draft=None, **kw)
