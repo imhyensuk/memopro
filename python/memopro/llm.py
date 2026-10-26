@@ -16,13 +16,28 @@ resident int4 ``draft`` (Apple GPUs).
 from __future__ import annotations
 
 import time
+import weakref
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any
 
-from memopro._errors import InvalidArgument
+from memopro._errors import BudgetExceeded, InvalidArgument, MemoproError
 
 __all__ = ["FinetuneResult", "finetune", "generate"]
+
+# an automatic draft is about this fraction of the target's bytes, at most AUTO_DRAFT_MAX: the
+# measured pairs were 1.5B for 7B (3.8x, E038b, 0174) and 0.5B for 3B (3.1x, E039, 0184)
+AUTO_DRAFT_SIZE = 0.2
+AUTO_DRAFT_MAX = 1 / 3
+# free room a draft must leave, as a fraction of its own size: what the GPU keeps during
+# drafted generation beyond the draft and the estimate (E061: more than 102 MiB of 473)
+AUTO_DRAFT_SLACK = 0.5
+# the target's vocabulary may have this many padding rows beyond a draft's (Qwen2.5: 128, 0170)
+AUTO_DRAFT_PADDING = 1024
+_UNSET = object()
+# model -> its automatic draft (or None), kept off the model itself: a module set as an
+# attribute would become one of its submodules (state_dict, .to())
+_AUTO_DRAFTS: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
 
 # the first step's room is this many times the estimate, until measured (0165). Measured over
 # estimate was 1.32-1.37 for Qwen2.5-3B/7B at 512 and 2,048 tokens (E037c, E041; 0187)
@@ -268,7 +283,7 @@ def generate(
     tokenizer: Any = None,
     budget: Any = "auto",
     device: str = "auto",
-    draft: Any = None,
+    draft: Any = "auto",
     max_new_tokens: int = 256,
     chat: bool = True,
     streamer: Any = None,
@@ -279,7 +294,11 @@ def generate(
     ``model`` is a name, a folder or a streamed model (reused as is). A string ``prompt`` goes
     through the chat template when the tokenizer has one and ``chat`` is true. ``draft`` (a
     name, folder or :func:`memopro.rt.torch.draft_model`) proposes tokens on Apple and NVIDIA
-    GPUs; the text is the same with or without it. ``streamer`` (e.g. Transformers'
+    GPUs; the text is the same with or without it. ``"auto"`` (the default) takes a smaller model
+    already on this disk that shares the tokenizer, about a fifth of the size (0322; nothing is
+    downloaded for it; looked for in the ``model_dirs`` setting, next to a model loaded from a
+    folder, and in the Hugging Face cache), and goes without one when there is none, on the CPU, or when the budget
+    cannot hold it next to the generation; ``None`` never drafts. ``streamer`` (e.g. Transformers'
     ``TextIteratorStreamer``) and ``stopping_criteria`` go to ``model.generate`` as they are: the
     streamer receives the same tokens the returned text is decoded from.
 
@@ -300,17 +319,28 @@ def generate(
             ids = tok(prompt, return_tensors="pt").input_ids
     else:
         ids = prompt
-    if draft is not None and not hasattr(draft, "memopro_draft_bytes"):
-        draft = rtt.draft_model(draft, target=m, device=m.device.type)
     tokens = ids.shape[1] + max_new_tokens
-    held = [int(_FIRST_STEP_MARGIN * _generation_estimate(m.config, tokens))]
-    if draft is not None:
-        held[0] += draft.memopro_draft_bytes
+    estimate = int(_FIRST_STEP_MARGIN * _generation_estimate(m.config, tokens))
+    auto = isinstance(draft, str) and draft == "auto"
+    if auto:
+        draft = _auto_draft(m, tok, _room(m, estimate))
+    elif draft is not None and not hasattr(draft, "memopro_draft_bytes"):
+        draft = rtt.draft_model(draft, target=m, device=m.device.type)
+    held = [estimate + (draft.memopro_draft_bytes if draft is not None else 0)]
     what = (
         "the draft, cache and intermediates" if draft is not None else "the cache and intermediates"
     )
     if m.device.type != "cuda":  # on CUDA the cache lives in GPU memory (0195)
-        _hold(m, held[0], what, "max_new_tokens")
+        try:
+            _hold(m, held[0], what, "max_new_tokens")
+        except BudgetExceeded:
+            if not (auto and draft is not None):
+                raise
+            # a draft chosen for the caller must not cost them the generation
+            _note("memopro: the budget cannot hold the draft as well; generating without it")
+            _AUTO_DRAFTS[m] = draft = None
+            held[0], what = estimate, "the cache and intermediates"
+            _hold(m, held[0], what, "max_new_tokens")
 
     def measure(*_: Any) -> None:  # what generation really kept on the GPU
         kept = _gpu_kept(m)
@@ -318,6 +348,7 @@ def generate(
             held[0] = kept
             _hold(m, kept, what, "max_new_tokens")
 
+    sent = _Sent(streamer) if streamer is not None else None
     hook = m.register_forward_hook(measure) if m.device.type == "mps" else None
     try:
         out = rtt.generate(
@@ -326,10 +357,225 @@ def generate(
             draft=draft,
             max_new_tokens=max_new_tokens,
             pad_token_id=tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id,
-            streamer=streamer,
+            streamer=sent,
             stopping_criteria=stopping_criteria,
         )
+    except BudgetExceeded:
+        if not (auto and draft is not None):
+            raise
+        out = None  # retried below, once the exception (and the draft it holds) is gone
     finally:
         if hook is not None:
             hook.remove()
+    if out is None:
+        # measured on the GPU, the draft did not fit next to the generation after all: the same
+        # text without it; a streamer gets only the tokens it has not had yet
+        _note("memopro: the budget cannot hold the draft as well; generating without it")
+        _AUTO_DRAFTS[m] = draft = None
+        _free_gpu(m)
+        return generate(
+            m,
+            ids,
+            tokenizer=tok,
+            budget=budget,
+            device=device,
+            draft=None,
+            max_new_tokens=max_new_tokens,
+            chat=chat,
+            streamer=sent.resumed() if sent is not None else None,
+            stopping_criteria=stopping_criteria,
+        )
     return tok.decode(out[0, ids.shape[1] :], skip_special_tokens=True)
+
+
+def _free_gpu(m: Any) -> None:
+    import gc
+
+    import torch
+
+    gc.collect()
+    if m.device.type == "mps":
+        torch.mps.empty_cache()
+    elif m.device.type == "cuda":
+        torch.cuda.empty_cache()
+
+
+def _note(message: str) -> None:
+    import warnings
+
+    warnings.warn(message, UserWarning, stacklevel=4)
+
+
+def _room(m: Any, estimate: int) -> int | None:
+    """Budget bytes left beside the largest weight and ``estimate`` for a draft; None on CUDA,
+    where the draft takes GPU memory from the device cache instead (0276)."""
+    if m.device.type == "cuda":
+        return None
+    if m.device.type == "mps":  # what the GPU already keeps counts as it will be measured
+        estimate = max(estimate, _gpu_kept(m))
+    stats = m.memopro_runtime.stats()
+    largest = max(b[0].nbytes for b in m.memopro_weights.buffers.values())
+    return stats["budget"] - stats["reserve"] - largest - estimate
+
+
+def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:
+    """The draft ``generate(draft="auto")`` uses for ``m``: found once per model and kept on it
+    (a chat calls generate again and again), or None (0322). A draft that would leave less than
+    AUTO_DRAFT_SLACK of its size free in ``room`` is not loaded: measured on the GPU it would
+    not fit the generation after all, and finding that out mid-way costs more than it saves
+    (E061: 1.5B at 1 GiB, 2.0 instead of 1.5 s per token)."""
+    import memopro.rt.torch as rtt
+
+    found = _AUTO_DRAFTS.get(m, _UNSET)
+    if found is not _UNSET:
+        return found
+    _AUTO_DRAFTS[m] = None
+    if m.device.type not in ("mps", "cuda"):
+        return None  # drafts stay in GPU memory
+    choice = _local_draft(m, tok)
+    if choice is None:
+        _note(
+            "memopro: no smaller model with the same tokenizer is on this disk, so this "
+            "generation has no draft; draft='<a model of the same family, about a fifth "
+            "of the size>' makes it faster (downloaded once, the text stays the same), or "
+            "memopro.configure(model_dirs=[...]) names the folders where you keep models"
+        )
+        return None
+    name, path = choice
+    need = int(rtt.draft_size(path, m.device.type) * (1 + AUTO_DRAFT_SLACK))
+    if room is not None and need > room:
+        budget = m.memopro_runtime.stats()["budget"]
+        _note(
+            f"memopro: {name} could draft, but the budget leaves {room >> 20} MiB beside the "
+            f"largest weight and the generation, and the draft needs about {need >> 20} MiB; "
+            f"a budget of at least {(budget + need - room + (1 << 20) - 1) >> 20} MiB lets it "
+            "draft (the text is the same either way)"
+        )
+        return None
+    try:
+        draft = rtt.draft_model(path, target=m, device=m.device.type)
+    except MemoproError as e:  # e.g. no int4 kernel on this GPU
+        _note(f"memopro: {name} cannot draft here ({e}); generating without a draft")
+        return None
+    _note(
+        f"memopro: drafting with {name} found on this disk (the text is the same as without a "
+        "draft; draft=None turns it off)"
+    )
+    _AUTO_DRAFTS[m] = draft
+    return draft
+
+
+def _local_draft(m: Any, tok: Any) -> tuple[str, Path] | None:
+    """(name, folder) of the model, among those :func:`_model_folders` finds, that suits ``m``
+    best as a draft: a causal LM with the same tokenizer, at most AUTO_DRAFT_MAX of ``m``'s bytes, the
+    closest to AUTO_DRAFT_SIZE of them; None when there is none. Reads only config files and
+    sizes until the tokenizer check."""
+    import json
+    import math
+
+    import transformers
+
+    import memopro.rt.torch as rtt
+
+    target = sum(buf.nbytes for buf, _, _ in m.memopro_weights.buffers.values())
+    vocab = getattr(m.config, "vocab_size", None)
+    if not isinstance(vocab, int) or target == 0:
+        return None
+    try:  # loaded as the candidates are, so both get the same added tokens
+        want = transformers.AutoTokenizer.from_pretrained(m.config._name_or_path).get_vocab()
+    except Exception:  # noqa: BLE001 - no tokenizer files with the weights: the caller's
+        want = tok.get_vocab()
+    candidates = []
+    for name, snap in _model_folders(m):
+        try:
+            cfg = json.loads((snap / "config.json").read_text())
+            names = [p.name for p in snap.iterdir()]
+            size = sum((snap / n).stat().st_size for n in rtt._weight_files(names))
+        except (OSError, ValueError):
+            continue
+        causal = any(str(a).endswith("ForCausalLM") for a in cfg.get("architectures") or ())
+        v = cfg.get("vocab_size")
+        if not causal or not isinstance(v, int) or not 0 <= vocab - v <= AUTO_DRAFT_PADDING:
+            continue
+        if not 0 < size <= AUTO_DRAFT_MAX * target:
+            continue
+        candidates.append((abs(math.log(size / (AUTO_DRAFT_SIZE * target))), name, snap))
+    for _, name, snap in sorted(candidates):
+        try:
+            same = transformers.AutoTokenizer.from_pretrained(str(snap)).get_vocab() == want
+        except Exception:  # noqa: BLE001 - no usable tokenizer: not shown to be shared
+            same = False
+        if same:
+            return name, snap
+    return None
+
+
+def _model_folders(m: Any) -> list[tuple[str, Path]]:
+    """Folders that may hold a draft for ``m``, each once (0324): the user's ``model_dirs``
+    (a model folder, or a folder of model folders), the folders next to ``m``'s own when it
+    was loaded from one, and the Hugging Face cache when there is one."""
+    from memopro.config import get_config
+
+    found: dict[Path, tuple[str, Path]] = {}
+
+    def add(name: str, folder: Path) -> None:
+        if (folder / "config.json").is_file():
+            found.setdefault(folder.resolve(), (name, folder))
+
+    def under(root: Path) -> None:
+        add(root.name, root)
+        if root.is_dir():
+            for f in sorted(root.iterdir()):
+                if f.is_dir():
+                    add(f.name, f)
+
+    for d in get_config().model_dirs:
+        under(Path(d).expanduser())
+    own = Path(str(m.config._name_or_path))
+    if own.is_dir():  # a model kept in a folder of its own: its neighbours (models/*)
+        under(own.resolve().parent)
+    try:
+        import huggingface_hub
+    except ImportError:  # no Hugging Face library: no cache to look in
+        return list(found.values())
+    root = Path(huggingface_hub.constants.HF_HUB_CACHE)
+    for snap in sorted(root.glob("models--*/snapshots/*")):
+        add(_hub_name(snap), snap)
+    return list(found.values())
+
+
+def _hub_name(snapshot: Path) -> str:
+    """``Org/Name`` of a Hugging Face cache snapshot folder."""
+    return snapshot.parent.parent.name.removeprefix("models--").replace("--", "/")
+
+
+class _Sent:
+    """A Transformers streamer passed through, counting the new tokens it got, so that a second
+    generation (without the draft) gives it only those it has not had (0322)."""
+
+    def __init__(self, inner: Any, *, prompt: bool = True, skip: int = 0) -> None:
+        self.inner = inner
+        self.prompt = prompt  # whether the prompt (the first put) goes through
+        self.skip = skip  # new tokens the inner streamer already has
+        self.prompt_seen = False
+        self.seen = 0
+
+    def put(self, value: Any) -> None:
+        if not self.prompt_seen:
+            self.prompt_seen = True
+            if self.prompt:
+                self.inner.put(value)
+            return
+        flat = value.reshape(-1)
+        self.seen += flat.numel()
+        drop = min(self.skip, flat.numel())
+        self.skip -= drop
+        if drop < flat.numel():
+            self.inner.put(flat[drop:])
+
+    def end(self) -> None:
+        self.inner.end()
+
+    def resumed(self) -> _Sent:
+        """The streamer for the second generation: no prompt, and none of the tokens sent."""
+        return _Sent(self.inner, prompt=False, skip=self.seen)

@@ -933,6 +933,21 @@ def _vocabulary_padding(name_or_dir: Any, revision: Any, config: Any, target: An
     return extra
 
 
+def draft_size(name_or_dir: str | Path, device: str = "mps") -> int:
+    """Device bytes :func:`draft_model` would take for a model folder, from its safetensors
+    headers alone: on Apple GPUs the decoder layers' matrices become int4 with group-32 scales
+    and zero points (5/16 of their bf16 bytes), everything else stays as stored; on NVIDIA GPUs
+    all of it stays 16-bit (0322). Qwen2.5-0.5B: 473 MiB, as measured."""
+    from memopro.hibernate._source import read_header
+
+    total = 0
+    for f in sorted(Path(name_or_dir).glob("*.safetensors")):
+        for key, r in read_header(f).items():
+            packed = device == "mps" and len(r.shape) == 2 and ".layers." in key
+            total += r.nbytes * 5 // 16 if packed else r.nbytes
+    return total
+
+
 def draft_model(
     name_or_dir: str | Path,
     *,

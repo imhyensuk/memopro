@@ -106,7 +106,7 @@ Main `memopro run` options: `--budget` (ceiling), `--dry-run` (print the setting
 | Function | Description |
 |---|---|
 | `memopro.finetune(model, texts, budget=, batch=, seq_len=, epochs=, lr=, rank=)` | LoRA training of an LLM larger than memory; returns a `FinetuneResult` (`model`, `adapter`, `losses`, `batch`, …) |
-| `memopro.generate(model, prompt, budget=, draft=, max_new_tokens=, streamer=, stopping_criteria=)` | generation with an LLM larger than memory. `streamer` (e.g. Transformers' `TextIteratorStreamer`) and `stopping_criteria` go to `model.generate` as they are; the streamed text equals the returned text |
+| `memopro.generate(model, prompt, budget=, draft="auto", max_new_tokens=, streamer=, stopping_criteria=)` | generation with an LLM larger than memory, drafted by a smaller model of the same family already on the disk. `streamer` (e.g. Transformers' `TextIteratorStreamer`) and `stopping_criteria` go to `model.generate` as they are; the streamed text equals the returned text |
 | `memopro.enable(budget=)` / `memopro.disable()` | a ceiling on the whole process; `Session.estimate()`, `Session.measured()` |
 | `memopro.load(model_id, budget=, quality=)` | load a Hugging Face model. By default (`quality="lossless"`) nothing loses accuracy and a model that does not fit is streamed; `"high"`, `"balanced"` or `"low"` also allow half precision, int8 or int4 |
 | `memopro.check(...)` / `memopro.doctor()` | the same diagnostics as the CLI |
@@ -217,6 +217,18 @@ text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Inst
 ```
 
 The small model proposes tokens and the large model verifies them; the output equals generation with the large model alone. Drafts run on Apple GPUs (int4) and NVIDIA GPUs (16-bit) and must share the target's tokenizer.
+
+Without `draft` (the default `"auto"`), a model already on this disk that shares the tokenizer and is about a fifth of the size becomes the draft. It is looked for in three places:
+
+1. the folders in the `model_dirs` setting (a model folder, or a folder of model folders)
+2. the folders next to a model loaded from a folder
+3. the Hugging Face cache, when there is one
+
+```python
+memopro.configure(model_dirs=["~/models", "/Volumes/SSD/llm"])  # or MEMOPRO_MODEL_DIRS=~/models:/Volumes/SSD/llm
+```
+
+Nothing is downloaded for it. With no such model, or a budget that cannot hold it as well, generation goes without a draft (the output is the same) and says which budget would let it draft. `draft=None` never drafts.
 
 ### Vision models
 
