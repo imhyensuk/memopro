@@ -700,6 +700,56 @@ impl Runtime {
         self.shared.pin_with(&self.shared, id, write, false, false)
     }
 
+    /// Copy the buffer's bytes into `dst` (its size) without making it resident: a resident
+    /// buffer is copied, a compressed one decompressed straight into `dst`. The runtime's own
+    /// memory does not change, so this needs no room in the budget; the caller's `dst` is
+    /// memory outside it (for `over_ceiling = "allow"`, 0320). Not counted as a use.
+    // ponytail: decompresses under the lock (a rare path: the budget had no room); release the
+    // lock around it if other threads ever wait on it measurably
+    pub fn read_into(&self, id: BufferId, dst: &mut [u8]) -> Result<()> {
+        let sh = &self.shared;
+        let mut st = sh.lock();
+        loop {
+            let b = st.bufs.get(&id).ok_or_else(|| unknown(id))?;
+            if !b.busy {
+                break;
+            }
+            st = sh.wait(st);
+        }
+        let b = st.bufs.get(&id).expect("checked above");
+        if dst.len() != b.nbytes {
+            return Err(Error::InvalidArgument(format!(
+                "buffer {id} holds {} bytes, the destination {}",
+                b.nbytes,
+                dst.len()
+            )));
+        }
+        if b.writers > 0 {
+            return Err(Error::InvalidArgument(format!(
+                "buffer {id} is pinned for writing"
+            )));
+        }
+        match &b.data {
+            Data::Resident(r) => {
+                dst.copy_from_slice(&r.as_slice()[..b.nbytes]);
+                Ok(())
+            }
+            Data::Compressed(p) => {
+                let mut at = 0;
+                for piece in &p.pieces {
+                    unpack_piece(piece, b.elem, &mut dst[at..at + piece.len]).map_err(|e| {
+                        Error::Integrity(format!("compressed data is damaged: {e}"))
+                    })?;
+                    at += piece.len;
+                }
+                Ok(())
+            }
+            Data::Empty => Err(Error::InvalidArgument(format!(
+                "buffer {id} is not in memory (read_into reads resident or compressed buffers)"
+            ))),
+        }
+    }
+
     /// Ask the service thread to bring the buffer back now (a hint; no effect without prefetch).
     pub fn prefetch(&self, id: BufferId) -> Result<()> {
         let mut st = self.shared.lock();

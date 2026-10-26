@@ -365,6 +365,43 @@ fn edr_pieces_compress_many_at_once_and_come_back() {
 }
 
 #[test]
+fn read_into_gives_the_bytes_back_without_room_in_the_budget() {
+    let rt = runtime(16, Policy::ReuseDistance);
+    let mut ids = Vec::new();
+    for k in 0..8 {
+        let content = widened(MIB / 2, 21 + k); // 2 MiB each, 16 MiB: some get compressed
+        let id = rt.alloc(content.len(), 4).unwrap();
+        rt.pin(id, true)
+            .unwrap()
+            .as_mut_slice()
+            .unwrap()
+            .copy_from_slice(&content);
+        ids.push((id, content));
+    }
+    let held: Vec<Pin> = ids[4..]
+        .iter()
+        .map(|(id, _)| rt.pin(*id, false).unwrap())
+        .collect();
+    // with 8 MiB pinned the other four cannot all be pinned at once...
+    let pins: Vec<_> = ids[..4].iter().map(|(id, _)| rt.pin(*id, false)).collect();
+    assert!(
+        pins.iter().any(|p| p.is_err()),
+        "the budget had room after all"
+    );
+    drop(pins);
+    let used = rt.stats().used;
+    // ...but every one reads back, and the runtime's memory does not grow
+    for (id, content) in &ids {
+        let mut out = vec![0u8; content.len()];
+        rt.read_into(*id, &mut out).unwrap();
+        assert_eq!(out, *content);
+    }
+    assert!(rt.stats().used <= used, "read_into took runtime memory");
+    assert!(rt.read_into(ids[0].0, &mut [0u8; 3]).is_err());
+    drop(held);
+}
+
+#[test]
 fn incompressible_data_without_a_file_is_refused_not_overrun() {
     let rt = runtime(12, Policy::ReuseDistance);
     let mut refused = false;

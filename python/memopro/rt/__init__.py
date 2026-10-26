@@ -499,6 +499,11 @@ class Buffer:
         with self.view(write) as arr:
             return fn(arr)
 
+    def read_into(self, out: Any) -> None:
+        """Copy the bytes into the writable buffer ``out`` (same size) without making them
+        resident: no room in the budget is needed, ``out`` is memory outside it (0320)."""
+        self.runtime._rt.read_into(self.id, out)
+
     def prefetch(self) -> None:
         """Bring the buffer back in the background now (a hint)."""
         self.runtime._rt.prefetch(self.id)
