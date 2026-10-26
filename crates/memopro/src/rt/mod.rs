@@ -225,6 +225,9 @@ struct Inner {
     queued: HashSet<BufferId>,
     trace: VecDeque<Trace>,
     stop: bool,
+    /// Room ran out with EDR pieces stored: they were squeezed to zstd and every later
+    /// compression uses zstd too (0318).
+    tight: bool,
 }
 
 /// One pin, for prediction: which buffer, how big, when, and how long it waited.
@@ -253,6 +256,8 @@ struct Buf {
     busy: bool,
     incompressible: bool,
     ratio: Option<f64>,
+    /// Pieces go to EDR instead of zstd (chosen with `ratio`).
+    edr: bool,
     /// Logical time of the last pin.
     last: u64,
     /// Smoothed number of pins between two uses of this buffer (0 = not known yet).
@@ -301,8 +306,19 @@ struct Piece {
     region: Region,
     /// Original bytes this piece holds.
     len: usize,
-    /// Stored as is (compression would not have made it smaller).
-    raw: bool,
+    /// How it is stored.
+    kind: Kind,
+}
+
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+enum Kind {
+    /// As is (compression would not have made it smaller).
+    Raw,
+    /// Byte shuffle + zstd ([`codec::pack_chunk`]).
+    Zstd,
+    /// EDR v1 ([`crate::edr::pack_piece`]): 2-byte elements whose exponents EDR codes well
+    /// (bf16), about 3x faster to restore than zstd per thread (0318).
+    Edr,
 }
 
 /// Measured throughputs; initial values from E015/E008 (0109 §7).
@@ -368,6 +384,7 @@ impl Buf {
             busy: false,
             incompressible: false,
             ratio: None,
+            edr: false,
             last: clock,
             period: 0.0,
             uses: 0,
@@ -476,6 +493,7 @@ impl Runtime {
                 queued: HashSet::new(),
                 trace: VecDeque::new(),
                 stop: false,
+                tight: false,
             }),
             cond: Condvar::new(),
         });
@@ -752,7 +770,11 @@ impl Runtime {
         let action = match (&b.data, recoverable) {
             (Data::Resident(_) | Data::Compressed(_), true) => Some(Action::Drop),
             (Data::Resident(r), false) if !b.incompressible => {
-                let ratio = *b.ratio.get_or_insert_with(|| probe_ratio(r, b.elem, level));
+                if b.ratio.is_none() {
+                    let (ratio, edr) = probe(r, b.elem, level);
+                    (b.ratio, b.edr) = (Some(ratio), edr);
+                }
+                let ratio = b.ratio.expect("probed above");
                 if 1.0 - 1.0 / ratio < min_saving {
                     b.incompressible = true;
                     None
@@ -1222,6 +1244,7 @@ impl Shared {
                 None if st.bufs.iter().any(|(i, b)| b.busy && Some(*i) != exclude) => {
                     st = self.wait(st)
                 }
+                None if self.squeeze(&mut st, exclude)? => {}
                 None => {
                     st.stats.refusals += 1;
                     let pinned: u64 = st
@@ -1243,6 +1266,61 @@ impl Shared {
                 }
             }
         }
+    }
+
+    /// Re-store one compressed buffer's EDR pieces as zstd (about 8% smaller for bf16), one
+    /// piece at a time so at most one piece (the reserve) is extra; false when there is none.
+    /// From then on compressions use zstd: this workload needs the smaller form (0318). Each
+    /// buffer is squeezed once (`edr` turns false), so make_room's loop ends.
+    // ponytail: done under the lock (only when the budget is otherwise exhausted); a busy-mark
+    // and unlocked re-store if other threads ever need to run meanwhile
+    fn squeeze(&self, st: &mut Inner, exclude: Option<BufferId>) -> Result<bool> {
+        let level = self.config.compress_level;
+        let Some(id) = st
+            .bufs
+            .iter()
+            .find(|(i, b)| {
+                Some(**i) != exclude
+                    && b.edr
+                    && !b.busy
+                    && b.pins == 0
+                    && matches!(&b.data, Data::Compressed(p)
+                        if p.pieces.iter().any(|x| x.kind == Kind::Edr))
+            })
+            .map(|(i, _)| *i)
+        else {
+            return Ok(false);
+        };
+        st.tight = true;
+        let b = st.bufs.get_mut(&id).expect("found above");
+        let (elem, nbytes) = (b.elem, b.nbytes);
+        let Data::Compressed(packed) = &mut b.data else {
+            unreachable!("found above")
+        };
+        let mut raw = Vec::new();
+        let (mut gave, mut took) = (0u64, 0u64);
+        for piece in packed.pieces.iter_mut().filter(|p| p.kind == Kind::Edr) {
+            raw.resize(piece.len, 0);
+            crate::edr::unpack_piece(piece.region.as_slice(), &mut raw)?;
+            let mut out = Vec::new();
+            codec::pack_chunk(&raw, elem, level, &mut out)?;
+            if out.len() >= piece.region.len() {
+                continue; // EDR is the smaller form of this piece: keep it
+            }
+            let new = Region::from_bytes(&out)?;
+            gave += piece.region.capacity() as u64;
+            took += new.capacity() as u64;
+            *piece = Piece {
+                region: new,
+                len: piece.len,
+                kind: Kind::Zstd,
+            };
+        }
+        packed.stored = packed.stored + took - gave;
+        b.ratio = Some(nbytes as f64 / packed.stored.max(1) as f64);
+        b.edr = false;
+        st.used = st.used + took - gave;
+        Ok(true)
     }
 
     /// The buffer and action with the lowest restore cost per byte freed, per distance to the
@@ -1349,8 +1427,8 @@ impl Shared {
                         let ratio = match b.ratio {
                             Some(x) => x,
                             None => {
-                                let x = probe_ratio(r, b.elem, level);
-                                b.ratio = Some(x);
+                                let (x, edr) = probe(r, b.elem, level);
+                                (b.ratio, b.edr) = (Some(x), edr);
                                 x
                             }
                         };
@@ -1417,7 +1495,7 @@ impl Shared {
         let wasted = std::mem::take(&mut b.prefetched);
         b.kept = false;
         b.stayed = false;
-        let (nbytes, elem) = (b.nbytes, b.elem);
+        let (nbytes, elem, edr) = (b.nbytes, b.elem, b.edr && !st.tight);
         let cap = region.capacity() as u64;
         // pieces compressed at once: each may hold one stored piece before its pages go back,
         // so as many as the room left in the budget allows on top of the reserve (0317)
@@ -1425,7 +1503,7 @@ impl Shared {
         let at_once = (1 + room / self.reserve).min(rayon::current_num_threads() as u64) as usize;
         drop(st);
         let t0 = Instant::now();
-        let result = pack_region(region, nbytes, elem, level, at_once);
+        let result = pack_region(region, nbytes, elem, level, at_once, edr);
         let seconds = t0.elapsed().as_secs_f64();
         let mut st = self.lock();
         let b = st.bufs.get_mut(&id).expect("busy buffers are not freed");
@@ -1647,18 +1725,33 @@ impl Shared {
     }
 }
 
-/// Compression ratio of the first piece of a buffer (at most 1 MiB), without changing it.
-fn probe_ratio(region: &Region, elem: usize, level: i32) -> f64 {
+/// Compression ratio of the first piece of a buffer (at most 1 MiB), without changing it, and
+/// whether EDR codes it: for 2-byte elements EDR is tried too and taken when it is at most
+/// [`EDR_SLACK`] times the zstd size (0318).
+fn probe(region: &Region, elem: usize, level: i32) -> (f64, bool) {
     let n = region.len().min(1 << 20) / elem * elem;
     if n == 0 {
-        return 1.0;
+        return (1.0, false);
     }
+    let src = &region.as_slice()[..n];
     let mut out = Vec::new();
-    match codec::pack_chunk(&region.as_slice()[..n], elem, level, &mut out) {
-        Ok(()) if !out.is_empty() => n as f64 / out.len() as f64,
-        _ => 1.0,
+    let zstd = match codec::pack_chunk(src, elem, level, &mut out) {
+        Ok(()) if !out.is_empty() => out.len(),
+        _ => n,
+    };
+    if elem == 2 && crate::edr::pack_piece(src, &mut out).is_ok() {
+        let e = out.len();
+        if (e as f64) <= EDR_SLACK * zstd as f64 && e < n {
+            return (n as f64 / e as f64, true);
+        }
     }
+    (n as f64 / zstd as f64, false)
 }
+
+/// How much larger than zstd an EDR piece may be and still be chosen: bf16 is 0.75 vs 0.69 of
+/// its size (+9%) for about 3x faster restores; float16 or integers code badly in EDR and stay
+/// on zstd (0318).
+const EDR_SLACK: f64 = 1.15;
 
 thread_local! {
     static OUT: std::cell::RefCell<Vec<u8>> = const { std::cell::RefCell::new(Vec::new()) };
@@ -1673,6 +1766,7 @@ fn pack_region(
     elem: usize,
     level: i32,
     at_once: usize,
+    edr: bool,
 ) -> std::result::Result<Packed, (Region, Error)> {
     use rayon::prelude::*;
 
@@ -1689,23 +1783,33 @@ fn pack_region(
         let done: Vec<Result<Piece>> = batch
             .par_iter()
             .map(|&(at, len)| {
-                OUT.with(|cell| -> Result<Piece> {
-                    let mut out = cell.borrow_mut();
-                    let src = &data[at..at + len];
-                    codec::pack_chunk(src, elem, level, &mut out)?;
-                    if out.len() < len {
-                        Ok(Piece {
-                            region: Region::from_bytes(&out)?,
+                let src = &data[at..at + len];
+                let stored = |out: &[u8], kind: Kind| -> Result<Piece> {
+                    Ok(if out.len() < len {
+                        Piece {
+                            region: Region::from_bytes(out)?,
                             len,
-                            raw: false,
-                        })
+                            kind,
+                        }
                     } else {
-                        Ok(Piece {
+                        Piece {
                             region: Region::from_bytes(src)?,
                             len,
-                            raw: true,
-                        })
-                    }
+                            kind: Kind::Raw,
+                        }
+                    })
+                };
+                if edr {
+                    // its own buffer: EDR encodes on the rayon pool too, and a thread that
+                    // steals another piece meanwhile must not find OUT borrowed (0318)
+                    let mut out = Vec::new();
+                    crate::edr::pack_piece(src, &mut out)?;
+                    return stored(&out, Kind::Edr);
+                }
+                OUT.with(|cell| -> Result<Piece> {
+                    let mut out = cell.borrow_mut();
+                    codec::pack_chunk(src, elem, level, &mut out)?;
+                    stored(&out, Kind::Zstd)
                 })
             })
             .collect();
@@ -1727,9 +1831,7 @@ fn pack_region(
             let mut at = 0;
             for p in &pieces {
                 let dst = &mut region.as_mut_slice()[at..at + p.len];
-                if p.raw {
-                    dst.copy_from_slice(&p.region.as_slice()[..p.len]);
-                } else if let Err(e2) = codec::unpack_chunk(p.region.as_slice(), elem, dst) {
+                if let Err(e2) = unpack_piece(p, elem, dst) {
                     return Err((
                         region,
                         Error::Integrity(format!("could not undo compression: {e2}")),
@@ -1741,6 +1843,19 @@ fn pack_region(
         }
     }
     Ok(Packed { pieces, stored })
+}
+
+/// One stored piece back into `dst` (its original bytes).
+fn unpack_piece(p: &Piece, elem: usize, dst: &mut [u8]) -> Result<()> {
+    let stored = p.region.as_slice();
+    match p.kind {
+        Kind::Raw => {
+            dst.copy_from_slice(&stored[..p.len]);
+            Ok(())
+        }
+        Kind::Zstd => Ok(codec::unpack_chunk(stored, elem, dst)?),
+        Kind::Edr => crate::edr::unpack_piece(stored, dst),
+    }
 }
 
 /// Decompress every piece into a new region, in parallel (pieces fill disjoint ranges).
@@ -1763,13 +1878,8 @@ fn unpack_region(packed: &Packed, nbytes: usize, elem: usize) -> Result<Region> 
         .par_iter()
         .zip(dsts)
         .try_for_each(|(p, dst)| {
-            if p.raw {
-                dst.copy_from_slice(&p.region.as_slice()[..p.len]);
-                Ok(())
-            } else {
-                codec::unpack_chunk(p.region.as_slice(), elem, dst)
-                    .map_err(|e| Error::Integrity(format!("compressed data is damaged: {e}")))
-            }
+            unpack_piece(p, elem, dst)
+                .map_err(|e| Error::Integrity(format!("compressed data is damaged: {e}")))
         })?;
     Ok(region)
 }

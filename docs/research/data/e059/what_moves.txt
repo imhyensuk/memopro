@@ -1,0 +1,15 @@
+float32 whole tensors exactly bf16 MiB 373 elements MiB 708
+{
+ "float32": {
+  "count": 263,
+  "MiB": 1638,
+  "zstd": 0.384,
+  "edr": null
+ },
+ "bfloat16": {
+  "count": 96,
+  "MiB": 456,
+  "zstd": 0.667,
+  "edr": 0.754
+ }
+}

@@ -4,6 +4,15 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: bf16 buffers are compressed with EDR in the runtime (0318)
+- When the runtime compresses a buffer of 2-byte elements, it tries EDR next to byte shuffle +
+  zstd on the first MiB and keeps EDR when it is at most 1.15x the zstd size, which is the case
+  for bf16 (75% instead of 69% of the size); float16 and integers stay on zstd. EDR restores
+  about twice as fast and compresses about 1.5x as fast: on an M1, bf16 layer tensors restore at
+  3.0-3.2 GB/s instead of 1.3-1.8. If room runs out while EDR pieces are stored, they are
+  re-stored as zstd one piece at a time and later compressions use zstd, so whatever fitted
+  before still fits. Results are unchanged.
+
 ### Changed: the runtime compresses and restores pieces in parallel (0317)
 - A compressed buffer's pieces are decompressed on every core at once, and compressed several at
   a time when the budget has room for them (one at a time when it is full, so the ceiling holds
