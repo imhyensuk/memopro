@@ -109,6 +109,22 @@ def install_memopro(root):
             return {"source": "already installed in this session", "version": memopro.__version__}
     except ImportError:
         pass
+    if globals().get("PIP_SPEC"):  # a published release (E068): PyPI, and the repository at
+        # GIT_REF for its tests (public, no token)
+        _log(f"installing {PIP_SPEC} from PyPI")
+        r = _pip("--pre", PIP_SPEC)
+        src = "/content/memopro-src"
+        shutil.rmtree(src, ignore_errors=True)
+        c = subprocess.run(["git", "clone", "-q", "--depth", "1", "--branch", GIT_REF,
+                            "https://github.com/imhyensuk/memopro.git", src],
+                           capture_output=True, text=True, check=False)
+        info = {"source": "pypi", "spec": PIP_SPEC, "ok": r.returncode == 0,
+                "stderr": r.stderr[-1500:] if r.returncode else "",
+                "tests_checkout": GIT_REF if c.returncode == 0 else c.stderr[-500:]}
+        if not info["ok"]:
+            raise RuntimeError(f"memopro install failed: {info}")
+        os.environ["MP_MEMOPRO_INSTALLED"] = "1"
+        return info
     info = {}
     bundles = sorted(glob.glob(os.path.join(root, "install", "memopro-src*.tar.gz")))
     wheels = sorted(glob.glob(os.path.join(root, "install", "memopro-*linux*.whl")))
