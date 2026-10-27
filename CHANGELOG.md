@@ -4,6 +4,22 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Added: `memopro.sort` and `memopro.join` (0357)
+- Sort a CSV file by an integer column, or join two on one, when the file is larger than
+  memory: everything memopro holds stays within the ceiling and nothing of its own is written to
+  the disk. The input is read again as often as the ceiling needs (each block checked against
+  its first read); the rows of a pass sit in runtime buffers that are compressed losslessly
+  when the ceiling is reached. Output goes to a file or to a function. Simple CSV only (a header,
+  `,` between fields, no quoted fields), integer keys.
+- Rows, keys and gathers are Rust kernels (`memopro::csv`) writing into reused buffers.
+
+### Added: locked runtime buffers (0357)
+- `Runtime.alloc(..., locked=True)` / `array(..., locked=True)` keep a buffer in RAM for its
+  whole life (mlock): it takes its room in the budget at once and is never compressed, swapped or
+  compressed by the operating system, for memory that must never wait (a real-time audio
+  buffer). `BudgetExceeded` when the budget cannot hold it, `ModeUnavailable` when the system
+  refuses the lock. Rust: `Runtime::alloc_locked`.
+
 ### Fixed: `generate(folder)` called again is no longer refused (0353)
 - Each call with a folder streams a new model; the one before stayed in a reference cycle until
   the collector ran, so its runtime and GPU copies counted as the process's and the next call

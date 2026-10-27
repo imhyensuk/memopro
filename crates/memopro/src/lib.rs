@@ -7,6 +7,7 @@
 //! - [`hwinfo`]: host memory, container limit and disk capacity for the per-pool budget (v0.1)
 //! - [`verify`]: reads of original file regions checked by digest (v0.1)
 //! - [`codec`]: byte shuffle + zstd for lossless in-RAM compression (v0.1)
+//! - [`csv`]: row and key kernels for `memopro.sort` / `memopro.join` (E069)
 //! - [`edr`]: bf16 weights as a 1-byte base (a draft) and a 4-bit residual, lossless (0308)
 //! - [`rt`]: runtime C-R: large buffers under a hard memory budget, dropped and re-read from
 //!   their original files or compressed, never written to disk (0109, 0112)
@@ -14,6 +15,7 @@
 //! Unbuilt functions return [`Error::NotImplemented`] with the planned milestone; nothing panics.
 
 pub mod codec;
+pub mod csv;
 pub mod edr;
 pub mod error;
 pub mod hwinfo;

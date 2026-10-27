@@ -2,7 +2,8 @@
 
 The public API (0.2.0, 0327): ``enable``/``disable`` set one memory ceiling for the whole
 process (``memopro run`` does it for a script); ``finetune``/``generate`` train and run LLMs
-whose weights exceed memory; ``load`` loads a model that fits; ``configure``/``using`` change
+whose weights exceed memory; ``load`` loads a model that fits; ``sort``/``join`` sort and join CSV files larger than memory
+without writing to the disk; ``configure``/``using`` change
 settings; ``doctor()`` (and ``memopro doctor``) reports memory and the ceiling. ``memopro.rt``
 is the advanced layer (runtimes, streamed models, paging).
 
@@ -47,6 +48,8 @@ _LAZY: dict[str, tuple[str, str | None]] = {
     "load": ("memopro.access", "load"),
     "finetune": ("memopro.llm", "finetune"),
     "generate": ("memopro.llm", "generate"),
+    "sort": ("memopro.table", "sort"),
+    "join": ("memopro.table", "join"),
     "doctor": ("memopro._doctor", "doctor"),
     "enable": ("memopro._enable", "enable"),
     "disable": ("memopro._enable", "disable"),
@@ -108,8 +111,10 @@ __all__ = [
     "finetune",
     "generate",
     "get_config",
+    "join",
     "load",
     "report",
     "rt",
+    "sort",
     "using",
 ]

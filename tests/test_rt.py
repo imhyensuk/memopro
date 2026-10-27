@@ -2,6 +2,7 @@
 lossless drop/re-read and compression, view lifetimes, errors as memopro exceptions."""
 
 import gc
+import sys
 
 import pytest
 
@@ -151,3 +152,22 @@ def test_policy_lru_is_available_for_comparison(data_file):
                 b.apply(len)
     with pytest.raises(memopro.InvalidArgument):
         rt.Runtime(budget="24MiB", policy="fifo")
+
+
+@pytest.mark.skipif(sys.platform == "win32", reason="locking is built for macOS and Linux")
+def test_a_locked_buffer_stays_in_ram_within_the_budget():
+    """E069 V3b (0356): `locked=True` takes its room now and is never compressed; a lock the
+    budget cannot hold is refused."""
+    r = rt.Runtime(budget="64MiB", process_budget=False)
+    b = r.array((1 << 20,), "float32", locked=True)
+    with b.pin(write=True) as v:
+        np.frombuffer(v, np.float32)[:] = np.arange(1 << 20)
+    assert not b.evict()
+    for _ in range(12):  # zeros, compressed around it
+        with r.alloc(4 << 20).pin(write=True):
+            pass
+    assert b.state == "resident"
+    with b.pin() as v:
+        assert np.array_equal(np.frombuffer(v, np.float32), np.arange(1 << 20, dtype=np.float32))
+    with pytest.raises(memopro.BudgetExceeded):
+        r.alloc(100 << 20, locked=True)
