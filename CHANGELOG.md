@@ -4,6 +4,16 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: PyTorch models keep the whole process within the ceiling (0344)
+- `finetune` and `generate` (PyTorch) now hold back, besides the step's or generation's memory,
+  what the process holds outside the runtime (Python, torch, the tokenizer, other models), with
+  a first-step allowance until it is measured and 64 MiB for what comes and goes between
+  measurements; the streamed model's runtime also shrinks by the process's footprint as it runs
+  (`process_budget`). On an 8 GB M1 (MPS) the peak footprint went 2,126 -> 1,452 MiB at a
+  1.5 GiB ceiling (Qwen2.5-1.5B), 3,131 -> 2,515 MiB at 2.5 GiB (3B training) and 3,084 ->
+  2,523 MiB (3B generation); losses and text unchanged, same speed. Small ceilings that only
+  fit the weights before are now refused, naming what the process holds besides.
+
 ### Changed: MLX models keep the whole process within the ceiling (0343)
 - `generate` and `finetune` with an mlx-lm model now count what the process already holds
   outside MLX (Python, libraries, the tokenizer) and MLX's buffer cache (now one layer) against

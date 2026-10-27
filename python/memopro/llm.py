@@ -42,6 +42,9 @@ _AUTO_DRAFTS: weakref.WeakKeyDictionary[Any, Any] = weakref.WeakKeyDictionary()
 # the first step's room is this many times the estimate, until measured (0165). Measured over
 # estimate was 1.32-1.37 for Qwen2.5-3B/7B at 512 and 2,048 tokens (E037c, E041; 0187)
 _FIRST_STEP_MARGIN = 1.4
+# memory that comes and goes between two measurements of the process (0344: an Apple GPU step of
+# Qwen2.5-3B rose 10 MiB over a 2.5 GiB ceiling with nothing kept for it)
+_TRANSIENT = 64 << 20
 
 
 def _device(device: str) -> str:
@@ -65,10 +68,24 @@ def _streamed(model: Any, budget: Any, device: str) -> Any:
     if hasattr(model, "memopro_weights"):
         return model
     if isinstance(model, (str, Path)):
-        return rtt.stream_model(model, budget=budget, device=_device(device))
+        from memopro.rt import resolve_budget
+
+        ceiling = resolve_budget(budget)
+        return rtt.stream_model(
+            model, budget=ceiling, runtime=_runtime(ceiling), device=_device(device)
+        )
     raise InvalidArgument(
         "pass a model name or folder, or a model from memopro.rt.torch.stream_model"
     )
+
+
+def _runtime(ceiling: int) -> Any:
+    """The runtime of a model streamed here. The ceiling is the whole process's (0344): besides
+    what `_hold` keeps for the step and the rest of the process, the runtime shrinks by what the
+    process holds while it runs (what the first step's warm-up adds before it can be measured)."""
+    from memopro.rt import Runtime
+
+    return Runtime(budget=ceiling, process_budget=ceiling)
 
 
 def _tokenizer(model: Any, tokenizer: Any) -> Any:
@@ -123,7 +140,7 @@ def _auto_batch(m: Any, seq_len: int, pieces: int) -> int:
     else:
         stats = m.memopro_runtime.stats()
         largest = max(b[0].nbytes for b in m.memopro_weights.buffers.values())
-        room = stats["budget"] - stats["reserve"] - largest
+        room = stats["budget"] - stats["reserve"] - largest - _outside(m)
     batch = 1
     while batch < min(AUTO_BATCH_MAX, pieces) and (
         _FIRST_STEP_MARGIN * _activation_estimate(m.config, seq_len, batch + 1) <= room
@@ -140,11 +157,27 @@ def _gpu_kept(m: Any) -> int:
     return rtt.gpu_kept(m.memopro_weights)
 
 
-def _hold(
-    m: Any, nbytes: int, what: str = "the step's activations", lower: str = "seq_len"
-) -> None:
-    """Keep ``nbytes`` of the runtime's budget for ``what`` (memory outside the weights), or
-    say why not."""
+def _outside(m: Any) -> int:
+    """Bytes the process holds outside the runtime of ``m`` and the GPU memory its step keeps:
+    Python, torch, the tokenizer, other models (0344: the ceiling is the whole process's, as for
+    MLX in 0343). 0 where the process cannot be measured."""
+    from memopro import rt
+
+    footprint = rt.process_footprint()
+    if not footprint:
+        return 0
+    gpu = max(0, _gpu_kept(m)) if m.device.type == "mps" else 0
+    return max(0, footprint - m.memopro_runtime.stats()["used"] - gpu)
+
+
+def _warm_up(m: Any) -> int:
+    """What the rest of the process may add before the first step or pass is measured."""
+    return int((_FIRST_STEP_MARGIN - 1) * _outside(m))
+
+
+def _hold(m: Any, nbytes: int, what: str = "the step's activations", lower: str = "seq_len") -> int:
+    """Keep ``nbytes`` of the runtime's budget for ``what`` (memory outside the weights) and
+    what the rest of the process holds, or say why not; returns all it keeps."""
     from memopro._errors import BudgetExceeded
 
     weights, rt = m.memopro_weights, m.memopro_runtime
@@ -153,12 +186,15 @@ def _hold(
     largest = max(b[0].nbytes for b in weights.buffers.values())
     stats = rt.stats()
     budget = stats["budget"]
-    if budget - stats["reserve"] - nbytes < largest:
+    outside = _outside(m) + _TRANSIENT
+    if budget - stats["reserve"] - nbytes - outside < largest:
         raise BudgetExceeded(
-            f"a {budget >> 20} MiB budget cannot hold the largest weight ({largest >> 20} MiB) "
-            f"and {what} (about {nbytes >> 20} MiB); raise the budget or lower {lower}"
+            f"a {budget >> 20} MiB ceiling cannot hold the largest weight ({largest >> 20} MiB), "
+            f"{what} (about {nbytes >> 20} MiB) and the {outside >> 20} MiB the process holds "
+            f"besides; raise the budget or lower {lower}"
         )
-    rt.hold_back(nbytes)
+    rt.hold_back(nbytes + outside)
+    return nbytes + outside
 
 
 @dataclass
@@ -169,7 +205,7 @@ class FinetuneResult:
     step_seconds: list[float] = field(default_factory=list)
     seconds: float = 0.0
     tokens: int = 0
-    held_back: int = 0  # bytes of the budget kept for the step's activations
+    held_back: int = 0  # bytes of the budget kept for the step's activations and the process
     batch: int = 1  # sequences per step (what batch="auto" chose)
 
 
@@ -267,12 +303,18 @@ def finetune(
     opt = torch.optim.AdamW(params, lr=lr)
     result = FinetuneResult(m, adapter, batch=batch)
     gpu = m.device.type == "mps"
-    # the budget covers the whole step: weights plus what the step keeps (0165; CPU 0175). On
-    # CUDA the step's memory is the GPU's own, outside the (host) budget (0195)
+    # the budget covers the whole process: weights, what the step keeps (0165; CPU 0175) and
+    # the rest of the process (0344). On CUDA the step's memory is the GPU's own, outside the
+    # (host) budget (0195)
+    step = 0
     if m.device.type != "cuda":
-        estimate = _activation_estimate(m.config, seq_len, min(batch, len(pieces)))
-        result.held_back = int(_FIRST_STEP_MARGIN * estimate)
-        _hold(m, result.held_back, lower="seq_len or batch")
+        step = int(
+            _FIRST_STEP_MARGIN * _activation_estimate(m.config, seq_len, min(batch, len(pieces)))
+        )
+    # until the first step is measured, the rest of the process may grow by _FIRST_STEP_MARGIN
+    # as well (0344: the Apple GPU's first step added 92 MiB of 469 outside the runtime)
+    result.held_back = _hold(m, step + _warm_up(m), lower="seq_len or batch")
+    measured = False
     start = time.perf_counter()
     for _ in range(epochs):
         for group in steps:
@@ -284,12 +326,12 @@ def finetune(
             opt.step()
             opt.zero_grad(set_to_none=True)
             # what the step really kept on the GPU, weights excluded (the CPU has no such count:
-            # there the estimate stays)
+            # there the estimate stays), and what the rest of the process holds now
             if gpu:
-                kept = _gpu_kept(m)
-                if kept > result.held_back:
-                    result.held_back = kept
-                    _hold(m, kept, lower="seq_len or batch")
+                step = max(step, _gpu_kept(m))
+            if not measured or step + _outside(m) > result.held_back:
+                result.held_back = _hold(m, step, lower="seq_len or batch")
+                measured = True
             m.memopro_weights.finish()
             result.losses.append(float(loss.detach()))
             result.step_seconds.append(time.perf_counter() - t)
@@ -370,23 +412,26 @@ def generate(
     what = (
         "the draft, cache and intermediates" if draft is not None else "the cache and intermediates"
     )
-    if m.device.type != "cuda":  # on CUDA the cache lives in GPU memory (0195)
-        try:
-            _hold(m, held[0], what, "max_new_tokens")
-        except BudgetExceeded:
-            if not (auto and draft is not None):
-                raise
-            # a draft chosen for the caller must not cost them the generation
-            _note("memopro: the budget cannot hold the draft as well; generating without it")
-            _AUTO_DRAFTS[m] = draft = None
-            held[0], what = estimate, "the cache and intermediates"
-            _hold(m, held[0], what, "max_new_tokens")
+    if m.device.type == "cuda":  # the cache and draft live in GPU memory (0195)
+        held[0] = 0
+    try:  # and the rest of the process, on every device (0344), until measured with room to grow
+        _hold(m, held[0] + _warm_up(m), what, "max_new_tokens")
+    except BudgetExceeded:
+        if not (auto and draft is not None):
+            raise
+        # a draft chosen for the caller must not cost them the generation
+        _note("memopro: the budget cannot hold the draft as well; generating without it")
+        _AUTO_DRAFTS[m] = draft = None
+        held[0], what = (0 if m.device.type == "cuda" else estimate), "the cache and intermediates"
+        _hold(m, held[0], what, "max_new_tokens")
+
+    measured = [False]
 
     def measure(*_: Any) -> None:  # what generation really kept on the GPU
         kept = _gpu_kept(m)
-        if kept > held[0]:
-            held[0] = kept
-            _hold(m, kept, what, "max_new_tokens")
+        if not measured[0] or kept > held[0]:
+            held[0], measured[0] = max(held[0], kept), True
+            _hold(m, held[0], what, "max_new_tokens")
 
     sent = _Sent(streamer) if streamer is not None else None
     hook = m.register_forward_hook(measure) if m.device.type == "mps" else None
@@ -458,7 +503,9 @@ def _room(m: Any, estimate: int) -> int | None:
     rt = m.memopro_runtime._rt
     stats = rt.stats()
     largest = max(b[0].nbytes for b in m.memopro_weights.buffers.values())
-    return stats["budget"] - stats["reserve"] - _machine_short(rt) - largest - estimate
+    return (
+        stats["budget"] - stats["reserve"] - _machine_short(rt) - largest - estimate - _outside(m)
+    )
 
 
 def _machine_short(rt: Any) -> int:
