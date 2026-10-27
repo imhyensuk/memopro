@@ -1,0 +1,31 @@
+{
+ "status": "error",
+ "device": "cuda",
+ "argv": [
+  "gen",
+  "Qwen/Qwen2.5-3B-Instruct",
+  "6442450944",
+  "32"
+ ],
+ "kind": "gen",
+ "model": "Qwen/Qwen2.5-3B-Instruct",
+ "mode": "memopro",
+ "budget": 6442450944,
+ "error": "BudgetExceeded: a 6144 MiB ceiling cannot hold the largest weight (593 MiB), the cache and intermediates (about 2429 MiB) and the 6138 MiB the process holds besides; raise the budget or lower max_new_tokens",
+ "trace": "Traceback (most recent call last):\n  File \"/content/memopro_colab/worker_common.py\", line 136, in guarded\n    main()\n    ~~~~^^\n  File \"/content/memopro_colab/worker_suite.py\", line 295, in main\n    (ft if kind == \"ft\" else gen)(model_id, int(ceiling), *map(int, rest))\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_suite.py\", line 210, in gen\n    texts.append(memopro.generate(path, p, tokenizer=tok, budget=ceiling,\n                 ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n                                  max_new_tokens=new_tokens))\n                                  ^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/llm.py\", line 419, in generate\n    _hold(m, held[0] + _warm_up(m), what, \"max_new_tokens\")\n    ~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/llm.py\", line 191, in _hold\n    raise BudgetExceeded(\n    ...<3 lines>...\n    )\nmemopro._errors.BudgetExceeded: a 6144 MiB ceiling cannot hold the largest weight (593 MiB), the cache and intermediates (about 2429 MiB) and the 6138 MiB the process holds besides; raise the budget or lower max_new_tokens\n",
+ "worker_s": 35.9,
+ "memory_end": {
+  "host_peak_rss_bytes": 6381772800,
+  "allocated_bytes": 6295218176,
+  "reserved_bytes": 6465519616,
+  "peak_allocated_bytes": 6300858880,
+  "peak_reserved_bytes": 6465519616,
+  "device_used_bytes": 6602752000,
+  "peak_device_used_bytes": 6602752000
+ },
+ "memopro_report": [],
+ "case": "Qwen2.5-3B-Instruct__gen_6144",
+ "wall_s": 43.6,
+ "timeline_peak_gpu_used_bytes": 6602883072,
+ "timeline_peak_host_used_bytes": 8139194368
+}

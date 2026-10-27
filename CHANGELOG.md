@@ -2,6 +2,14 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Fixed: `generate(folder)` called again is no longer refused (0353)
+- Each call with a folder streams a new model; the one before stayed in a reference cycle until
+  the collector ran, so its runtime and GPU copies counted as the process's and the next call
+  was refused (`BudgetExceeded` at the second prompt on a Colab T4, E068). A new streamed
+  model now collects first and empties the device cache.
+
 ## 0.2.0b3 (beta)
 
 Fix from the T4 re-run of 0.2.0b2 (E068, docs/research/0351).

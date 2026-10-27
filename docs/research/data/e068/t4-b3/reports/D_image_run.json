@@ -1,0 +1,76 @@
+{
+ "report": {
+  "entries": [
+   {
+    "technique": "enable.rt",
+    "action": "applied",
+    "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+    "reclaimed_bytes": null,
+    "timestamp": 1793107823.8027804
+   },
+   {
+    "technique": "enable.numpy",
+    "action": "applied",
+    "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793107823.8027859
+   },
+   {
+    "technique": "enable.transformers",
+    "action": "applied",
+    "detail": "from_pretrained loads models that do not fit as memopro.load",
+    "reclaimed_bytes": null,
+    "timestamp": 1793107823.802791
+   },
+   {
+    "technique": "transparent",
+    "action": "applied",
+    "detail": "budget 403.61 MiB, peak 355.05 MiB; 3523 faults, 3327 chunks compressed (3.25 GiB to 1.45 GiB), 2755 brought back, 0 over budget; nothing written",
+    "reclaimed_bytes": null,
+    "timestamp": 1793107838.6045916
+   }
+  ]
+ },
+ "transparent": {
+  "budget": 423213056,
+  "limit": 422164480,
+  "used": 0,
+  "peak_used": 372293632,
+  "regions": 0,
+  "mapped_bytes": 0,
+  "resident_bytes": 0,
+  "compressed_bytes": 0,
+  "faults": 3523,
+  "zero_fills": 768,
+  "restores": 2755,
+  "restore_seconds": 4.067151160999998,
+  "evictions": 3327,
+  "compress_in": 3488612352,
+  "compress_out": 1560303346,
+  "compress_seconds": 5.118052811999992,
+  "incompressible": 0,
+  "overruns": 0,
+  "spurious": 0,
+  "outside_peak": 53661696,
+  "limit_low": 368502784,
+  "machine_limited": 0,
+  "trims": 0,
+  "holds": 0,
+  "written_bytes": 0
+ },
+ "session": {
+  "elapsed_seconds": 14.882106696999926,
+  "memopro_seconds": 9.18520397299999,
+  "slowdown": 2.612315396277441,
+  "ceiling": 423213056,
+  "footprint": 46395392,
+  "peak_footprint": 427208704,
+  "exceeded_bytes": 3995648,
+  "overruns": 0,
+  "activations_moved": 0,
+  "activations_over_ceiling": 0,
+  "runtimes": [],
+  "predictions": []
+ },
+ "ceiling": 423213056
+}

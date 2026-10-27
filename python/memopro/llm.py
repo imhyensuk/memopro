@@ -68,12 +68,23 @@ def _streamed(model: Any, budget: Any, device: str) -> Any:
     if hasattr(model, "memopro_weights"):
         return model
     if isinstance(model, (str, Path)):
+        import gc
+
+        import torch
+
         from memopro.rt import resolve_budget
 
+        # a model streamed by an earlier call and dropped since sits in a reference cycle until
+        # the collector runs; until then its runtime and device copies count as the process's
+        # and the next call is refused (E068, 0353: 6,138 MiB "held besides" at a 6 GiB ceiling)
+        gc.collect()
+        where = _device(device)
+        if where == "cuda":
+            torch.cuda.empty_cache()
+        elif where == "mps":  # what it held must not count as this model's GPU memory
+            torch.mps.empty_cache()
         ceiling = resolve_budget(budget)
-        return rtt.stream_model(
-            model, budget=ceiling, runtime=_runtime(ceiling), device=_device(device)
-        )
+        return rtt.stream_model(model, budget=ceiling, runtime=_runtime(ceiling), device=where)
     raise InvalidArgument(
         "pass a model name or folder, or a model from memopro.rt.torch.stream_model"
     )

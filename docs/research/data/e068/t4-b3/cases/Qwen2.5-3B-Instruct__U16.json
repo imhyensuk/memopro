@@ -1,0 +1,82 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "Qwen/Qwen2.5-3B-Instruct",
+  "16",
+  "10",
+  "512"
+ ],
+ "kind": "unsloth_lora",
+ "model": "Qwen/Qwen2.5-3B-Instruct",
+ "bits": 16,
+ "unsloth": "2026.10.9",
+ "torch": "2.14.1+cu130",
+ "load_s": 28.6,
+ "dtype": "torch.float16",
+ "memory_after_load": {
+  "host_peak_rss_bytes": 6321049600,
+  "allocated_bytes": 6180398080,
+  "reserved_bytes": 6201278464,
+  "peak_allocated_bytes": 6180398592,
+  "peak_reserved_bytes": 6264193024,
+  "device_used_bytes": 6340608000,
+  "peak_device_used_bytes": 6403522560
+ },
+ "losses": [
+  2.662105083465576,
+  3.026881456375122,
+  3.1175780296325684,
+  2.9086849689483643,
+  2.945653200149536,
+  2.8344318866729736,
+  2.9984700679779053,
+  2.827040195465088,
+  2.5622634887695312,
+  2.1815807819366455
+ ],
+ "loss_bits": [
+  "0x1.54bfdc0000000p+1",
+  "0x1.8370da0000000p+1",
+  "0x1.8f0ccc0000000p+1",
+  "0x1.744fca0000000p+1",
+  "0x1.790b2a0000000p+1",
+  "0x1.6aceaa0000000p+1",
+  "0x1.7fcdde0000000p+1",
+  "0x1.69dc740000000p+1",
+  "0x1.47f8400000000p+1",
+  "0x1.173e0a0000000p+1"
+ ],
+ "step_s": [
+  25.08955693244934,
+  0.4417243003845215,
+  0.44723057746887207,
+  0.4479804039001465,
+  0.44730257987976074,
+  0.4456198215484619,
+  0.447324275970459,
+  0.44440507888793945,
+  0.44666051864624023,
+  0.4477241039276123
+ ],
+ "tokens": 5120,
+ "worker_s": 72.9,
+ "memory_end": {
+  "host_peak_rss_bytes": 6321049600,
+  "allocated_bytes": 6254130688,
+  "reserved_bytes": 6694109184,
+  "peak_allocated_bytes": 6654871552,
+  "peak_reserved_bytes": 6694109184,
+  "device_used_bytes": 6841827328,
+  "peak_device_used_bytes": 6841827328
+ },
+ "memopro_report": [
+  {
+   "error": "No module named 'memopro'"
+  }
+ ],
+ "case": "Qwen2.5-3B-Instruct__U16",
+ "wall_s": 98.7,
+ "timeline_peak_gpu_used_bytes": 6841958400,
+ "timeline_peak_host_used_bytes": 4826161152
+}
