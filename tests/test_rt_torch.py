@@ -1083,6 +1083,14 @@ def test_auto_draft_takes_the_closest_local_model_with_the_same_tokenizer(tmp_pa
     for dirs in ([str(elsewhere)], [str(elsewhere / "mine")]):
         with memopro.using(model_dirs=dirs):
             assert llm._local_draft(m3, tok)[0] == "mine"
+    # a copy whose weights are not there (E068: link text in a synced cache) is passed over
+    broken = tmp_path / "broken" / "mine"
+    _tiny_qwen(broken, 1, hidden=128, layers=2)
+    tok.save_pretrained(broken)
+    for f in broken.glob("*.safetensors"):
+        f.write_text("../../blobs/" + "0" * 64)
+    with memopro.using(model_dirs=[str(broken)]):
+        assert llm._local_draft(m3, tok) is None
     monkeypatch.setenv("MEMOPRO_MODEL_DIRS", os.pathsep.join(["/nowhere", str(elsewhere)]))
     assert memopro.get_config().model_dirs == ("/nowhere", str(elsewhere))
     assert llm._local_draft(m3, tok)[0] == "mine"

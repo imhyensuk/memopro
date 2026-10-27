@@ -1,0 +1,45 @@
+[08:32:19] {"memopro": "0.2.0b1", "torch": "2.11.0+cu130", "transformers": "5.20.2", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0195_cuda_stream": true}}
+[08:32:19] cuda; time left after setup: 119 min
+[08:32:19] run tests
+[08:33:29]   -> failed (70.4s)
+[08:34:10] model Qwen/Qwen2.5-3B-Instruct on Drive (40s)
+[08:34:10] Qwen/Qwen2.5-3B-Instruct: Drive cache entries ['model-00002-of-00002.safetensors'] are link text without their blob; downloading to the local disk instead
+[08:35:03] downloaded Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 53s)
+[08:35:03] run Qwen2.5-3B-Instruct__plain_lora
+[08:36:56]   -> ok (113.1s)
+[08:36:56] run Qwen2.5-3B-Instruct__plain_gen
+[08:37:32]   -> ok (35.9s)
+[08:37:32] run Qwen2.5-3B-Instruct__ft_6144
+[08:39:11]   -> ok (99.3s)
+[08:39:11] run Qwen2.5-3B-Instruct__ft_8192
+[08:40:56]   -> ok (105.2s)
+[08:40:56] run Qwen2.5-3B-Instruct__gen_6144
+[08:41:17]   -> error (20.8s)
+[08:43:24] model Qwen/Qwen2.5-7B-Instruct on Drive (127s)
+[08:43:25] Qwen/Qwen2.5-7B-Instruct: Drive cache entries ['model-00002-of-00004.safetensors', 'model-00004-of-00004.safetensors'] are link text without their blob; downloading to the local disk instead
+[08:45:42] downloaded Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 137s)
+[08:45:42] run Qwen2.5-7B-Instruct__ft_7168
+[08:55:32]   -> ok (590.6s)
+[08:55:32] run Qwen2.5-7B-Instruct__ft_9216
+[09:05:25]   -> ok (592.4s)
+[09:05:25] run Qwen2.5-7B-Instruct__gen_7168
+[09:05:50]   -> error (25.0s)
+[09:05:50] run D_image_plain
+[09:05:59]   -> ok (9.4s)
+[09:05:59] run D_image_run
+[09:06:21]   -> ok (21.4s)
+[09:06:21] run D_classify_plain
+[09:06:46]   -> ok (25.6s)
+[09:06:46] run D_classify_run
+[09:08:07]   -> ok (80.7s)
+[09:08:07] installing Unsloth into its own virtual environment with uv (~3-6 min)
+[09:10:26] Unsloth environment: 🦥 Unsloth: Will patch your computer to enable 2x faster free finetuning.
+Unsloth: xformers is installed but cannot load with torch 2.14.1+cu130 (it was built for 2.10.0+cu128), so PyTorch attention is used instead.
+To install a matching xformers, run `unsloth install-kernels xformers`, or `pip uninstall xformers` to hide this. UNSLOTH_ENABLE_LOGGING=1 shows the full error.
+🦥 Unsloth Zoo will now patch everything to make training faster!
+2026.10.9 2.14.1+cu130 5.17.0
+[09:10:27] model Qwen/Qwen2.5-3B-Instruct on Drive (1s)
+[09:10:28] Qwen/Qwen2.5-3B-Instruct: Drive cache entries ['model-00002-of-00002.safetensors', 'model-00001-of-00002.safetensors'] are link text without their blob; downloading to the local disk instead
+[09:11:25] downloaded Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 57s)
+[09:11:28] run Qwen2.5-3B-Instruct__U16
+[09:14:27]   -> ok (178.8s)
