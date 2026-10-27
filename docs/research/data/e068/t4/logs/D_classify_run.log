@@ -1,0 +1,7 @@
+$ /usr/bin/python3 /content/memopro_colab/worker_memopro_run.py run --budget 1280827392 --no-torch --report-json /content/drive/MyDrive/memopro_colab/results/beta_t4/20261027-083215/reports/D_classify_run.json /content/memopro_colab/worker_data.py classify.py
+RESULT {"status": "ok", "error": null, "result": {"coef": "a9b9ed86098f6946ac00bda1e9d6576ebac3caae9491182e2712f9130b5fbeb9", "accuracy": 0.9514175, "nnz": 21699438, "seconds": 66.5721704460002, "import_rss_bytes": 3012030464, "maxrss_bytes": 1282654208, "maxrss_rusage_bytes": 3012030464}, "preloaded": false}
+memopro report:
+  [applied] enable.rt - runtimes and pagers share the ceiling; budget="auto" (finetune, generate, stream_model, Runtime) means it
+  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)
+  [applied] enable.transformers - from_pretrained loads models that do not fit as memopro.load
+  [applied] transparent - budget 1.19 GiB, peak 1.02 GiB; 10309 faults, 8340 chunks compressed (8.14 GiB to 1.60 GiB), 5410 brought back, 0 over budget; nothing written

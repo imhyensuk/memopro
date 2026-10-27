@@ -1,0 +1,83 @@
+$ /usr/bin/python3 /content/memopro_colab/worker_pytest.py /content/memopro-src tests
+........s...................................................s......s.... [ 39%]
+......................s....sss................s............s....ss....ss [ 79%]
+....ss.ss..s.s...........s.....s.F....                                   [100%]
+=================================== FAILURES ===================================
+___ test_run_applies_the_loading_policy_only_where_the_script_did_not_choose ___
+
+tiny_dir = '/tmp/pytest-of-root/pytest-0/run-model0'
+tmp_path = PosixPath('/tmp/pytest-of-root/pytest-0/test_run_applies_the_loading_p0')
+
+    def test_run_applies_the_loading_policy_only_where_the_script_did_not_choose(tiny_dir, tmp_path):
+        (tmp_path / "app.py").write_text(SCRIPT)
+        stored = sum(
+            f.stat().st_size for f in __import__("pathlib").Path(tiny_dir).glob("*.safetensors")
+        )
+        budget = str(int(stored * 0.8))
+        args = [
+            "--budget",
+            budget,
+            "app.py",
+            tiny_dir,
+            "hello",
+        ]
+        done = _run_cli(args, tmp_path)
+        assert done.returncode == 0, done.stderr[-2000:]
+        line = next(l for l in done.stdout.splitlines() if l.startswith("RESULT"))
+        _, name, arg, chosen, explicit = line.split()
+        assert (name, arg) == ("__main__", "hello")
+        assert chosen == "torch.float32"  # did not fit, and is still never converted (0328)
+        assert explicit == "torch.float32"  # the script's explicit choice is kept
+>       assert "loaded as written" in done.stderr and "loading policy installed" in done.stderr
+E       AssertionError: assert ('loaded as written' in '/usr/local/lib/python3.13/dist-packages/memopro/_enable.py:279: UserWarning: memopro: the ceiling of 1.70 MiB cannot ...ed: loaded as offload.cpu (exactly as stored)\n  [exceeded] ceiling - peak 916.68 MiB against 1.70 MiB (+914.98 MiB)\n')
+E        +  where '/usr/local/lib/python3.13/dist-packages/memopro/_enable.py:279: UserWarning: memopro: the ceiling of 1.70 MiB cannot ...ed: loaded as offload.cpu (exactly as stored)\n  [exceeded] ceiling - peak 916.68 MiB against 1.70 MiB (+914.98 MiB)\n' = CompletedProcess(args=['/usr/bin/python3', '-m', 'memopro', 'run', '--budget', '1786380', 'app.py', '/tmp/pytest-of-ro...d: loaded as offload.cpu (exactly as stored)\n  [exceeded] ceiling - peak 916.68 MiB against 1.70 MiB (+914.98 MiB)\n').stderr
+
+tests/test_run.py:86: AssertionError
+---------------------------- Captured stderr setup -----------------------------
+
+Writing model shards:   0%|          | 0/1 [00:00<?, ?it/s]
+Writing model shards: 100%|██████████| 1/1 [00:00<00:00, 332.96it/s]
+=============================== warnings summary ===============================
+tests/test_examples.py::test_quickstart_notebook_runs
+  /usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py:434: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_new.cpp:1586.)
+    t = torch.frombuffer(pin, dtype=dtype, count=numel).view(shape)
+
+tests/test_rt_torch.py::test_lora_on_streamed_frozen_weights_trains_identically
+  /content/memopro-src/tests/test_rt_torch.py:122: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+  Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+    losses.append(float(loss))
+
+tests/test_rt_torch.py::test_loss_chunks_keep_float32_logits_under_the_mps_heap_threshold
+  /usr/local/lib/python3.13/dist-packages/torch/utils/checkpoint.py:232: UserWarning: None of the inputs have requires_grad=True. Gradients will be None
+    check_backward_validity(args)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+FAILED tests/test_run.py::test_run_applies_the_loading_policy_only_where_the_script_did_not_choose
+SKIPPED [1] tests/test_int4pack.py:17: could not import 'torchao': No module named 'torchao'
+SKIPPED [1] tests/test_mlx.py:8: could not import 'mlx.core': No module named 'mlx'
+SKIPPED [1] tests/test_activations.py:30: no MPS
+SKIPPED [1] tests/test_doctor.py:59: vm_stat is macOS only
+SKIPPED [1] tests/test_doctor.py:175: needs a usable Apple MPS device
+SKIPPED [1] tests/test_macos_malloc.py:85: the restart only happens on macOS
+SKIPPED [1] tests/test_mps_heap.py:99: Apple silicon only
+SKIPPED [1] tests/test_mps_heap.py:121: Apple silicon only
+SKIPPED [1] tests/test_mps_heap.py:167: MPS only
+SKIPPED [1] tests/test_rt_adopt.py:143: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:178: needs a usable Apple GPU (CI macOS VMs cannot allocate)
+SKIPPED [1] tests/test_rt_torch.py:297: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:329: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:459: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:481: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:614: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:639: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:667: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:707: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:777: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:805: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:1116: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_transparent.py:74: elsewhere the refusal is checked
+1 failed, 160 passed, 23 skipped, 3 warnings in 64.36s (0:01:04)
+
+
+RESULT {"status": "failed", "returncode": 1, "counts": {"failed": 1, "passed": 160, "skipped": 23}, "failed": ["FAILED tests/test_run.py::test_run_applies_the_loading_policy_only_where_the_script_did_not_choose"], "skipped": ["SKIPPED [1] tests/test_int4pack.py:17: could not import 'torchao': No module named 'torchao'", "SKIPPED [1] tests/test_mlx.py:8: could not import 'mlx.core': No module named 'mlx'", "SKIPPED [1] tests/test_activations.py:30: no MPS", "SKIPPED [1] tests/test_doctor.py:59: vm_stat is macOS only", "SKIPPED [1] tests/test_doctor.py:175: needs a usable Apple MPS device", "SKIPPED [1] tests/test_macos_malloc.py:85: the restart only happens on macOS", "SKIPPED [1] tests/test_mps_heap.py:99: Apple silicon only", "SKIPPED [1] tests/test_mps_heap.py:121: Apple silicon only", "SKIPPED [1] tests/test_mps_heap.py:167: MPS only", "SKIPPED [1] tests/test_rt_adopt.py:143: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:178: needs a usable Apple GPU (CI macOS VMs cannot allocate)", "SKIPPED [1] tests/test_rt_torch.py:297: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:329: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:459: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:481: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:614: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:639: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:667: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:707: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:777: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:805: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:1116: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_transparent.py:74: elsewhere the refusal is checked"], "files": ["tests"]}

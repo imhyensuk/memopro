@@ -1,0 +1,10 @@
+$ /usr/bin/python3 /content/memopro_colab/worker_memopro_run.py run --budget 423170048 --no-torch --report-json /content/drive/MyDrive/memopro_colab/results/beta_t4/20261027-083215/reports/D_image_run.json /content/memopro_colab/worker_data.py image.py 1024
+/usr/local/lib/python3.13/dist-packages/memopro/_enable.py:279: UserWarning: memopro: the ceiling of 403.57 MiB cannot be kept (the process holds 697.54 MiB now). Most of it is memory memopro cannot move (the interpreter, libraries, arrays under 16 MiB). Raise the ceiling or hold less data at once; Session.estimate(sample, total=...) predicts whether data fits before running.
+  warnings.warn(_over_message(s.budget, now, pager), UserWarning, stacklevel=1)
+RESULT {"status": "ok", "error": null, "result": {"images": 1024, "means_sha256": "b861a4784dbc9750534a825b502ea0d9efa11ff143561a7bd0d481bd500cf28d", "counts_sha256": "8d39ee60d44d19ffb1222003fc927446e2a1d993da991bd2f7d85fbf4b24f84f", "total": 232319114517, "max": 1780, "stack_sha256": "8bb0fe82b1bf12c3aa9547008331b8c507988148a6dac54e78b628ce3918e319", "build_seconds": 4.919341340000301, "seconds": 17.242669041000227, "maxrss_bytes": 734060544, "maxrss_rusage_bytes": 3012030464}, "preloaded": false}
+memopro report:
+  [applied] enable.rt - runtimes and pagers share the ceiling; budget="auto" (finetune, generate, stream_model, Runtime) means it
+  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)
+  [applied] enable.transformers - from_pretrained loads models that do not fit as memopro.load
+  [applied] transparent - budget 403.57 MiB, peak 402.55 MiB; 3348 faults, 2949 chunks compressed (2.88 GiB to 1.32 GiB), 2580 brought back, 0 over budget; nothing written
+  [exceeded] ceiling - peak 700.05 MiB against 403.57 MiB (+296.49 MiB)

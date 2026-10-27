@@ -1,0 +1,83 @@
+{
+ "report": {
+  "entries": [
+   {
+    "technique": "enable.rt",
+    "action": "applied",
+    "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+    "reclaimed_bytes": null,
+    "timestamp": 1793091960.101502
+   },
+   {
+    "technique": "enable.numpy",
+    "action": "applied",
+    "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793091960.1015074
+   },
+   {
+    "technique": "enable.transformers",
+    "action": "applied",
+    "detail": "from_pretrained loads models that do not fit as memopro.load",
+    "reclaimed_bytes": null,
+    "timestamp": 1793091960.1015124
+   },
+   {
+    "technique": "transparent",
+    "action": "applied",
+    "detail": "budget 403.57 MiB, peak 402.55 MiB; 3348 faults, 2949 chunks compressed (2.88 GiB to 1.32 GiB), 2580 brought back, 0 over budget; nothing written",
+    "reclaimed_bytes": null,
+    "timestamp": 1793091981.2201345
+   },
+   {
+    "technique": "ceiling",
+    "action": "exceeded",
+    "detail": "peak 700.05 MiB against 403.57 MiB (+296.49 MiB)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793091981.2201457
+   }
+  ]
+ },
+ "transparent": {
+  "budget": 423170048,
+  "limit": 422121472,
+  "used": 0,
+  "peak_used": 422106338,
+  "regions": 0,
+  "mapped_bytes": 0,
+  "resident_bytes": 0,
+  "compressed_bytes": 0,
+  "faults": 3348,
+  "zero_fills": 768,
+  "restores": 2580,
+  "restore_seconds": 4.370104922999996,
+  "evictions": 2949,
+  "compress_in": 3092250624,
+  "compress_out": 1417610342,
+  "compress_seconds": 5.490725985999999,
+  "incompressible": 0,
+  "overruns": 0,
+  "spurious": 0,
+  "outside_peak": 312790931,
+  "limit_low": 109330541,
+  "machine_limited": 0,
+  "trims": 0,
+  "holds": 1914,
+  "written_bytes": 0
+ },
+ "session": {
+  "elapsed_seconds": 21.197027115999845,
+  "memopro_seconds": 9.860830908999995,
+  "slowdown": 1.8698535848304347,
+  "ceiling": 423170048,
+  "footprint": 83886080,
+  "peak_footprint": 734060544,
+  "exceeded_bytes": 310890496,
+  "overruns": 0,
+  "activations_moved": 0,
+  "activations_over_ceiling": 0,
+  "runtimes": [],
+  "predictions": []
+ },
+ "ceiling": 423170048
+}

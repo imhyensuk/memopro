@@ -83,7 +83,9 @@ def test_run_applies_the_loading_policy_only_where_the_script_did_not_choose(tin
     assert (name, arg) == ("__main__", "hello")
     assert chosen == "torch.float32"  # did not fit, and is still never converted (0328)
     assert explicit == "torch.float32"  # the script's explicit choice is kept
-    assert "loaded as written" in done.stderr and "loading policy installed" in done.stderr
+    assert "loading policy installed" in done.stderr
+    # with a GPU the exact offload.cpu is chosen (E068 on a T4); without one nothing else fits
+    assert ("offload.cpu" if torch.cuda.is_available() else "loaded as written") in done.stderr
 
 
 def test_run_leaves_models_that_fit_alone_and_cleans_up(tiny_dir, tmp_path):

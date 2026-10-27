@@ -585,10 +585,12 @@ def _local_draft(m: Any, tok: Any) -> tuple[str, Path] | None:
     sizes until the tokenizer check."""
     import json
     import math
+    import struct
 
     import transformers
 
     import memopro.rt.torch as rtt
+    from memopro._safetensors import read_header
 
     target = sum(buf.nbytes for buf, _, _ in m.memopro_weights.buffers.values())
     vocab = getattr(m.config, "vocab_size", None)
@@ -603,8 +605,12 @@ def _local_draft(m: Any, tok: Any) -> tuple[str, Path] | None:
         try:
             cfg = json.loads((snap / "config.json").read_text())
             names = [p.name for p in snap.iterdir()]
-            size = sum((snap / n).stat().st_size for n in rtt._weight_files(names))
-        except (OSError, ValueError):
+            files = rtt._weight_files(names)
+            size = sum((snap / n).stat().st_size for n in files)
+            for n in files:  # a broken copy (E068: link text in a synced cache) is no draft
+                if n.endswith(".safetensors"):
+                    read_header(snap / n)
+        except (OSError, ValueError, struct.error, MemoproError):
             continue
         causal = any(str(a).endswith("ForCausalLM") for a in cfg.get("architectures") or ())
         v = cfg.get("vocab_size")

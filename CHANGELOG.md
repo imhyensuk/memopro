@@ -2,6 +2,13 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Fixed: a broken model copy on the disk no longer stops `generate` (0348)
+- The automatic draft search skips model folders whose safetensors cannot be read (for example
+  link text in a synced Hugging Face cache) instead of failing the whole generation (E068 on a
+  Colab T4).
+
 ## 0.2.0b1 (beta)
 
 The first beta of 0.2.0: everything is lossless and nothing memopro makes is written to the
