@@ -8,6 +8,9 @@
 #   4 unsloth (T4 only, report) Unsloth 16-bit on the same 3B task
 TIME_LIMIT_S = 120 * 60  # cases that would end after this are skipped (setup counts too)
 PIP_SPEC = "memopro[llm]==0.2.0b3"
+# diagnosis (0354): build this branch of the public repository here instead of installing
+# PIP_SPEC (~5-8 min more, once per commit); "" = the PyPI release, for the judged run
+SOURCE_REF = "main"
 # model -> two whole-process host ceilings (bytes). The worker's process alone holds ~1.5 GB
 # (torch, the tokenizer, the WikiText dataset) and the first step reserves 0.4x more of it
 # (0344), so every ceiling here is below the weights but well above the process itself
@@ -43,6 +46,13 @@ def step_s(r):
     return sum(s[1:]) / len(s[1:]) if len(s) > 1 else None
 
 
+def built_from():
+    """What this run measures: the PyPI release, or the branch and commit built here."""
+    if SOURCE_REF:
+        return f"{SOURCE_REF}@{os.environ.get('MP_MEMOPRO_COMMIT', '?')}"
+    return PIP_SPEC.split("==")[-1]
+
+
 def on_gpu():
     try:
         import torch  # noqa: PLC0415
@@ -57,7 +67,8 @@ def beta_body():
     where = "cuda" if gpu else "cpu"
     models = GPU_MODELS if gpu else CPU_MODELS
     lora = LORA[where]
-    config = {"PIP_SPEC": PIP_SPEC, "GIT_REF": GIT_REF, "MODELS": models, "LORA": lora,
+    config = {"PIP_SPEC": PIP_SPEC, "GIT_REF": GIT_REF, "SOURCE_REF": SOURCE_REF,
+              "MODELS": models, "LORA": lora,
               "NEW_TOKENS": NEW_TOKENS, "DATA_WORKLOADS": DATA_WORKLOADS, "PARTS": PARTS}
     run, env = bootstrap("beta_t4" if gpu else "beta_cpu", config)
     _log(f"{where}; time left after setup: {left() / 60:.0f} min")
@@ -198,7 +209,7 @@ def summarize_beta(run, gpu, models):
             notes.append(f"- `{key}` ({r.get('status')}): {text.replace(chr(10), ' ')[:400]}")
     cols = [("check", lambda r: r["check"]), ("criterion", lambda r: r["criterion"]),
             ("result", lambda r: r["result"]), ("detail", lambda r: r["detail"])]
-    return write_summary(run, f"memopro 0.2.0b3 on Colab {'T4' if gpu else 'CPU'} (E068)", cols,
+    return write_summary(run, f"memopro {built_from()} on Colab {'T4' if gpu else 'CPU'} (E068)", cols,
                          rows, notes)
 
 

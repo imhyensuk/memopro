@@ -128,7 +128,7 @@ NOTEBOOKS = {
 """),
     "beta": ("colab_beta.ipynb", "cell_beta.py", """# memopro 0.2.0b3 베타 시험: Colab T4와 Colab CPU (docs/research/0346, E068)
 
-PyPI에 올린 **0.2.0b3**을 사용자처럼 설치해(`pip install --pre "memopro[llm]==0.2.0b3"`) 잰다. 같은 셀을 **두 번** 실행한다: 한 번은 **T4 GPU** 런타임, 한 번은 **CPU** 런타임(셀이 어느 쪽인지 알아서 고른다, 결과 폴더 `results/beta_t4/`·`results/beta_cpu/`).
+PyPI에 올린 **0.2.0b3**을 사용자처럼 설치해(`pip install --pre "memopro[llm]==0.2.0b3"`) 잰다. 단, 설정 `SOURCE_REF = "main"`(기본, 진단용, 0354)이면 공개 저장소의 그 브랜치를 받아 여기서 빌드해 잰다(커밋마다 처음 5~8분 더 걸림). 판정용 실행은 `SOURCE_REF = ""`로 PyPI 판을 쓴다. 같은 셀을 **두 번** 실행한다: 한 번은 **T4 GPU** 런타임, 한 번은 **CPU** 런타임(셀이 어느 쪽인지 알아서 고른다, 결과 폴더 `results/beta_t4/`·`results/beta_cpu/`).
 
 | 순서 | 갈래 | 무엇을 보나 |
 |---|---|---|
