@@ -192,6 +192,10 @@ def finetune(
 ) -> FinetuneResult:
     """LoRA fine-tuning of a causal LM whose 16-bit weights stay in their files.
 
+    ``model`` may also be a model loaded with ``mlx_lm.load`` (pass its tokenizer): then it is
+    trained with mlx-lm's LoRA layers and loss, the same as training it whole, and memopro only
+    reads again the layers that do not fit the ceiling (0339).
+
     ``texts`` are joined (end-of-text token between them) and cut into ``seq_len``-token pieces,
     ``batch`` per step (the last step may hold fewer). Each streamed weight is read once per
     step whatever ``batch`` is, so a larger batch trains more tokens per read (0252); it is
@@ -203,6 +207,25 @@ def finetune(
     reproducible; ``checkpointing=False`` saves a pass over the streamed weights (about 10% on an
     M1) but keeps every layer's activations and, on Apple GPUs, made results differ from run to
     run (0156)."""
+    from memopro import _mlx
+
+    if _mlx.is_mlx_model(model):  # the user's mlx-lm model is the original (0334 C, 0339)
+        if device != "auto" or checkpointing is not True:
+            raise InvalidArgument("an MLX model takes neither device nor checkpointing")
+        return _mlx.finetune(
+            model,
+            texts,
+            tokenizer=tokenizer,
+            budget=budget,
+            epochs=epochs,
+            seq_len=seq_len,
+            batch=batch,
+            lr=lr,
+            rank=rank,
+            alpha=alpha,
+            targets=targets,
+            seed=seed,
+        )
     import peft
     import torch
 
@@ -435,8 +458,12 @@ def _room(m: Any, estimate: int) -> int | None:
     rt = m.memopro_runtime._rt
     stats = rt.stats()
     largest = max(b[0].nbytes for b in m.memopro_weights.buffers.values())
-    short = rt.limit() - rt.machine_limit()
-    return stats["budget"] - stats["reserve"] - short - largest - estimate
+    return stats["budget"] - stats["reserve"] - _machine_short(rt) - largest - estimate
+
+
+def _machine_short(rt: Any) -> int:
+    """Bytes of the runtime's limit the machine cannot give without swapping now (0333)."""
+    return rt.limit() - rt.machine_limit()
 
 
 def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:

@@ -12,6 +12,17 @@ transformers = pytest.importorskip("transformers")
 tokenizers = pytest.importorskip("tokenizers")
 
 
+@pytest.fixture(autouse=True)
+def _give_metal_memory_back():
+    """MLX keeps freed Metal buffers in its cache, and torch's MPS count of what the GPU keeps
+    is the process's: give them back so later tests measure only their own."""
+    yield
+    import gc
+
+    gc.collect()
+    mx.clear_cache()
+
+
 def _tiny(path, layers=6):
     torch.manual_seed(0)
     cfg = transformers.Qwen2Config(
@@ -80,3 +91,75 @@ def test_mlx_models_take_only_what_mlx_lm_does(tmp_path):
         memopro.generate(model, "w2", tokenizer=tok, draft="x", max_new_tokens=2)
     with pytest.raises(memopro.BudgetExceeded):
         memopro.generate(model, "w2", tokenizer=tok, budget=1 << 20, max_new_tokens=2)
+
+
+def _whole_graph_lora(path, batches, steps_per_batch=1, rank=8, alpha=16, lr=1e-3):
+    """mlx-lm's own training step on the whole model (the original): the same LoRA layers and
+    loss, value_and_grad over the whole graph, compiled as mlx-lm's trainer does."""
+    from functools import partial
+
+    import mlx.optimizers as optim
+    from mlx import nn
+    from mlx_lm.tuner.trainer import default_loss
+    from mlx_lm.tuner.utils import linear_to_lora_layers
+
+    model, _ = mlx_lm.load(path)
+    mx.random.seed(0)
+    model.freeze()
+    keys = sorted(
+        n
+        for n, _ in model.layers[0].named_modules()
+        if n and n.split(".")[-1] in ("q_proj", "k_proj", "v_proj", "o_proj")
+    )
+    linear_to_lora_layers(
+        model,
+        len(model.layers),
+        {"rank": rank, "scale": alpha / rank, "dropout": 0.0, "keys": keys},
+    )
+    opt = optim.AdamW(learning_rate=lr)
+    lvg = nn.value_and_grad(model, default_loss)
+    state = [model.state, opt.state, mx.random.state]
+
+    @partial(mx.compile, inputs=state, outputs=state)
+    def step(x, lengths):
+        (loss, _), g = lvg(model, x, lengths)
+        opt.update(model, g)
+        return loss
+
+    losses = []
+    for group in batches:
+        x = mx.array(group)
+        loss = step(x, mx.array([[0, x.shape[1] - 1]] * x.shape[0]))
+        mx.eval(state)
+        losses.append(loss.item())
+    return losses, model
+
+
+def test_streamed_mlx_lora_equals_mlx_lm_whole_graph_training(tmp_path, monkeypatch):
+    from mlx.utils import tree_flatten
+
+    from memopro import _mlx, llm
+
+    # the step's activations are tiny here; a small estimate leaves the budget to the layers
+    monkeypatch.setattr(llm, "_activation_estimate", lambda *a: 1 << 20)
+
+    path = _tiny(tmp_path / "t")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(3)]
+    model, tok = mlx_lm.load(path, lazy=True)
+    memopro.report().clear()
+    r = memopro.finetune(model, texts, tokenizer=tok, budget=15 << 20, seq_len=16, batch=2, lr=1e-3)
+    assert "read again each pass" in memopro.report().entries[-1].detail
+    assert not memopro.report().entries[-1].detail.startswith("mlx-lm LoRA; 6 of")
+    eos = tok.eos_token
+    ids = tok.encode(eos.join(texts) + eos)
+    pieces = [p for p in (ids[i : i + 16] for i in range(0, len(ids) - 1, 16)) if len(p) > 1]
+    batches = [pieces[i : i + 2] for i in range(0, len(pieces), 2)]
+    if len({len(p) for p in batches[-1]}) > 1:
+        batches[-1:] = [batches[-1][:-1], batches[-1][-1:]]
+    losses, whole = _whole_graph_lora(path, batches)
+    assert r.losses == losses  # bit for bit
+    mine = dict(tree_flatten(r.model.trainable_parameters()))
+    theirs = dict(tree_flatten(whole.trainable_parameters()))
+    assert mine.keys() == theirs.keys() and len(mine) == 48
+    assert all(mx.array_equal(mine[k], theirs[k]).item() for k in mine)
+    assert len(_mlx._layer_list(model)) == 6

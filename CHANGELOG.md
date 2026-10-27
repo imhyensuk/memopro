@@ -4,6 +4,15 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Added: LoRA training of mlx-lm models within the ceiling (0339)
+- `memopro.finetune(model, texts, tokenizer=tok)` with a model from `mlx_lm.load` trains it with
+  mlx-lm's LoRA layers and loss (a model that already has LoRA layers keeps them), one decoder
+  layer at a time: forward keeps each layer's input, backward recomputes each layer for its
+  vector-Jacobian product, and the layers that do not fit are read again from their files both
+  ways. Losses and adapters equal mlx-lm's whole-graph training step bit for bit. Qwen2.5-1.5B
+  (10 x 129 tokens) at 1.5 GiB on an 8 GB M1: 59.1 tok/s (whole-graph MLX 84.5 at 3.5 GB with
+  1.6 GB of swap; PyTorch path 45.4), the same losses; Qwen2.5-3B at 3 GiB: 21.7 tok/s.
+
 ### Added: mlx-lm models within the ceiling (0337)
 - `memopro.generate(model, prompt, tokenizer=tok)` with a model from `mlx_lm.load` runs it with
   mlx-lm as given (the text is mlx-lm's own) and keeps it within the ceiling: the decoder layers
