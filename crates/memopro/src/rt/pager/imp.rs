@@ -4,6 +4,7 @@ use super::{PagerConfig, PagerStats};
 use crate::codec;
 use crate::error::{Error, Result};
 use crate::rt::page_size;
+use crate::rt::region::Region as Mapped;
 use std::collections::BTreeMap;
 use std::io;
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd, RawFd};
@@ -157,7 +158,7 @@ enum Data {
     /// Never touched: comes back as zeros.
     Absent,
     Resident,
-    Compressed(Vec<u8>),
+    Compressed(Mapped),
 }
 
 struct Chunk {
@@ -382,7 +383,7 @@ impl Pager {
             }
             match &c.data {
                 Data::Resident => st.resident -= chunk,
-                Data::Compressed(p) => st.compressed -= p.len() as u64,
+                Data::Compressed(p) => st.compressed -= p.capacity() as u64,
                 Data::Absent => {}
             }
         }
@@ -565,12 +566,12 @@ impl Shared {
                 st.stats.zero_fills += 1;
             }
             Data::Compressed(p) => {
-                if let Err(e) = codec::unpack_chunk(&p, self.config.elem, &mut scratch) {
+                if let Err(e) = codec::unpack_chunk(p.as_slice(), self.config.elem, &mut scratch) {
                     // the only copy of this memory is damaged: stopping is the only honest thing
                     eprintln!("memopro pager: a compressed chunk could not be restored ({e})");
                     std::process::abort();
                 }
-                st.compressed -= p.len() as u64;
+                st.compressed -= p.capacity() as u64;
                 st.stats.restores += 1;
             }
             Data::Resident => {}
@@ -737,7 +738,7 @@ impl Shared {
             self.config.compress_level,
             chunk as f64 * (1.0 - self.config.min_saving),
         );
-        let packed: Vec<Option<Vec<u8>>> = self.pool.install(|| {
+        let packed: Vec<Option<Mapped>> = self.pool.install(|| {
             use rayon::prelude::*;
             victims
                 .par_iter()
@@ -754,9 +755,10 @@ impl Shared {
                     let mut out = Vec::new();
                     let fine = codec::pack_chunk(src, elem, level, &mut out).is_ok()
                         && (out.len() as f64) < keep;
-                    // kept at its own length: `out` reserved the worst case, about a whole
-                    // chunk, which the budget would not see (E068: +136 MB outside)
-                    fine.then(|| out.to_vec())
+                    // kept in pages of its own, given back to the system when it is restored:
+                    // `out` reserved a whole chunk, and glibc's moving mmap threshold kept such
+                    // blocks on its heaps, outside what the budget sees (E068: +260 MB)
+                    fine.then(|| Mapped::from_bytes(&out).ok()).flatten()
                 })
                 .collect()
         });
@@ -779,13 +781,13 @@ impl Shared {
             };
             // SAFETY: our own mapping; its content is saved in `stored`.
             unsafe { libc::madvise(cstart as *mut libc::c_void, chunk, libc::MADV_DONTNEED) };
-            let n = stored.len() as u64;
+            let (n, packed_len) = (stored.capacity() as u64, stored.len() as u64);
             c.data = Data::Compressed(stored);
             st.resident -= chunk as u64;
             st.compressed += n;
             st.stats.evictions += 1;
             st.stats.compress_in += chunk as u64;
-            st.stats.compress_out += n;
+            st.stats.compress_out += packed_len;
             // threads that tried to write meanwhile wait on the write-protection; their faults
             // are queued and bring the chunk back
         }
