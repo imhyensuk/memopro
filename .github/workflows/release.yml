@@ -61,7 +61,7 @@ jobs:
           /tmp/smoke/bin/memopro --version
           /tmp/smoke/bin/memopro doctor --no-devices --json > /dev/null
           /tmp/smoke/bin/python -c "import sys, memopro; assert memopro.__version__ == '${{ needs.version.outputs.pep440 }}'; assert 'torch' not in sys.modules"
-          /tmp/smoke/bin/python -c "import memopro; s = memopro.enable('512MB!'); print(s); s.disable()"
+          /tmp/smoke/bin/python -c "import memopro; s = memopro.enable('512MB'); print(s); s.disable()"
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-x86_64-unknown-linux-gnu
@@ -103,7 +103,7 @@ jobs:
           /tmp/smoke/bin/memopro --version
           /tmp/smoke/bin/memopro doctor --no-devices --json > /dev/null
           /tmp/smoke/bin/python -c "import sys, memopro; assert memopro.__version__ == '${{ needs.version.outputs.pep440 }}'; assert 'torch' not in sys.modules"
-          /tmp/smoke/bin/python -c "import memopro; s = memopro.enable('512MB!'); print(s); s.disable()"
+          /tmp/smoke/bin/python -c "import memopro; s = memopro.enable('512MB'); print(s); s.disable()"
       - uses: actions/upload-artifact@v4
         with:
           name: wheels-aarch64-apple-darwin

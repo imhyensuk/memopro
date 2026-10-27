@@ -6,7 +6,7 @@
 [![CI](https://github.com/imhyensuk/memopro/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imhyensuk/memopro/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#라이선스)
 ![Python ≥ 3.11](https://img.shields.io/badge/python-%E2%89%A5%203.11-blue.svg?logo=python&logoColor=white)
-![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
+![Status: beta](https://img.shields.io/badge/status-beta-yellow.svg)
 
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
 ![Hugging Face Transformers](https://img.shields.io/badge/%F0%9F%A4%97%20Transformers-FFD21E)
@@ -68,6 +68,8 @@ memopro는 이 문제를 **메모리 대신 시간을 쓰는 방식**으로 해�
 pip install memopro            # 런타임, memopro run, enable, 진단
 pip install "memopro[llm]"     # + finetune, generate (PyTorch, Transformers, PEFT)
 ```
+
+0.2.0 베타를 쓰려면 `pip install --pre memopro`(또는 `"memopro[llm]==0.2.0b1"`)로 설치합니다. 0.1.x에서 바뀐 점은 [CHANGELOG](CHANGELOG.md)의 "0.1.x에서 옮겨 오기"에 있습니다.
 
 | 추가 옵션 | 포함 |
 |---|---|

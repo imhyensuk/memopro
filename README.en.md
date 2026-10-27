@@ -6,7 +6,7 @@
 [![CI](https://github.com/imhyensuk/memopro/actions/workflows/ci.yml/badge.svg?branch=main)](https://github.com/imhyensuk/memopro/actions/workflows/ci.yml)
 [![License: MIT OR Apache-2.0](https://img.shields.io/badge/license-MIT%20OR%20Apache--2.0-blue.svg)](#license)
 ![Python ≥ 3.11](https://img.shields.io/badge/python-%E2%89%A5%203.11-blue.svg?logo=python&logoColor=white)
-![Status: alpha](https://img.shields.io/badge/status-alpha-orange.svg)
+![Status: beta](https://img.shields.io/badge/status-beta-yellow.svg)
 
 ![PyTorch](https://img.shields.io/badge/PyTorch-EE4C2C?logo=pytorch&logoColor=white)
 ![Hugging Face Transformers](https://img.shields.io/badge/%F0%9F%A4%97%20Transformers-FFD21E)
@@ -68,6 +68,8 @@ Other tools fit better when:
 pip install memopro            # runtime, memopro run, enable, diagnostics
 pip install "memopro[llm]"     # + finetune, generate (PyTorch, Transformers, PEFT)
 ```
+
+The 0.2.0 beta installs with `pip install --pre memopro` (or `"memopro[llm]==0.2.0b1"`). What changed from 0.1.x: [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md), "Upgrading from 0.1.x".
 
 | Extra | Includes |
 |---|---|
