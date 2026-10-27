@@ -1,0 +1,76 @@
+{
+ "report": {
+  "entries": [
+   {
+    "technique": "enable.rt",
+    "action": "applied",
+    "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+    "reclaimed_bytes": null,
+    "timestamp": 1793107856.396604
+   },
+   {
+    "technique": "enable.numpy",
+    "action": "applied",
+    "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793107856.39661
+   },
+   {
+    "technique": "enable.transformers",
+    "action": "applied",
+    "detail": "from_pretrained loads models that do not fit as memopro.load",
+    "reclaimed_bytes": null,
+    "timestamp": 1793107856.3966162
+   },
+   {
+    "technique": "transparent",
+    "action": "applied",
+    "detail": "budget 1.19 GiB, peak 1.02 GiB; 9603 faults, 7140 chunks compressed (6.97 GiB to 1.50 GiB), 4704 brought back, 0 over budget; nothing written",
+    "reclaimed_bytes": null,
+    "timestamp": 1793107907.983886
+   }
+  ]
+ },
+ "transparent": {
+  "budget": 1279500288,
+  "limit": 1278451712,
+  "used": 843534336,
+  "peak_used": 1093664768,
+  "regions": 5,
+  "mapped_bytes": 1415577600,
+  "resident_bytes": 725614592,
+  "compressed_bytes": 117919744,
+  "faults": 9603,
+  "zero_fills": 4899,
+  "restores": 4704,
+  "restore_seconds": 11.399493224,
+  "evictions": 7140,
+  "compress_in": 7486832640,
+  "compress_out": 1612054468,
+  "compress_seconds": 23.226341391000002,
+  "incompressible": 330,
+  "overruns": 0,
+  "spurious": 0,
+  "outside_peak": 208416768,
+  "limit_low": 1070034944,
+  "machine_limited": 0,
+  "trims": 4,
+  "holds": 0,
+  "written_bytes": 0
+ },
+ "session": {
+  "elapsed_seconds": 51.6684937279997,
+  "memopro_seconds": 34.625834615,
+  "slowdown": 3.0317154961216297,
+  "ceiling": 1279500288,
+  "footprint": 1046753280,
+  "peak_footprint": 1281622016,
+  "exceeded_bytes": 2121728,
+  "overruns": 0,
+  "activations_moved": 0,
+  "activations_over_ceiling": 0,
+  "runtimes": [],
+  "predictions": []
+ },
+ "ceiling": 1279500288
+}

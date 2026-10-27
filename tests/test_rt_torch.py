@@ -656,6 +656,18 @@ def test_finetune_budget_covers_the_step_on_mps(tmp_path):
         memopro.finetune(path, texts, tokenizer=tok, budget="20MiB", device="mps", seq_len=64)
 
 
+def _mps_left_mib(device="mps"):
+    """MiB of Apple GPU memory earlier tests left (heaps torch does not give back): a ceiling
+    is the whole process's, so tests with ceilings of a few MiB add it (0353)."""
+    import gc
+
+    gc.collect()
+    if device != "mps":
+        return 0
+    torch.mps.empty_cache()
+    return torch.mps.driver_allocated_memory() >> 20
+
+
 @pytest.mark.parametrize("device", ["cpu", "mps"])
 def test_generate_budget_covers_the_generation(tmp_path, device):
     """0182: `memopro.generate` holds back part of the budget for the cache and intermediates
@@ -672,7 +684,7 @@ def test_generate_budget_covers_the_generation(tmp_path, device):
     )
     core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
     tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
-    m = rtt.stream_model(path, budget="24MiB", device=device)
+    m = rtt.stream_model(path, budget=f"{24 + _mps_left_mib(device)}MiB", device=device)
     full = m.memopro_runtime.limit
     ids = tok("w2 w9 w16", return_tensors="pt").input_ids
     with torch.no_grad():
@@ -715,9 +727,10 @@ def test_two_streamed_models_on_mps_count_only_their_own_memory(tmp_path):
     def run(m):
         return memopro.generate(m, "w2 w9 w16", tokenizer=tok, max_new_tokens=8, chat=False)
 
-    b = rtt.stream_model(_tiny_qwen(tmp_path / "b", 1), budget="20MiB", device="mps")
+    budget = f"{20 + _mps_left_mib()}MiB"
+    b = rtt.stream_model(_tiny_qwen(tmp_path / "b", 1), budget=budget, device="mps")
     alone = run(b)
-    a = rtt.stream_model(_tiny_qwen(tmp_path / "a", 0), budget="20MiB", device="mps")
+    a = rtt.stream_model(_tiny_qwen(tmp_path / "a", 0), budget=budget, device="mps")
     run(a)
     assert run(b) == alone
     assert rtt.gpu_kept(b.memopro_weights) <= rtt._held_back(b.memopro_runtime)
@@ -1119,6 +1132,22 @@ class _Collect:
 
     def end(self):
         self.ended += 1
+
+
+def test_a_model_streamed_from_a_folder_does_not_keep_the_last_one_alive(tmp_path):
+    """E068: generate(folder) in a loop streams a new model each call; the one before sits in a
+    reference cycle, and until it is collected the next call counts its memory as the
+    process's and refuses the ceiling."""
+    import weakref
+
+    from memopro import llm
+
+    path = str(_tiny_qwen(tmp_path / "t", 0))
+    m = llm._streamed(path, "2GiB", "cpu")
+    before = weakref.ref(m.memopro_runtime)
+    del m
+    llm._streamed(path, "2GiB", "cpu")
+    assert before() is None
 
 
 def test_generate_with_an_automatic_draft_returns_the_plain_text(tmp_path, monkeypatch):
