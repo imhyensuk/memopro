@@ -2,7 +2,9 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.2.0b3 (beta)
+
+Fix from the T4 re-run of 0.2.0b2 (E068, docs/research/0351).
 
 ### Changed: no automatic draft on NVIDIA GPUs (0351)
 - `generate(draft="auto")` drafts only on Apple GPUs. On a Colab T4 the automatic 16-bit draft
