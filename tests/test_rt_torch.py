@@ -1235,5 +1235,6 @@ def test_the_ceiling_counts_what_the_process_holds_besides_the_runtime(tmp_path)
     kw = {"tokenizer": tok, "device": "cpu", "seq_len": 64, "targets": ("q_proj", "v_proj")}
     with pytest.raises(memopro.BudgetExceeded, match="the process holds besides"):
         memopro.finetune(path, texts, budget="24MiB", **kw)  # enough for the runtime alone
-    r = memopro.finetune(path, texts, budget=int(1.5 * rt.process_footprint()), **kw)  # warm-up
+    ceiling = 2 * rt.process_footprint() + (512 << 20)  # the process, warm-up and the step
+    r = memopro.finetune(path, texts, budget=ceiling, **kw)
     assert r.held_back >= llm._outside(r.model) > 0 and r.losses
