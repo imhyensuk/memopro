@@ -127,6 +127,14 @@ class _FileWeights:
         fresh = self._from_file()
         self.layer.update(tree_unflatten([(n, fresh[k]) for n, k in self.names.items()]))
 
+    def prefetch(self) -> None:
+        """Start reading the layer's weights while something else computes (two layers fit)."""
+        import mlx.core as mx
+        from mlx.utils import tree_flatten
+
+        if self.usable:
+            mx.async_eval([v for _, v in tree_flatten(self.layer.parameters())])
+
 
 def _streamed(layer: Any, weights: _FileWeights) -> Any:
     """One decoder layer wrapped: evaluated on its own, then its weights dropped to the file."""
@@ -365,10 +373,12 @@ def finetune(
                 h = inner.embed_tokens(inputs)
                 mask = create_attention_mask(h, None)
                 hs = [h]
-                for layer, w in zip(layers, streams, strict=True):
+                for i, (layer, w) in enumerate(zip(layers, streams, strict=True)):
                     h = layer(h, mask, None)
+                    if i + 1 < len(layers) and streams[i + 1] is not None:
+                        streams[i + 1].prefetch()  # read the next layer while this one computes
                     mx.eval(h)
-                    if w is not None:
+                    if w is not None and i + 1 < len(layers):  # the last one: backward's first
                         w.drop()
                     hs.append(h)
                 loss, (g,) = mx.vjp(
@@ -376,6 +386,8 @@ def finetune(
                     [hs[-1]],
                     [mx.array(1.0, mx.float32)],
                 )
+                if len(layers) > 1 and streams[-2] is not None:
+                    streams[-2].prefetch()  # backward's second layer, read during the head
                 mx.eval(loss, g)
                 grads: dict[str, Any] = {}
                 for i in reversed(range(len(layers))):
@@ -392,9 +404,15 @@ def finetune(
 
                     _, cot = mx.vjp(f, [hs[i], *arrays], [g])
                     layer.update(tree_unflatten(list(zip(keys_, arrays, strict=True))))
+                    if i > 0 and streams[i - 1] is not None:
+                        streams[i - 1].prefetch()
                     mx.eval(cot)
-                    if streams[i] is not None:
+                    if streams[i] is not None and (i == 0 or streams[i - 1] is not None):
                         streams[i].drop()
+                    elif streams[i] is not None and i + 1 < len(layers) and streams[i + 1]:
+                        # the first streamed layer stays for the next forward, and the one after
+                        # it is read while the kept layers compute
+                        streams[i + 1].prefetch()
                     g = cot[0]
                     grads.update({prefix + k: v for k, v in zip(keys_, cot[1:], strict=True)})
                     hs[i + 1] = None
@@ -404,6 +422,9 @@ def finetune(
                 result.step_seconds.append(time.perf_counter() - t)
                 result.tokens += x.size
     finally:
+        for w in streams:
+            if w is not None:
+                w.drop()  # the layers kept across passes go back to their files too
         mx.set_cache_limit(old_cache)
         mx.clear_cache()
     result.seconds = time.perf_counter() - start
