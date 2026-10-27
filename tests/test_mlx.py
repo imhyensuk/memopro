@@ -93,7 +93,7 @@ def test_mlx_models_take_only_what_mlx_lm_does(tmp_path):
         memopro.generate(model, "w2", tokenizer=tok, budget=1 << 20, max_new_tokens=2)
 
 
-def _whole_graph_lora(path, batches, steps_per_batch=1, rank=8, alpha=16, lr=1e-3):
+def _whole_graph_lora(path, batches, steps_per_batch=1, rank=8, alpha=16, lr=1e-3, times=None):
     """mlx-lm's own training step on the whole model (the original): the same LoRA layers and
     loss, value_and_grad over the whole graph, compiled as mlx-lm's trainer does."""
     from functools import partial
@@ -126,12 +126,17 @@ def _whole_graph_lora(path, batches, steps_per_batch=1, rank=8, alpha=16, lr=1e-
         opt.update(model, g)
         return loss
 
+    import time
+
     losses = []
     for group in batches:
+        t = time.perf_counter()
         x = mx.array(group)
         loss = step(x, mx.array([[0, x.shape[1] - 1]] * x.shape[0]))
         mx.eval(state)
         losses.append(loss.item())
+        if times is not None:  # E067 times each step of the original
+            times.append(time.perf_counter() - t)
     return losses, model
 
 
