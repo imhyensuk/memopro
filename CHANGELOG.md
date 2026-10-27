@@ -4,6 +4,14 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: MLX LoRA reads the next layer while the current one computes (0340)
+- A streamed layer's weights are read in the background while the layer before it computes
+  (at most two streamed layers in memory, as before); the last layer of forward is used by
+  backward without reading it again, and the first streamed layer stays for the next forward.
+  Losses unchanged bit for bit. Qwen2.5-3B at 2.5 GiB on an 8 GB M1: 20.3-21.0 -> 25.4-26.8
+  tok/s (batch 1, 129 tokens); reads from the SSD now set the pace, so a larger batch gives
+  more tokens per read (batch 4: 71.3 tok/s at the same ceiling).
+
 ### Added: LoRA training of mlx-lm models within the ceiling (0339)
 - `memopro.finetune(model, texts, tokenizer=tok)` with a model from `mlx_lm.load` trains it with
   mlx-lm's LoRA layers and loss (a model that already has LoRA layers keeps them), one decoder

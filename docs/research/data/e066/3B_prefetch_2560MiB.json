@@ -1,0 +1,7 @@
+{"note": "0340 dev check, 8 GB M1 with other apps, Qwen2.5-3B-Instruct aa8e725, 10 x 129 tokens, batch 1 unless stated, run.py stream 2560MiB alternating",
+ "before_tok_per_s": [20.3, 21.0], "after_tok_per_s": [25.4, 26.8],
+ "after_peak_MiB": [2418, 2419], "final_loss_all_runs": 4.060763359069824,
+ "same_state_3GiB_13_kept": {"before": 22.6, "after_v1": 28.0},
+ "batch_steady_tok_per_s_2560MiB": {"1": 28.1, "4": 71.3},
+ "step_breakdown_s_3GiB_v1": {"fwd_kept": 0.36, "fwd_stream": 0.645, "drop_load_waiting_for_read": 1.688, "head": 0.184, "bwd_stream": 0.858, "bwd_kept": 0.846, "opt": 0.021, "mean_step": 4.64},
+ "raw_layer_read_GB_per_s": [2.03, 2.38], "layer_MiB": 147, "layer_compute_ms": {"forward": 16, "vjp": 27}}
