@@ -361,10 +361,11 @@ def generate(
     it within the ceiling (0337). A string ``prompt`` goes
     through the chat template when the tokenizer has one and ``chat`` is true. ``draft`` (a
     name, folder or :func:`memopro.rt.torch.draft_model`) proposes tokens on Apple and NVIDIA
-    GPUs; the text is the same with or without it. ``"auto"`` (the default) takes a smaller model
+    GPUs; the text is the same with or without it. ``"auto"`` (the default) takes, on Apple
+    GPUs, a smaller model
     already on this disk that shares the tokenizer, about a fifth of the size (0322; nothing is
     downloaded for it; looked for in the ``model_dirs`` setting, next to a model loaded from a
-    folder, and in the Hugging Face cache), and goes without one when there is none, on the CPU, or when the budget
+    folder, and in the Hugging Face cache), and goes without one when there is none or when the budget
     cannot hold it next to the generation; ``None`` never drafts. ``streamer`` (e.g. Transformers'
     ``TextIteratorStreamer``) and ``stopping_criteria`` go to ``model.generate`` as they are: the
     streamer receives the same tokens the returned text is decoded from.
@@ -491,13 +492,10 @@ def _note(message: str) -> None:
     warnings.warn(message, UserWarning, stacklevel=4)
 
 
-def _room(m: Any, estimate: int) -> int | None:
+def _room(m: Any, estimate: int) -> int:
     """Budget bytes left beside the largest weight and ``estimate`` for a draft, less what the
     machine cannot give without swapping (0333: a self-draft beside a 4.5 GiB ceiling on 8 GB
-    grew swap 1.2 GB); None on CUDA, where the draft takes GPU memory from the device cache
-    instead (0276)."""
-    if m.device.type == "cuda":
-        return None
+    grew swap 1.2 GB)."""
     if m.device.type == "mps":  # what the GPU already keeps counts as it will be measured
         estimate = max(estimate, _gpu_kept(m))
     rt = m.memopro_runtime._rt
@@ -525,14 +523,18 @@ def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:
     if found is not _UNSET:
         return found
     _AUTO_DRAFTS[m] = None
-    if m.device.type not in ("mps", "cuda"):
-        return None  # drafts stay in GPU memory
+    if m.device.type != "mps":
+        # drafts stay in GPU memory; on CUDA a draft is 16-bit, its memory is not planned next
+        # to the device cache, and on the T4 it cost the generation (E068, 0351: 3B 1.07 s/token
+        # with a 0.5B draft vs 0.46 without it in E043, the host 1.2 GiB over its ceiling; 7B
+        # with a 1.5B draft ran out of GPU memory). An explicit draft still drafts there
+        return None
     choice = _local_draft(m, tok)
-    if choice is None and m.device.type == "mps" and _streams_every_token(m):
+    if choice is None and _streams_every_token(m):
         # no sibling: an int4 copy of the model itself, kept in memory only (0329, E033 S3:
         # 3B 3.55 -> 0.89-1.04 s/token, the same text). Only when the weights do not fit the
         # budget: when they do, streaming is cheap and the draft is pure cost (1.5B at 3 GiB:
-        # 0.29 -> 0.48 s/token). On CUDA a draft is 16-bit, a second copy of the whole model
+        # 0.29 -> 0.48 s/token)
         choice = _own_folder(m)
     if choice is None:
         _note(

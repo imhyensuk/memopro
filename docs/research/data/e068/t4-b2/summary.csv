@@ -1,0 +1,16 @@
+check,criterion,result,detail
+B1,repository tests at the tag: no failures,pass,"{'passed': 161, 'skipped': 23} "
+B2 Qwen2.5-3B-Instruct,"finetune completes at both ceilings, losses bit-identical",pass,"['ok', 'ok'] []"
+B3 Qwen2.5-3B-Instruct__ft_6144,process peak (VmHWM) <= ceiling,pass,ok: peak 5.57 GiB vs ceiling 6.00 GiB
+B3 Qwen2.5-3B-Instruct__ft_8192,process peak (VmHWM) <= ceiling,pass,ok: peak 7.33 GiB vs ceiling 8.00 GiB
+B3 Qwen2.5-3B-Instruct__gen_6144,process peak (VmHWM) <= ceiling,fail,ok: peak 7.19 GiB vs ceiling 6.00 GiB
+B4 Qwen2.5-3B-Instruct,generate's text = the model loaded normally,pass,"plain ok 0.09 s/token, memopro ok 2.05 s/token"
+R1 Qwen2.5-3B-Instruct,report: step s plain / memopro at both ceilings; first loss,n/a,"5.08 / ['5.53', '5.90']; 2.6548 / 2.6548"
+B2 Qwen2.5-7B-Instruct,"finetune completes at both ceilings, losses bit-identical",pass,"['ok', 'ok'] []"
+B3 Qwen2.5-7B-Instruct__ft_7168,process peak (VmHWM) <= ceiling,pass,ok: peak 6.37 GiB vs ceiling 7.00 GiB
+B3 Qwen2.5-7B-Instruct__ft_9216,process peak (VmHWM) <= ceiling,pass,ok: peak 8.36 GiB vs ceiling 9.00 GiB
+B3 Qwen2.5-7B-Instruct__gen_7168,process peak (VmHWM) <= ceiling,fail,oom: peak 6.83 GiB vs ceiling 7.00 GiB
+R1 Qwen2.5-7B-Instruct,report: step s plain / memopro at both ceilings; first loss,n/a,"- / ['42.23', '43.11']; - / 2.5411"
+B5 image,"memopro run at half: plain result, peak <= ceiling + 32 MiB",pass,ok; peak 0.40 GiB vs 0.39 GiB; 5.0 -> 14.5 s
+B5 classify,"memopro run at half: plain result, peak <= ceiling + 32 MiB",pass,ok; peak 1.19 GiB vs 1.19 GiB; 16.4 -> 49.5 s
+R2,report: Unsloth 16-bit 3B step s (memopro at the larger ceiling),n/a,ok 0.48 / 5.90

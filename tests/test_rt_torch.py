@@ -1097,10 +1097,15 @@ def test_auto_draft_takes_the_closest_local_model_with_the_same_tokenizer(tmp_pa
     monkeypatch.delenv("MEMOPRO_MODEL_DIRS")
     monkeypatch.setattr(llm, "AUTO_DRAFT_MAX", 0.01)
     assert llm._local_draft(m, tok) is None
-    # on the CPU there is no draft and nothing to say
+
+    # on the CPU and on CUDA (E068) there is no draft and nothing to say
+    class OnCuda:
+        device = torch.device("cuda")
+
     with warnings.catch_warnings():
         warnings.simplefilter("error")
         assert llm._auto_draft(m, tok) is None
+        assert llm._auto_draft(OnCuda(), tok) is None
 
 
 class _Collect:
