@@ -4,7 +4,7 @@ The Rust core of [memopro](https://github.com/imhyensuk/memopro): run work that 
 than the machine has, losslessly, within a guaranteed memory ceiling. "Memory" means hardware
 memory (GPU/RAM), not agent or conversation memory.
 
-**Status: beta (0.2.0-beta.2); the API may still change.** Verified on 8-16 GB machines (Apple
+**Status: beta (0.2.0-beta.3); the API may still change.** Verified on 8-16 GB machines (Apple
 silicon, Linux, Colab T4); the design does not depend on the memory size.
 
 ```rust
