@@ -2,7 +2,9 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.2.0b2 (beta)
+
+Fixes from the first beta on Colab (E068, docs/research/0348-0349).
 
 ### Fixed: a broken model copy on the disk no longer stops `generate` (0348)
 - The automatic draft search skips model folders whose safetensors cannot be read (for example
