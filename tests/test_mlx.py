@@ -23,6 +23,15 @@ def _give_metal_memory_back():
     mx.clear_cache()
 
 
+def _ceiling(mlx_bytes):
+    """A whole-process ceiling (0343) leaving MLX ``mlx_bytes``: what the process already holds
+    outside MLX counts too."""
+    from memopro import rt
+
+    mine = mx.get_active_memory() + mx.get_cache_memory()
+    return rt.process_footprint() - mine + mlx_bytes
+
+
 def _tiny(path, layers=6):
     torch.manual_seed(0)
     cfg = transformers.Qwen2Config(
@@ -58,7 +67,7 @@ def test_streamed_mlx_generation_is_mlx_lm_s_own_text(tmp_path):
     memopro.report().clear()
     # room for the embedding, the generation and two layers, plus one layer: the rest stream
     text = memopro.generate(
-        model, "w2 w9 w16", tokenizer=tok, budget=12 << 20, max_new_tokens=12, chat=False
+        model, "w2 w9 w16", tokenizer=tok, budget=_ceiling(12 << 20), max_new_tokens=12, chat=False
     )
     assert text == plain
     detail = memopro.report().entries[-1].detail
@@ -77,7 +86,7 @@ def test_a_layer_the_user_changed_is_kept_not_reread(tmp_path):
     q.weight = q.weight * 2  # no longer what the file holds
     plain = mlx_lm.generate(model, tok, "w2 w9 w16", max_tokens=8)
     text = memopro.generate(
-        model, "w2 w9 w16", tokenizer=tok, budget=12 << 20, max_new_tokens=8, chat=False
+        model, "w2 w9 w16", tokenizer=tok, budget=_ceiling(12 << 20), max_new_tokens=8, chat=False
     )
     assert text == plain
 
@@ -152,7 +161,9 @@ def test_streamed_mlx_lora_equals_mlx_lm_whole_graph_training(tmp_path, monkeypa
     texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(3)]
     model, tok = mlx_lm.load(path, lazy=True)
     memopro.report().clear()
-    r = memopro.finetune(model, texts, tokenizer=tok, budget=15 << 20, seq_len=16, batch=2, lr=1e-3)
+    r = memopro.finetune(
+        model, texts, tokenizer=tok, budget=_ceiling(15 << 20), seq_len=16, batch=2, lr=1e-3
+    )
     assert "read again each pass" in memopro.report().entries[-1].detail
     assert not memopro.report().entries[-1].detail.startswith("mlx-lm LoRA; 6 of")
     eos = tok.eos_token
@@ -168,3 +179,18 @@ def test_streamed_mlx_lora_equals_mlx_lm_whole_graph_training(tmp_path, monkeypa
     assert mine.keys() == theirs.keys() and len(mine) == 48
     assert all(mx.array_equal(mine[k], theirs[k]).item() for k in mine)
     assert len(_mlx._layer_list(model)) == 6
+
+
+def test_the_ceiling_counts_what_the_process_holds_outside_mlx(tmp_path, monkeypatch):
+    from memopro import rt
+
+    path = _tiny(tmp_path / "t", layers=2)
+    model, tok = mlx_lm.load(path, lazy=True)
+    budget = _ceiling(64 << 20)  # fits as long as nothing else grows
+    memopro.generate(model, "w2 w9 w16", tokenizer=tok, budget=budget, max_new_tokens=2, chat=False)
+    held = rt.process_footprint()
+    monkeypatch.setattr(rt, "process_footprint", lambda: held + (1 << 30))  # 1 GiB more outside
+    with pytest.raises(memopro.BudgetExceeded, match="outside MLX"):
+        memopro.generate(
+            model, "w2 w9 w16", tokenizer=tok, budget=budget, max_new_tokens=2, chat=False
+        )

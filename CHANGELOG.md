@@ -4,6 +4,13 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Changed: MLX models keep the whole process within the ceiling (0343)
+- `generate` and `finetune` with an mlx-lm model now count what the process already holds
+  outside MLX (Python, libraries, the tokenizer) and MLX's buffer cache (now one layer) against
+  the ceiling; before, only MLX memory was counted and the process went up to ~300 MiB over it
+  (E067). Qwen2.5-1.5B at 1.5 GiB: peak footprint 1,461 MiB (was 1,784 MiB above the start),
+  50.6 tok/s; Qwen2.5-3B at 2.5 GiB: 2,432 MiB, 20.2 tok/s; results unchanged bit for bit.
+
 ### Changed: MLX LoRA reads the next layer while the current one computes (0340)
 - A streamed layer's weights are read in the background while the layer before it computes
   (at most two streamed layers in memory, as before); the last layer of forward is used by
