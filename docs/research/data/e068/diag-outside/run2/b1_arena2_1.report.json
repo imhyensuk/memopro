@@ -1,0 +1,76 @@
+{
+ "report": {
+  "entries": [
+   {
+    "technique": "enable.rt",
+    "action": "applied",
+    "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095446.323594
+   },
+   {
+    "technique": "enable.numpy",
+    "action": "applied",
+    "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095446.3235977
+   },
+   {
+    "technique": "transparent",
+    "action": "applied",
+    "detail": "budget 403.36 MiB, peak 402.34 MiB; 3352 faults, 2965 chunks compressed (2.90 GiB to 1.34 GiB), 2584 brought back, 0 over budget; nothing written",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095453.0175247
+   },
+   {
+    "technique": "ceiling",
+    "action": "exceeded",
+    "detail": "peak 697.89 MiB against 403.36 MiB (+294.53 MiB)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095453.017531
+   }
+  ]
+ },
+ "transparent": {
+  "budget": 422950912,
+  "limit": 421902336,
+  "used": 0,
+  "peak_used": 421879716,
+  "regions": 0,
+  "mapped_bytes": 0,
+  "resident_bytes": 0,
+  "compressed_bytes": 0,
+  "faults": 3352,
+  "zero_fills": 768,
+  "restores": 2584,
+  "restore_seconds": 2.0404553450000025,
+  "evictions": 2965,
+  "compress_in": 3109027840,
+  "compress_out": 1433938207,
+  "compress_seconds": 2.0194798169999997,
+  "incompressible": 0,
+  "overruns": 0,
+  "spurious": 0,
+  "outside_peak": 311050849,
+  "limit_low": 110851487,
+  "machine_limited": 0,
+  "trims": 0,
+  "holds": 1830,
+  "written_bytes": 0
+ },
+ "session": {
+  "elapsed_seconds": 6.768796524999999,
+  "memopro_seconds": 4.059935162000002,
+  "slowdown": 2.4987607772971168,
+  "ceiling": 422950912,
+  "footprint": 308170752,
+  "peak_footprint": 731791360,
+  "exceeded_bytes": 308840448,
+  "overruns": 0,
+  "activations_moved": 0,
+  "activations_over_ceiling": 0,
+  "runtimes": [],
+  "predictions": []
+ },
+ "ceiling": 422950912
+}

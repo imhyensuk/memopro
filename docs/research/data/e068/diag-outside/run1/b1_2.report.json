@@ -1,0 +1,76 @@
+{
+ "report": {
+  "entries": [
+   {
+    "technique": "enable.rt",
+    "action": "applied",
+    "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095071.3946176
+   },
+   {
+    "technique": "enable.numpy",
+    "action": "applied",
+    "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095071.3946218
+   },
+   {
+    "technique": "transparent",
+    "action": "applied",
+    "detail": "budget 403.29 MiB, peak 402.24 MiB; 3357 faults, 2959 chunks compressed (2.89 GiB to 1.33 GiB), 2589 brought back, 0 over budget; nothing written",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095078.3799667
+   },
+   {
+    "technique": "ceiling",
+    "action": "exceeded",
+    "detail": "peak 698.08 MiB against 403.29 MiB (+294.79 MiB)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095078.3799736
+   }
+  ]
+ },
+ "transparent": {
+  "budget": 422879232,
+  "limit": 421830656,
+  "used": 0,
+  "peak_used": 421781461,
+  "regions": 0,
+  "mapped_bytes": 0,
+  "resident_bytes": 0,
+  "compressed_bytes": 0,
+  "faults": 3357,
+  "zero_fills": 768,
+  "restores": 2589,
+  "restore_seconds": 2.3219142290000083,
+  "evictions": 2959,
+  "compress_in": 3102736384,
+  "compress_out": 1431703563,
+  "compress_seconds": 1.7369000960000012,
+  "incompressible": 0,
+  "overruns": 0,
+  "spurious": 0,
+  "outside_peak": 311181292,
+  "limit_low": 110649364,
+  "machine_limited": 0,
+  "trims": 0,
+  "holds": 1830,
+  "written_bytes": 0
+ },
+ "session": {
+  "elapsed_seconds": 7.046973190000017,
+  "memopro_seconds": 4.058814325000009,
+  "slowdown": 2.3582993770982115,
+  "ceiling": 422879232,
+  "footprint": 119980032,
+  "peak_footprint": 731987968,
+  "exceeded_bytes": 309108736,
+  "overruns": 0,
+  "activations_moved": 0,
+  "activations_over_ceiling": 0,
+  "runtimes": [],
+  "predictions": []
+ },
+ "ceiling": 422879232
+}

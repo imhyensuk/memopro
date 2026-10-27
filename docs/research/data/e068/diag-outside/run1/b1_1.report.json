@@ -1,0 +1,76 @@
+{
+ "report": {
+  "entries": [
+   {
+    "technique": "enable.rt",
+    "action": "applied",
+    "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095039.731704
+   },
+   {
+    "technique": "enable.numpy",
+    "action": "applied",
+    "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095039.7317085
+   },
+   {
+    "technique": "transparent",
+    "action": "applied",
+    "detail": "budget 403.29 MiB, peak 402.25 MiB; 3375 faults, 2976 chunks compressed (2.91 GiB to 1.34 GiB), 2607 brought back, 1 over budget; nothing written",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095046.7652175
+   },
+   {
+    "technique": "ceiling",
+    "action": "exceeded",
+    "detail": "peak 693.14 MiB against 403.29 MiB (+289.86 MiB)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095046.765225
+   }
+  ]
+ },
+ "transparent": {
+  "budget": 422879232,
+  "limit": 421830656,
+  "used": 0,
+  "peak_used": 421787317,
+  "regions": 0,
+  "mapped_bytes": 0,
+  "resident_bytes": 0,
+  "compressed_bytes": 0,
+  "faults": 3375,
+  "zero_fills": 768,
+  "restores": 2607,
+  "restore_seconds": 2.332402580000001,
+  "evictions": 2976,
+  "compress_in": 3120562176,
+  "compress_out": 1437324837,
+  "compress_seconds": 1.7426630460000008,
+  "incompressible": 0,
+  "overruns": 1,
+  "spurious": 0,
+  "outside_peak": 306069272,
+  "limit_low": 115761384,
+  "machine_limited": 0,
+  "trims": 0,
+  "holds": 1871,
+  "written_bytes": 0
+ },
+ "session": {
+  "elapsed_seconds": 7.096058134999993,
+  "memopro_seconds": 4.0750656260000016,
+  "slowdown": 2.348916163763984,
+  "ceiling": 422879232,
+  "footprint": 119820288,
+  "peak_footprint": 726814720,
+  "exceeded_bytes": 303935488,
+  "overruns": 1,
+  "activations_moved": 0,
+  "activations_over_ceiling": 0,
+  "runtimes": [],
+  "predictions": []
+ },
+ "ceiling": 422879232
+}

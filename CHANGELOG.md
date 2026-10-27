@@ -9,6 +9,12 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   link text in a synced Hugging Face cache) instead of failing the whole generation (E068 on a
   Colab T4).
 
+### Fixed: `memopro run` and `enable` keep NumPy data within the ceiling on Linux again (0349)
+- The pager kept each compressed chunk in a block reserved for the worst case, about a whole
+  chunk, and glibc held such blocks after use: the image-stack program peaked at 727 MB under a
+  423 MB ceiling (E068). Compressed chunks now live in pages of their own, returned at once:
+  432 MB.
+
 ## 0.2.0b1 (beta)
 
 The first beta of 0.2.0: everything is lossless and nothing memopro makes is written to the
