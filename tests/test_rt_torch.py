@@ -18,6 +18,19 @@ import memopro.access
 import memopro.env
 
 
+@pytest.fixture(autouse=True)
+def _runtime_ceilings(request, monkeypatch):
+    """These tests size the runtime with small budgets; the rest of the test process (about
+    1 GiB) counts against the ceiling only in the test that checks it (0344)."""
+    if "process_outside" not in request.keywords:
+        from memopro import llm
+        from memopro.rt import Runtime
+
+        monkeypatch.setattr(llm, "_outside", lambda m: 0)
+        monkeypatch.setattr(llm, "_TRANSIENT", 0)
+        monkeypatch.setattr(llm, "_runtime", lambda c: Runtime(budget=c, process_budget=False))
+
+
 @pytest.fixture(scope="module")
 def tiny_gpt2(tmp_path_factory):
     """A small GPT-2 saved as safetensors (about 11 MB, more than the 9 MiB budget's limit),
@@ -1202,3 +1215,25 @@ def test_draft_room_counts_what_the_machine_cannot_give():
     assert llm._room(m, 50) == 1000 - 10 - 100 - 50
     rt.short = 300
     assert llm._room(m, 50) == 1000 - 10 - 300 - 100 - 50
+
+
+@pytest.mark.process_outside
+def test_the_ceiling_counts_what_the_process_holds_besides_the_runtime(tmp_path):
+    """0344: the ceiling is the whole process's, so what Python, torch and the tokenizer hold
+    counts too."""
+    pytest.importorskip("peft")
+    tokenizers = pytest.importorskip("tokenizers")
+    from memopro import llm, rt
+
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(4)]
+    kw = {"tokenizer": tok, "device": "cpu", "seq_len": 64, "targets": ("q_proj", "v_proj")}
+    with pytest.raises(memopro.BudgetExceeded, match="the process holds besides"):
+        memopro.finetune(path, texts, budget="24MiB", **kw)  # enough for the runtime alone
+    r = memopro.finetune(path, texts, budget=int(1.5 * rt.process_footprint()), **kw)  # warm-up
+    assert r.held_back >= llm._outside(r.model) > 0 and r.losses

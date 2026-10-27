@@ -49,6 +49,7 @@ features = ["pyo3/extension-module"]
 
 [tool.pytest.ini_options]
 testpaths = ["tests"]
+markers = ["process_outside: the test counts the process outside the runtime (0344)"]
 
 [tool.ruff]
 line-length = 100
