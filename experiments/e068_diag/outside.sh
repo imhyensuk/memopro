@@ -1,7 +1,8 @@
 #!/usr/bin/env bash
 # E068 diagnosis (docs/research/0349): the image stack under `memopro run --budget <half>` on a
 # Linux runner; memory outside the pager for 0.2.0b1 (PyPI), with glibc malloc settings, and for
-# the checked-out build. Usage: outside.sh OUT_DIR
+# the checked-out build. Usage: outside.sh OUT_DIR. Run through the e040b workflow's probe step
+# (edited on branch pager-exact-chunks only; runs 40484545781 and 40485452733).
 set -u
 OUT="$1"; mkdir -p "$OUT"
 W="$OUT/work"; mkdir -p "$W"

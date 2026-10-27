@@ -1,0 +1,8 @@
+/home/runner/work/_temp/e040b/outside/b1/lib/python3.12/site-packages/memopro/_enable.py:279: UserWarning: memopro: the ceiling of 403.29 MiB cannot be kept (the process holds 665.56 MiB now). Most of it is memory memopro cannot move (the interpreter, libraries, arrays under 16 MiB). Raise the ceiling or hold less data at once; Session.estimate(sample, total=...) predicts whether data fits before running.
+  warnings.warn(_over_message(s.budget, now, pager), UserWarning, stacklevel=1)
+RESULT {"status": "ok", "error": null, "result": {"images": 1024, "means_sha256": "b861a4784dbc9750534a825b502ea0d9efa11ff143561a7bd0d481bd500cf28d", "counts_sha256": "8d39ee60d44d19ffb1222003fc927446e2a1d993da991bd2f7d85fbf4b24f84f", "total": 232319114517, "max": 1780, "stack_sha256": "8bb0fe82b1bf12c3aa9547008331b8c507988148a6dac54e78b628ce3918e319", "build_seconds": 1.6000663960000168, "seconds": 8.133867075000012, "maxrss_bytes": 720273408, "maxrss_rusage_bytes": 720273408}, "preloaded": false}
+memopro report:
+  [applied] enable.rt - runtimes and pagers share the ceiling; budget="auto" (finetune, generate, stream_model, Runtime) means it
+  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)
+  [applied] transparent - budget 403.29 MiB, peak 402.28 MiB; 4385 faults, 4296 chunks compressed (4.20 GiB to 2.01 GiB), 3617 brought back, 6 over budget; nothing written
+  [exceeded] ceiling - peak 686.91 MiB against 403.29 MiB (+283.62 MiB)

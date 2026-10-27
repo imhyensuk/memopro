@@ -1,0 +1,76 @@
+{
+ "report": {
+  "entries": [
+   {
+    "technique": "enable.rt",
+    "action": "applied",
+    "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095046.9496906
+   },
+   {
+    "technique": "enable.numpy",
+    "action": "applied",
+    "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095046.9496946
+   },
+   {
+    "technique": "transparent",
+    "action": "applied",
+    "detail": "budget 403.29 MiB, peak 402.23 MiB; 3357 faults, 2961 chunks compressed (2.89 GiB to 1.34 GiB), 2589 brought back, 0 over budget; nothing written",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095053.4392014
+   },
+   {
+    "technique": "ceiling",
+    "action": "exceeded",
+    "detail": "peak 702.38 MiB against 403.29 MiB (+299.09 MiB)",
+    "reclaimed_bytes": null,
+    "timestamp": 1793095053.439208
+   }
+  ]
+ },
+ "transparent": {
+  "budget": 422879232,
+  "limit": 421830656,
+  "used": 0,
+  "peak_used": 421771639,
+  "regions": 0,
+  "mapped_bytes": 0,
+  "resident_bytes": 0,
+  "compressed_bytes": 0,
+  "faults": 3357,
+  "zero_fills": 768,
+  "restores": 2589,
+  "restore_seconds": 2.309466582999998,
+  "evictions": 2961,
+  "compress_in": 3104833536,
+  "compress_out": 1433891608,
+  "compress_seconds": 1.8725399909999993,
+  "incompressible": 0,
+  "overruns": 0,
+  "spurious": 0,
+  "outside_peak": 315817549,
+  "limit_low": 106013107,
+  "machine_limited": 0,
+  "trims": 0,
+  "holds": 1836,
+  "written_bytes": 0
+ },
+ "session": {
+  "elapsed_seconds": 6.5513076810000115,
+  "memopro_seconds": 4.182006573999997,
+  "slowdown": 2.7650802431334753,
+  "ceiling": 422879232,
+  "footprint": 289988608,
+  "peak_footprint": 736497664,
+  "exceeded_bytes": 313618432,
+  "overruns": 0,
+  "activations_moved": 0,
+  "activations_over_ceiling": 0,
+  "runtimes": [],
+  "predictions": []
+ },
+ "ceiling": 422879232
+}

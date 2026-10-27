@@ -1,0 +1,5 @@
+RESULT {"status": "ok", "error": null, "result": {"images": 1024, "means_sha256": "b861a4784dbc9750534a825b502ea0d9efa11ff143561a7bd0d481bd500cf28d", "counts_sha256": "8d39ee60d44d19ffb1222003fc927446e2a1d993da991bd2f7d85fbf4b24f84f", "total": 232319114517, "max": 1780, "stack_sha256": "8bb0fe82b1bf12c3aa9547008331b8c507988148a6dac54e78b628ce3918e319", "build_seconds": 3.3923023309999962, "seconds": 9.375910421999976, "maxrss_bytes": 430026752, "maxrss_rusage_bytes": 430026752}, "preloaded": false}
+memopro report:
+  [applied] enable.rt - runtimes and pagers share the ceiling; budget="auto" (finetune, generate, stream_model, Runtime) means it
+  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)
+  [applied] transparent - budget 403.36 MiB, peak 360.00 MiB; 3555 faults, 3362 chunks compressed (3.28 GiB to 1.47 GiB), 2787 brought back, 0 over budget; nothing written
