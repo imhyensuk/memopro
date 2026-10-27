@@ -34,6 +34,16 @@ EXTRA_WORKERS = {
         "worker_suite.py": HERE / "worker_suite.py",
         "worker_unsloth.py": HERE / "worker_unsloth.py",
     },
+    "beta": {
+        "worker_suite.py": HERE / "worker_suite.py",
+        "worker_unsloth.py": HERE / "worker_unsloth.py",
+        "worker_data.py": HERE / "worker_data.py",
+        "worker_memopro_run.py": HERE / "worker_memopro_run.py",
+        "worker_pytest.py": HERE / "worker_pytest.py",
+        "image.py": ROOT / "experiments/e027_transparent/workload.py",
+        "common.py": ROOT / "experiments/e040_workloads/common.py",
+        "classify.py": ROOT / "experiments/e040_workloads/classify.py",
+    },
     "full": {
         "worker_suite.py": HERE / "worker_suite.py",
         "worker_unsloth.py": HERE / "worker_unsloth.py",
@@ -115,6 +125,21 @@ NOTEBOOKS = {
 
 - 준비: 런타임 **T4 GPU**. Drive `memopro_colab/install/`에 이번 소스 묶음 `memopro-src.tar.gz`를 **덮어쓰기**(현재 코드, 첫 실행 때 빌드 5~8분, 이후 Drive에 보관된 빌드 재사용). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**.
 - 결과: `MyDrive/memopro_colab/results/full/<실행 id>/summary.md`(판정 표), 같은 이름의 `.zip`.
+"""),
+    "beta": ("colab_beta.ipynb", "cell_beta.py", """# memopro 0.2.0b1 베타 시험: Colab T4와 Colab CPU (docs/research/0346, E068)
+
+PyPI에 올린 **0.2.0b1**을 사용자처럼 설치해(`pip install --pre "memopro[llm]==0.2.0b1"`) 잰다. 같은 셀을 **두 번** 실행한다: 한 번은 **T4 GPU** 런타임, 한 번은 **CPU** 런타임(셀이 어느 쪽인지 알아서 고른다, 결과 폴더 `results/beta_t4/`·`results/beta_cpu/`).
+
+| 순서 | 갈래 | 무엇을 보나 |
+|---|---|---|
+| ① | 단위 시험 | 저장소의 시험을 태그 `v0.2.0b1`에서, 이 기계에서 |
+| ② | LLM | `memopro.finetune`·`memopro.generate`를 사용자처럼(폴더와 프로세스 전체 상한): 상한이 달라도 손실이 같은가, 프로세스 최대 메모리가 상한 안인가, 생성 글이 그냥 올린 모델과 같은가. T4: Qwen2.5-3B·7B, CPU: Qwen2.5-0.5B |
+| ③ | 데이터 | 영상 묶음·scikit-learn을 코드 수정 없이 `memopro run --budget 절반`으로 |
+| ④ | Unsloth | (T4, 보고만) 같은 3B 작업의 Unsloth 16비트 속도 |
+
+- 예상 시간: T4 약 1시간 30분~2시간(셀 예산 120분, 넘으면 뒤가 건너뛰어진다), CPU 약 40~60분.
+- 준비: Drive `install/`에 아무것도 올리지 않아도 된다(PyPI에서 설치). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한다.
+- 결과: `MyDrive/memopro_colab/results/beta_t4|beta_cpu/<실행 id>/summary.md`(판정 표), 같은 이름의 `.zip`.
 """),
     "beat": ("colab_t4_beat.ipynb", "cell_beat.py", """# memopro가 Unsloth보다 나은 곳 (docs/research/0240, E049)
 

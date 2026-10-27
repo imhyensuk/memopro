@@ -4,6 +4,8 @@
     worker_suite.py lm_lora   <model> <plain|memopro> <budget_bytes> <steps> <seq>
     worker_suite.py vis_infer <model> <plain|memopro> <budget_bytes> <batch>
     worker_suite.py vis_lora  <model> <plain|memopro> <budget_bytes> <steps> <batch>
+    worker_suite.py ft        <model> <ceiling_bytes> <steps> <seq>    (public API, E068)
+    worker_suite.py gen       <model> <ceiling_bytes> <new_tokens>     (public API, E068)
 
 `plain` loads the model normally onto the GPU; `memopro` streams it from host memory within
 `budget_bytes` (memopro.rt.torch.stream_model(device="cuda"), 0195).
@@ -172,6 +174,47 @@ def lm_lora(model_id, mode, budget, steps, seq):
     finish(losses=losses, loss_bits=[float.hex(x) for x in losses], step_s=step_s)
 
 
+def lora_texts(tok, steps, seq):
+    from worker_common import wikitext_ids
+
+    ids = wikitext_ids(tok, "train", (seq - 1) * steps)
+    return [tok.decode(ids[i * (seq - 1):(i + 1) * (seq - 1)]) for i in range(steps)]
+
+
+def ft(model_id, ceiling, steps, seq):
+    """memopro.finetune as a user calls it: a folder and a ceiling for the whole process (0344)."""
+    import transformers
+
+    import memopro
+
+    path = model_path(model_id)
+    tok = transformers.AutoTokenizer.from_pretrained(path)
+    r = memopro.finetune(path, lora_texts(tok, steps, seq), tokenizer=tok, budget=ceiling,
+                         seq_len=seq)
+    finish(losses=r.losses, loss_bits=[float.hex(x) for x in r.losses], step_s=r.step_seconds,
+           tokens=r.tokens, held_back=r.held_back, ceiling=ceiling,
+           rt=r.model.memopro_runtime.stats(), copy_stats=copy_stats(r.model))
+
+
+def gen(model_id, ceiling, new_tokens):
+    """memopro.generate as a user calls it, one call per prompt, the same ceiling (0344)."""
+    import transformers
+
+    import memopro
+
+    path = model_path(model_id)
+    tok = transformers.AutoTokenizer.from_pretrained(path)
+    texts, secs = [], []
+    for p in PROMPTS:  # each call from the folder, as a user would call it
+        t = time.time()
+        texts.append(memopro.generate(path, p, tokenizer=tok, budget=ceiling,
+                                      max_new_tokens=new_tokens))
+        sync()
+        secs.append(time.time() - t)
+    finish(texts=texts, seconds=secs, s_per_token=sum(secs) / (new_tokens * len(PROMPTS)),
+           ceiling=ceiling)
+
+
 def images(batch, size):
     g = torch.Generator().manual_seed(0)
     return torch.rand(batch, 3, size, size, generator=g)
@@ -243,6 +286,15 @@ def vis_lora(model_id, mode, budget, steps, batch):
 
 
 def main():
+    if sys.argv[1] in ("ft", "gen"):  # the public API: <model> <ceiling> <...> (E068)
+        kind, model_id, ceiling, *rest = sys.argv[1:]
+        RESULT.update(kind=kind, model=model_id, mode="memopro", budget=int(ceiling))
+        torch.manual_seed(0)
+        if kind == "ft":
+            torch.use_deterministic_algorithms(True, warn_only=True)
+        (ft if kind == "ft" else gen)(model_id, int(ceiling), *map(int, rest))
+        cleanup()
+        return
     kind, model_id, mode, budget, *rest = sys.argv[1:]
     RESULT.update(kind=kind, model=model_id, mode=mode, budget=int(budget))
     torch.manual_seed(0)
