@@ -13,7 +13,8 @@ Grace hash join); what is memopro's is doing it without disk writes inside a pro
 Rows, keys and gathers are Rust kernels (``memopro::csv``) writing into reused buffers, so the
 allocator has nothing to keep between blocks.
 
-Simple CSV only: a header line, ``,`` between fields, no quoted fields, and integer keys.
+Simple CSV only: a header line, ``\n`` line endings, ``,`` between fields, no quoted fields,
+and integer keys; other input is refused, never misread.
 """
 
 from __future__ import annotations
@@ -40,7 +41,8 @@ Out = str | os.PathLike | Callable[[bytes], Any]
 
 def sort(path: str | os.PathLike, key: str, *, out: Out, budget: Any = "auto") -> dict[str, Any]:
     """Write the rows of the CSV file ``path`` sorted by its integer column ``key`` to ``out``
-    (a file path, or a function called with consecutive pieces of the output), header first.
+    (a file path, or a function called with consecutive bytes-like pieces of the output),
+    header first.
     The sort is stable: rows with equal keys keep their order in the file. Everything memopro
     holds stays within ``budget`` (the whole process's ceiling, as ``memopro.enable``); the
     input is only read, as many times as the ceiling needs. Returns counters (passes, rows,
@@ -131,9 +133,9 @@ def join(
     w = np.concatenate(sizes) if sizes else np.empty(0, np.int64)
     del keys, sizes
     order = np.argsort(k, kind="stable")
-    # per right row: its bytes without the key, its key, start and length (8 bytes each), and
-    # the key and index arrays of a sort over them
-    k, w = k[order], np.cumsum(w[order] + 48)
+    # per right row: its bytes without the key (twice while the pieces are joined into one
+    # array), its key, start and length (8 bytes each), and the arrays of a sort over them
+    k, w = k[order], np.cumsum(2 * w[order] + 48)
     del order
     sink = _Sink(out)
     rest = _without(b.header.rstrip(b"\n"), cb)
@@ -267,9 +269,11 @@ class _Source:
             self.header = f.readline()
         if not self.header.endswith(b"\n"):
             raise InvalidArgument(f"{self.path}: no header line")
+        if self.header.endswith(b"\r\n"):
+            raise InvalidArgument(f"{self.path}: Windows line endings (\\r\\n) are not supported")
         if b'"' in self.header:
             raise InvalidArgument(f"{self.path}: quoted CSV fields are not supported")
-        self.names = self.header.rstrip(b"\r\n").decode().split(",")
+        self.names = self.header.rstrip(b"\n").decode().split(",")
         self.crcs: list[int] = []  # of each block, from the first complete pass
         self.read_bytes = 0
 
@@ -435,7 +439,9 @@ class _Right:
             s, ks, ke = block.starts[sel], block.key_start[sel], block.key_end[sel]
             e = s + block.lens[sel] - 1  # the newline
             # the fields before the key (with their comma) and after it (without its comma)
-            if col == 0:
+            if not self.extra:  # only the key: nothing else to add to a left row
+                segs = [(s, s * 0)]
+            elif col == 0:
                 segs = [(ke + 1, e - ke - 1)]
             elif col == len(src.names) - 1:
                 segs = [(s, ks - 1 - s)]

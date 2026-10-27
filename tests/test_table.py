@@ -97,3 +97,19 @@ def test_defaults_sort_a_small_file_in_one_bucket(tmp_path):
     want = sorted(rows, key=lambda r: int(r.split(",")[0]))
     assert bytes(got).decode() == "k,i,t\n" + "".join(r + "\n" for r in want)
     assert st["passes"] == 2 and st["runtime"]["written_bytes"] == 0
+
+
+def test_edge_cases_header_only_crlf_and_a_key_only_right_file(tmp_path):
+    empty = tmp_path / "e.csv"
+    empty.write_text("k,t\n")
+    got = bytearray()
+    memopro.sort(empty, "k", out=got.extend)
+    assert bytes(got) == b"k,t\n"
+    (tmp_path / "l.csv").write_text("k,t\n2,b\n1,a\n3,c")  # no newline at the end
+    (tmp_path / "keys.csv").write_text("k\n3\n1\n")
+    got = bytearray()
+    memopro.join(tmp_path / "l.csv", tmp_path / "keys.csv", "k", out=got.extend)
+    assert sorted(bytes(got).decode().splitlines()) == ["1,a", "3,c", "k,t"]
+    (tmp_path / "w.csv").write_bytes(b"k,t\r\n1,a\r\n")
+    with pytest.raises(memopro.InvalidArgument, match="line endings"):
+        memopro.sort(tmp_path / "w.csv", "k", out=lambda b: None)

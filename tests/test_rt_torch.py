@@ -919,6 +919,9 @@ def test_a_model_not_on_disk_is_downloaded_once_with_a_note(tmp_path, monkeypatc
     monkeypatch.setattr(huggingface_hub.HfApi, "model_info", model_info)
     monkeypatch.setattr(huggingface_hub, "snapshot_download", snapshot_download)
     monkeypatch.setattr(huggingface_hub.constants, "HF_HUB_CACHE", str(tmp_path / "cache"))
+    # a roomy disk whatever this machine's is (the refusal is checked below with a full one)
+    roomy = types.SimpleNamespace(total=100 << 30, used=10 << 30, free=90 << 30)
+    monkeypatch.setattr("shutil.disk_usage", lambda _: roomy)
     name = "memopro-test/not-on-this-disk"
     with memopro.using(download="never"), pytest.raises(memopro.ModeUnavailable):
         rtt.stream_model(name, budget="9MiB")
