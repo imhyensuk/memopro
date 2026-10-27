@@ -1,0 +1,95 @@
+{
+ "status": "ok",
+ "error": null,
+ "result": {
+  "coef": "a9b9ed86098f6946ac00bda1e9d6576ebac3caae9491182e2712f9130b5fbeb9",
+  "accuracy": 0.9514175,
+  "nnz": 21699438,
+  "seconds": 49.498049664000064,
+  "import_rss_bytes": 1031413760,
+  "maxrss_bytes": 1281187840,
+  "maxrss_rusage_bytes": 1281187840
+ },
+ "preloaded": false,
+ "case": "D_classify_run",
+ "wall_s": 50.1,
+ "timeline_peak_gpu_used_bytes": 3145728,
+ "timeline_peak_host_used_bytes": 3482005504,
+ "report": {
+  "report": {
+   "entries": [
+    {
+     "technique": "enable.rt",
+     "action": "applied",
+     "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+     "reclaimed_bytes": null,
+     "timestamp": 1793101907.2876809
+    },
+    {
+     "technique": "enable.numpy",
+     "action": "applied",
+     "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+     "reclaimed_bytes": null,
+     "timestamp": 1793101907.287686
+    },
+    {
+     "technique": "enable.transformers",
+     "action": "applied",
+     "detail": "from_pretrained loads models that do not fit as memopro.load",
+     "reclaimed_bytes": null,
+     "timestamp": 1793101907.2876928
+    },
+    {
+     "technique": "transparent",
+     "action": "applied",
+     "detail": "budget 1.19 GiB, peak 1.02 GiB; 9599 faults, 7136 chunks compressed (6.97 GiB to 1.50 GiB), 4700 brought back, 0 over budget; nothing written",
+     "reclaimed_bytes": null,
+     "timestamp": 1793101956.9358754
+    }
+   ]
+  },
+  "transparent": {
+   "budget": 1279313920,
+   "limit": 1278265344,
+   "used": 843534336,
+   "peak_used": 1093664768,
+   "regions": 5,
+   "mapped_bytes": 1415577600,
+   "resident_bytes": 725614592,
+   "compressed_bytes": 117919744,
+   "faults": 9599,
+   "zero_fills": 4899,
+   "restores": 4700,
+   "restore_seconds": 10.878158718000018,
+   "evictions": 7136,
+   "compress_in": 7482638336,
+   "compress_out": 1611419057,
+   "compress_seconds": 22.462373608000004,
+   "incompressible": 330,
+   "overruns": 0,
+   "spurious": 0,
+   "outside_peak": 209301504,
+   "limit_low": 1068963840,
+   "machine_limited": 0,
+   "trims": 4,
+   "holds": 0,
+   "written_bytes": 0
+  },
+  "session": {
+   "elapsed_seconds": 49.72556599699965,
+   "memopro_seconds": 33.34053232600002,
+   "slowdown": 3.034816222868706,
+   "ceiling": 1279313920,
+   "footprint": 1046577152,
+   "peak_footprint": 1281187840,
+   "exceeded_bytes": 1873920,
+   "overruns": 0,
+   "activations_moved": 0,
+   "activations_over_ceiling": 0,
+   "runtimes": [],
+   "predictions": []
+  },
+  "ceiling": 1279313920
+ },
+ "budget": 1279313920
+}

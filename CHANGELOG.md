@@ -2,6 +2,13 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Changed: no automatic draft on NVIDIA GPUs (0351)
+- `generate(draft="auto")` drafts only on Apple GPUs. On a Colab T4 the automatic 16-bit draft
+  made 3B generation slower and pushed the process 1.2 GiB over its ceiling, and 7B with a
+  1.5B draft ran out of GPU memory (E068). `draft=` given explicitly still drafts on CUDA.
+
 ## 0.2.0b2 (beta)
 
 Fixes from the first beta on Colab (E068, docs/research/0348-0349).
