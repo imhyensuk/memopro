@@ -754,7 +754,9 @@ impl Shared {
                     let mut out = Vec::new();
                     let fine = codec::pack_chunk(src, elem, level, &mut out).is_ok()
                         && (out.len() as f64) < keep;
-                    fine.then_some(out)
+                    // kept at its own length: `out` reserved the worst case, about a whole
+                    // chunk, which the budget would not see (E068: +136 MB outside)
+                    fine.then(|| out.to_vec())
                 })
                 .collect()
         });

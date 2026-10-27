@@ -47,8 +47,7 @@ jobs:
       - name: Probe
         if: inputs.probe != ''
         run: |
-          sudo apt-get install -y -q gdb > /dev/null
-          bash experiments/e040b_preload/probe.sh "$PWD/target/release/libmemopro_preload.so" "${{ runner.temp }}/e040b/probe"
+          bash experiments/e068_diag/outside.sh "${{ runner.temp }}/e040b/outside"
       - name: E040b
         if: inputs.probe == ''
         env:
