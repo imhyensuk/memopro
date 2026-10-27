@@ -168,9 +168,10 @@ def _plan(
     frozen_only: bool = False,
 ) -> tuple[int, list[_FileWeights | None]]:
     """The ceiling, and per decoder layer None (kept in memory) or its file weights (read
-    again each use): the first layers that fit stay, within the ceiling and no more than the
-    machine can give without swapping (0332), beside what is outside the layers, ``extra``
-    bytes and two layers being read."""
+    again each use): the first layers that fit stay beside the weights outside the layers,
+    ``extra`` bytes, two layers being read and MLX's cache of one layer. The ceiling is the
+    whole process's (0343): what the process holds outside MLX counts too. No more is used
+    than the machine can give without swapping (0332)."""
     import mlx.core as mx
 
     from memopro import rt
@@ -179,13 +180,16 @@ def _plan(
     sizes = [_nbytes(layer.parameters()) for layer in layers]
     rest = _nbytes(model.parameters()) - sum(sizes)
     ceiling = rt.resolve_budget(budget)
-    allowed = min(ceiling, mx.get_active_memory() + _machine_room())
-    room = allowed - rest - extra - 2 * max(sizes)
+    mine = mx.get_active_memory() + mx.get_cache_memory()
+    outside = max(0, (rt.process_footprint() or mine) - mine)  # Python, libraries, tokenizer
+    allowed = min(ceiling - outside, mx.get_active_memory() + _machine_room())
+    room = allowed - rest - extra - 3 * max(sizes)
     if room < 0:
         raise BudgetExceeded(
-            f"the ceiling {ceiling >> 20} MiB (the machine can give {allowed >> 20} MiB now) "
-            f"cannot hold the {rest >> 20} MiB outside the layers, the {extra >> 20} MiB "
-            f"{what} and two layers of {max(sizes) >> 20} MiB"
+            f"the ceiling {ceiling >> 20} MiB (the process holds {outside >> 20} MiB outside "
+            f"MLX; MLX can have {max(0, allowed) >> 20} MiB now) cannot hold the {rest >> 20} "
+            f"MiB outside the layers, the {extra >> 20} MiB {what} and three layers of "
+            f"{max(sizes) >> 20} MiB (two being read, one in MLX's cache)"
         )
     keys = {k for f in files for k in mx.load(str(f))}
     out: list[_FileWeights | None] = []
@@ -244,7 +248,7 @@ def generate(
     for i, w in enumerate(streams):
         if w is not None:
             layers[i] = _streamed(layers[i], w)
-    old_cache = mx.set_cache_limit(2 * max(sizes))
+    old_cache = mx.set_cache_limit(max(sizes))  # counted in the plan
     try:
         out = io.StringIO()
         with contextlib.redirect_stdout(out):
@@ -361,7 +365,7 @@ def finetune(
 
     opt = optim.AdamW(learning_rate=lr)
     result = FinetuneResult(model, model, held_back=estimate, batch=batch)
-    old_cache = mx.set_cache_limit(2 * max(_nbytes(layer.parameters()) for layer in layers))
+    old_cache = mx.set_cache_limit(max(_nbytes(layer.parameters()) for layer in layers))
     start = time.perf_counter()
     try:
         for _ in range(epochs):
