@@ -2,7 +2,26 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.2.0b1 (beta)
+
+The first beta of 0.2.0: everything is lossless and nothing memopro makes is written to the
+disk; the ceiling you set holds for the whole process; models loaded with `mlx_lm.load` run and
+train as mlx-lm runs them.
+
+### Upgrading from 0.1.x
+- Budgets: `"auto"` is 80% of the machine's memory; a size is the ceiling as given (for the
+  whole process in `finetune`, `generate` and `enable`); the forms `"-2GB"`, `"2GB..6GB"`,
+  `"6GB!"`, `{use, min, max}` and the settings `budget_basis`, `headroom` raise an error showing
+  the new form. Ceilings that only fitted the weights before may now be refused: the process
+  itself (Python, torch, the tokenizer: about 0.5-1 GB) counts.
+- Removed: `check`, `train_session`, `optimize`, `hibernate`, `census`, `elastic`, the technique
+  registry, `memopro check`, the notebook magics, every disk-writing feature (spill, file
+  residency, disk offload, `fallback="stored"`, `disk_writes` and related settings) and every
+  automatic lossy choice (`quality`, `prefer`; int4/int8/half are never picked for you). Each
+  removed name raises an error that says what to use instead.
+- `load` loads exactly as stored, or what you passed (`dtype=`, `quantization_config=`), and
+  streams a model that does not fit.
+- New: mlx-lm models in `finetune` and `generate` (`pip install "memopro[mlx]"`).
 
 ### Changed: PyTorch models keep the whole process within the ceiling (0344)
 - `finetune` and `generate` (PyTorch) now hold back, besides the step's or generation's memory,

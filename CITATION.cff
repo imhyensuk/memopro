@@ -1,14 +1,14 @@
 cff-version: 1.2.0
 message: "If you use this software, please cite it as below."
 title: memopro
-abstract: "Run work that exceeds your machine's memory losslessly, within a guaranteed memory ceiling: 16-bit LLM fine-tuning and generation beyond device memory, and a budgeted runtime for large arrays (alpha)."
+abstract: "Run work that exceeds your machine's memory losslessly, within a guaranteed memory ceiling: 16-bit LLM fine-tuning and generation beyond device memory, and a budgeted runtime for large arrays (beta)."
 type: software
 authors:
   - family-names: "Im"
     given-names: "Hyeonseok"
     alias: "임현석"
     affiliation: "한신대학교 공공인재빅데이터융합학"
-version: 0.1.10
+version: 0.2.0b1
 license:
   - MIT
   - Apache-2.0
