@@ -232,7 +232,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 | `memopro.generate(model, prompt, budget=, draft="auto", max_new_tokens=, streamer=, stopping_criteria=)` | 메모리보다 큰 LLM의 생성. 디스크에 있는 같은 계열의 작은 모델을 초안으로 자동 사용. `streamer`(예: Transformers `TextIteratorStreamer`)와 `stopping_criteria`는 `model.generate`에 그대로 넘어가며, 스트리머가 받는 텍스트는 반환값과 같음. `mlx_lm.load`로 불러온 모델을 `tokenizer=`와 함께 주면 mlx-lm이 그대로 생성하고, memopro는 상한에 맞지 않는 층만 토큰마다 다시 읽음(출력은 mlx-lm과 같음, `pip install memopro[mlx]`). |
 | `memopro.enable(budget=)` / `memopro.disable()` | 프로세스 전체 메모리 상한. `Session.estimate()`, `Session.measured()` |
 | `memopro.load(model_id, budget=, **from_pretrained)` | Hugging Face 모델을 저장된 그대로 불러오기(정밀도를 바꾸지 않음). 예산에 안 들어가면 흘려 쓰기로 불러옴. `dtype=`·`quantization_config=`를 직접 주면 그 모델이 원본이 되어 준 그대로 불러옴. 디스크에는 아무것도 쓰지 않음 |
-| `memopro.sort(path, key, out=, budget=)` / `memopro.join(left, right, on, out=, budget=)` | 메모리보다 큰 CSV를 정수 열로 정렬하거나 병합. 상한 안에서 돌고 중간 파일을 디스크에 쓰지 않음(원본을 필요한 만큼 다시 읽고, 바뀌었으면 오류). `out`은 파일 경로나 바이트 조각을 받는 함수. 단순 CSV만(머리글, `,` 구분, 따옴표 없음, `\n` 또는 `\r\n` 줄 끝) |
+| `memopro.sort(path, key, out=, budget=)` / `memopro.join(left, right, on, out=, budget=)` | 메모리보다 큰 CSV를 한 열로 정렬하거나 병합(정수면 숫자 순서, 아니면 바이트 순서). 상한 안에서 돌고 중간 파일을 디스크에 쓰지 않음(원본을 필요한 만큼 다시 읽고, 바뀌었으면 오류). `out`은 파일 경로나 바이트 조각을 받는 함수. RFC 4180 CSV(머리글, `,` 구분, 따옴표 필드, `\n`·`\r\n` 줄 끝) |
 | `memopro.doctor()` | CLI와 같은 메모리·상한 보고 |
 | `memopro.configure(...)` / `memopro.using(...)` | 전역 설정 / 블록 단위 설정 |
 
@@ -390,7 +390,7 @@ h = hashlib.sha256()  # 출력을 파일 대신 함수로 받기
 memopro.join("events.csv", "users.csv", on="user_id", out=h.update, budget="8GB")
 ```
 
-중간 파일을 쓰지 않고, 필요한 만큼 원본을 다시 읽습니다. 블록마다 첫 읽기의 CRC와 맞춰 보므로 도중에 파일이 바뀌면 틀린 결과 대신 오류가 납니다. 한 번에 담은 행은 상한에 닿으면 무손실 압축됩니다. `out`은 파일 경로이거나 출력 조각을 받는 함수입니다. 단순 CSV(머리글, `,` 구분, 따옴표 없음, `\n`·`\r\n` 줄 끝)와 정수 열쇠만 받고, 그 밖의 입력은 잘못 읽지 않고 거부합니다.
+중간 파일을 쓰지 않고, 필요한 만큼 원본을 다시 읽습니다. 블록마다 첫 읽기의 CRC와 맞춰 보므로 도중에 파일이 바뀌면 틀린 결과 대신 오류가 납니다. 한 번에 담은 행은 상한에 닿으면 무손실 압축됩니다. `out`은 파일 경로이거나 출력 조각을 받는 함수입니다. RFC 4180 CSV(머리글, `,` 구분, 쉼표·줄바꿈·`""`를 담은 따옴표 필드, `\n`·`\r\n` 줄 끝)를 받습니다. 열쇠는 파일의 모든 값이 정수면 숫자로, 아니면 글자(바이트 순서, `LC_ALL=C sort`와 같음)로 비교합니다. 잘못된 입력은 잘못 읽지 않고 거부합니다.
 
 ### 실시간 버퍼 고정
 
