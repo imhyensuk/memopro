@@ -46,7 +46,8 @@ memopro는 이 문제를 **메모리 대신 시간을 쓰는 방식**으로 해�
 | 코드 수정 없는 메모리 상한 | `memopro run --budget 8GB script.py`로 NumPy·PyTorch 스크립트를 상한 안에서 실행 |
 | 프로세스 메모리 상한 API | `memopro.enable(budget=...)` 한 줄로 프로세스 전체에 상한 적용 |
 | 실행 전 진단과 예측 | 모델이 예산에 들어가는지, 상한을 걸면 얼마나 느려지는지 미리 계산 |
-| 예산 런타임 | 큰 배열·텐서·모듈·옵티마이저를 예산 안에서 관리하는 Python·Rust·C API |
+| 메모리보다 큰 CSV 정렬·병합 | `memopro.sort` / `memopro.join`: 중간 파일을 디스크에 쓰지 않고 상한 안에서 |
+| 예산 런타임 | 큰 배열·텐서·모듈·옵티마이저를 예산 안에서 관리하는 Python·Rust·C API. `locked=True`로 실시간 버퍼를 RAM에 고정 |
 
 ## 주요 대상
 
@@ -61,6 +62,127 @@ memopro는 이 문제를 **메모리 대신 시간을 쓰는 방식**으로 해�
 다음 경우에는 다른 도구가 더 적합합니다.
 - 모델이 메모리에 다 들어가는 경우: Unsloth, mlx-tune 같은 전용 도구가 더 빠릅니다.
 - 정확도 손실이 허용되는 경우: 4비트 양자화(QLoRA, llama.cpp)가 더 빠릅니다.
+
+## 측정 결과
+
+"개발 확인"으로 표시한 것을 빼면 모든 수치는 미리 정한 판정 기준으로 잰 값이고, 원시 결과는 [`docs/research/data/`](docs/research/data/)에 있습니다. 그림은 [`experiments/readme_figures.py`](experiments/readme_figures.py)가 결과 파일에서 직접 그립니다.
+
+### 8GB Mac에서 메모리보다 큰 LLM 학습
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/fit-8gb-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/fit-8gb.svg" alt="8GB MacBook Air M1에서 Qwen2.5 1.5B, 3B, 7B의 16비트 LoRA: 3B부터 mlx-tune은 메모리 부족, memopro는 7B(가중치 15GB)까지 학습" width="720">
+</picture>
+
+가중치는 파일에 둔 채 필요한 층만 읽습니다. 상한을 바꿔도 학습 손실은 비트 단위로 같습니다.
+
+<details><summary>표로 보기</summary>
+
+| 모델 | 16비트 가중치 | mlx-tune | memopro |
+|---|---|---|---|
+| Qwen2.5-1.5B | 3.1 GB | 실행 (118.9 tok/s) | 실행 (45.4 tok/s) |
+| Qwen2.5-3B | 6.2 GB | 메모리 부족 | 실행 (20.0 tok/s, 상한 1 GiB) |
+| Qwen2.5-7B | 15.2 GB | 불러올 수 없음 | 실행 (16.4 tok/s, 1,024토큰) |
+
+</details>
+
+### 8GB Mac에서 메모리보다 큰 LLM 생성
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/generation-8gb-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/generation-8gb.svg" alt="토큰당 시간: 3B는 llama.cpp CPU 14.75초 대 memopro 1.09초, 7B는 초안 없이 8.95초에서 초안으로 2.37초" width="720">
+</picture>
+
+출력은 모델을 그냥 올렸을 때와 같습니다. llama.cpp는 Metal로 올리면 모두 메모리 부족이었고 CPU로만 돌았습니다.
+
+<details><summary>표로 보기</summary>
+
+| 경우 | 초/토큰 |
+|---|---|
+| 3B, llama.cpp (CPU) | 14.75 |
+| 3B, memopro + int4 초안 | 1.09 |
+| 7B, memopro (초안 없음) | 8.95 |
+| 7B, memopro + 초안 | 2.37 (3.8배 빠름) |
+
+</details>
+
+### 프로세스 전체가 상한 안에
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ceiling-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ceiling.svg" alt="프로세스 최대 메모리 대 상한: T4 학습 91~93%, 데이터 프로그램 100~101%(허용 +32MiB), 1GB CSV 정렬 74%" width="720">
+</picture>
+
+상한은 memopro가 쥔 메모리만이 아니라 Python·torch까지 포함한 프로세스 전체에 걸립니다.
+
+<details><summary>표로 보기</summary>
+
+| 작업 (환경) | 상한 | 최대 메모리 |
+|---|---|---|
+| 3B 16비트 LoRA (Colab T4) | 6 / 8 GiB | 5.56 / 7.34 GiB |
+| 7B 16비트 LoRA (Colab T4, 7B는 T4에 그냥 안 들어감) | 7 / 9 GiB | 6.36 / 8.37 GiB |
+| 영상 묶음, 메모리 절반 (Colab) | 403 MiB | 407 MiB (허용 +32 MiB 안) |
+| scikit-learn, 메모리 절반 (Colab) | 1,220 MiB | 1,222 MiB |
+| 1GB CSV 정렬 (M1, 개발 확인) | 313 MiB | 233 MiB |
+
+</details>
+
+### 메모리 절반에서 그대로 실행, SSD에는 0바이트
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/half-memory-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/half-memory.svg" alt="메모리 절반에서 OS 스왑은 2,300MiB와 1,713MiB를 SSD에 썼고 memopro는 0바이트; 영상 작업은 스왑 62초 대 memopro 15초" width="720">
+</picture>
+
+코드를 고치지 않은 프로그램을 `memopro run --budget <절반>`으로 실행했습니다. 결과는 메모리를 다 쓴 실행과 같습니다. OS 스왑과 달리 SSD에 아무것도 쓰지 않습니다(억제율 100%).
+
+<details><summary>표로 보기</summary>
+
+| 작업 | SSD 쓰기: OS 스왑 / memopro | 시간: 메모리 전부 / OS 스왑 / memopro |
+|---|---|---|
+| 영상 묶음 (E027) | 2,300 MiB / 0 | 5.3 / 62.2 / 14.8초 |
+| scikit-learn 분류 (E040) | 1,713 MiB / 0 | 11.7 / 25.5 / 27.0초 |
+
+Linux 러너, cgroup 상한 = 일반 실행 최대 메모리의 1/2.
+
+</details>
+
+### 실시간 오디오: 다른 메모리가 스왑돼도 끊기지 않음
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/audio-locked-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/audio-locked.svg" alt="오디오 블록 렌더 시간 분포: 일반 버퍼는 마감 5.33ms를 3번 넘었고(최대 9.3ms) locked=True 버퍼는 0번(최대 2.5ms)" width="720">
+</picture>
+
+같은 메모리 공간에서 다른 프로세스가 약 8.5 GiB를 스왑하는 동안 60초를 렌더링했습니다. `Runtime.alloc(..., locked=True)`로 잡은 샘플 버퍼는 RAM에 고정되어 한 번도 끊기지 않았습니다.
+
+<details><summary>표로 보기</summary>
+
+| 경우 | 끊김 | 렌더 p99 / 최대 | 메이저 폴트 |
+|---|---|---|---|
+| 압박 없음, 일반 버퍼 | 0 | 0.06 / 0.24 ms | 0 |
+| 압박 있음, 일반 버퍼 | 3 | 0.30 / 9.34 ms | 549 |
+| 압박 있음, `locked=True` | 0 | 0.09 / 2.53 ms | 75 (파이썬 자체 코드 페이지) |
+
+</details>
+
+### 무손실 압축의 비율과 속도
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/compression-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/compression.svg" alt="자료 종류별 압축 비율: CSV 3.02배, int64 열쇠 2.07배, 영상 1.36배, float32 1.10배(압축 안 함), 무작위 바이트 압축 안 함" width="720">
+</picture>
+
+메모리가 모자라면 쓰지 않는 버퍼를 메모리 안에서 무손실로 압축합니다(디스크에 쓰지 않음). 거의 줄지 않는 자료는 압축하지 않고 그대로 둡니다. 모든 버퍼가 비트 단위로 같게 돌아왔습니다. Apple M1에서는 같은 비율에 속도가 약 두 배였습니다(CSV 압축 0.98 GB/s, 해제 3.23 GB/s).
+
+### 다른 언어에서 부르기
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ffi-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ffi.svg" alt="런타임 호출 비용: C ABI는 Rust와 같고 Python은 호출당 약 5배; 대량 복사는 세 언어 모두 memcpy 속도" width="720">
+</picture>
+
+C 프로그램은 `memopro-c`(`include/memopro.h`)로 Rust와 같은 비용에 런타임을 씁니다. 세 언어가 같은 바이트를 냈습니다.
 
 ## 설치
 
@@ -257,6 +379,28 @@ with work.view(write=True) as a:             # 사용하는 동안만 메모리�
     a[:] = 1.0
 ```
 
+### 메모리보다 큰 CSV 정렬·병합
+
+```python
+import hashlib, memopro
+
+memopro.sort("events.csv", key="user_id", out="sorted.csv", budget="8GB")
+
+h = hashlib.sha256()  # 출력을 파일 대신 함수로 받기
+memopro.join("events.csv", "users.csv", on="user_id", out=h.update, budget="8GB")
+```
+
+중간 파일을 쓰지 않고, 필요한 만큼 원본을 다시 읽습니다. 블록마다 첫 읽기의 CRC와 맞춰 보므로 도중에 파일이 바뀌면 틀린 결과 대신 오류가 납니다. 한 번에 담은 행은 상한에 닿으면 무손실 압축됩니다. `out`은 파일 경로이거나 출력 조각을 받는 함수입니다. 단순 CSV(머리글, `,` 구분, 따옴표 없음, `\n`·`\r\n` 줄 끝)와 정수 열쇠만 받고, 그 밖의 입력은 잘못 읽지 않고 거부합니다.
+
+### 실시간 버퍼 고정
+
+```python
+from memopro.rt import Runtime
+
+rt = Runtime(budget="1GB")
+samples = rt.array((48_000 * 60,), "int16", locked=True)  # 압축·스왑되지 않음
+```
+
 ### 벤치마크
 
 | 작업 | 환경 | 결과 |
@@ -268,15 +412,19 @@ with work.view(write=True) as a:             # 사용하는 동안만 메모리�
 | Qwen2.5-3B LoRA 학습, `mlx_lm.load` 모델 | Apple M1, 8GB | 상한 2.5GiB에서 22.8토큰/초, 손실·어댑터가 mlx-lm 학습과 비트 동일 (mlx-lm 그대로는 1.8토큰/초, 스왑 +0.9GB; mlx-tune은 메모리 부족) |
 | 1.5B~3.8B 모델 (Qwen2.5, SmolLM2, Phi-3.5) | NVIDIA T4, 16GB | 메모리를 충분히 쓴 실행 대비 학습 1.00~1.03배, 생성 1.06~1.35배 시간 |
 | NumPy·scikit-learn·CSV 처리, 필요 메모리의 50~75% 상한 | Linux | 결과 동일, 1.1~3.4배 시간 |
+| 같은 3B LoRA, 모델이 GPU에 들어가는 크기 | NVIDIA T4 | Unsloth 0.45초/스텝 대 memopro 5.1초/스텝 (Unsloth가 약 11배 빠름) |
 
 검증한 모델: Qwen2.5(1.5B~14B), SmolLM2, Phi-3.5, Mistral-7B, DINOv2, ConvNeXtV2, ResNet-152. 원시 결과는 [`docs/research/data/`](docs/research/data/)에 있습니다.
 
 ### 한계
 
 - 메모리를 크게 넘는 모델은 실행되지만 저장 장치 읽기 속도에 묶여 매우 느립니다. 예를 들어 NVIDIA T4에서 14B 16비트 LoRA는 약 1토큰/초입니다.
-- 무작위 접근이 많은 데이터 작업(정렬, 조인, Polars 등)은 결과는 같지만 크게 느려질 수 있습니다.
+- 모델이 메모리에 들어가는 크기에서는 전용 도구가 훨씬 빠릅니다(T4 3B: Unsloth가 약 11배, M1 1.5B: mlx-tune이 2.6배). memopro의 장점은 들어가지 않는 크기를 결과를 바꾸지 않고 상한 안에서 돌리는 데 있습니다.
+- 코드를 고치지 않은 무작위 접근 작업(pandas 데이터프레임 조작, Polars 등)은 `memopro run`에서 크게 느려지거나 상한을 지키지 못할 수 있습니다. 큰 CSV의 정렬·병합에는 `memopro.sort`/`memopro.join`을 쓰세요.
+- CUDA에서 학습 손실은 상한과 관계없이 같지만, 일반 PyTorch 학습과는 2단계부터 마지막 자리가 다를 수 있습니다.
+- `locked=True`는 데이터 버퍼만 고정합니다. 프로그램 코드까지 고정하려면 프로그램이 직접 `mlockall`을 써야 합니다.
 - Apple GPU에서는 `finetune`/`stream_model`을 다른 MPS 연산보다 먼저 호출해야 메모리 설정이 적용됩니다.
-- 알파 버전이라 API가 바뀔 수 있습니다. 변경 내역은 [CHANGELOG](CHANGELOG.md)에 있습니다.
+- 베타 버전이라 API가 바뀔 수 있습니다. 변경 내역은 [CHANGELOG](CHANGELOG.md)에 있습니다.
 
 ## 기여와 라이선스
 
