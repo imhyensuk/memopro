@@ -10,7 +10,7 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   the disk. The input is read again as often as the ceiling needs (each block checked against
   its first read); the rows of a pass sit in runtime buffers that are compressed losslessly
   when the ceiling is reached. Output goes to a file or to a function. Simple CSV only (a header,
-  `,` between fields, no quoted fields), integer keys.
+  `\n` or `\r\n` line endings, `,` between fields, no quoted fields), integer keys.
 - Rows, keys and gathers are Rust kernels (`memopro::csv`) writing into reused buffers.
 
 ### Added: locked runtime buffers (0357)

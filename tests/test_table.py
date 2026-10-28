@@ -29,7 +29,7 @@ def _rows(n, keys, seed):
 def test_sort_is_stable_and_equals_a_plain_sort(tmp_path, small):
     rows = _rows(3000, list(range(-50, 400)), 1)  # repeated and negative keys
     path = tmp_path / "a.csv"
-    path.write_text("k,i,t\n" + "\n".join(rows) + "\n")
+    path.write_text("k,i,t\n" + "\n".join(rows) + "\n", newline="\n")
     got = bytearray()
     st = memopro.sort(path, "k", out=got.extend)
     want = sorted(rows, key=lambda r: int(r.split(",")[0]))  # Python's sort is stable
@@ -43,8 +43,8 @@ def test_join_equals_a_plain_join(tmp_path, small):
     left = _rows(2000, list(range(300)), 2)
     rng = random.Random(3)
     right = [f"r{j},{rng.randrange(320)},{'y' * rng.randint(0, 9)}" for j in range(900)]
-    (tmp_path / "l.csv").write_text("k,i,t\n" + "\n".join(left) + "\n")
-    (tmp_path / "r.csv").write_text("name,k,w\n" + "\n".join(right) + "\n")
+    (tmp_path / "l.csv").write_text("k,i,t\n" + "\n".join(left) + "\n", newline="\n")
+    (tmp_path / "r.csv").write_text("name,k,w\n" + "\n".join(right) + "\n", newline="\n")
     got = bytearray()
     st = memopro.join(tmp_path / "l.csv", tmp_path / "r.csv", "k", out=got.extend)
     lines = bytes(got).decode().splitlines()
@@ -62,10 +62,10 @@ def test_join_equals_a_plain_join(tmp_path, small):
 
 def test_bad_input_is_refused_not_misread(tmp_path, small):
     p = tmp_path / "q.csv"
-    p.write_text('k,t\n1,"a,b"\n')
+    p.write_text('k,t\n1,"a,b"\n', newline="\n")
     with pytest.raises(memopro.InvalidArgument, match="quoted"):
         memopro.sort(p, "k", out=lambda b: None)
-    p.write_text("k,t\n1,a\nx,b\n")
+    p.write_text("k,t\n1,a\nx,b\n", newline="\n")
     with pytest.raises(memopro.InvalidArgument, match="integers"):
         memopro.sort(p, "k", out=lambda b: None)
     with pytest.raises(memopro.InvalidArgument, match="no column"):
@@ -75,12 +75,12 @@ def test_bad_input_is_refused_not_misread(tmp_path, small):
 def test_a_file_changed_between_passes_is_an_error(tmp_path, small, monkeypatch):
     rows = _rows(500, list(range(100)), 4)
     path = tmp_path / "a.csv"
-    path.write_text("k,i,t\n" + "\n".join(rows) + "\n")
+    path.write_text("k,i,t\n" + "\n".join(rows) + "\n", newline="\n")
     ratio = table._ratio
 
     def change(src, col):
         out = ratio(src, col)
-        path.write_text("k,i,t\n" + "\n".join(reversed(rows)) + "\n")
+        path.write_text("k,i,t\n" + "\n".join(reversed(rows)) + "\n", newline="\n")
         return out
 
     monkeypatch.setattr(table, "_ratio", change)
@@ -91,7 +91,7 @@ def test_a_file_changed_between_passes_is_an_error(tmp_path, small, monkeypatch)
 def test_defaults_sort_a_small_file_in_one_bucket(tmp_path):
     rows = _rows(1000, list(range(1000)), 5)
     path = tmp_path / "a.csv"
-    path.write_text("k,i,t\n" + "\n".join(rows) + "\n")
+    path.write_text("k,i,t\n" + "\n".join(rows) + "\n", newline="\n")
     got = bytearray()
     st = memopro.sort(path, "k", out=got.extend)
     want = sorted(rows, key=lambda r: int(r.split(",")[0]))
@@ -101,15 +101,21 @@ def test_defaults_sort_a_small_file_in_one_bucket(tmp_path):
 
 def test_edge_cases_header_only_crlf_and_a_key_only_right_file(tmp_path):
     empty = tmp_path / "e.csv"
-    empty.write_text("k,t\n")
+    empty.write_bytes(b"k,t\n")
     got = bytearray()
     memopro.sort(empty, "k", out=got.extend)
     assert bytes(got) == b"k,t\n"
-    (tmp_path / "l.csv").write_text("k,t\n2,b\n1,a\n3,c")  # no newline at the end
-    (tmp_path / "keys.csv").write_text("k\n3\n1\n")
+    (tmp_path / "l.csv").write_bytes(b"k,t\n2,b\n1,a\n3,c")  # no newline at the end
+    (tmp_path / "keys.csv").write_bytes(b"k\n3\n1\n")
     got = bytearray()
     memopro.join(tmp_path / "l.csv", tmp_path / "keys.csv", "k", out=got.extend)
-    assert sorted(bytes(got).decode().splitlines()) == ["1,a", "3,c", "k,t"]
-    (tmp_path / "w.csv").write_bytes(b"k,t\r\n1,a\r\n")
-    with pytest.raises(memopro.InvalidArgument, match="line endings"):
-        memopro.sort(tmp_path / "w.csv", "k", out=lambda b: None)
+    assert sorted(bytes(got).split(b"\n")) == [b"", b"1,a", b"3,c", b"k,t"]
+    # Windows line endings: rows kept as they are, the key before \r\n read as a number
+    (tmp_path / "w.csv").write_bytes(b"t,k\r\nb,2\r\na,1\r\nc,3")
+    got = bytearray()
+    memopro.sort(tmp_path / "w.csv", "k", out=got.extend)
+    assert bytes(got) == b"t,k\r\na,1\r\nb,2\r\nc,3\r\n"
+    (tmp_path / "r.csv").write_bytes(b"k,n\r\n1,x\r\n2,y\r\n")
+    got = bytearray()
+    memopro.join(tmp_path / "w.csv", tmp_path / "r.csv", "k", out=got.extend)
+    assert sorted(bytes(got).split(b"\r\n")) == [b"", b"a,1,x", b"b,2,y", b"t,k,n"]

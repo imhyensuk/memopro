@@ -81,8 +81,8 @@ def main() -> None:
     import memopro
 
     run = lambda *c, **k: subprocess.run(c, check=True, cwd=ROOT, **k)
-    run("cargo", "build", "-q", "--release", "-p", "memopro-c", "-p", "memopro", "--example",
-        "e069_ffi")
+    run("cargo", "build", "-q", "--release", "-p", "memopro-c")  # the C library
+    run("cargo", "build", "-q", "--release", "-p", "memopro", "--example", "e069_ffi")
     rust = json.loads(run(str(ROOT / "target/release/examples/e069_ffi"), capture_output=True,
                           text=True).stdout)
     exe = os.path.join(tempfile.mkdtemp(), "v6c")
