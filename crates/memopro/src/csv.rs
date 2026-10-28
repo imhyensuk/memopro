@@ -3,7 +3,8 @@
 //! temporary is allocated per block (NumPy's took 16 bytes per gathered byte, and the
 //! allocator kept them: macOS large cache 0060, glibc heaps 0349).
 //!
-//! Simple CSV only: lines end in `\n`, fields are separated by `,`, and no field is quoted.
+//! Simple CSV only: lines end in `\n` or `\r\n`, fields are separated by `,`, and no field is
+//! quoted.
 
 use crate::error::{Error, Result};
 
@@ -13,9 +14,9 @@ pub fn count_lines(block: &[u8]) -> usize {
 }
 
 /// Rows of `block` (whole lines, each ending in `\n`): for row `i`, its start, its length with
-/// the newline, field `col` parsed as an `i64` key, and that field's start and end. Every row
-/// must have `fields` fields and no quote. Each output must hold at least the number of rows;
-/// returns that number.
+/// the line ending, its length without it (`\n` or `\r\n`), field `col` parsed as an `i64` key,
+/// and that field's start and end. Every row must have `fields` fields and no quote. Each
+/// output must hold at least the number of rows; returns that number.
 #[allow(clippy::too_many_arguments)]
 pub fn rows(
     block: &[u8],
@@ -23,6 +24,7 @@ pub fn rows(
     fields: usize,
     starts: &mut [i64],
     lens: &mut [i64],
+    body: &mut [i64],
     keys: &mut [i64],
     key_start: &mut [i64],
     key_end: &mut [i64],
@@ -50,6 +52,7 @@ pub fn rows(
             ));
         };
         let line = &block[at..at + nl];
+        let line = line.strip_suffix(b"\r").unwrap_or(line);
         if n == cap {
             return Err(Error::InvalidArgument(format!(
                 "more than {cap} rows for the outputs"
@@ -87,6 +90,7 @@ pub fn rows(
         keys[n] = parse_key(&line[fs..fe])?;
         starts[n] = at as i64;
         lens[n] = nl as i64 + 1;
+        body[n] = line.len() as i64;
         key_start[n] = (at + fs) as i64;
         key_end[n] = (at + fe) as i64;
         n += 1;
@@ -154,7 +158,7 @@ pub fn gather(src: &[u8], starts: &[i64], lens: &[i64], out: &mut [u8]) -> Resul
 }
 
 /// Joined rows into `out`: for each `i`, `left[ls[i]..][..ll[i]]`, a comma when `comma`,
-/// `right[rs[i]..][..rl[i]]` and a newline; returns the bytes written.
+/// `right[rs[i]..][..rl[i]]` and a line ending (`\r\n` when `crlf`); returns the bytes written.
 #[allow(clippy::too_many_arguments)]
 pub fn join_rows(
     left: &[u8],
@@ -164,6 +168,7 @@ pub fn join_rows(
     rs: &[i64],
     rl: &[i64],
     comma: bool,
+    crlf: bool,
     out: &mut [u8],
 ) -> Result<usize> {
     let n = ls.len();
@@ -174,7 +179,7 @@ pub fn join_rows(
     for i in 0..n {
         let a = range(left.len(), ls[i], ll[i])?;
         let b = range(right.len(), rs[i], rl[i])?;
-        let end = at + a.len() + usize::from(comma) + b.len() + 1;
+        let end = at + a.len() + usize::from(comma) + b.len() + 1 + usize::from(crlf);
         if end > out.len() {
             return Err(Error::InvalidArgument("output too small".into()));
         }
@@ -187,6 +192,10 @@ pub fn join_rows(
         let blen = b.len();
         out[at..at + blen].copy_from_slice(&right[b]);
         at += blen;
+        if crlf {
+            out[at] = b'\r';
+            at += 1;
+        }
         out[at] = b'\n';
         at += 1;
     }
@@ -200,24 +209,34 @@ mod tests {
     #[test]
     fn rows_keys_and_gathers() {
         let block = b"3,x,7\n-12,yy,8\n5,z,9\n";
-        let mut v = [[0i64; 3]; 5];
-        let [s, l, k, ks, ke] = &mut v;
-        assert_eq!(rows(block, 0, 3, s, l, k, ks, ke).unwrap(), 3);
+        let mut v = [[0i64; 3]; 6];
+        let [s, l, b, k, ks, ke] = &mut v;
+        assert_eq!(rows(block, 0, 3, s, l, b, k, ks, ke).unwrap(), 3);
         assert_eq!(*k, [3, -12, 5]);
         assert_eq!(*l, [6, 9, 6]);
+        assert_eq!(*b, [5, 8, 5]);
         let mut out = vec![0u8; 21];
         let n = gather(block, &[s[2], s[0]], &[l[2], l[0]], &mut out).unwrap();
         assert_eq!(&out[..n], b"5,z,9\n3,x,7\n");
-        let mut v2 = [[0i64; 3]; 5];
-        let [s2, l2, k2, ks2, ke2] = &mut v2;
-        assert_eq!(rows(block, 2, 3, s2, l2, k2, ks2, ke2).unwrap(), 3);
+        let mut v2 = [[0i64; 3]; 6];
+        let [s2, l2, b2, k2, ks2, ke2] = &mut v2;
+        // the last field before \r\n is the key: the \r is the line ending, not the field
+        assert_eq!(
+            rows(b"a,7\r\nb,8\r\n", 1, 2, s2, l2, b2, k2, ks2, ke2).unwrap(),
+            2
+        );
+        assert_eq!(
+            (&k2[..2], &l2[..2], &b2[..2]),
+            (&[7, 8][..], &[5, 5][..], &[3, 3][..])
+        );
+        assert_eq!(rows(block, 2, 3, s2, l2, b2, k2, ks2, ke2).unwrap(), 3);
         assert_eq!(*k2, [7, 8, 9]);
-        assert!(rows(b"1,\"a\"\n", 0, 2, s, l, k, ks, ke).is_err());
-        assert!(rows(b"1,2\n", 0, 3, s, l, k, ks, ke).is_err());
-        assert!(rows(b"x,2\n", 0, 2, s, l, k, ks, ke).is_err());
-        assert!(rows(b"99999999999999999999,2\n", 0, 2, s, l, k, ks, ke).is_err());
+        assert!(rows(b"1,\"a\"\n", 0, 2, s, l, b, k, ks, ke).is_err());
+        assert!(rows(b"1,2\n", 0, 3, s, l, b, k, ks, ke).is_err());
+        assert!(rows(b"x,2\n", 0, 2, s, l, b, k, ks, ke).is_err());
+        assert!(rows(b"99999999999999999999,2\n", 0, 2, s, l, b, k, ks, ke).is_err());
         let mut j = vec![0u8; 32];
-        let n = join_rows(b"1,a", &[0], &[3], b"b,c", &[0], &[3], true, &mut j).unwrap();
+        let n = join_rows(b"1,a", &[0], &[3], b"b,c", &[0], &[3], true, false, &mut j).unwrap();
         assert_eq!(&j[..n], b"1,a,b,c\n");
     }
 }
