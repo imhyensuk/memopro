@@ -153,6 +153,127 @@ fn typed<T>(raw: Raw, what: &str) -> PyResult<(usize, usize)> {
     Ok((raw.ptr, raw.len / size))
 }
 
+// ------------------------------------------------------------------ csv (E069, 0356)
+
+/// A C-contiguous int64 buffer (NumPy `int64`), held by the returned `PyBuffer`.
+fn borrow_i64(obj: &Bound<'_, PyAny>, writable: bool) -> PyResult<(PyBuffer<i64>, Raw)> {
+    let buf = PyBuffer::<i64>::get(obj)?;
+    if !buf.is_c_contiguous() {
+        return Err(PyValueError::new_err("buffer must be C-contiguous"));
+    }
+    if writable && buf.readonly() {
+        return Err(PyValueError::new_err("destination buffer is read-only"));
+    }
+    let raw = Raw {
+        ptr: buf.buf_ptr() as usize,
+        len: buf.item_count(),
+    };
+    Ok((buf, raw))
+}
+
+impl Raw {
+    /// SAFETY: as `slice_mut`, for an int64 buffer from `borrow_i64` (`len` counts values).
+    unsafe fn i64s<'a>(self) -> &'a mut [i64] {
+        unsafe { std::slice::from_raw_parts_mut(self.ptr as *mut i64, self.len) }
+    }
+}
+
+/// Number of lines in `block`.
+#[pyfunction]
+fn csv_count_lines(py: Python<'_>, block: &Bound<'_, PyAny>) -> PyResult<usize> {
+    let (_b, b) = borrow(block, false)?;
+    // SAFETY: `_b` holds the buffer.
+    Ok(py.detach(|| memopro::csv::count_lines(unsafe { b.slice() })))
+}
+
+/// Row starts, lengths, integer keys of field `col` and that field's span (int64 outputs).
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn csv_rows(
+    py: Python<'_>,
+    block: &Bound<'_, PyAny>,
+    col: usize,
+    fields: usize,
+    starts: &Bound<'_, PyAny>,
+    lens: &Bound<'_, PyAny>,
+    keys: &Bound<'_, PyAny>,
+    key_start: &Bound<'_, PyAny>,
+    key_end: &Bound<'_, PyAny>,
+) -> PyResult<usize> {
+    let (_b, b) = borrow(block, false)?;
+    let bufs = [starts, lens, keys, key_start, key_end]
+        .map(|o| borrow_i64(o, true))
+        .into_iter()
+        .collect::<PyResult<Vec<_>>>()?;
+    let [s, l, k, ks, ke] = [0, 1, 2, 3, 4].map(|i| bufs[i].1);
+    py.detach(|| {
+        // SAFETY: `_b` and `bufs` hold the buffers for the call; the outputs are distinct arrays.
+        let (s, l, k, ks, ke) = unsafe { (s.i64s(), l.i64s(), k.i64s(), ks.i64s(), ke.i64s()) };
+        memopro::csv::rows(unsafe { b.slice() }, col, fields, s, l, k, ks, ke)
+    })
+    .map_err(rt_err)
+}
+
+/// Segments of `src` (int64 starts and lengths) one after another into `out`; bytes written.
+#[pyfunction]
+fn csv_gather(
+    py: Python<'_>,
+    src: &Bound<'_, PyAny>,
+    starts: &Bound<'_, PyAny>,
+    lens: &Bound<'_, PyAny>,
+    out: &Bound<'_, PyAny>,
+) -> PyResult<usize> {
+    let (_s, s) = borrow(src, false)?;
+    let (_a, a) = borrow_i64(starts, false)?;
+    let (_n, n) = borrow_i64(lens, false)?;
+    let (_o, o) = borrow(out, true)?;
+    py.detach(|| {
+        // SAFETY: the four buffers are held by `_s`, `_a`, `_n`, `_o`.
+        let (a, n) = unsafe { (a.i64s(), n.i64s()) };
+        memopro::csv::gather(unsafe { s.slice() }, a, n, unsafe { o.slice_mut() })
+    })
+    .map_err(rt_err)
+}
+
+/// Joined rows: left segment, a comma when `comma`, right segment, newline; bytes written.
+#[pyfunction]
+#[allow(clippy::too_many_arguments)]
+fn csv_join_rows(
+    py: Python<'_>,
+    left: &Bound<'_, PyAny>,
+    ls: &Bound<'_, PyAny>,
+    ll: &Bound<'_, PyAny>,
+    right: &Bound<'_, PyAny>,
+    rs: &Bound<'_, PyAny>,
+    rl: &Bound<'_, PyAny>,
+    comma: bool,
+    out: &Bound<'_, PyAny>,
+) -> PyResult<usize> {
+    let (_l, lb) = borrow(left, false)?;
+    let (_r, rb) = borrow(right, false)?;
+    let (_o, o) = borrow(out, true)?;
+    let idx = [ls, ll, rs, rl]
+        .map(|x| borrow_i64(x, false))
+        .into_iter()
+        .collect::<PyResult<Vec<_>>>()?;
+    let [a, b, c, d] = [0, 1, 2, 3].map(|i| idx[i].1);
+    py.detach(|| {
+        // SAFETY: every buffer is held for the call by `_l`, `_r`, `_o` and `idx`.
+        let (a, b, c, d) = unsafe { (a.i64s(), b.i64s(), c.i64s(), d.i64s()) };
+        memopro::csv::join_rows(
+            unsafe { lb.slice() },
+            a,
+            b,
+            unsafe { rb.slice() },
+            c,
+            d,
+            comma,
+            unsafe { o.slice_mut() },
+        )
+    })
+    .map_err(rt_err)
+}
+
 /// The 15 most frequent exponents of a bf16 buffer (EDR v1 table).
 #[pyfunction]
 fn edr_table<'py>(py: Python<'py>, src: &Bound<'py, PyAny>) -> PyResult<Bound<'py, PyBytes>> {
@@ -370,9 +491,17 @@ impl RtRuntime {
         py.detach(move || rt.hold_back(nbytes)).map_err(rt_err)
     }
 
-    fn alloc(&self, py: Python<'_>, nbytes: usize, elem: usize) -> PyResult<u64> {
+    #[pyo3(signature = (nbytes, elem, locked=false))]
+    fn alloc(&self, py: Python<'_>, nbytes: usize, elem: usize, locked: bool) -> PyResult<u64> {
         let rt = self.rt.clone();
-        py.detach(move || rt.alloc(nbytes, elem)).map_err(rt_err)
+        py.detach(move || {
+            if locked {
+                rt.alloc_locked(nbytes, elem)
+            } else {
+                rt.alloc(nbytes, elem)
+            }
+        })
+        .map_err(rt_err)
     }
 
     fn add_file(&self, path: PathBuf, offset: u64, nbytes: usize, elem: usize) -> PyResult<u64> {
@@ -999,6 +1128,10 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hwinfo_cpu, m)?)?;
     m.add_function(wrap_pyfunction!(hwinfo_disk, m)?)?;
     m.add_function(wrap_pyfunction!(edr_table, m)?)?;
+    m.add_function(wrap_pyfunction!(csv_count_lines, m)?)?;
+    m.add_function(wrap_pyfunction!(csv_rows, m)?)?;
+    m.add_function(wrap_pyfunction!(csv_gather, m)?)?;
+    m.add_function(wrap_pyfunction!(csv_join_rows, m)?)?;
     m.add_function(wrap_pyfunction!(edr_encode, m)?)?;
     m.add_function(wrap_pyfunction!(edr_decode, m)?)?;
     m.add_function(wrap_pyfunction!(edr2_encode, m)?)?;

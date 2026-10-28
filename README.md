@@ -110,6 +110,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 | `memopro.generate(model, prompt, budget=, draft="auto", max_new_tokens=, streamer=, stopping_criteria=)` | 메모리보다 큰 LLM의 생성. 디스크에 있는 같은 계열의 작은 모델을 초안으로 자동 사용. `streamer`(예: Transformers `TextIteratorStreamer`)와 `stopping_criteria`는 `model.generate`에 그대로 넘어가며, 스트리머가 받는 텍스트는 반환값과 같음. `mlx_lm.load`로 불러온 모델을 `tokenizer=`와 함께 주면 mlx-lm이 그대로 생성하고, memopro는 상한에 맞지 않는 층만 토큰마다 다시 읽음(출력은 mlx-lm과 같음, `pip install memopro[mlx]`). |
 | `memopro.enable(budget=)` / `memopro.disable()` | 프로세스 전체 메모리 상한. `Session.estimate()`, `Session.measured()` |
 | `memopro.load(model_id, budget=, **from_pretrained)` | Hugging Face 모델을 저장된 그대로 불러오기(정밀도를 바꾸지 않음). 예산에 안 들어가면 흘려 쓰기로 불러옴. `dtype=`·`quantization_config=`를 직접 주면 그 모델이 원본이 되어 준 그대로 불러옴. 디스크에는 아무것도 쓰지 않음 |
+| `memopro.sort(path, key, out=, budget=)` / `memopro.join(left, right, on, out=, budget=)` | 메모리보다 큰 CSV를 정수 열로 정렬하거나 병합. 상한 안에서 돌고 중간 파일을 디스크에 쓰지 않음(원본을 필요한 만큼 다시 읽고, 바뀌었으면 오류). `out`은 파일 경로나 바이트 조각을 받는 함수. 단순 CSV만(머리글, `,` 구분, 따옴표 없음, `\n` 줄 끝) |
 | `memopro.doctor()` | CLI와 같은 메모리·상한 보고 |
 | `memopro.configure(...)` / `memopro.using(...)` | 전역 설정 / 블록 단위 설정 |
 
@@ -120,7 +121,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 | 이름 | 설명 |
 |---|---|
 | `memopro.rt.Runtime(budget=)` | 예산 안에서 버퍼를 관리하는 런타임 |
-| `Runtime.load_npy`, `.array`, `.add_file`, `.alloc` | 파일·새 버퍼 등록. `Buffer.view()`로 복사 없는 NumPy 뷰 |
+| `Runtime.load_npy`, `.array`, `.add_file`, `.alloc` | 파일·새 버퍼 등록. `Buffer.view()`로 복사 없는 NumPy 뷰. `alloc(..., locked=True)`는 버퍼를 RAM에 고정(압축·스왑 없음, 실시간 오디오 버퍼처럼 기다리면 안 되는 메모리용, macOS·Linux) |
 | `Runtime.adopt(obj)` | 텐서·모듈·옵티마이저·배열을 담은 객체를 런타임에 맡김 |
 | `memopro.rt.torch.stream_model(name, budget=, device=, model_class=)` | 가중치를 파일에 둔 채 Hugging Face 모델 실행 |
 | `memopro.rt.torch.draft_model(name, target=, device=)` | 생성 속도용 초안 모델 (Apple GPU: int4, NVIDIA GPU: 16비트) |

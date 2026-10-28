@@ -121,6 +121,14 @@ impl Region {
     }
 }
 
+impl Region {
+    /// Keep every page of the region in RAM (mlock): the operating system then neither swaps
+    /// nor compresses it, and its pages are present from now on. Unmapping unlocks them.
+    pub fn lock(&mut self) -> Result<()> {
+        lock_pages(self.ptr, self.cap)
+    }
+}
+
 impl Drop for Region {
     fn drop(&mut self) {
         free(self.ptr, self.cap);
@@ -198,6 +206,28 @@ fn free(ptr: *mut u8, cap: usize) {
 #[cfg(not(unix))]
 fn release_pages(_ptr: *mut u8, _start: usize, _len: usize) -> bool {
     false
+}
+
+#[cfg(unix)]
+fn lock_pages(ptr: *mut u8, len: usize) -> Result<()> {
+    // SAFETY: the range is this region's own mapping.
+    if unsafe { libc::mlock(ptr.cast(), len) } == 0 {
+        return Ok(());
+    }
+    let e = std::io::Error::last_os_error();
+    Err(Error::Unsupported(format!(
+        "cannot lock {} MiB in RAM ({e}); the limit for locked memory (ulimit -l, \
+         RLIMIT_MEMLOCK) may be too low",
+        len >> 20
+    )))
+}
+
+#[cfg(not(unix))]
+fn lock_pages(_ptr: *mut u8, len: usize) -> Result<()> {
+    Err(Error::Unsupported(format!(
+        "locking {} MiB in RAM is built for macOS and Linux only",
+        len >> 20
+    )))
 }
 
 #[cfg(test)]

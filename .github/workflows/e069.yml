@@ -1,0 +1,52 @@
+name: E069 validation (Linux)
+
+# E069 (docs/research/0356) parts measured on a Linux runner: V3b locked audio buffer under
+# memory pressure, V4 bytes written by OS swap and by `memopro run`, V5 codec, V6 FFI. Manual
+# only; results are uploaded as the `e069-linux` artifact. Input `parts` limits the parts.
+on:
+  workflow_dispatch:
+    inputs:
+      parts:
+        description: "space-separated parts of v34_linux.py (v3b v4; empty = both)"
+        required: false
+        default: ""
+
+permissions:
+  contents: read
+
+jobs:
+  e069:
+    name: E069 (Linux, cgroup v2)
+    runs-on: ubuntu-24.04
+    timeout-minutes: 120
+    steps:
+      - uses: actions/checkout@v4
+      - uses: dtolnay/rust-toolchain@stable
+      - uses: Swatinem/rust-cache@v2
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - run: python -m pip install --upgrade pip maturin numpy scipy scikit-learn
+      - run: maturin build --release --out dist
+      - run: python -m pip install --no-index --find-links dist memopro
+      - name: Kernel, memory, swap and limits
+        run: |
+          uname -a
+          free -m
+          swapon --show
+          ulimit -l
+          lsblk -d
+      - name: V5 codec and V6 FFI
+        run: |
+          mkdir -p "${{ runner.temp }}/e069"
+          python -m experiments.e069_validation.v5_codec "${{ runner.temp }}/e069/v5_linux.json"
+          python -m experiments.e069_validation.v6_ffi "${{ runner.temp }}/e069/v6_linux.json"
+      - name: V3b and V4
+        env:
+          E069_OUT: ${{ runner.temp }}/e069
+        run: python experiments/e069_validation/v34_linux.py ${{ inputs.parts }}
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: e069-linux
+          path: ${{ runner.temp }}/e069

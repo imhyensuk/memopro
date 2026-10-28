@@ -195,18 +195,35 @@ class Runtime:
         *,
         dtype: str = "uint8",
         shape: tuple[int, ...] | None = None,
+        locked: bool = False,
     ) -> Buffer:
-        """A new zero-filled buffer in memory (it can only be compressed to make room)."""
+        """A new zero-filled buffer in memory (it can only be compressed to make room).
+
+        ``locked=True`` keeps it in RAM for its whole life (E069, 0356): it takes its room in
+        the budget now and is never compressed, nor swapped or compressed by the operating
+        system, so using it never waits on memory (a real-time audio buffer, say). Raises
+        ``BudgetExceeded`` when the budget cannot hold it and ``ModeUnavailable`` when the
+        system refuses the lock (``ulimit -l``)."""
         if nbytes is None:
             if shape is None:
                 raise InvalidArgument("give nbytes or shape")
             nbytes = _count(shape) * _itemsize(dtype)
         nbytes = _check_shape(nbytes, dtype, shape)
-        return Buffer(self, self._rt.alloc(nbytes, _elem(dtype)), nbytes, dtype, shape)
+        try:
+            bid = self._rt.alloc(nbytes, _elem(dtype), locked)
+        except NotImplementedError as e:  # memopro::Error::Unsupported: the lock was refused
+            from memopro._errors import ModeUnavailable
 
-    def array(self, shape: tuple[int, ...], dtype: str = "float32") -> Buffer:
+            raise ModeUnavailable(
+                "memopro.rt.Runtime.alloc(locked=True)", str(e), ("locked=False",)
+            ) from None
+        return Buffer(self, bid, nbytes, dtype, shape)
+
+    def array(
+        self, shape: tuple[int, ...], dtype: str = "float32", *, locked: bool = False
+    ) -> Buffer:
         """A new zero-filled array buffer (shorthand for ``alloc(shape=..., dtype=...)``)."""
-        return self.alloc(shape=tuple(shape), dtype=dtype)
+        return self.alloc(shape=tuple(shape), dtype=dtype, locked=locked)
 
     def load_npy(self, path: str | Path) -> Buffer:
         """Register a ``.npy`` file's array (C order) without reading it."""

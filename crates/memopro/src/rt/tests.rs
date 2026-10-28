@@ -977,3 +977,31 @@ fn buffers_give_way_when_the_machine_has_less_room_than_the_budget() {
     assert_eq!(short.refusals, 0, "{short:?}");
     assert!(short.peak_used <= 128 * MIB as u64, "{short:?}");
 }
+
+#[cfg(unix)]
+#[test]
+fn locked_buffers_stay_resident_and_count_in_the_budget() {
+    // E069 V3b (0356): a locked buffer keeps its place while others are compressed around it,
+    // and one that does not fit the budget is refused
+    let rt = runtime(16, Policy::ReuseDistance);
+    let locked = rt.alloc_locked(4 * MIB, 1).unwrap();
+    let pattern = noise(4 * MIB, 5);
+    rt.pin(locked, true)
+        .unwrap()
+        .as_mut_slice()
+        .unwrap()
+        .copy_from_slice(&pattern);
+    assert!(!rt.evict(locked).unwrap());
+    for _ in 0..8 {
+        let id = rt.alloc(4 * MIB, 1).unwrap(); // zeros: compressed to make room
+        drop(rt.pin(id, true).unwrap());
+    }
+    assert_eq!(rt.state(locked).unwrap(), BufferState::Resident);
+    assert_eq!(rt.pin(locked, false).unwrap().as_slice(), &pattern[..]);
+    assert!(rt.stats().pinned_bytes >= 4 * MIB as u64);
+    assert!(matches!(
+        rt.alloc_locked(32 * MIB, 1),
+        Err(Error::Budget(_))
+    ));
+    rt.free(locked).unwrap();
+}

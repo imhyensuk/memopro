@@ -277,6 +277,8 @@ struct Buf {
     kept: bool,
     /// In memory, uncompressed, since its last use.
     stayed: bool,
+    /// Locked in RAM for good (`alloc_locked`): never compressed, dropped or moved.
+    locked: bool,
 }
 
 struct Src {
@@ -396,7 +398,13 @@ impl Buf {
             prefetched: false,
             kept: false,
             stayed: false,
+            locked: false,
         }
+    }
+
+    /// Pinned, or locked for good: the runtime must leave its memory where it is.
+    fn held(&self) -> bool {
+        self.pins > 0 || self.locked
     }
 
     fn accounted(&self) -> u64 {
@@ -586,6 +594,31 @@ impl Runtime {
         let clock = st.clock;
         st.bufs
             .insert(id, Buf::new(nbytes, elem, Data::Resident(region), clock));
+        Ok(id)
+    }
+
+    /// Like [`Runtime::alloc`], but the buffer is locked in RAM for its whole life (mlock): it
+    /// takes its room in the budget now, its pages are present, and neither the runtime
+    /// (compression) nor the operating system (swap, memory compression) ever moves it, for
+    /// memory that must never fault, such as a real-time audio buffer. Fails with
+    /// [`Error::Budget`] when the budget cannot hold it and [`Error::Unsupported`] when the
+    /// system refuses the lock.
+    pub fn alloc_locked(&self, nbytes: usize, elem: usize) -> Result<BufferId> {
+        check_size(nbytes, elem)?;
+        let cap = round_to_pages(nbytes) as u64;
+        let sh = &self.shared;
+        let st = sh.lock();
+        let mut st = sh.make_room(st, cap, None, None)?;
+        let mut region = Region::new(nbytes)?;
+        region.lock()?;
+        st.used += cap;
+        st.stats.peak_used = st.stats.peak_used.max(st.used);
+        let id = st.next_id;
+        st.next_id += 1;
+        let clock = st.clock;
+        let mut b = Buf::new(nbytes, elem, Data::Resident(region), clock);
+        b.locked = true;
+        st.bufs.insert(id, b);
         Ok(id)
     }
 
@@ -821,7 +854,7 @@ impl Runtime {
                 st = sh.wait(st);
                 continue;
             }
-            if b.pins > 0 {
+            if b.held() {
                 return Ok(false);
             }
             break;
@@ -884,7 +917,7 @@ impl Runtime {
             match &b.data {
                 Data::Resident(r) => {
                     s.resident_bytes += r.capacity() as u64;
-                    if b.pins > 0 {
+                    if b.held() {
                         s.pinned_bytes += r.capacity() as u64;
                     }
                 }
@@ -1181,7 +1214,7 @@ impl Shared {
         let Some(b) = st.bufs.get(&id) else {
             return st;
         };
-        if b.busy || b.pins > 0 || b.lineage.is_some() {
+        if b.busy || b.held() || b.lineage.is_some() {
             return st;
         }
         let nbytes = b.nbytes as u64;
@@ -1324,7 +1357,7 @@ impl Shared {
                     let pinned: u64 = st
                         .bufs
                         .values()
-                        .filter(|b| b.pins > 0)
+                        .filter(|b| b.held())
                         .map(Buf::accounted)
                         .sum();
                     let kept: u64 = st.used - pinned;
@@ -1357,7 +1390,7 @@ impl Shared {
                 Some(**i) != exclude
                     && b.edr
                     && !b.busy
-                    && b.pins == 0
+                    && !b.held()
                     && matches!(&b.data, Data::Compressed(p)
                         if p.pieces.iter().any(|x| x.kind == Kind::Edr))
             })
@@ -1453,7 +1486,7 @@ impl Shared {
         let mut best: Option<(f64, BufferId, Action)> = None;
         let mut newly_incompressible = 0;
         for (&id, b) in st.bufs.iter_mut() {
-            if Some(id) == exclude || b.pins > 0 || b.busy || (protect_kept && b.kept) {
+            if Some(id) == exclude || b.held() || b.busy || (protect_kept && b.kept) {
                 continue;
             }
             let staleness = now - b.last as f64 + 1.0;
