@@ -191,7 +191,7 @@ pip install memopro            # runtime, memopro run, enable, diagnostics
 pip install "memopro[llm]"     # + finetune, generate (PyTorch, Transformers, PEFT)
 ```
 
-The 0.2.0 beta installs with `pip install --pre memopro` (or `"memopro[llm]==0.2.0b1"`). What changed from 0.1.x: [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md), "Upgrading from 0.1.x".
+The 0.2.0 beta installs with `pip install --pre memopro` (or `"memopro[llm]==0.2.0b4"`). What changed from 0.1.x: [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md), "Upgrading from 0.1.x".
 
 | Extra | Includes |
 |---|---|
@@ -208,9 +208,9 @@ The 0.2.0 beta installs with `pip install --pre memopro` (or `"memopro[llm]==0.2
 | macOS, Apple silicon | all features (Apple GPU) |
 | Linux x86_64/aarch64 + NVIDIA GPU | all features (CUDA) |
 | Linux CPU | all features except GPU ones |
-| Windows | basic features (no paging in `memopro run`) |
+| Windows x86_64 | CPU features (LLM training and generation, sort/join, the runtime); no transparent paging in `memopro run`, no `locked=True` |
 
-PyPI provides wheels for macOS arm64 and Linux x86_64/aarch64; other platforms build from source with a Rust toolchain. In a Rust project: `cargo add memopro`.
+PyPI provides wheels for macOS arm64, Linux x86_64/aarch64 and Windows x86_64; other platforms build from source with a Rust toolchain. In a Rust project: `cargo add memopro`.
 
 ## Commands and API
 

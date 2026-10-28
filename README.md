@@ -191,7 +191,7 @@ pip install memopro            # 런타임, memopro run, enable, 진단
 pip install "memopro[llm]"     # + finetune, generate (PyTorch, Transformers, PEFT)
 ```
 
-0.2.0 베타를 쓰려면 `pip install --pre memopro`(또는 `"memopro[llm]==0.2.0b1"`)로 설치합니다. 0.1.x에서 바뀐 점은 [CHANGELOG](CHANGELOG.md)의 "0.1.x에서 옮겨 오기"에 있습니다.
+0.2.0 베타를 쓰려면 `pip install --pre memopro`(또는 `"memopro[llm]==0.2.0b4"`)로 설치합니다. 0.1.x에서 바뀐 점은 [CHANGELOG](CHANGELOG.md)의 "0.1.x에서 옮겨 오기"에 있습니다.
 
 | 추가 옵션 | 포함 |
 |---|---|
@@ -208,9 +208,9 @@ pip install "memopro[llm]"     # + finetune, generate (PyTorch, Transformers, PE
 | macOS, Apple silicon | 전체 기능 (Apple GPU) |
 | Linux x86_64·aarch64 + NVIDIA GPU | 전체 기능 (CUDA) |
 | Linux CPU | GPU 기능을 제외한 전체 기능 |
-| Windows | 기본 기능 (`memopro run`의 페이징 미지원) |
+| Windows x86_64 | CPU 기능(LLM 학습·생성, sort/join, 런타임). `memopro run`의 투명 페이징과 `locked=True`는 미지원 |
 
-PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 환경은 Rust 툴체인으로 소스에서 빌드됩니다. Rust 프로젝트는 `cargo add memopro`로 추가합니다.
+PyPI는 macOS arm64, Linux x86_64·aarch64, Windows x86_64 wheel을 제공합니다. 그 밖의 환경은 Rust 툴체인으로 소스에서 빌드됩니다. Rust 프로젝트는 `cargo add memopro`로 추가합니다.
 
 ## 명령어와 API
 
