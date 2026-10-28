@@ -27,23 +27,29 @@ static double median(double *v, int n) {
     return v[n / 2];
 }
 
+static void fail(const char *what) {
+    fprintf(stderr, "%s: %s\n", what, mp_last_error());
+    exit(2);
+}
+
 static mp_runtime *rt;
 static mp_buffer small;
 
 static void op_pin(void) {
     mp_pin *p = NULL;
-    if (mp_pin_acquire(rt, small, 0, &p) != MP_OK) exit(2);
+    if (mp_pin_acquire(rt, small, 0, &p) != MP_OK) fail("mp_pin_acquire");
     mp_unpin(p);
 }
 
 static void op_alloc(void) {
     mp_buffer id;
-    if (mp_alloc(rt, 64 << 10, 1, &id) != MP_OK || mp_free(rt, id) != MP_OK) exit(2);
+    if (mp_alloc(rt, 64 << 10, 1, &id) != MP_OK) fail("mp_alloc");
+    if (mp_free(rt, id) != MP_OK) fail("mp_free");
 }
 
 static void op_stats(void) {
     mp_stats s;
-    if (mp_stats_get(rt, &s) != MP_OK) exit(2);
+    if (mp_stats_get(rt, &s) != MP_OK) fail("mp_stats_get");
 }
 
 static double per_op(int reps, void (*f)(void)) {
@@ -59,7 +65,8 @@ static double per_op(int reps, void (*f)(void)) {
 int main(void) {
     mp_config cfg;
     mp_config_default(&cfg, 3 * GIB);
-    if (mp_runtime_new(&cfg, &rt) != MP_OK || mp_alloc(rt, 1 << 20, 1, &small) != MP_OK) return 1;
+    if (mp_runtime_new(&cfg, &rt) != MP_OK) fail("mp_runtime_new");
+    if (mp_alloc(rt, 1 << 20, 1, &small) != MP_OK) fail("mp_alloc");
     double pin_ns = per_op(100000, op_pin);
     double alloc_ns = per_op(10000, op_alloc);
     double stats_ns = per_op(100000, op_stats);
@@ -68,12 +75,12 @@ int main(void) {
     for (size_t i = 0; i < GIB; i++) src[i] = (unsigned char)((i * 2654435761u) >> 11);
     memset(plain, 1, GIB);
     mp_buffer big;
-    if (mp_alloc(rt, GIB, 1, &big) != MP_OK) return 1;
+    if (mp_alloc(rt, GIB, 1, &big) != MP_OK) fail("mp_alloc 1 GiB");
     double g[9], pg[9];
     uint64_t sum = 0;
     for (int r = 0; r < 9; r++) {
         mp_pin *p = NULL;
-        if (mp_pin_acquire(rt, big, 1, &p) != MP_OK) return 1;
+        if (mp_pin_acquire(rt, big, 1, &p) != MP_OK) fail("mp_pin_acquire 1 GiB");
         unsigned char *dst = mp_pin_data(p);
         double t = now();
         memcpy(dst, src, GIB);
