@@ -44,6 +44,10 @@ EXTRA_WORKERS = {
         "common.py": ROOT / "experiments/e040_workloads/common.py",
         "classify.py": ROOT / "experiments/e040_workloads/classify.py",
     },
+    "e069": {
+        "worker_e069.py": HERE / "worker_e069.py",
+        "csvgen.py": ROOT / "experiments/e069_validation/csvgen.py",
+    },
     "full": {
         "worker_suite.py": HERE / "worker_suite.py",
         "worker_unsloth.py": HERE / "worker_unsloth.py",
@@ -126,13 +130,13 @@ NOTEBOOKS = {
 - 준비: 런타임 **T4 GPU**. Drive `memopro_colab/install/`에 이번 소스 묶음 `memopro-src.tar.gz`를 **덮어쓰기**(현재 코드, 첫 실행 때 빌드 5~8분, 이후 Drive에 보관된 빌드 재사용). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**.
 - 결과: `MyDrive/memopro_colab/results/full/<실행 id>/summary.md`(판정 표), 같은 이름의 `.zip`.
 """),
-    "beta": ("colab_beta.ipynb", "cell_beta.py", """# memopro 0.2.0b3 베타 시험: Colab T4와 Colab CPU (docs/research/0346, E068)
+    "beta": ("colab_beta.ipynb", "cell_beta.py", """# memopro 0.2.0b4 베타 시험: Colab T4와 Colab CPU (docs/research/0346, E068)
 
-PyPI에 올린 **0.2.0b3**을 사용자처럼 설치해(`pip install --pre "memopro[llm]==0.2.0b3"`) 잰다. 단, 설정 `SOURCE_REF = "main"`(기본, 진단용, 0354)이면 공개 저장소의 그 브랜치를 받아 여기서 빌드해 잰다(커밋마다 처음 5~8분 더 걸림). 판정용 실행은 `SOURCE_REF = ""`로 PyPI 판을 쓴다. 같은 셀을 **두 번** 실행한다: 한 번은 **T4 GPU** 런타임, 한 번은 **CPU** 런타임(셀이 어느 쪽인지 알아서 고른다, 결과 폴더 `results/beta_t4/`·`results/beta_cpu/`).
+PyPI에 올린 **0.2.0b4**을 사용자처럼 설치해(`pip install --pre "memopro[llm]==0.2.0b4"`) 잰다. 단, 설정 `SOURCE_REF = "main"`(기본, 진단용, 0354)이면 공개 저장소의 그 브랜치를 받아 여기서 빌드해 잰다(커밋마다 처음 5~8분 더 걸림). 판정용 실행은 `SOURCE_REF = ""`로 PyPI 판을 쓴다. 같은 셀을 **두 번** 실행한다: 한 번은 **T4 GPU** 런타임, 한 번은 **CPU** 런타임(셀이 어느 쪽인지 알아서 고른다, 결과 폴더 `results/beta_t4/`·`results/beta_cpu/`).
 
 | 순서 | 갈래 | 무엇을 보나 |
 |---|---|---|
-| ① | 단위 시험 | 저장소의 시험을 태그 `v0.2.0b3`에서, 이 기계에서 |
+| ① | 단위 시험 | 저장소의 시험을 태그 `v0.2.0b4`에서, 이 기계에서 |
 | ② | LLM | `memopro.finetune`·`memopro.generate`를 사용자처럼(폴더와 프로세스 전체 상한): 상한이 달라도 손실이 같은가, 프로세스 최대 메모리가 상한 안인가, 생성 글이 그냥 올린 모델과 같은가. T4: Qwen2.5-3B·7B, CPU: Qwen2.5-0.5B |
 | ③ | 데이터 | 영상 묶음·scikit-learn을 코드 수정 없이 `memopro run --budget 절반`으로 |
 | ④ | Unsloth | (T4, 보고만) 같은 3B 작업의 Unsloth 16비트 속도 |
@@ -140,6 +144,23 @@ PyPI에 올린 **0.2.0b3**을 사용자처럼 설치해(`pip install --pre "memo
 - 예상 시간: T4 약 1시간 30분~2시간(셀 예산 120분, 넘으면 뒤가 건너뛰어진다), CPU 약 40~60분.
 - 준비: Drive `install/`에 아무것도 올리지 않아도 된다(PyPI에서 설치). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한다.
 - 결과: `MyDrive/memopro_colab/results/beta_t4|beta_cpu/<실행 id>/summary.md`(판정 표), 같은 이름의 `.zip`.
+"""),
+    "e069": ("colab_e069.ipynb", "cell_e069.py", """# E069 V2: 30GB CSV를 8GB 상한에서 정렬·병합 (docs/research/0356)
+
+`memopro.sort`·`memopro.join`(디스크에 중간 파일을 쓰지 않음)을 GNU sort·DuckDB(임시 파일을 씀)와 같은 자료로 비교한다. 출력은 흘러가는 대로 해시만 하고 쓰지 않는다.
+
+| 판정(0356) | 기준 |
+|---|---|
+| V2-K1 | memopro 정렬 출력의 SHA-256 = GNU sort 출력 |
+| V2-K2 | memopro 병합의 행 집합(순서 무관 해시) = DuckDB |
+| V2-K3 | memopro 프로세스 최대 메모리(VmHWM) ≤ 8GiB |
+| V2-K4 | memopro가 쓴 바이트 ≤ 64MiB |
+
+- 런타임: **CPU**면 충분하다(호스트 메모리 약 13GB, 로컬 디스크 약 75GB 필요). GPU는 쓰지 않는다.
+- 처음에 30GB `fact.csv`와 2천만 행 `dim.csv`를 로컬 디스크에 만든다(약 15~25분). 세션이 바뀌면 다시 만든다.
+- 설정 `SOURCE_REF = "main"`이면 저장소 main을 받아 빌드한다(처음 5~8분).
+- 예상 시간: 2~4시간(셀 예산 6시간). 끊기면 다시 실행해 이어 간다.
+- 결과: `MyDrive/memopro_colab/results/e069_v2/<실행 id>/summary.md`, 같은 이름의 `.zip`.
 """),
     "beat": ("colab_t4_beat.ipynb", "cell_beat.py", """# memopro가 Unsloth보다 나은 곳 (docs/research/0240, E049)
 

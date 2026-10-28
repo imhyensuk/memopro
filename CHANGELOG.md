@@ -2,7 +2,10 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.2.0b4 (beta)
+
+CSV sorting and joining beyond memory, locked buffers, and fixes from the T4 re-runs
+(E068, E069; docs/research/0353, 0357).
 
 ### Added: `memopro.sort` and `memopro.join` (0357)
 - Sort a CSV file by an integer column, or join two on one, when the file is larger than

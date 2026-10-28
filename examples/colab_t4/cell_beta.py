@@ -1,5 +1,5 @@
 # ==== SETTINGS (edit here) ===========================================================
-# E068 (pre-registered in docs/research/0346): the published 0.2.0b3 from PyPI on a Colab T4
+# E068 (pre-registered in docs/research/0346): the published 0.2.0b4 from PyPI on a Colab T4
 # and on a Colab CPU runtime, within 2 h. The same cell runs on either; it finds which.
 #   1 tests   the repository's tests at the release tag, on this machine
 #   2 lm      memopro.finetune / memopro.generate as a user calls them (a folder and a ceiling
@@ -7,7 +7,7 @@
 #   3 data    E027/E040 programs, unchanged, under `memopro run --budget <half>`
 #   4 unsloth (T4 only, report) Unsloth 16-bit on the same 3B task
 TIME_LIMIT_S = 120 * 60  # cases that would end after this are skipped (setup counts too)
-PIP_SPEC = "memopro[llm]==0.2.0b3"
+PIP_SPEC = "memopro[llm]==0.2.0b4"
 # diagnosis (0354): build this branch of the public repository here instead of installing
 # PIP_SPEC (~5-8 min more, once per commit); "" = the PyPI release, for the judged run
 SOURCE_REF = "main"
@@ -25,7 +25,7 @@ DATA_WORKLOADS = [["image.py", "1024"], ["classify.py"]]
 PARTS = ["tests", "lm", "data", "unsloth"]
 # ==== (settings shared by all cells) ================================================
 DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"
-GIT_REF = "v0.2.0b3"
+GIT_REF = "v0.2.0b4"
 EXPECTED_COMMIT = "@@COMMIT@@"
 NEW_RUN = False  # False: resume the last run of this cell if its settings did not change
 RETRY_FAILED = True  # on resume, run crashed or failed cases again
