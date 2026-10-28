@@ -112,8 +112,31 @@ def beta_body():
         extra = {"MP_MODEL_PATH": fetch_model(model)}
         case(run, f"{short(model)}__U16", 300, "worker_unsloth.py",
              [model, 16, lora["steps"], lora["seq"]], 25 * 60, extra, python=py)
+        if SOURCE_REF and install_into(py):  # memopro wrapping the Unsloth model (0363)
+            case(run, f"{short(model)}__U16_memopro", 300, "worker_unsloth.py",
+                 [model, 16, lora["steps"], lora["seq"], "memopro"], 25 * 60, extra, python=py)
+            case(run, f"{short(model)}__U16_gen", 240, "worker_unsloth.py",
+                 [model, 16, lora["steps"], lora["seq"], "gen"], 20 * 60, extra, python=py)
         free_local_models()
     summarize_beta(run, gpu, models)
+
+
+def install_into(py):
+    """This commit's memopro wheel (built at setup) into the Unsloth environment."""
+    import glob  # noqa: PLC0415
+
+    wheels = sorted(glob.glob(os.path.join(DRIVE_ROOT, "install",
+                                           f"built-{os.environ.get('MP_MEMOPRO_COMMIT')}",
+                                           "memopro-*.whl")))
+    if not wheels:
+        _log("no memopro wheel for the Unsloth environment")
+        return False
+    r = subprocess.run([sys.executable, "-m", "uv", "pip", "install", "-q", "--python", py,
+                        "--no-deps", "--reinstall", wheels[-1]], capture_output=True, text=True,
+                       check=False)
+    if r.returncode:
+        _log(f"memopro into the Unsloth environment failed: {r.stderr[-800:]}")
+    return r.returncode == 0
 
 
 def enable_run(run, key, expected_s, budget, workload, timeout):
@@ -191,6 +214,18 @@ def summarize_beta(run, gpu, models):
         check("R2", "report: Unsloth 16-bit 3B step s (memopro at the larger ceiling)", None,
               f"{u.get('status')} {fmt(step_s(u))} / {fmt(step_s(recs.get(f'{n}__ft_{models[next(iter(models))][1] // MIB}', {})))}",
               [f"{n}__U16"])
+    if gpu:
+        n = short(next(iter(models)))
+        u, um, ug = (recs.get(f"{n}__U16{k}", {}) for k in ("", "_memopro", "_gen"))
+        if um.get("case"):
+            check("R3", "report (0363): memopro.finetune on the Unsloth model = Unsloth's loop",
+                  None, f"{um.get('status')}; bits equal: {um.get('loss_bits') == u.get('loss_bits')}; "
+                  f"step s {fmt(step_s(um))} vs {fmt(step_s(u))}; first loss "
+                  f"{fmt((um.get('losses') or [None])[0], 4)} / {fmt((u.get('losses') or [None])[0], 4)}",
+                  [um["case"]])
+        if ug.get("case"):
+            check("R4", "report (0363): memopro.generate on the Unsloth model = Unsloth's",
+                  None, f"{ug.get('status')}; same text: {ug.get('same')}", [ug["case"]])
     judged = [r for r in rows if r["check"].startswith("B")]
     notes = ["Pre-registered: docs/research/0346 (E068).",
              f"{'T4' if gpu else 'CPU'} runtime; elapsed {(time.time() - T_START) / 60:.0f} min of "

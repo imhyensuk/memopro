@@ -1289,3 +1289,53 @@ def test_the_ceiling_counts_what_the_process_holds_besides_the_runtime(tmp_path)
     ceiling = 2 * rt.process_footprint() + (512 << 20)  # the process, warm-up and the step
     r = memopro.finetune(path, texts, budget=ceiling, **kw)
     assert r.held_back >= llm._outside(r.model) > 0 and r.losses
+
+
+def test_a_model_you_loaded_trains_and_generates_as_it_is(tmp_path):
+    """0363: a PyTorch model loaded by the user (Transformers here; Unsloth's FastLanguageModel
+    the same way) is the original: memopro.finetune gives the losses of training it directly
+    with the same settings, and memopro.generate the text of its own greedy generate."""
+    peft = pytest.importorskip("peft")
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    texts = [" ".join(f"w{(i * 7 + j) % 50 + 2}" for j in range(60)) for i in range(3)]
+
+    def load():
+        return transformers.AutoModelForCausalLM.from_pretrained(path, dtype=torch.float32)
+
+    r = memopro.finetune(load(), texts, tokenizer=tok, seq_len=64, lr=1e-2, checkpointing=False)
+    torch.manual_seed(0)  # the same steps by hand
+    m = peft.get_peft_model(
+        load(),
+        peft.LoraConfig(
+            r=8, lora_alpha=16, target_modules=["q_proj", "k_proj", "v_proj", "o_proj"]
+        ),
+    )
+    ids = tok("w1".join(texts) + "w1", return_tensors="pt").input_ids[0]
+    opt = torch.optim.AdamW([p for p in m.parameters() if p.requires_grad], lr=1e-2)
+    want = []
+    m.train()
+    for i in range(0, len(ids) - 1, 64):
+        x = ids[i : i + 64][None]
+        if x.shape[1] < 2:
+            continue
+        loss = m(input_ids=x, labels=x).loss
+        loss.backward()
+        opt.step()
+        opt.zero_grad(set_to_none=True)
+        want.append(float(loss))
+    assert r.losses == want and len(want) > 1
+    r = memopro.finetune(load(), texts, tokenizer=tok, seq_len=64, lr=1e-2)  # checkpointing on
+    assert len(r.losses) == len(want) and all(math.isfinite(x) for x in r.losses)
+    model = load()
+    text = memopro.generate(model, "w2 w9 w16", tokenizer=tok, max_new_tokens=6, chat=False)
+    prompt = tok("w2 w9 w16", return_tensors="pt").input_ids
+    plain = model.generate(input_ids=prompt, do_sample=False, max_new_tokens=6, pad_token_id=1)
+    assert text == tok.decode(plain[0, prompt.shape[1] :], skip_special_tokens=True)
+    with pytest.raises(memopro.InvalidArgument, match="tokenizer"):
+        memopro.generate(model, "w2", max_new_tokens=2)

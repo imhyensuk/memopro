@@ -241,7 +241,10 @@ def finetune(
 
     ``model`` may also be a model loaded with ``mlx_lm.load`` (pass its tokenizer): then it is
     trained with mlx-lm's LoRA layers and loss, the same as training it whole, and memopro only
-    reads again the layers that do not fit the ceiling (0339).
+    reads again the layers that do not fit the ceiling (0339). A PyTorch model you loaded
+    yourself (Unsloth's ``FastLanguageModel``, Transformers; pass its tokenizer) is trained as
+    it is, with its own layers and loss (an Unsloth model gets Unsloth's LoRA layers and keeps
+    its speed), within the ceiling for the whole process (0363).
 
     ``texts`` are joined (end-of-text token between them) and cut into ``seq_len``-token pieces,
     ``batch`` per step (the last step may hold fewer). Each streamed weight is read once per
@@ -272,6 +275,26 @@ def finetune(
             alpha=alpha,
             targets=targets,
             seed=seed,
+        )
+    from memopro import _loaded
+
+    if _loaded.is_loaded(model):  # the user's own model (Unsloth, Transformers) is the original
+        if device != "auto":
+            raise InvalidArgument("a model you loaded computes where it is: leave device out")
+        return _loaded.finetune(
+            model,
+            texts,
+            tokenizer=tokenizer,
+            budget=budget,
+            epochs=epochs,
+            seq_len=seq_len,
+            batch=batch,
+            lr=lr,
+            rank=rank,
+            alpha=alpha,
+            targets=targets,
+            seed=seed,
+            checkpointing=checkpointing,
         )
     import peft
     import torch
@@ -369,7 +392,8 @@ def generate(
 
     ``model`` is a name, a folder or a streamed model (reused as is), or a model loaded with
     ``mlx_lm.load`` (pass its tokenizer): then mlx-lm runs it as given and memopro only keeps
-    it within the ceiling (0337). A string ``prompt`` goes
+    it within the ceiling (0337). A PyTorch model you loaded yourself (Unsloth, Transformers;
+    pass its tokenizer) generates greedily as it is, Unsloth's in its inference mode (0363). A string ``prompt`` goes
     through the chat template when the tokenizer has one and ``chat`` is true. ``draft`` (a
     name, folder or :func:`memopro.rt.torch.draft_model`) proposes tokens on Apple and NVIDIA
     GPUs; the text is the same with or without it. ``"auto"`` (the default) takes a smaller model
@@ -399,6 +423,21 @@ def generate(
             budget=budget,
             max_new_tokens=max_new_tokens,
             chat=chat,
+        )
+    from memopro import _loaded
+
+    if _loaded.is_loaded(model):  # the user's own model (Unsloth, Transformers) is the original
+        if device != "auto" or draft not in (None, "auto"):
+            raise InvalidArgument("a model you loaded takes neither device nor draft")
+        return _loaded.generate(
+            model,
+            prompt,
+            tokenizer=tokenizer,
+            budget=budget,
+            max_new_tokens=max_new_tokens,
+            chat=chat,
+            streamer=streamer,
+            stopping_criteria=stopping_criteria,
         )
     import memopro.rt.torch as rtt
 

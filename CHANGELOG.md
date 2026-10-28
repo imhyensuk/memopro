@@ -4,6 +4,14 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Added: models you loaded yourself, Unsloth included (0363)
+- `memopro.finetune` / `memopro.generate` take a PyTorch model you loaded (Unsloth's
+  `FastLanguageModel`, Transformers; pass its tokenizer) and train or run it as it is, with its
+  own layers and loss: the results of training or generating with it directly under the same
+  settings, at its own speed. An Unsloth model gets Unsloth's LoRA layers
+  (`FastLanguageModel.get_peft_model`) and generates in its inference mode. The whole process is
+  checked against the ceiling before and after every step.
+
 ### Changed: CUDA generation (0363)
 - Weights copied into the GPU cache give up their host copy (read again from the file, checked,
   if the cache is dropped): a model that fits the GPU holds almost no host memory.
