@@ -178,16 +178,47 @@ impl Raw {
     }
 }
 
-/// Number of lines in `block`.
+/// Number of rows (line breaks outside quotes) in `block`.
 #[pyfunction]
-fn csv_count_lines(py: Python<'_>, block: &Bound<'_, PyAny>) -> PyResult<usize> {
+fn csv_count_rows(py: Python<'_>, block: &Bound<'_, PyAny>) -> PyResult<usize> {
     let (_b, b) = borrow(block, false)?;
     // SAFETY: `_b` holds the buffer.
-    Ok(py.detach(|| memopro::csv::count_lines(unsafe { b.slice() })))
+    Ok(py.detach(|| memopro::csv::count_rows(unsafe { b.slice() })))
 }
 
-/// Row starts, lengths with and without the line ending, integer keys of field `col` and that
-/// field's span (int64 outputs).
+/// End of the last complete row of `block` (0 when there is none).
+#[pyfunction]
+fn csv_cut(py: Python<'_>, block: &Bound<'_, PyAny>) -> PyResult<usize> {
+    let (_b, b) = borrow(block, false)?;
+    // SAFETY: `_b` holds the buffer.
+    Ok(py.detach(|| memopro::csv::cut(unsafe { b.slice() })))
+}
+
+/// Text keys (enclosing quotes removed) as `width`-byte records into `out`; the longest key.
+#[pyfunction]
+fn csv_fixed(
+    py: Python<'_>,
+    src: &Bound<'_, PyAny>,
+    starts: &Bound<'_, PyAny>,
+    ends: &Bound<'_, PyAny>,
+    width: usize,
+    out: &Bound<'_, PyAny>,
+) -> PyResult<usize> {
+    let (_s, s) = borrow(src, false)?;
+    let (_a, a) = borrow_i64(starts, false)?;
+    let (_e, e) = borrow_i64(ends, false)?;
+    let (_o, o) = borrow(out, true)?;
+    py.detach(|| {
+        // SAFETY: the four buffers are held by `_s`, `_a`, `_e`, `_o`.
+        let (a, e) = unsafe { (a.i64s(), e.i64s()) };
+        memopro::csv::fixed(unsafe { s.slice() }, a, e, width, unsafe { o.slice_mut() })
+    })
+    .map_err(rt_err)
+}
+
+/// Row starts, lengths with and without the line ending, field `col` as an integer key (`mode`
+/// "int", "text" or "detect") and that field's span (int64 outputs); the number of rows and
+/// whether every key was an integer.
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
 fn csv_rows(
@@ -195,13 +226,20 @@ fn csv_rows(
     block: &Bound<'_, PyAny>,
     col: usize,
     fields: usize,
+    mode: &str,
     starts: &Bound<'_, PyAny>,
     lens: &Bound<'_, PyAny>,
     body: &Bound<'_, PyAny>,
     keys: &Bound<'_, PyAny>,
     key_start: &Bound<'_, PyAny>,
     key_end: &Bound<'_, PyAny>,
-) -> PyResult<usize> {
+) -> PyResult<(usize, bool)> {
+    let mode = match mode {
+        "int" => memopro::csv::KeyMode::Int,
+        "text" => memopro::csv::KeyMode::Text,
+        "detect" => memopro::csv::KeyMode::Detect,
+        _ => return Err(PyValueError::new_err("mode is int, text or detect")),
+    };
     let (_b, b) = borrow(block, false)?;
     let bufs = [starts, lens, body, keys, key_start, key_end]
         .map(|o| borrow_i64(o, true))
@@ -212,7 +250,7 @@ fn csv_rows(
         // SAFETY: `_b` and `bufs` hold the buffers for the call; the outputs are distinct arrays.
         let (s, l, n) = unsafe { (s.i64s(), l.i64s(), n.i64s()) };
         let (k, ks, ke) = unsafe { (k.i64s(), ks.i64s(), ke.i64s()) };
-        memopro::csv::rows(unsafe { b.slice() }, col, fields, s, l, n, k, ks, ke)
+        memopro::csv::rows(unsafe { b.slice() }, col, fields, mode, s, l, n, k, ks, ke)
     })
     .map_err(rt_err)
 }
@@ -1133,7 +1171,9 @@ fn _core(m: &Bound<'_, PyModule>) -> PyResult<()> {
     m.add_function(wrap_pyfunction!(hwinfo_cpu, m)?)?;
     m.add_function(wrap_pyfunction!(hwinfo_disk, m)?)?;
     m.add_function(wrap_pyfunction!(edr_table, m)?)?;
-    m.add_function(wrap_pyfunction!(csv_count_lines, m)?)?;
+    m.add_function(wrap_pyfunction!(csv_count_rows, m)?)?;
+    m.add_function(wrap_pyfunction!(csv_cut, m)?)?;
+    m.add_function(wrap_pyfunction!(csv_fixed, m)?)?;
     m.add_function(wrap_pyfunction!(csv_rows, m)?)?;
     m.add_function(wrap_pyfunction!(csv_gather, m)?)?;
     m.add_function(wrap_pyfunction!(csv_join_rows, m)?)?;

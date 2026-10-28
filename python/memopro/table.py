@@ -13,8 +13,10 @@ Grace hash join); what is memopro's is doing it without disk writes inside a pro
 Rows, keys and gathers are Rust kernels (``memopro::csv``) writing into reused buffers, so the
 allocator has nothing to keep between blocks.
 
-Simple CSV only: a header line, ``\n`` or ``\r\n`` line endings, ``,`` between fields, no
-quoted fields, and integer keys; other input is refused, never misread.
+CSV as RFC 4180 writes it: a header line, ``\n`` or ``\r\n`` line endings, ``,`` between
+fields, fields optionally in ``"`` (holding commas, line breaks and ``""``). Keys are integers
+(compared as numbers) when every key in the file is one, else text (compared byte by byte, as
+``LC_ALL=C sort`` does; enclosing quotes left out). Other input is refused, never misread.
 """
 
 from __future__ import annotations
@@ -35,12 +37,16 @@ SAMPLE = 16  # every SAMPLE-th row's key plans the buckets
 PART = 16  # a sub-range holds at most 1/PART of the ceiling raw, so it comes back beside the rest
 FILL = 0.7  # fraction of the estimated room a bucket is planned to fill
 WORK = 4 * BLOCK  # a block, its row arrays and a gathered piece
+# what the runtime's compression threads keep once they start (a zstd context, a shuffle and an
+# output buffer each): measured about 100 MiB on an 8-core M1 (0362)
+COMPRESS_WORK = (os.cpu_count() or 4) * (12 << 20)
+PREFIX = 16  # bytes of a text key that place it in a bucket (whole keys order the rows)
 
 Out = str | os.PathLike | Callable[[bytes], Any]
 
 
 def sort(path: str | os.PathLike, key: str, *, out: Out, budget: Any = "auto") -> dict[str, Any]:
-    """Write the rows of the CSV file ``path`` sorted by its integer column ``key`` to ``out``
+    """Write the rows of the CSV file ``path`` sorted by its column ``key`` to ``out``
     (a file path, or a function called with consecutive bytes-like pieces of the output),
     header first.
     The sort is stable: rows with equal keys keep their order in the file. Everything memopro
@@ -54,24 +60,29 @@ def sort(path: str | os.PathLike, key: str, *, out: Out, budget: Any = "auto") -
     src = _Source(path)
     col = src.column(key)
     ceiling = rt.resolve_budget(budget)
-    # pass 0: every SAMPLE-th row's key and size plan the buckets
-    keys, sizes, rows = [], [], 0
-    for block in src.blocks(col):
-        keys.append(block.keys[::SAMPLE].copy())
+    # pass 0: every SAMPLE-th row's key (as a number and as text) and size plan the buckets;
+    # the keys are numbers when every one in the file is
+    ints, texts, sizes, rows, numeric = [], [], [], 0, True
+    for block in src.blocks(col, "detect"):
+        ints.append(block.keys[::SAMPLE].copy())
+        texts.append(block.text(PREFIX)[::SAMPLE].copy())
         sizes.append(block.lens[::SAMPLE] * SAMPLE)
         rows += block.n
+        numeric &= block.all_int
+    mode = "int" if numeric else "text"
+    keys = ints if numeric else texts
     sample = np.concatenate(keys) if keys else np.empty(0, np.int64)
     raw = np.concatenate(sizes) if sizes else np.empty(0, np.int64)
     order = np.argsort(sample, kind="stable")
     sample, raw = sample[order], np.cumsum(raw[order])
-    del keys, sizes, order
+    del ints, texts, keys, sizes, order
     ratio = _ratio(src, col)
     # a sub-range comes back raw, and is gathered in order, beside the rest of its bucket
-    reserve = 4 * ceiling // PART
+    reserve = 4 * ceiling // PART + COMPRESS_WORK
     room = _room(ceiling, reserve) * ratio * FILL
     sink = _Sink(out)
     sink.write(src.header)
-    stats = {"rows": rows, "passes": 1, "splits": 0, "compression_ratio": ratio}
+    stats = {"rows": rows, "passes": 1, "splits": 0, "compression_ratio": ratio, "keys": mode}
     pending = _ranges(sample, raw, room)
     # the runtime keeps the whole process within the ceiling less what a block and a sub-range
     # coming back add between two of its measurements
@@ -79,20 +90,29 @@ def sort(path: str | os.PathLike, key: str, *, out: Out, budget: Any = "auto") -
     while pending:
         lo, hi = pending.pop(0)
         subs = _ranges(*_inside(sample, raw, lo, hi), ceiling / PART, lo, hi)
-        store = _Bucket(r, [s[1] for s in subs][:-1], len(src.names), col)
+        store = _Bucket(r, [s[1] for s in subs][:-1], len(src.names), col, mode)
         try:
-            for block in src.blocks(col):
-                sel = np.flatnonzero((block.keys >= lo) & (block.keys < hi))
+            for block in src.blocks(col, mode):
+                where = block.keys if numeric else block.text(PREFIX)
+                sel = np.flatnonzero(_within(where, lo, hi))
                 if len(sel):
-                    store.add(block, sel)
+                    store.add(block, sel, where[sel])
         except BudgetExceeded:
+            empty = not any(store.chunks)
             store.free()
             stats["passes"] += 1
+            if empty:  # not one buffer fitted: a smaller range cannot help
+                held = (rt.process_footprint() or 0) >> 20
+                raise BudgetExceeded(
+                    f"a {ceiling >> 20} MiB ceiling leaves no room for rows beside the "
+                    f"{held} MiB this process holds and {reserve >> 20} MiB of work space; "
+                    "raise the budget"
+                ) from None
             halves = _split(sample, lo, hi)
             if halves is None:
                 raise BudgetExceeded(
-                    f"the rows with key {lo} (or a run of equal keys) do not fit a "
-                    f"{ceiling >> 20} MiB ceiling; raise the budget"
+                    f"the rows with key {lo!r} (or a run of keys that share their first "
+                    f"{PREFIX} bytes) do not fit a {ceiling >> 20} MiB ceiling; raise the budget"
                 ) from None
             pending[:0] = halves
             stats["splits"] += 1
@@ -113,11 +133,12 @@ def join(
     out: Out,
     budget: Any = "auto",
 ) -> dict[str, Any]:
-    """Inner join of two CSV files on their integer column ``on``: each output row is the left
+    """Inner join of two CSV files on their column ``on``: each output row is the left
     row, then the right row's other fields, for every pair with equal keys (the right file is
     the one kept in memory, so pass the smaller one there). Rows come in the left file's order
-    within each key range of the right file. Header first; ``out`` and ``budget`` as in
-    :func:`sort`. Returns counters."""
+    within each key range of the right file. Keys are compared as numbers when every right key
+    and the left file's first keys are integers, else as text. Header first; ``out`` and
+    ``budget`` as in :func:`sort`. Returns counters."""
     import numpy as np
 
     from memopro import rt
@@ -125,30 +146,45 @@ def join(
     a, b = _Source(left), _Source(right)
     ca, cb = a.column(on), b.column(on)
     ceiling = rt.resolve_budget(budget)
-    keys, sizes = [], []
-    for block in b.blocks(cb):
-        keys.append(block.keys.copy())
+    ints, texts, sizes, numeric = [], [], [], True
+    for block in b.blocks(cb, "detect"):
+        ints.append(block.keys.copy())
+        texts.append(block.text(PREFIX))
         sizes.append(block.lens.copy())
+        numeric &= block.all_int
+    first = next(a.blocks(ca, "detect"), None)
+    numeric &= first is None or first.all_int
+    del first
+    mode = "int" if numeric else "text"
+    keys = ints if numeric else texts
     k = np.concatenate(keys) if keys else np.empty(0, np.int64)
     w = np.concatenate(sizes) if sizes else np.empty(0, np.int64)
-    del keys, sizes
+    del ints, texts, keys, sizes
     order = np.argsort(k, kind="stable")
     # per right row: its bytes without the key (twice while the pieces are joined into one
     # array), its key, start and length (8 bytes each), and the arrays of a sort over them
     k, w = k[order], np.cumsum(2 * w[order] + 48)
     del order
     sink = _Sink(out)
-    rest = _without(b.header.rstrip(b"\r\n"), cb)
+    rest = _header(b.names[:cb] + b.names[cb + 1 :])
     end = b"\r\n" if a.crlf else b"\n"
     sink.write(a.header.rstrip(b"\r\n") + (b"," + rest if rest else b"") + end)
     parts = _ranges(k, w, _room(ceiling, 2 * BLOCK) * FILL)
     del k, w
-    stats = {"passes": 1, "parts": len(parts), "rows": 0}
+    stats = {"passes": 1, "parts": len(parts), "rows": 0, "keys": mode}
     for lo, hi in parts:
-        table = _Right(b, cb, lo, hi, a.crlf)
+        table = _Right(b, cb, lo, hi, a.crlf, mode)
         stats["passes"] += 2
-        for block in a.blocks(ca):
-            stats["rows"] += table.join(block, sink)
+        try:
+            for block in a.blocks(ca, mode):
+                stats["rows"] += table.join(block, sink)
+        except InvalidArgument as e:
+            if mode == "int" and "integers" in str(e):
+                raise InvalidArgument(
+                    f"{a.path}: {e}; the keys are compared as numbers because every key of "
+                    f"{b.path} and the first ones of {a.path} are integers"
+                ) from None
+            raise
         del table
     sink.close()
     stats["read_bytes"] = a.read_bytes + b.read_bytes
@@ -178,7 +214,7 @@ def _ratio(src: _Source, col: int) -> float:
 
     from memopro import rt
 
-    block = next(src.blocks(col), None)
+    block = next(src.blocks(col, "text"), None)
     if block is None:
         return 1.0
     r = rt.Runtime(budget=max(4 * BLOCK, 16 << 20), process_budget=False)
@@ -190,53 +226,73 @@ def _ratio(src: _Source, col: int) -> float:
     return max(1.0, s["compress_in"] / s["compress_out"]) if s["compress_out"] else 1.0
 
 
-def _ranges(keys, cum, room, lo=None, hi=None) -> list[tuple[int, int]]:
-    """Key ranges [lo, hi) whose estimated bytes (``cum``: cumulative over the sorted sample
-    ``keys``) stay under ``room``; a run of equal keys is never cut."""
+def _ranges(keys, cum, room, lo=None, hi=None) -> list[tuple[Any, Any]]:
+    """Key ranges [lo, hi) (None: unbounded) whose estimated bytes (``cum``: cumulative over the
+    sorted sample ``keys``, numbers or text prefixes) stay under ``room``; a run of equal keys is
+    never cut."""
     import numpy as np
 
-    lo = -(1 << 63) if lo is None else lo
-    hi = (1 << 63) - 1 if hi is None else hi
     bounds = [lo]
     if len(keys):
         c = cum - cum[0]
         target = room
         while target < c[-1]:
-            cut = int(keys[min(int(np.searchsorted(c, target)), len(keys) - 1)])
-            if cut <= bounds[-1]:  # a run of equal keys: the next range starts after it
+            cut = keys[min(int(np.searchsorted(c, target)), len(keys) - 1)]
+            if bounds[-1] is not None and cut <= bounds[-1]:  # a run of equal keys: skip it
                 j = int(np.searchsorted(keys, bounds[-1], "right"))
                 if j >= len(keys):
                     break
-                cut = int(keys[j])
+                cut = keys[j]
+            if hi is not None and cut >= hi:
+                break
             bounds.append(cut)
             target = c[int(np.searchsorted(keys, cut)) - 1] + room
     bounds.append(hi)
-    return [(x, y) for x, y in itertools.pairwise(bounds) if x < y]
+    return list(itertools.pairwise(bounds))
+
+
+def _within(keys, lo, hi):
+    """Which ``keys`` lie in [lo, hi) (None: unbounded)."""
+    import numpy as np
+
+    inside = np.ones(len(keys), bool)
+    if lo is not None:
+        inside &= keys >= lo
+    if hi is not None:
+        inside &= keys < hi
+    return inside
 
 
 def _inside(keys, cum, lo, hi):
     import numpy as np
 
-    i, j = np.searchsorted(keys, lo), np.searchsorted(keys, hi)
+    i = 0 if lo is None else int(np.searchsorted(keys, lo))
+    j = len(keys) if hi is None else int(np.searchsorted(keys, hi))
     return keys[i:j], cum[i:j]
 
 
-def _split(keys, lo, hi) -> list[tuple[int, int]] | None:
-    import numpy as np
-
-    inside = keys[np.searchsorted(keys, lo) : np.searchsorted(keys, hi)]
-    nxt = inside[inside > lo]
-    if not len(nxt):
+def _split(keys, lo, hi) -> list[tuple[Any, Any]] | None:
+    inside = keys[_within(keys, lo, hi)]
+    later = inside if lo is None else inside[inside > lo]
+    if not len(later) or (lo is None and len(inside) and later[0] == inside[-1]):
         return None
-    mid = int(inside[len(inside) // 2])
-    if mid <= lo:
-        mid = int(nxt[0])
+    mid = inside[len(inside) // 2]
+    if lo is not None and mid <= lo or lo is None and mid <= inside[0]:
+        bigger = inside[inside > inside[0]]
+        if not len(bigger):
+            return None
+        mid = bigger[0]
     return [(lo, mid), (mid, hi)]
 
 
-def _without(line: bytes, col: int) -> bytes:
-    fields = line.split(b",")
-    return b",".join(fields[:col] + fields[col + 1 :])
+def _header(names: list[str]) -> bytes:
+    """Column names as a CSV line without its ending (quoted where needed)."""
+    import csv
+    import io
+
+    out = io.StringIO()
+    csv.writer(out, lineterminator="").writerow(names)
+    return out.getvalue().encode()
 
 
 def _mapped(nbytes: int):
@@ -271,9 +327,9 @@ class _Source:
         if not self.header.endswith(b"\n"):
             raise InvalidArgument(f"{self.path}: no header line")
         self.crlf = self.header.endswith(b"\r\n")  # joined rows end as the left file's do
-        if b'"' in self.header:
-            raise InvalidArgument(f"{self.path}: quoted CSV fields are not supported")
-        self.names = self.header.rstrip(b"\r\n").decode().split(",")
+        import csv
+
+        self.names = next(csv.reader([self.header.rstrip(b"\r\n").decode()]))
         self.crcs: list[int] = []  # of each block, from the first complete pass
         self.read_bytes = 0
 
@@ -282,11 +338,14 @@ class _Source:
             raise InvalidArgument(f"{self.path}: no column {name!r} (columns: {self.names})")
         return self.names.index(name)
 
-    def blocks(self, col: int) -> Iterator[_Block]:
-        """The file's lines in blocks, read into one reused anonymous mapping, with their rows
-        and the integer keys of column ``col``. A block is valid until the next one. The first
-        complete pass records each block's CRC-32; later passes must read the same bytes."""
+    def blocks(self, col: int, mode: str) -> Iterator[_Block]:
+        """The file's rows in blocks, read into one reused anonymous mapping, with the keys of
+        column ``col`` (``mode``: "int", "text" or "detect"). A block is valid until the next
+        one. The first complete pass records each block's CRC-32; later passes must read the
+        same bytes."""
         import numpy as np
+
+        from memopro import _core
 
         check = len(self.crcs) > 0
         crcs: list[int] = []
@@ -310,8 +369,8 @@ class _Source:
                         end += len(ending)
                     cut = end
                 else:
-                    cut = mm.rfind(b"\n", 0, end) + 1
-                    if cut == 0:  # a line longer than the block: a larger mapping
+                    cut = _core.csv_cut(memoryview(mm)[:end])  # outside quotes
+                    if cut == 0:  # a row longer than the block: a larger mapping
                         bigger = mmap.mmap(-1, 2 * size + 2)
                         bigger[:end] = mm[:end]
                         mm, size, have = bigger, 2 * size, end
@@ -321,7 +380,7 @@ class _Source:
                     raise IntegrityError(f"{self.path} changed while it was being read again")
                 crcs.append(crc)
                 arr = np.frombuffer(mm, np.uint8, count=cut)
-                yield _Block(arr, rows.parse(arr, col, len(self.names)))
+                yield _Block(arr, rows.parse(arr, col, len(self.names), mode))
                 del arr
                 if n == 0:
                     break
@@ -339,26 +398,49 @@ class _Rows:
     def __init__(self) -> None:
         self.cap = 0
 
-    def parse(self, arr, col: int, fields: int):
+    def parse(self, arr, col: int, fields: int, mode: str):
         import numpy as np
 
         from memopro import _core
 
-        n = _core.csv_count_lines(arr)
-        if n > self.cap:
+        n = _core.csv_count_rows(arr)
+        if n > self.cap or not hasattr(self, "arrays"):
             self.cap = max(n, 2 * self.cap)
             self.arrays = [np.empty(self.cap, np.int64) for _ in range(6)]
-        _core.csv_rows(arr, col, fields, *self.arrays)
-        return n, [a[:n] for a in self.arrays]
+        _, all_int = _core.csv_rows(arr, col, fields, mode, *self.arrays)
+        return n, [a[:n] for a in self.arrays], all_int
 
 
 class _Block:
     def __init__(self, arr, parsed) -> None:
         self.arr = arr
-        # lens with the line ending, body without it
+        # lens with the line ending, body without it; the key field with any quotes
+        n, arrays, self.all_int = parsed
         self.n, (self.starts, self.lens, self.body, self.keys, self.key_start, self.key_end) = (
-            parsed
+            n,
+            arrays,
         )
+
+    def text(self, width: int | None = None, rows=None):
+        """The text keys (enclosing quotes left out) of ``rows`` (all) as ``S<width>`` records
+        (``width`` None: the longest key's)."""
+        return _text(self.arr, self.key_start, self.key_end, width, rows)
+
+
+def _text(arr, starts, ends, width=None, rows=None):
+    import numpy as np
+
+    from memopro import _core
+
+    if rows is not None:
+        starts, ends = starts[rows], ends[rows]
+    starts = np.ascontiguousarray(starts, np.int64)
+    ends = np.ascontiguousarray(ends, np.int64)
+    if width is None:
+        width = max(1, _core.csv_fixed(arr, starts, ends, 0, np.empty(0, np.uint8)))
+    out = np.zeros(len(starts) * width, np.uint8)
+    _core.csv_fixed(arr, starts, ends, width, out)
+    return out.view(f"S{width}")
 
 
 # ------------------------------------------------------------------------------- sort buckets
@@ -366,19 +448,20 @@ class _Bucket:
     """The rows of one key range, in sub-ranges of runtime buffers (compressed by the runtime
     when the ceiling is reached). Keys are parsed again when a sub-range comes back."""
 
-    def __init__(self, runtime: Any, cuts: list[int], fields: int, col: int) -> None:
+    def __init__(self, runtime: Any, cuts: list[Any], fields: int, col: int, mode: str) -> None:
         import numpy as np
 
-        self.r, self.fields, self.col = runtime, fields, col
-        self.cuts = np.asarray(cuts, np.int64)
+        self.r, self.fields, self.col, self.mode = runtime, fields, col, mode
+        self.cuts = np.asarray(cuts, np.int64 if mode == "int" else f"S{PREFIX}")
         n = len(cuts) + 1
         self.chunks: list[list[Any]] = [[] for _ in range(n)]
         self.fill = [CHUNK] * n  # bytes used in each sub-range's last chunk
 
-    def add(self, block: _Block, sel) -> None:
+    def add(self, block: _Block, sel, keys) -> None:
+        """Rows ``sel`` of ``block``, whose keys (numbers or text prefixes) are ``keys``."""
         import numpy as np
 
-        sub = np.searchsorted(self.cuts, block.keys[sel], "right")
+        sub = np.searchsorted(self.cuts, keys, "right")
         order = np.argsort(sub, kind="stable")  # file order within each sub-range
         sel, sub = sel[order], sub[order]
         edges = np.searchsorted(sub, np.arange(len(self.chunks) + 1))
@@ -413,7 +496,11 @@ class _Bucket:
                 c.read_into(whole[i * CHUNK : (i + 1) * CHUNK])
                 c.free()
             data = whole[: CHUNK * (len(self.chunks[s]) - 1) + self.fill[s]]
-            _, (starts, lens, _, keys, _, _) = rows.parse(data, self.col, self.fields)
+            _, (starts, lens, _, keys, ks, ke), _ = rows.parse(
+                data, self.col, self.fields, self.mode
+            )
+            if self.mode == "text":
+                keys = _text(data, ks, ke)
             order = np.argsort(keys, kind="stable")
             sink.write(_gather(data, starts[order], lens[order]))
             del whole, data, order
@@ -431,14 +518,16 @@ class _Right:
     """The rows of the right file with keys in [lo, hi), without the key field, sorted by key
     (equal keys in file order)."""
 
-    def __init__(self, src: _Source, col: int, lo: int, hi: int, crlf: bool) -> None:
+    def __init__(self, src: _Source, col: int, lo: Any, hi: Any, crlf: bool, mode: str) -> None:
         import numpy as np
 
         self.extra = len(src.names) > 1  # the right file has fields besides the key
         self.crlf = crlf  # the left file's line ending
+        self.mode = mode
         keys, rests, lens = [], [], []
-        for block in src.blocks(col):
-            sel = np.flatnonzero((block.keys >= lo) & (block.keys < hi))
+        for block in src.blocks(col, mode):
+            where = block.keys if mode == "int" else block.text(PREFIX)
+            sel = np.flatnonzero(_within(where, lo, hi))
             if not len(sel):
                 continue
             s, ks, ke = block.starts[sel], block.key_start[sel], block.key_end[sel]
@@ -455,9 +544,10 @@ class _Right:
             st = np.stack([x for x, _ in segs], axis=1).ravel()
             ln = np.stack([y for _, y in segs], axis=1).ravel()
             rests.append(_gather(block.arr, st, ln).copy())
-            keys.append(block.keys[sel].copy())
+            keys.append(block.keys[sel].copy() if mode == "int" else block.text(None, sel))
             lens.append(sum(y for _, y in segs))
-        self.keys = np.concatenate(keys) if keys else np.empty(0, np.int64)
+        empty = np.empty(0, np.int64 if mode == "int" else "S1")
+        self.keys = np.concatenate(keys) if keys else empty
         self.rest = np.concatenate(rests) if rests else np.empty(0, np.uint8)
         del rests
         lengths = np.concatenate(lens) if lens else np.empty(0, np.int64)
@@ -472,8 +562,17 @@ class _Right:
 
         from memopro import _core
 
-        lo = np.searchsorted(self.keys, block.keys, "left")
-        count = np.searchsorted(self.keys, block.keys, "right") - lo
+        if self.mode == "int":
+            mine = block.keys
+        else:  # the left keys at the right keys' width; longer ones match nothing
+            width = self.keys.dtype.itemsize
+            mine = block.text(width)
+            quoted = block.arr[block.key_start] == 34
+            length = block.key_end - block.key_start - 2 * quoted
+        lo = np.searchsorted(self.keys, mine, "left")
+        count = np.searchsorted(self.keys, mine, "right") - lo
+        if self.mode == "text":
+            count[length > width] = 0
         total = int(count.sum())
         if not total:
             return 0
