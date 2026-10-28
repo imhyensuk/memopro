@@ -109,6 +109,34 @@ jobs:
           name: wheels-aarch64-apple-darwin
           path: dist
 
+  wheel-windows:
+    # Windows x86_64 (E070, 0364): Windows users install without a Rust toolchain.
+    name: Wheel (x86_64-pc-windows-msvc)
+    needs: version
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+      - uses: PyO3/maturin-action@v1
+        with:
+          target: x86_64-pc-windows-msvc
+          args: --release --out dist
+      - name: Smoke test the wheel in a clean environment (no torch)
+        shell: bash
+        run: |
+          python -m venv smoke
+          smoke/Scripts/pip install --no-index --find-links dist memopro
+          smoke/Scripts/memopro --version
+          smoke/Scripts/memopro doctor --no-devices --json > /dev/null
+          smoke/Scripts/python -c "import sys, memopro; assert memopro.__version__ == '${{ needs.version.outputs.pep440 }}'; assert 'torch' not in sys.modules"
+          smoke/Scripts/python -c "import memopro; s = memopro.enable('512MB'); print(s); s.disable()"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: wheels-x86_64-pc-windows-msvc
+          path: dist
+
   sdist:
     needs: version
     runs-on: ubuntu-latest
@@ -124,7 +152,7 @@ jobs:
           path: dist
 
   publish-pypi:
-    needs: [wheel-linux, wheel-linux-arm, wheel-macos, sdist]
+    needs: [wheel-linux, wheel-linux-arm, wheel-macos, wheel-windows, sdist]
     if: startsWith(github.ref, 'refs/tags/v')
     runs-on: ubuntu-latest
     environment: pypi
