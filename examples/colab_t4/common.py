@@ -106,9 +106,29 @@ def install_memopro(root):
         import memopro  # noqa: PLC0415
 
         if os.environ.get("MP_MEMOPRO_INSTALLED") == "1":
-            return {"source": "already installed in this session", "version": memopro.__version__}
+            return {"source": "already installed in this session", "version": memopro.__version__,
+                    "commit": os.environ.get("MP_MEMOPRO_COMMIT")}
     except ImportError:
         pass
+    if globals().get("SOURCE_REF"):  # a diagnosis run (0354): the public repository at this
+        # branch, built here (Rust core and memopro-preload), its tests from the same checkout
+        src = "/content/memopro-src"
+        shutil.rmtree(src, ignore_errors=True)
+        c = subprocess.run(["git", "clone", "-q", "--depth", "1", "--branch", SOURCE_REF,
+                            "https://github.com/imhyensuk/memopro.git", src],
+                           capture_output=True, text=True, check=False)
+        if c.returncode != 0:
+            raise RuntimeError(f"cloning memopro@{SOURCE_REF} failed: {c.stderr[-800:]}")
+        sha = subprocess.run(["git", "rev-parse", "HEAD"], cwd=src, capture_output=True,
+                             text=True, check=True).stdout.strip()[:12]
+        _log(f"building memopro@{SOURCE_REF} ({sha}); ~5-8 min the first time per commit")
+        info = {"source": f"github@{SOURCE_REF}", "commit": sha,
+                **_build_source(src, os.path.join(root, "install", f"built-{sha}"))}
+        if not info.get("ok"):
+            raise RuntimeError(f"memopro build failed: {info}")
+        os.environ["MP_MEMOPRO_INSTALLED"] = "1"
+        os.environ["MP_MEMOPRO_COMMIT"] = sha
+        return info
     if globals().get("PIP_SPEC"):  # a published release (E068): PyPI, and the repository at
         # GIT_REF for its tests (public, no token)
         _log(f"installing {PIP_SPEC} from PyPI")
@@ -565,6 +585,8 @@ def bootstrap(cell, config):
     info = install_memopro(root)
     extras = install_extras()
     write_workers()
+    if info.get("commit"):  # a new commit is a new run
+        config = {**config, "COMMIT": info["commit"]}
     run = Run(root, cell, config, new_run=NEW_RUN)
     global LOG_FILE
     LOG_FILE = run.path("orchestrator.log")
