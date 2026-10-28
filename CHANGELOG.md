@@ -2,6 +2,15 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Changed: CUDA generation (0363)
+- Weights copied into the GPU cache give up their host copy (read again from the file, checked,
+  if the cache is dropped): a model that fits the GPU holds almost no host memory.
+- `generate(draft="auto")` drafts on CUDA again, only while the model's weights do not all fit
+  the GPU cache; the draft's 16-bit weights and its own generation memory are taken off the
+  cache first, and the draft loads straight to the GPU.
+
 ## 0.2.0b4 (beta)
 
 CSV sorting and joining beyond memory, locked buffers, and fixes from the T4 re-runs
