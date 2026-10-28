@@ -2,7 +2,14 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.2.0b4 (beta)
+
+CSV sorting and joining beyond memory (text keys, quoted CSV), locked buffers, models you loaded
+yourself (Unsloth), CUDA generation fixes, and Windows wheels (E068-E070; docs/research/0353-0364).
+
+### Added: Windows wheels (0364)
+- Releases include an x86_64 Windows wheel, so `pip install memopro` works on Windows without a
+  Rust toolchain.
 
 ### Added: models you loaded yourself, Unsloth included (0363)
 - `memopro.finetune` / `memopro.generate` take a PyTorch model you loaded (Unsloth's
@@ -28,11 +35,6 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 - A ceiling too small for even one buffer beside the process is refused at once with what the
   process holds, instead of splitting the key range until no split is left. The plan counts
   what the runtime's compression threads keep.
-
-## 0.2.0b4 (beta)
-
-CSV sorting and joining beyond memory, locked buffers, and fixes from the T4 re-runs
-(E068, E069; docs/research/0353, 0357).
 
 ### Added: `memopro.sort` and `memopro.join` (0357)
 - Sort a CSV file by an integer column, or join two on one, when the file is larger than
