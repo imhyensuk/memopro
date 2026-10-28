@@ -1,0 +1,4 @@
+{"lang": "rust", "pin_unpin_ns": 1087.3, "alloc_free_64k_ns": 10050.9, "stats_ns": 12.2, "copy_gbps": 19.47, "plain_memcpy_gbps": 19.44, "checksum": 18446744073642442752, "pin_unpin_ns_vs_rust": 1.0, "alloc_free_64k_ns_vs_rust": 1.0, "stats_ns_vs_rust": 1.0}
+{"lang": "c", "pin_unpin_ns": 1084.8, "alloc_free_64k_ns": 9126.1, "stats_ns": 23.8, "copy_gbps": 19.27, "plain_memcpy_gbps": 19.27, "checksum": 18446744073642442752, "sink": 5, "pin_unpin_ns_vs_rust": 0.9977007265704038, "alloc_free_64k_ns_vs_rust": 0.9079883393526949, "stats_ns_vs_rust": 1.9508196721311477}
+{"lang": "python", "pin_unpin_ns": 5702.5238, "alloc_free_64k_ns": 19110.0415, "stats_ns": 3203.6155, "checksum": 18446744073642442752, "copy_gbps": 19.53090197838403, "plain_memcpy_gbps": 19.484918521933057, "pin_unpin_ns_vs_rust": 5.24466458199209, "alloc_free_64k_ns_vs_rust": 1.9013263986309683, "stats_ns_vs_rust": 262.5914344262295}
+K1 same bytes: True

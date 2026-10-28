@@ -1,0 +1,12 @@
+{
+ "case": "v4_image_swap",
+ "returncode": 0,
+ "wall_s": 62.22509335000001,
+ "swap_out_bytes": 2412130304,
+ "disk_written_bytes": 2416304128,
+ "stdout_tail": "{\"images\": 2048, \"means_sha256\": \"9fa1a56a76da24e6462edc34024a2605248b9bc8652529cca5bd29945e89e5d2\", \"counts_sha256\": \"fc7c091ef96ec55850f923c49a19cffe7346da5955f7bc57262955f75e680038\", \"total\": 478153025805, \"max\": 1802, \"stack_sha256\": \"c7d6d44d86eb75183f05281e57c0d485eb15bfe147cd2a95f86368a332034985\", \"build_seconds\": 4.130761675999963, \"seconds\": 61.51301848999998, \"maxrss_bytes\": 848011264}\n{\"images\": 2048, \"means_sha256\": \"9fa1a56a76da24e6462edc34024a2605248b9bc8652529cca5bd29945e89e5d2\", \"counts_sha256\": \"fc7c091ef96ec55850f923c49a19cffe7346da5955f7bc57262955f75e680038\", \"total\": 478153025805, \"max\": 1802, \"stack_sha256\": \"c7d6d44d86eb75183f05281e57c0d485eb15bfe147cd2a95f86368a332034985\", \"build_seconds\": 4.130761675999963, \"seconds\": 61.51301848999998, \"maxrss_bytes\": 848011264, \"io\": {\"rchar\": 3514369, \"wchar\": 0, \"syscr\": 382, \"syscw\": 0, \"read_bytes\": 6736584704, \"write_bytes\": 0, \"cancelled_write_bytes\": 0}}\n",
+ "stderr_tail": "",
+ "limit": 826277888,
+ "same_result": true,
+ "write_bytes": 0
+}
