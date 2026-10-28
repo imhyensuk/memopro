@@ -19,6 +19,16 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   the GPU cache; the draft's 16-bit weights and its own generation memory are taken off the
   cache first, and the draft loads straight to the GPU.
 
+### Changed: `memopro.sort` / `memopro.join` read text keys and quoted CSV (0362)
+- Keys compare as numbers when every key in the file is an integer (found in the first pass),
+  else as bytes, as `LC_ALL=C sort` orders them; a join compares numbers when every right key
+  and the left file's first keys are integers.
+- RFC 4180 quoting: fields in `"` may hold commas, line breaks and `""`; a row ends at a line
+  break outside quotes; a key's enclosing quotes are left out when it is compared.
+- A ceiling too small for even one buffer beside the process is refused at once with what the
+  process holds, instead of splitting the key range until no split is left. The plan counts
+  what the runtime's compression threads keep.
+
 ## 0.2.0b4 (beta)
 
 CSV sorting and joining beyond memory, locked buffers, and fixes from the T4 re-runs

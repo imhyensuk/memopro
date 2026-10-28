@@ -1,34 +1,80 @@
-//! Simple CSV kernels for `memopro.sort` / `memopro.join` (E069 V2, 0356): row positions, one
-//! integer key per row, and byte gathers, written into the caller's buffers so that no index
-//! temporary is allocated per block (NumPy's took 16 bytes per gathered byte, and the
-//! allocator kept them: macOS large cache 0060, glibc heaps 0349).
+//! CSV kernels for `memopro.sort` / `memopro.join` (E069 V2, 0356; 0361): row positions, one
+//! key per row, and byte gathers, written into the caller's buffers so that no index temporary
+//! is allocated per block (NumPy's took 16 bytes per gathered byte, and the allocator kept them:
+//! macOS large cache 0060, glibc heaps 0349).
 //!
-//! Simple CSV only: lines end in `\n` or `\r\n`, fields are separated by `,`, and no field is
-//! quoted.
+//! CSV as RFC 4180 writes it: lines end in `\n` or `\r\n`, fields are separated by `,`, and a
+//! field may be enclosed in `"` (then it may hold `,`, line breaks and `""` for a quote). A row
+//! ends at a line break outside quotes.
 
 use crate::error::{Error, Result};
 
-/// Number of lines (`\n` bytes) in `block`.
-pub fn count_lines(block: &[u8]) -> usize {
-    block.iter().filter(|&&b| b == b'\n').count()
+/// How the key field is read by [`rows`].
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
+pub enum KeyMode {
+    /// Every key must be an integer (an error otherwise).
+    Int,
+    /// Keys are text: only their positions are given.
+    Text,
+    /// Integers where they parse; whether all did is returned.
+    Detect,
 }
 
-/// Rows of `block` (whole lines, each ending in `\n`): for row `i`, its start, its length with
-/// the line ending, its length without it (`\n` or `\r\n`), field `col` parsed as an `i64` key,
-/// and that field's start and end. Every row must have `fields` fields and no quote. Each
-/// output must hold at least the number of rows; returns that number.
+/// End of the last complete row of `block` (just after its line break outside quotes); 0 when
+/// the block holds no complete row.
+pub fn cut(block: &[u8]) -> usize {
+    let (mut quoted, mut end) = (false, 0);
+    for (i, &b) in block.iter().enumerate() {
+        match b {
+            b'"' => quoted = !quoted,
+            b'\n' if !quoted => end = i + 1,
+            _ => {}
+        }
+    }
+    end
+}
+
+/// Number of rows (line breaks outside quotes) in `block`.
+pub fn count_rows(block: &[u8]) -> usize {
+    let mut quoted = false;
+    let mut n = 0;
+    for &b in block {
+        match b {
+            b'"' => quoted = !quoted,
+            b'\n' if !quoted => n += 1,
+            _ => {}
+        }
+    }
+    n
+}
+
+/// The bytes of a field without the quotes that enclose it.
+fn unquoted(f: &[u8]) -> &[u8] {
+    if f.len() >= 2 && f[0] == b'"' && f[f.len() - 1] == b'"' {
+        &f[1..f.len() - 1]
+    } else {
+        f
+    }
+}
+
+/// Rows of `block` (whole rows, each ending in a line break outside quotes): for row `i`, its
+/// start, its length with the line ending, its length without it (`\n` or `\r\n`), the start
+/// and end of field `col` (with any enclosing quotes), and that field as an `i64` key when
+/// `mode` asks for one. Every row must have `fields` fields. Each output must hold at least the
+/// number of rows; returns that number and whether every key was an integer.
 #[allow(clippy::too_many_arguments)]
 pub fn rows(
     block: &[u8],
     col: usize,
     fields: usize,
+    mode: KeyMode,
     starts: &mut [i64],
     lens: &mut [i64],
     body: &mut [i64],
     keys: &mut [i64],
     key_start: &mut [i64],
     key_end: &mut [i64],
-) -> Result<usize> {
+) -> Result<(usize, bool)> {
     if col >= fields {
         return Err(Error::InvalidArgument(format!(
             "column {col} of {fields} fields"
@@ -37,6 +83,7 @@ pub fn rows(
     let cap = [
         starts.len(),
         lens.len(),
+        body.len(),
         keys.len(),
         key_start.len(),
         key_end.len(),
@@ -44,59 +91,96 @@ pub fn rows(
     .into_iter()
     .min()
     .unwrap_or(0);
-    let (mut n, mut at) = (0, 0);
-    while at < block.len() {
-        let Some(nl) = block[at..].iter().position(|&b| b == b'\n') else {
-            return Err(Error::InvalidArgument(
-                "a block must end with a whole line".into(),
-            ));
-        };
-        let line = &block[at..at + nl];
-        let line = line.strip_suffix(b"\r").unwrap_or(line);
-        if n == cap {
-            return Err(Error::InvalidArgument(format!(
-                "more than {cap} rows for the outputs"
-            )));
-        }
-        let (mut field, mut fs, mut fe) = (0, 0, line.len());
-        for (i, &b) in line.iter().enumerate() {
-            match b {
-                b',' => {
-                    if field == col {
-                        fe = i;
-                    }
-                    field += 1;
-                    if field == col {
-                        fs = i + 1;
-                    }
+    let (mut n, mut at, mut all_int) = (0, 0, true);
+    let (mut field, mut fs, mut fe, mut quoted) = (0, 0, None, false);
+    for (i, &b) in block.iter().enumerate() {
+        match b {
+            b'"' => quoted = !quoted,
+            b',' if !quoted => {
+                if field == col {
+                    fe = Some(i);
                 }
-                b'"' => {
-                    return Err(Error::InvalidArgument(
-                        "quoted CSV fields are not supported".into(),
-                    ));
+                field += 1;
+                if field == col {
+                    fs = i + 1;
                 }
-                _ => {}
             }
+            b'\n' if !quoted => {
+                let end = if i > at && block[i - 1] == b'\r' {
+                    i - 1
+                } else {
+                    i
+                };
+                if field + 1 != fields {
+                    return Err(Error::InvalidArgument(format!(
+                        "a row has {} fields, not {fields}",
+                        field + 1
+                    )));
+                }
+                if n == cap {
+                    return Err(Error::InvalidArgument(format!(
+                        "more than {cap} rows for the outputs"
+                    )));
+                }
+                let (ks, ke) = (if col == 0 { at } else { fs }, fe.unwrap_or(end));
+                keys[n] = match mode {
+                    KeyMode::Text => 0,
+                    KeyMode::Int => parse_key(unquoted(&block[ks..ke]))?,
+                    KeyMode::Detect => match parse_key(unquoted(&block[ks..ke])) {
+                        Ok(v) => v,
+                        Err(_) => {
+                            all_int = false;
+                            0
+                        }
+                    },
+                };
+                starts[n] = at as i64;
+                lens[n] = (i + 1 - at) as i64;
+                body[n] = (end - at) as i64;
+                key_start[n] = ks as i64;
+                key_end[n] = ke as i64;
+                n += 1;
+                at = i + 1;
+                (field, fs, fe) = (0, 0, None);
+            }
+            _ => {}
         }
-        if field + 1 != fields {
-            return Err(Error::InvalidArgument(format!(
-                "a row has {} fields, not {fields}",
-                field + 1
-            )));
-        }
-        if field == col {
-            fe = line.len();
-        }
-        keys[n] = parse_key(&line[fs..fe])?;
-        starts[n] = at as i64;
-        lens[n] = nl as i64 + 1;
-        body[n] = line.len() as i64;
-        key_start[n] = (at + fs) as i64;
-        key_end[n] = (at + fe) as i64;
-        n += 1;
-        at += nl + 1;
     }
-    Ok(n)
+    if at != block.len() {
+        return Err(Error::InvalidArgument(
+            "a block must end with a whole row (a quote may be left open)".into(),
+        ));
+    }
+    Ok((n, all_int && mode != KeyMode::Text))
+}
+
+/// Text keys (`src[starts[i]..ends[i]]`, enclosing quotes removed) as `width`-byte records into
+/// `out`, cut or padded with zeros; with `width` 0 nothing is written. Returns the longest key.
+pub fn fixed(
+    src: &[u8],
+    starts: &[i64],
+    ends: &[i64],
+    width: usize,
+    out: &mut [u8],
+) -> Result<usize> {
+    if starts.len() != ends.len() || out.len() < width * starts.len() {
+        return Err(Error::InvalidArgument(
+            "key arrays and output do not match".into(),
+        ));
+    }
+    let mut longest = 0;
+    for (i, (&s, &e)) in starts.iter().zip(ends).enumerate() {
+        let r = range(src.len(), s, e - s)?;
+        let k = unquoted(&src[r]);
+        longest = longest.max(k.len());
+        if width > 0 {
+            let rec = &mut out[i * width..(i + 1) * width];
+            let m = k.len().min(width);
+            rec[..m].copy_from_slice(&k[..m]);
+            rec[m..].fill(0);
+        }
+    }
+    Ok(longest)
 }
 
 fn parse_key(s: &[u8]) -> Result<i64> {
@@ -206,37 +290,58 @@ pub fn join_rows(
 mod tests {
     use super::*;
 
+    fn run(
+        block: &[u8],
+        col: usize,
+        fields: usize,
+        mode: KeyMode,
+    ) -> Result<(usize, bool, [[i64; 4]; 6])> {
+        let mut v = [[0i64; 4]; 6];
+        let [s, l, b, k, ks, ke] = &mut v;
+        let (n, all) = rows(block, col, fields, mode, s, l, b, k, ks, ke)?;
+        Ok((n, all, v))
+    }
+
     #[test]
     fn rows_keys_and_gathers() {
         let block = b"3,x,7\n-12,yy,8\n5,z,9\n";
-        let mut v = [[0i64; 3]; 6];
-        let [s, l, b, k, ks, ke] = &mut v;
-        assert_eq!(rows(block, 0, 3, s, l, b, k, ks, ke).unwrap(), 3);
-        assert_eq!(*k, [3, -12, 5]);
-        assert_eq!(*l, [6, 9, 6]);
-        assert_eq!(*b, [5, 8, 5]);
+        let (n, all, [s, l, b, k, _, _]) = run(block, 0, 3, KeyMode::Int).unwrap();
+        assert_eq!((n, all), (3, true));
+        assert_eq!(
+            (&k[..3], &l[..3], &b[..3]),
+            (&[3, -12, 5][..], &[6, 9, 6][..], &[5, 8, 5][..])
+        );
         let mut out = vec![0u8; 21];
         let n = gather(block, &[s[2], s[0]], &[l[2], l[0]], &mut out).unwrap();
         assert_eq!(&out[..n], b"5,z,9\n3,x,7\n");
-        let mut v2 = [[0i64; 3]; 6];
-        let [s2, l2, b2, k2, ks2, ke2] = &mut v2;
         // the last field before \r\n is the key: the \r is the line ending, not the field
+        let (n, _, [_, l, b, k, _, _]) = run(b"a,7\r\nb,8\r\n", 1, 2, KeyMode::Int).unwrap();
         assert_eq!(
-            rows(b"a,7\r\nb,8\r\n", 1, 2, s2, l2, b2, k2, ks2, ke2).unwrap(),
-            2
+            (n, &k[..2], &l[..2], &b[..2]),
+            (2, &[7, 8][..], &[5, 5][..], &[3, 3][..])
         );
-        assert_eq!(
-            (&k2[..2], &l2[..2], &b2[..2]),
-            (&[7, 8][..], &[5, 5][..], &[3, 3][..])
-        );
-        assert_eq!(rows(block, 2, 3, s2, l2, b2, k2, ks2, ke2).unwrap(), 3);
-        assert_eq!(*k2, [7, 8, 9]);
-        assert!(rows(b"1,\"a\"\n", 0, 2, s, l, b, k, ks, ke).is_err());
-        assert!(rows(b"1,2\n", 0, 3, s, l, b, k, ks, ke).is_err());
-        assert!(rows(b"x,2\n", 0, 2, s, l, b, k, ks, ke).is_err());
-        assert!(rows(b"99999999999999999999,2\n", 0, 2, s, l, b, k, ks, ke).is_err());
+        assert!(run(b"1,2\n", 0, 3, KeyMode::Int).is_err());
+        assert!(run(b"x,2\n", 0, 2, KeyMode::Int).is_err());
+        assert!(run(b"99999999999999999999,2\n", 0, 2, KeyMode::Int).is_err());
+        assert!(!run(b"1,a\nx,b\n", 0, 2, KeyMode::Detect).unwrap().1);
         let mut j = vec![0u8; 32];
         let n = join_rows(b"1,a", &[0], &[3], b"b,c", &[0], &[3], true, false, &mut j).unwrap();
         assert_eq!(&j[..n], b"1,a,b,c\n");
+    }
+
+    #[test]
+    fn quoted_fields_and_text_keys() {
+        // a quoted field holding a comma, a line break and an escaped quote; a quoted key
+        let block = b"\"b,1\",\"x\ny\"\"z\"\n\"a\",2\n";
+        assert_eq!(count_rows(block), 2);
+        assert_eq!(cut(&block[..block.len() - 3]), 15);
+        let (n, all, [_, l, _, _, ks, ke]) = run(block, 0, 2, KeyMode::Detect).unwrap();
+        assert_eq!((n, all, l[0], l[1]), (2, false, 15, 6));
+        let mut out = [0u8; 8];
+        let longest = fixed(block, &ks[..2], &ke[..2], 4, &mut out).unwrap();
+        assert_eq!((longest, &out), (3, b"b,1\0a\0\0\0"));
+        let (_, all, [_, _, _, k, _, _]) = run(b"\"7\",a\n8,b\n", 0, 2, KeyMode::Detect).unwrap();
+        assert!(all && k[..2] == [7, 8]);
+        assert!(run(b"\"open,1\n", 0, 2, KeyMode::Text).is_err());
     }
 }

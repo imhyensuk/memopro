@@ -62,14 +62,85 @@ def test_join_equals_a_plain_join(tmp_path, small):
 
 def test_bad_input_is_refused_not_misread(tmp_path, small):
     p = tmp_path / "q.csv"
-    p.write_text('k,t\n1,"a,b"\n', newline="\n")
-    with pytest.raises(memopro.InvalidArgument, match="quoted"):
+    p.write_text('k,t\n1,"open\n2,b\n', newline="\n")  # a quote never closed
+    with pytest.raises(memopro.InvalidArgument, match="quote"):
         memopro.sort(p, "k", out=lambda b: None)
-    p.write_text("k,t\n1,a\nx,b\n", newline="\n")
-    with pytest.raises(memopro.InvalidArgument, match="integers"):
+    p.write_text("k,t\n1,a\n2,b,c\n", newline="\n")
+    with pytest.raises(memopro.InvalidArgument, match="fields"):
         memopro.sort(p, "k", out=lambda b: None)
     with pytest.raises(memopro.InvalidArgument, match="no column"):
         memopro.sort(p, "nope", out=lambda b: None)
+
+
+def _quoted(rng, i):
+    """A row with a quoted text key (sometimes with a comma), a plain field and a quoted field
+    holding commas, a line break and an escaped quote."""
+    key = rng.choice(["apple", "Apple", "banana", "a,b", "zeta", "beta"]) + str(rng.randrange(50))
+    key = f'"{key}"' if "," in key or rng.random() < 0.3 else key
+    note = f'"x,{i}\nline ""q"""' if rng.random() < 0.4 else f"n{i}"
+    return f"{key},{i},{note}"
+
+
+def _key(row):
+    import csv
+    import io
+
+    return next(csv.reader(io.StringIO(row)))[0].encode()
+
+
+def test_text_keys_and_quoted_fields_sort_byte_by_byte(tmp_path, small):
+    rng = random.Random(7)
+    rows = [_quoted(rng, i) for i in range(1500)]
+    path = tmp_path / "t.csv"
+    path.write_text('name,i,"a ""note"""\n' + "\n".join(rows) + "\n", newline="\n")
+    got = bytearray()
+    st = memopro.sort(path, "name", out=got.extend)
+    want = sorted(rows, key=_key)  # stable, byte order (LC_ALL=C)
+    assert bytes(got).decode() == 'name,i,"a ""note"""\n' + "".join(r + "\n" for r in want)
+    assert st["keys"] == "text" and st["passes"] > 3
+
+
+def test_text_and_quoted_join_equals_a_plain_join(tmp_path, small):
+    import collections
+
+    rng = random.Random(8)
+    left = [_quoted(rng, i) for i in range(1200)]
+    right = []
+    for j in range(400):
+        k = rng.choice(["apple", "Apple", "banana", "a,b", "zeta"]) + str(rng.randrange(50))
+        right.append(f'r{j},"{k}",w{j}')
+    (tmp_path / "l.csv").write_text("name,i,note\n" + "\n".join(left) + "\n", newline="\n")
+    (tmp_path / "r.csv").write_text('id,"name",w\n' + "\n".join(right) + "\n", newline="\n")
+    got = bytearray()
+    st = memopro.join(tmp_path / "l.csv", tmp_path / "r.csv", "name", out=got.extend)
+    by_key = collections.defaultdict(list)
+    for r in right:
+        rid, rest = r.split(",", 1)
+        k, w = rest.rsplit(",", 1)
+        by_key[k.strip('"').encode()].append(f"{rid},{w}")
+    want = collections.Counter(f"{row}\n{rest}" for row in left for rest in by_key[_key(row)])
+    lines = bytes(got).decode()
+    header, body = lines.split("\n", 1)
+    assert header == "name,i,note,id,w"
+    rows = []  # joined rows end with ",<id>,<w>\n"; a quoted note may hold line breaks
+    for r in left:
+        for rest in by_key[_key(r)]:
+            rows.append(f"{r},{rest}\n")
+    assert sorted(rows) == sorted(_split_rows(body)) and st["keys"] == "text"
+    assert sum(want.values()) == len(rows)
+
+
+def _split_rows(text):
+    """Rows of CSV text (line breaks inside quotes kept), each with its newline."""
+    out, cur, quoted = [], [], False
+    for ch in text:
+        cur.append(ch)
+        if ch == '"':
+            quoted = not quoted
+        elif ch == "\n" and not quoted:
+            out.append("".join(cur))
+            cur = []
+    return out
 
 
 def test_a_file_changed_between_passes_is_an_error(tmp_path, small, monkeypatch):
