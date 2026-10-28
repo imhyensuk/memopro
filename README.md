@@ -228,7 +228,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64 wheel을 제공합니다. 그 밖의 
 
 | 함수 | 설명 |
 |---|---|
-| `memopro.finetune(model, texts, budget=, batch=, seq_len=, epochs=, lr=, rank=)` | 메모리보다 큰 LLM의 LoRA 학습. `FinetuneResult`(`model`, `adapter`, `losses`, `batch` 등) 반환. `mlx_lm.load`로 불러온 모델을 `tokenizer=`와 함께 주면 mlx-lm의 LoRA 층과 손실로 학습하며, 결과는 mlx-lm 학습과 같음 |
+| `memopro.finetune(model, texts, budget=, batch=, seq_len=, epochs=, lr=, rank=)` | 메모리보다 큰 LLM의 LoRA 학습. `FinetuneResult`(`model`, `adapter`, `losses`, `batch` 등) 반환. 직접 불러온 PyTorch 모델(Unsloth `FastLanguageModel`, Transformers)을 `tokenizer=`와 함께 주면 그 모델 그대로(Unsloth면 Unsloth의 LoRA 층과 속도로) 학습하고, memopro는 프로세스 상한만 확인함. `mlx_lm.load`로 불러온 모델을 `tokenizer=`와 함께 주면 mlx-lm의 LoRA 층과 손실로 학습하며, 결과는 mlx-lm 학습과 같음 |
 | `memopro.generate(model, prompt, budget=, draft="auto", max_new_tokens=, streamer=, stopping_criteria=)` | 메모리보다 큰 LLM의 생성. 디스크에 있는 같은 계열의 작은 모델을 초안으로 자동 사용. `streamer`(예: Transformers `TextIteratorStreamer`)와 `stopping_criteria`는 `model.generate`에 그대로 넘어가며, 스트리머가 받는 텍스트는 반환값과 같음. `mlx_lm.load`로 불러온 모델을 `tokenizer=`와 함께 주면 mlx-lm이 그대로 생성하고, memopro는 상한에 맞지 않는 층만 토큰마다 다시 읽음(출력은 mlx-lm과 같음, `pip install memopro[mlx]`). |
 | `memopro.enable(budget=)` / `memopro.disable()` | 프로세스 전체 메모리 상한. `Session.estimate()`, `Session.measured()` |
 | `memopro.load(model_id, budget=, **from_pretrained)` | Hugging Face 모델을 저장된 그대로 불러오기(정밀도를 바꾸지 않음). 예산에 안 들어가면 흘려 쓰기로 불러옴. `dtype=`·`quantization_config=`를 직접 주면 그 모델이 원본이 되어 준 그대로 불러옴. 디스크에는 아무것도 쓰지 않음 |
@@ -331,9 +331,9 @@ r.adapter.save_pretrained("my-lora")     # 표준 PEFT 어댑터
 text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Instruct")
 ```
 
-작은 모델이 토큰을 제안하고 큰 모델이 검증합니다. 출력은 큰 모델만으로 생성한 결과와 같습니다. 초안은 Apple GPU(int4)와 NVIDIA GPU(16비트)에서 쓸 수 있고, 같은 토크나이저를 쓰는 모델이어야 합니다. NVIDIA GPU에서는 `draft=`로 직접 줄 때만 씁니다(T4에서 자동 초안이 오히려 느리거나 메모리를 넘겼습니다).
+작은 모델이 토큰을 제안하고 큰 모델이 검증합니다. 출력은 큰 모델만으로 생성한 결과와 같습니다. 초안은 Apple GPU(int4)와 NVIDIA GPU(16비트)에서 쓸 수 있고, 같은 토크나이저를 쓰는 모델이어야 합니다. NVIDIA GPU에서 자동 초안은 모델 가중치가 GPU에 다 들어가지 않을 때만 쓰고, 초안의 가중치와 생성 작업 메모리를 GPU 캐시에서 미리 뺍니다(모델이 GPU에 다 들어가면 초안은 오히려 느렸습니다).
 
-`draft`를 주지 않으면(기본값 `"auto"`) Apple GPU에서는 이 디스크에 이미 있는 모델 가운데 같은 토크나이저를 쓰고 크기가 약 1/5인 모델을 골라 초안으로 씁니다. 찾는 곳은 세 군데입니다.
+`draft`를 주지 않으면(기본값 `"auto"`) 이 디스크에 이미 있는 모델 가운데 같은 토크나이저를 쓰고 크기가 약 1/5인 모델을 골라 초안으로 씁니다. 찾는 곳은 세 군데입니다.
 
 1. `model_dirs` 설정에 적은 폴더(모델 폴더 또는 모델 폴더들을 담은 폴더)
 2. 폴더에서 불러온 모델이라면 그 옆 폴더들

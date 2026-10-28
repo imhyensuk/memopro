@@ -4,6 +4,21 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Added: models you loaded yourself, Unsloth included (0363)
+- `memopro.finetune` / `memopro.generate` take a PyTorch model you loaded (Unsloth's
+  `FastLanguageModel`, Transformers; pass its tokenizer) and train or run it as it is, with its
+  own layers and loss: the results of training or generating with it directly under the same
+  settings, at its own speed. An Unsloth model gets Unsloth's LoRA layers
+  (`FastLanguageModel.get_peft_model`) and generates in its inference mode. The whole process is
+  checked against the ceiling before and after every step.
+
+### Changed: CUDA generation (0363)
+- Weights copied into the GPU cache give up their host copy (read again from the file, checked,
+  if the cache is dropped): a model that fits the GPU holds almost no host memory.
+- `generate(draft="auto")` drafts on CUDA again, only while the model's weights do not all fit
+  the GPU cache; the draft's 16-bit weights and its own generation memory are taken off the
+  cache first, and the draft loads straight to the GPU.
+
 ### Changed: `memopro.sort` / `memopro.join` read text keys and quoted CSV (0362)
 - Keys compare as numbers when every key in the file is an integer (found in the first pass),
   else as bytes, as `LC_ALL=C sort` orders them; a join compares numbers when every right key
