@@ -489,6 +489,7 @@ class StreamedWeights:
         dev = edr.device_parts(parts, self.device)
         self.gpu_edr[pid] = dev
         self.gpu_cache_bytes += parts.nbytes
+        self.runtime._rt.evict(buf.id)  # as a cached copy (0363)
         self.copy_stats["edr_bytes"] += parts.nbytes
         self.copy_stats["copies"] += 1
         self.copy_stats["copy_bytes"] += parts.nbytes
@@ -531,6 +532,9 @@ class StreamedWeights:
         if self.gpu_cache_bytes + nbytes <= min(cap, self.gpu_budget):
             self.gpu_cache[pid] = t
             self.gpu_cache_bytes += nbytes
+            # the device keeps it now: the host copy can go (read again from its file, checked,
+            # if the device cache is dropped), which leaves the host room to the rest (0363)
+            self.runtime._rt.evict(buf.id)
         return t
 
     def _prefetch_after(self, module: Any) -> None:
@@ -1005,8 +1009,14 @@ def draft_model(
             if torch.cuda.is_bf16_supported(including_emulation=False)
             else torch.float16
         )
+        try:  # straight to the GPU, not through host memory (0363)
+            import accelerate  # noqa: F401
+
+            placed = {"device_map": {"": device}}
+        except ImportError:
+            placed = {}
         model = transformers.AutoModelForCausalLM.from_pretrained(
-            str(name_or_dir), revision=revision, dtype=dtype
+            str(name_or_dir), revision=revision, dtype=dtype, **placed
         ).to(device)
     model.eval()
     if pad:  # the target's extra rows are padding: the draft never proposes them

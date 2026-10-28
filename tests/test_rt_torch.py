@@ -548,6 +548,8 @@ def test_copy_path_cache_and_prefetch_keep_results(tmp_path):
         results.append((text, r.losses))
         stats[name] = dict(m.memopro_weights.copy_stats)
         assert m.memopro_runtime.stats()["pinned_bytes"] == 0
+        if name == "all":  # every weight is on the device: the host copies were given up (0363)
+            assert m.memopro_runtime.stats()["used"] == 0
     assert all(x == results[0] for x in results[1:])
     weights = len(m.memopro_weights.buffers)
     assert stats["all"]["copies"] == weights and stats["all"]["hits"] > 0
@@ -1114,9 +1116,13 @@ def test_auto_draft_takes_the_closest_local_model_with_the_same_tokenizer(tmp_pa
     monkeypatch.setattr(llm, "AUTO_DRAFT_MAX", 0.01)
     assert llm._local_draft(m, tok) is None
 
-    # on the CPU and on CUDA (E068) there is no draft and nothing to say
+    # on the CPU, and on CUDA while every weight fits the GPU cache (0363), there is no draft
+    # and nothing to say
+    import types
+
     class OnCuda:
         device = torch.device("cuda")
+        memopro_weights = types.SimpleNamespace(buffers={}, gpu_budget=1 << 30)
 
     with warnings.catch_warnings():
         warnings.simplefilter("error")

@@ -372,12 +372,12 @@ def generate(
     it within the ceiling (0337). A string ``prompt`` goes
     through the chat template when the tokenizer has one and ``chat`` is true. ``draft`` (a
     name, folder or :func:`memopro.rt.torch.draft_model`) proposes tokens on Apple and NVIDIA
-    GPUs; the text is the same with or without it. ``"auto"`` (the default) takes, on Apple
-    GPUs, a smaller model
+    GPUs; the text is the same with or without it. ``"auto"`` (the default) takes a smaller model
     already on this disk that shares the tokenizer, about a fifth of the size (0322; nothing is
     downloaded for it; looked for in the ``model_dirs`` setting, next to a model loaded from a
     folder, and in the Hugging Face cache), and goes without one when there is none or when the budget
-    cannot hold it next to the generation; ``None`` never drafts. ``streamer`` (e.g. Transformers'
+    cannot hold it next to the generation; on NVIDIA GPUs only while the weights do not all
+    fit the GPU cache (0363); ``None`` never drafts. ``streamer`` (e.g. Transformers'
     ``TextIteratorStreamer``) and ``stopping_criteria`` go to ``model.generate`` as they are: the
     streamer receives the same tokens the returned text is decoded from.
 
@@ -417,7 +417,7 @@ def generate(
     estimate = int(_FIRST_STEP_MARGIN * _generation_estimate(m.config, tokens))
     auto = isinstance(draft, str) and draft == "auto"
     if auto:
-        draft = _auto_draft(m, tok, _room(m, estimate))
+        draft = _auto_draft(m, tok, _room(m, estimate), tokens)
     elif draft is not None and not hasattr(draft, "memopro_draft_bytes"):
         draft = rtt.draft_model(draft, target=m, device=m.device.type)
     held = [estimate + (draft.memopro_draft_bytes if draft is not None else 0)]
@@ -522,24 +522,24 @@ def _machine_short(rt: Any) -> int:
     return rt.limit() - rt.machine_limit()
 
 
-def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:
+def _auto_draft(m: Any, tok: Any, room: int | None = None, tokens: int = 2048) -> Any:
     """The draft ``generate(draft="auto")`` uses for ``m``: found once per model and kept on it
     (a chat calls generate again and again), or None (0322). A draft that would leave less than
     AUTO_DRAFT_SLACK of its size free in ``room`` is not loaded: measured on the GPU it would
     not fit the generation after all, and finding that out mid-way costs more than it saves
-    (E061: 1.5B at 1 GiB, 2.0 instead of 1.5 s per token)."""
+    (E061: 1.5B at 1 GiB, 2.0 instead of 1.5 s per token). On CUDA a draft is 16-bit and is
+    used only when the target's weights do not all fit the GPU cache; its weights and its own
+    generation memory for ``tokens`` positions come out of that cache (0363)."""
     import memopro.rt.torch as rtt
 
     found = _AUTO_DRAFTS.get(m, _UNSET)
     if found is not _UNSET:
         return found
     _AUTO_DRAFTS[m] = None
+    if m.device.type == "cuda":
+        return _cuda_draft(m, tok, tokens)
     if m.device.type != "mps":
-        # drafts stay in GPU memory; on CUDA a draft is 16-bit, its memory is not planned next
-        # to the device cache, and on the T4 it cost the generation (E068, 0351: 3B 1.07 s/token
-        # with a 0.5B draft vs 0.46 without it in E043, the host 1.2 GiB over its ceiling; 7B
-        # with a 1.5B draft ran out of GPU memory). An explicit draft still drafts there
-        return None
+        return None  # drafts stay in GPU memory
     choice = _local_draft(m, tok)
     if choice is None and _streams_every_token(m):
         # no sibling: an int4 copy of the model itself, kept in memory only (0329, E033 S3:
@@ -586,6 +586,50 @@ def _auto_draft(m: Any, tok: Any, room: int | None = None) -> Any:
     _note(
         f"memopro: drafting with {what} (the text is the same as without a draft; "
         "draft=None turns it off)"
+    )
+    _AUTO_DRAFTS[m] = draft
+    return draft
+
+
+def _cuda_draft(m: Any, tok: Any, tokens: int) -> Any:
+    """The automatic draft on CUDA (0363): none while every target weight stays in the GPU cache
+    (then a draft is pure cost: E068 0351, 3B 1.07 s/token with a 0.5B draft vs 0.46 without);
+    else a smaller sibling on this disk whose 16-bit weights and own generation memory fit what
+    the cache has (before 0363 only its weights were counted, and 7B with a 1.5B draft ran out
+    of GPU memory on a T4)."""
+    import transformers
+
+    import memopro.rt.torch as rtt
+
+    weights = m.memopro_weights
+    whole = sum(buf.nbytes for buf, _, _ in weights.buffers.values())
+    if whole <= weights.gpu_budget:
+        return None
+    choice = _local_draft(m, tok)
+    if choice is None:
+        return None
+    name, path = choice
+    config = transformers.AutoConfig.from_pretrained(str(path))
+    working = int(_FIRST_STEP_MARGIN * _generation_estimate(config, tokens))
+    need = int((rtt.draft_size(path, "cuda") + working) * (1 + AUTO_DRAFT_SLACK))
+    if need > weights.gpu_budget:
+        _note(
+            f"memopro: {name} could draft, but it needs about {need >> 20} MiB of GPU memory "
+            f"and the cache has {weights.gpu_budget >> 20} MiB; generating without it (the "
+            "text is the same either way)"
+        )
+        return None
+    try:
+        draft = rtt.draft_model(path, target=m, device="cuda")  # takes its size off the cache
+    except MemoproError as e:
+        _note(f"memopro: {name} cannot draft here ({e}); generating without a draft")
+        return None
+    weights.gpu_budget = max(0, weights.gpu_budget - working)
+    if weights.gpu_cache_bytes > weights.gpu_budget:
+        weights.drop_gpu_cache()
+    _note(
+        f"memopro: drafting with {name} found on this disk (the text is the same as without a "
+        "draft; draft=None turns it off)"
     )
     _AUTO_DRAFTS[m] = draft
     return draft
