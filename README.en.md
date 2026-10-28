@@ -46,7 +46,8 @@ memopro trades **time for memory**. It empties data that is not in use and resto
 | A memory ceiling without code changes | `memopro run --budget 8GB script.py` runs NumPy and PyTorch scripts within the ceiling |
 | A process-wide ceiling API | `memopro.enable(budget=...)` applies a ceiling to the whole process in one line |
 | Diagnosis and prediction before running | whether a model fits a budget, and how much slower a ceiling makes a program |
-| A budgeted runtime | Python, Rust and C APIs that keep large arrays, tensors, modules and optimizers within a budget |
+| Sorting and joining CSV files larger than memory | `memopro.sort` / `memopro.join`: within the ceiling, no intermediate files written to the disk |
+| A budgeted runtime | Python, Rust and C APIs that keep large arrays, tensors, modules and optimizers within a budget; `locked=True` pins a real-time buffer in RAM |
 
 ## Who it is for
 
@@ -61,6 +62,127 @@ memopro trades **time for memory**. It empties data that is not in use and resto
 Other tools fit better when:
 - the model fits in memory: dedicated tools such as Unsloth and mlx-tune are faster;
 - some accuracy loss is acceptable: 4-bit quantization (QLoRA, llama.cpp) is faster.
+
+## Measured results
+
+Apart from those marked "development check", every number was measured against criteria fixed beforehand; raw results are in [`docs/research/data/`](https://github.com/imhyensuk/memopro/tree/main/docs/research/data). The figures are drawn from the result files by [`experiments/readme_figures.py`](https://github.com/imhyensuk/memopro/blob/main/experiments/readme_figures.py).
+
+### Fine-tuning LLMs larger than memory on an 8 GB Mac
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/fit-8gb-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/fit-8gb.svg" alt="16-bit LoRA of Qwen2.5 1.5B, 3B and 7B on an 8 GB MacBook Air M1: mlx-tune runs out of memory from 3B, memopro trains up to 7B (15 GB of weights)" width="720">
+</picture>
+
+The weights stay in their files and only the layers in use are read. Losses are bit-identical whatever the ceiling.
+
+<details><summary>As a table</summary>
+
+| Model | 16-bit weights | mlx-tune | memopro |
+|---|---|---|---|
+| Qwen2.5-1.5B | 3.1 GB | runs (118.9 tok/s) | runs (45.4 tok/s) |
+| Qwen2.5-3B | 6.2 GB | out of memory | runs (20.0 tok/s, 1 GiB ceiling) |
+| Qwen2.5-7B | 15.2 GB | cannot load | runs (16.4 tok/s, 1,024 tokens) |
+
+</details>
+
+### Generation with LLMs larger than memory on an 8 GB Mac
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/generation-8gb-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/generation-8gb.svg" alt="Seconds per token: 3B llama.cpp CPU 14.75 vs memopro 1.09; 7B 8.95 without a draft, 2.37 with one" width="720">
+</picture>
+
+The text is the same as the model loaded normally. Every Metal offload of llama.cpp ran out of memory, so it ran on the CPU.
+
+<details><summary>As a table</summary>
+
+| Case | s/token |
+|---|---|
+| 3B, llama.cpp (CPU) | 14.75 |
+| 3B, memopro + int4 draft | 1.09 |
+| 7B, memopro (no draft) | 8.95 |
+| 7B, memopro + draft | 2.37 (3.8x faster) |
+
+</details>
+
+### The whole process stays within the ceiling
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ceiling-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ceiling.svg" alt="Process peak against the ceiling: T4 training 91-93%, data programs 100-101% (32 MiB allowed), 1 GB CSV sort 74%" width="720">
+</picture>
+
+The ceiling covers the whole process, Python and torch included, not only what memopro holds.
+
+<details><summary>As a table</summary>
+
+| Work (hardware) | Ceiling | Peak |
+|---|---|---|
+| 3B 16-bit LoRA (Colab T4) | 6 / 8 GiB | 5.56 / 7.34 GiB |
+| 7B 16-bit LoRA (Colab T4; 7B does not fit a T4 loaded normally) | 7 / 9 GiB | 6.36 / 8.37 GiB |
+| image stack at half memory (Colab) | 403 MiB | 407 MiB (within the 32 MiB allowed) |
+| scikit-learn at half memory (Colab) | 1,220 MiB | 1,222 MiB |
+| 1 GB CSV sort (M1, development check) | 313 MiB | 233 MiB |
+
+</details>
+
+### Unchanged programs at half their memory, 0 bytes written to the SSD
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/half-memory-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/half-memory.svg" alt="At half memory OS swap wrote 2,300 and 1,713 MiB to the SSD and memopro 0 bytes; the image program took 62 s with swap and 15 s with memopro" width="720">
+</picture>
+
+Programs left unchanged ran under `memopro run --budget <half>` with the results of a run with all the memory. Unlike OS swap, nothing is written to the SSD (100% fewer writes).
+
+<details><summary>As a table</summary>
+
+| Work | SSD writes: OS swap / memopro | Time: all memory / OS swap / memopro |
+|---|---|---|
+| image stack (E027) | 2,300 MiB / 0 | 5.3 / 62.2 / 14.8 s |
+| scikit-learn classifier (E040) | 1,713 MiB / 0 | 11.7 / 25.5 / 27.0 s |
+
+Linux runner, cgroup limit = half the plain run's peak.
+
+</details>
+
+### Real-time audio that does not drop out while other memory swaps
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/audio-locked-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/audio-locked.svg" alt="Render time per audio block: the ordinary buffer missed the 5.33 ms deadline 3 times (max 9.3 ms), the locked=True buffer never (max 2.5 ms)" width="720">
+</picture>
+
+Sixty seconds of rendering while another process in the same memory group swapped about 8.5 GiB. The sample buffer from `Runtime.alloc(..., locked=True)` stays in RAM and the audio never dropped out.
+
+<details><summary>As a table</summary>
+
+| Case | Drop-outs | Render p99 / max | Major faults |
+|---|---|---|---|
+| no pressure, ordinary buffer | 0 | 0.06 / 0.24 ms | 0 |
+| pressure, ordinary buffer | 3 | 0.30 / 9.34 ms | 549 |
+| pressure, `locked=True` | 0 | 0.09 / 2.53 ms | 75 (Python's own code pages) |
+
+</details>
+
+### Lossless compression: ratio and speed
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/compression-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/compression.svg" alt="Compression ratio by kind of data: CSV 3.02x, int64 keys 2.07x, images 1.36x, float32 1.10x (left as is), random bytes not compressed" width="720">
+</picture>
+
+When memory runs short, idle buffers are compressed losslessly in memory (never written to the disk); data that barely shrinks is left as it is. Every buffer came back bit-identical. On an Apple M1 the ratios are the same at about twice the speed (CSV: 0.98 GB/s compress, 3.23 GB/s decompress).
+
+### Calling the runtime from other languages
+
+<picture>
+  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ffi-dark.svg">
+  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ffi.svg" alt="Cost of runtime calls: the C ABI costs the same as Rust, Python about 5x per call; bulk copies run at memcpy speed in all three" width="720">
+</picture>
+
+C programs use the runtime through `memopro-c` (`include/memopro.h`) at the cost of Rust calls; the three languages produced the same bytes.
 
 ## Installation
 
@@ -257,6 +379,28 @@ with work.view(write=True) as a:             # a NumPy view, in memory only whil
     a[:] = 1.0
 ```
 
+### Sorting and joining CSV files larger than memory
+
+```python
+import hashlib, memopro
+
+memopro.sort("events.csv", key="user_id", out="sorted.csv", budget="8GB")
+
+h = hashlib.sha256()  # take the output in a function instead of a file
+memopro.join("events.csv", "users.csv", on="user_id", out=h.update, budget="8GB")
+```
+
+No intermediate files are written; the input is read again as often as needed, each block checked against the CRC of its first read, so a file that changes mid-way is an error, never a wrong result. The rows of a pass are compressed losslessly once the ceiling is reached. `out` is a file path or a function that gets the output in pieces. Simple CSV only (a header, `,` between fields, no quotes, `\n` or `\r\n` line endings) with integer keys; other input is refused, never misread.
+
+### Pinning a real-time buffer
+
+```python
+from memopro.rt import Runtime
+
+rt = Runtime(budget="1GB")
+samples = rt.array((48_000 * 60,), "int16", locked=True)  # never compressed or swapped
+```
+
 ### Benchmarks
 
 | Task | Hardware | Result |
@@ -268,15 +412,19 @@ with work.view(write=True) as a:             # a NumPy view, in memory only whil
 | Qwen2.5-3B LoRA training, a model from `mlx_lm.load` | Apple M1, 8 GB | 22.8 tokens/s at a 2.5 GiB ceiling, losses and adapters bit-identical to mlx-lm's training (mlx-lm alone: 1.8 tokens/s, +0.9 GB of swap; mlx-tune runs out of memory) |
 | 1.5B–3.8B models (Qwen2.5, SmolLM2, Phi-3.5) | NVIDIA T4, 16 GB | 1.00–1.03x the time of a run with enough memory for training, 1.06–1.35x for generation |
 | NumPy, scikit-learn, CSV processing at 50–75% of the memory they need | Linux | identical results, 1.1–3.4x the time |
+| the same 3B LoRA, a model that fits the GPU | NVIDIA T4 | Unsloth 0.45 s/step vs memopro 5.1 s/step (Unsloth about 11x faster) |
 
 Models verified: Qwen2.5 (1.5B–14B), SmolLM2, Phi-3.5, Mistral-7B, DINOv2, ConvNeXtV2, ResNet-152. Raw results: [`docs/research/data/`](https://github.com/imhyensuk/memopro/tree/main/docs/research/data).
 
 ### Limitations
 
 - Models far larger than memory run, but storage read speed makes them very slow; 14B 16-bit LoRA on an NVIDIA T4 runs at about 1 token/s.
-- Data work with heavy random access (sorts, joins, Polars) gives identical results but can be much slower.
+- When the model fits in memory, dedicated tools are much faster (T4 3B: Unsloth about 11x; M1 1.5B: mlx-tune 2.6x). memopro's strength is running what does not fit, unchanged and within the ceiling.
+- Unchanged programs with heavy random access (pandas dataframe work, Polars) can be much slower under `memopro run` or fail to keep the ceiling. Sort and join large CSV files with `memopro.sort`/`memopro.join`.
+- On CUDA, training losses are the same whatever the ceiling but can differ from plain PyTorch training in the last bits from step 2.
+- `locked=True` pins data buffers only; to pin the program's code as well, the program itself calls `mlockall`.
 - On Apple GPUs, call `finetune`/`stream_model` before other MPS work so the memory setting applies.
-- Alpha: the API may change. See the [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md).
+- Beta: the API may change. See the [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md).
 
 ## Contributing and license
 
