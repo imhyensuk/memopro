@@ -131,7 +131,7 @@ def v4() -> None:
 def main() -> None:
     OUT.mkdir(parents=True, exist_ok=True)
     env = {"platform": platform.platform(), "python": platform.python_version(),
-           "uname": os.uname()._asdict(),
+           "kernel": f"{os.uname().sysname} {os.uname().release} {os.uname().machine}",
            "swaps": open("/proc/swaps").read(), "meminfo": open("/proc/meminfo").read()[:600]}
     try:
         import memopro

@@ -37,10 +37,11 @@ jobs:
           ulimit -l
           lsblk -d
       - name: V5 codec and V6 FFI
+        continue-on-error: true  # V3b and V4 do not depend on them
         run: |
           mkdir -p "${{ runner.temp }}/e069"
           python -m experiments.e069_validation.v5_codec "${{ runner.temp }}/e069/v5_linux.json"
-          python -m experiments.e069_validation.v6_ffi "${{ runner.temp }}/e069/v6_linux.json"
+          python -m experiments.e069_validation.v6_ffi "${{ runner.temp }}/e069/v6_linux.json" 2>&1 | tee "${{ runner.temp }}/e069/v6_linux.log"
       - name: V3b and V4
         env:
           E069_OUT: ${{ runner.temp }}/e069

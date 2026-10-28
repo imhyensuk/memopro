@@ -1,0 +1,85 @@
+{
+ "env": {
+  "memopro": "0.2.0b3",
+  "machine": "x86_64",
+  "platform": "Linux-6.17.0-1022-azure-x86_64-with-glibc2.39",
+  "python": "3.12.15"
+ },
+ "results": [
+  {
+   "kind": "float32 simulation field",
+   "bytes": 1073741824,
+   "identical": true,
+   "compressed_bytes": 972210176,
+   "ratio": 1.1044338462056995,
+   "evicted": true,
+   "default_compresses": false,
+   "compress_s": 1.278363965,
+   "decompress_s": 0.884109772,
+   "compress_gbps": 0.8399343640760399,
+   "decompress_gbps": 1.214489261408141,
+   "evict_wall_s": 1.2823457519999977,
+   "pin_wall_s_minus_hash": 0.9188926709999947
+  },
+  {
+   "kind": "uint16 image stack",
+   "bytes": 1073741824,
+   "identical": true,
+   "compressed_bytes": 791928832,
+   "ratio": 1.3558564616068935,
+   "evicted": true,
+   "default_compresses": true,
+   "compress_s": 1.977050578,
+   "decompress_s": 1.017342955,
+   "compress_gbps": 0.5431028603659729,
+   "decompress_gbps": 1.0554374203141752,
+   "evict_wall_s": 1.981064373999999,
+   "pin_wall_s_minus_hash": 1.0524719950000048
+  },
+  {
+   "kind": "CSV text",
+   "bytes": 1073741824,
+   "identical": true,
+   "compressed_bytes": 355631104,
+   "ratio": 3.019257348198655,
+   "evicted": true,
+   "default_compresses": true,
+   "compress_s": 2.05912111,
+   "decompress_s": 0.972372644,
+   "compress_gbps": 0.521456372228635,
+   "decompress_gbps": 1.1042493128796822,
+   "evict_wall_s": 2.0640910010000084,
+   "pin_wall_s_minus_hash": 0.9948182510000265
+  },
+  {
+   "kind": "int64 keys",
+   "bytes": 1073741824,
+   "identical": true,
+   "compressed_bytes": 519053312,
+   "ratio": 2.0686542194725464,
+   "evicted": true,
+   "default_compresses": true,
+   "compress_s": 2.336298609,
+   "decompress_s": 1.214546521,
+   "compress_gbps": 0.4595910042764572,
+   "decompress_gbps": 0.8840680907932056,
+   "evict_wall_s": 2.3414937130000055,
+   "pin_wall_s_minus_hash": 1.2552657140000179
+  },
+  {
+   "kind": "random bytes",
+   "bytes": 1073741824,
+   "identical": true,
+   "compressed_bytes": 0,
+   "ratio": null,
+   "evicted": false,
+   "default_compresses": false,
+   "compress_s": 0.0,
+   "decompress_s": 0.0,
+   "compress_gbps": null,
+   "decompress_gbps": null,
+   "evict_wall_s": 0.001247409999990623,
+   "pin_wall_s_minus_hash": 0.008296781000012743
+  }
+ ]
+}

@@ -1,0 +1,10 @@
+{
+ "case": "v4_classify_plain",
+ "returncode": 0,
+ "wall_s": 11.686055167000006,
+ "swap_out_bytes": 0,
+ "disk_written_bytes": 1413120,
+ "stdout_tail": "{\"coef\": \"50aeb42249f560e4a08362abe475cb2c789c5aaf508b886f4625ffefd03bb168\", \"accuracy\": 0.9514175, \"nnz\": 21699438, \"seconds\": 11.235488487999987, \"import_rss_bytes\": 55324672, \"maxrss_bytes\": 2497818624}\n{\"coef\": \"50aeb42249f560e4a08362abe475cb2c789c5aaf508b886f4625ffefd03bb168\", \"accuracy\": 0.9514175, \"nnz\": 21699438, \"seconds\": 11.235488487999987, \"import_rss_bytes\": 55324672, \"maxrss_bytes\": 2497818624, \"io\": {\"rchar\": 25487023, \"wchar\": 1287134, \"syscr\": 2338, \"syscw\": 61, \"read_bytes\": 3141632, \"write_bytes\": 1409024, \"cancelled_write_bytes\": 0}}\n",
+ "stderr_tail": "",
+ "limit": null
+}

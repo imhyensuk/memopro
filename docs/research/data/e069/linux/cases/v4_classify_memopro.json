@@ -1,0 +1,12 @@
+{
+ "case": "v4_classify_memopro",
+ "returncode": 0,
+ "wall_s": 26.99817073600002,
+ "swap_out_bytes": 0,
+ "disk_written_bytes": 81920,
+ "stdout_tail": "{\"coef\": \"50aeb42249f560e4a08362abe475cb2c789c5aaf508b886f4625ffefd03bb168\", \"accuracy\": 0.9514175, \"nnz\": 21699438, \"seconds\": 26.520257270000002, \"import_rss_bytes\": 49979392, \"maxrss_bytes\": 1253834752}\n{\"coef\": \"50aeb42249f560e4a08362abe475cb2c789c5aaf508b886f4625ffefd03bb168\", \"accuracy\": 0.9514175, \"nnz\": 21699438, \"seconds\": 26.520257270000002, \"import_rss_bytes\": 49979392, \"maxrss_bytes\": 1253834752, \"io\": {\"rchar\": 25457240, \"wchar\": 32, \"syscr\": 37869, \"syscw\": 1, \"read_bytes\": 0, \"write_bytes\": 0, \"cancelled_write_bytes\": 0}}\n",
+ "stderr_tail": "memopro report:\n  [applied] enable.rt - runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it\n  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)\n  [applied] transparent - budget 1.16 GiB, peak 1.04 GiB; 8444 faults, 5918 chunks compressed (5.78 GiB to 1.26 GiB), 3877 brought back, 0 over budget; nothing written\n",
+ "limit": 1248854016,
+ "same_result": true,
+ "write_bytes": 0
+}
