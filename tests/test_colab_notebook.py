@@ -66,3 +66,25 @@ def test_committed_notebook_matches_the_sources(tmp_path):
     after = "".join((tmp_path / n).read_text(encoding="utf-8") for n in names)
     strip = lambda t: "\n".join(l for l in t.splitlines() if "EXPECTED_COMMIT =" not in l)
     assert strip(before) == strip(after), "run examples/colab_t4/build.py and commit the notebook"
+
+
+def test_windows_notebook_is_built_from_its_sources_and_compiles(tmp_path):
+    """E070 (0364): the committed Windows notebook equals a fresh build; its cell and the
+    embedded worker sources compile."""
+    subprocess.run(
+        [sys.executable, str(ROOT / "examples/windows_local/build.py"), "--nb-dir", str(tmp_path)],
+        check=True,
+        capture_output=True,
+    )
+    built = (tmp_path / "colab_windows_local.ipynb").read_text(encoding="utf-8")
+    assert built == (ROOT / "examples/colab_windows_local.ipynb").read_text(encoding="utf-8")
+    nb = json.loads(built)
+    src = "".join(nb["cells"][1]["source"])
+    tree = ast.parse(src)
+    workers = next(
+        n
+        for n in tree.body
+        if isinstance(n, ast.Assign) and getattr(n.targets[0], "id", "") == "WORKERS"
+    )
+    for key, value in zip(workers.value.keys, workers.value.values, strict=True):
+        compile(value.value, key.value, "exec")
