@@ -31,13 +31,22 @@ def csv_rows(
     fields: int,
     starts: Any,
     lens: Any,
+    body: Any,
     keys: Any,
     key_start: Any,
     key_end: Any,
 ) -> int: ...
 def csv_gather(src: Buffer, starts: Any, lens: Any, out: Buffer) -> int: ...
 def csv_join_rows(
-    left: Buffer, ls: Any, ll: Any, right: Buffer, rs: Any, rl: Any, comma: bool, out: Buffer
+    left: Buffer,
+    ls: Any,
+    ll: Any,
+    right: Buffer,
+    rs: Any,
+    rl: Any,
+    comma: bool,
+    crlf: bool,
+    out: Buffer,
 ) -> int: ...
 
 # runtime C-R (0112): buffers under a hard budget, dropped/re-read or compressed, never written

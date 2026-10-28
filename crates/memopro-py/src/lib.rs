@@ -186,7 +186,8 @@ fn csv_count_lines(py: Python<'_>, block: &Bound<'_, PyAny>) -> PyResult<usize> 
     Ok(py.detach(|| memopro::csv::count_lines(unsafe { b.slice() })))
 }
 
-/// Row starts, lengths, integer keys of field `col` and that field's span (int64 outputs).
+/// Row starts, lengths with and without the line ending, integer keys of field `col` and that
+/// field's span (int64 outputs).
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
 fn csv_rows(
@@ -196,20 +197,22 @@ fn csv_rows(
     fields: usize,
     starts: &Bound<'_, PyAny>,
     lens: &Bound<'_, PyAny>,
+    body: &Bound<'_, PyAny>,
     keys: &Bound<'_, PyAny>,
     key_start: &Bound<'_, PyAny>,
     key_end: &Bound<'_, PyAny>,
 ) -> PyResult<usize> {
     let (_b, b) = borrow(block, false)?;
-    let bufs = [starts, lens, keys, key_start, key_end]
+    let bufs = [starts, lens, body, keys, key_start, key_end]
         .map(|o| borrow_i64(o, true))
         .into_iter()
         .collect::<PyResult<Vec<_>>>()?;
-    let [s, l, k, ks, ke] = [0, 1, 2, 3, 4].map(|i| bufs[i].1);
+    let [s, l, n, k, ks, ke] = [0, 1, 2, 3, 4, 5].map(|i| bufs[i].1);
     py.detach(|| {
         // SAFETY: `_b` and `bufs` hold the buffers for the call; the outputs are distinct arrays.
-        let (s, l, k, ks, ke) = unsafe { (s.i64s(), l.i64s(), k.i64s(), ks.i64s(), ke.i64s()) };
-        memopro::csv::rows(unsafe { b.slice() }, col, fields, s, l, k, ks, ke)
+        let (s, l, n) = unsafe { (s.i64s(), l.i64s(), n.i64s()) };
+        let (k, ks, ke) = unsafe { (k.i64s(), ks.i64s(), ke.i64s()) };
+        memopro::csv::rows(unsafe { b.slice() }, col, fields, s, l, n, k, ks, ke)
     })
     .map_err(rt_err)
 }
@@ -235,7 +238,7 @@ fn csv_gather(
     .map_err(rt_err)
 }
 
-/// Joined rows: left segment, a comma when `comma`, right segment, newline; bytes written.
+/// Joined rows: left segment, a comma when `comma`, right segment, line ending; bytes written.
 #[pyfunction]
 #[allow(clippy::too_many_arguments)]
 fn csv_join_rows(
@@ -247,6 +250,7 @@ fn csv_join_rows(
     rs: &Bound<'_, PyAny>,
     rl: &Bound<'_, PyAny>,
     comma: bool,
+    crlf: bool,
     out: &Bound<'_, PyAny>,
 ) -> PyResult<usize> {
     let (_l, lb) = borrow(left, false)?;
@@ -268,6 +272,7 @@ fn csv_join_rows(
             c,
             d,
             comma,
+            crlf,
             unsafe { o.slice_mut() },
         )
     })

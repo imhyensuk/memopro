@@ -13,8 +13,8 @@ Grace hash join); what is memopro's is doing it without disk writes inside a pro
 Rows, keys and gathers are Rust kernels (``memopro::csv``) writing into reused buffers, so the
 allocator has nothing to keep between blocks.
 
-Simple CSV only: a header line, ``\n`` line endings, ``,`` between fields, no quoted fields,
-and integer keys; other input is refused, never misread.
+Simple CSV only: a header line, ``\n`` or ``\r\n`` line endings, ``,`` between fields, no
+quoted fields, and integer keys; other input is refused, never misread.
 """
 
 from __future__ import annotations
@@ -138,13 +138,14 @@ def join(
     k, w = k[order], np.cumsum(2 * w[order] + 48)
     del order
     sink = _Sink(out)
-    rest = _without(b.header.rstrip(b"\n"), cb)
-    sink.write(a.header.rstrip(b"\n") + (b"," + rest if rest else b"") + b"\n")
+    rest = _without(b.header.rstrip(b"\r\n"), cb)
+    end = b"\r\n" if a.crlf else b"\n"
+    sink.write(a.header.rstrip(b"\r\n") + (b"," + rest if rest else b"") + end)
     parts = _ranges(k, w, _room(ceiling, 2 * BLOCK) * FILL)
     del k, w
     stats = {"passes": 1, "parts": len(parts), "rows": 0}
     for lo, hi in parts:
-        table = _Right(b, cb, lo, hi)
+        table = _Right(b, cb, lo, hi, a.crlf)
         stats["passes"] += 2
         for block in a.blocks(ca):
             stats["rows"] += table.join(block, sink)
@@ -269,11 +270,10 @@ class _Source:
             self.header = f.readline()
         if not self.header.endswith(b"\n"):
             raise InvalidArgument(f"{self.path}: no header line")
-        if self.header.endswith(b"\r\n"):
-            raise InvalidArgument(f"{self.path}: Windows line endings (\\r\\n) are not supported")
+        self.crlf = self.header.endswith(b"\r\n")  # joined rows end as the left file's do
         if b'"' in self.header:
             raise InvalidArgument(f"{self.path}: quoted CSV fields are not supported")
-        self.names = self.header.rstrip(b"\n").decode().split(",")
+        self.names = self.header.rstrip(b"\r\n").decode().split(",")
         self.crcs: list[int] = []  # of each block, from the first complete pass
         self.read_bytes = 0
 
@@ -291,7 +291,7 @@ class _Source:
         check = len(self.crcs) > 0
         crcs: list[int] = []
         size = BLOCK
-        mm, have = mmap.mmap(-1, size + 1), 0
+        mm, have = mmap.mmap(-1, size + 2), 0  # room for a last line's missing ending
         rows = _Rows()
         with self.path.open("rb", buffering=0) as f:
             f.seek(len(self.header))
@@ -304,14 +304,15 @@ class _Source:
                 if n == 0:
                     if end == 0:
                         break
-                    if mm[end - 1] != 10:  # a last line without its newline
-                        mm[end] = 10
-                        end += 1
+                    if mm[end - 1] != 10:  # a last line without its ending: the file's one
+                        ending = b"\r\n" if self.crlf else b"\n"
+                        mm[end : end + len(ending)] = ending
+                        end += len(ending)
                     cut = end
                 else:
                     cut = mm.rfind(b"\n", 0, end) + 1
                     if cut == 0:  # a line longer than the block: a larger mapping
-                        bigger = mmap.mmap(-1, 2 * size + 1)
+                        bigger = mmap.mmap(-1, 2 * size + 2)
                         bigger[:end] = mm[:end]
                         mm, size, have = bigger, 2 * size, end
                         continue
@@ -346,7 +347,7 @@ class _Rows:
         n = _core.csv_count_lines(arr)
         if n > self.cap:
             self.cap = max(n, 2 * self.cap)
-            self.arrays = [np.empty(self.cap, np.int64) for _ in range(5)]
+            self.arrays = [np.empty(self.cap, np.int64) for _ in range(6)]
         _core.csv_rows(arr, col, fields, *self.arrays)
         return n, [a[:n] for a in self.arrays]
 
@@ -354,7 +355,10 @@ class _Rows:
 class _Block:
     def __init__(self, arr, parsed) -> None:
         self.arr = arr
-        self.n, (self.starts, self.lens, self.keys, self.key_start, self.key_end) = parsed
+        # lens with the line ending, body without it
+        self.n, (self.starts, self.lens, self.body, self.keys, self.key_start, self.key_end) = (
+            parsed
+        )
 
 
 # ------------------------------------------------------------------------------- sort buckets
@@ -409,7 +413,7 @@ class _Bucket:
                 c.read_into(whole[i * CHUNK : (i + 1) * CHUNK])
                 c.free()
             data = whole[: CHUNK * (len(self.chunks[s]) - 1) + self.fill[s]]
-            _, (starts, lens, keys, _, _) = rows.parse(data, self.col, self.fields)
+            _, (starts, lens, _, keys, _, _) = rows.parse(data, self.col, self.fields)
             order = np.argsort(keys, kind="stable")
             sink.write(_gather(data, starts[order], lens[order]))
             del whole, data, order
@@ -427,17 +431,18 @@ class _Right:
     """The rows of the right file with keys in [lo, hi), without the key field, sorted by key
     (equal keys in file order)."""
 
-    def __init__(self, src: _Source, col: int, lo: int, hi: int) -> None:
+    def __init__(self, src: _Source, col: int, lo: int, hi: int, crlf: bool) -> None:
         import numpy as np
 
         self.extra = len(src.names) > 1  # the right file has fields besides the key
+        self.crlf = crlf  # the left file's line ending
         keys, rests, lens = [], [], []
         for block in src.blocks(col):
             sel = np.flatnonzero((block.keys >= lo) & (block.keys < hi))
             if not len(sel):
                 continue
             s, ks, ke = block.starts[sel], block.key_start[sel], block.key_end[sel]
-            e = s + block.lens[sel] - 1  # the newline
+            e = s + block.body[sel]  # the line ending
             # the fields before the key (with their comma) and after it (without its comma)
             if not self.extra:  # only the key: nothing else to add to a left row
                 segs = [(s, s * 0)]
@@ -475,10 +480,11 @@ class _Right:
         left = np.repeat(np.arange(block.n), count)
         right = lo[left] + np.arange(total) - np.repeat(np.cumsum(count) - count, count)
         ls = np.ascontiguousarray(block.starts[left])
-        ll = np.ascontiguousarray(block.lens[left] - 1)
+        ll = np.ascontiguousarray(block.body[left])
         rs, rl = np.ascontiguousarray(self.starts[right]), np.ascontiguousarray(self.lengths[right])
-        out = _mapped(int(ll.sum() + rl.sum()) + total * (2 if self.extra else 1))
-        n = _core.csv_join_rows(block.arr, ls, ll, self.rest, rs, rl, self.extra, out)
+        ends = 1 + self.extra + self.crlf  # bytes besides the two segments
+        out = _mapped(int(ll.sum() + rl.sum()) + total * ends)
+        n = _core.csv_join_rows(block.arr, ls, ll, self.rest, rs, rl, self.extra, self.crlf, out)
         sink.write(out[:n])
         return total
 
