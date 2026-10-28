@@ -1,0 +1,12 @@
+{
+ "case": "v4_image_memopro",
+ "returncode": 0,
+ "wall_s": 14.845863705999989,
+ "swap_out_bytes": 0,
+ "disk_written_bytes": 2707456,
+ "stdout_tail": "{\"images\": 2048, \"means_sha256\": \"9fa1a56a76da24e6462edc34024a2605248b9bc8652529cca5bd29945e89e5d2\", \"counts_sha256\": \"fc7c091ef96ec55850f923c49a19cffe7346da5955f7bc57262955f75e680038\", \"total\": 478153025805, \"max\": 1802, \"stack_sha256\": \"c7d6d44d86eb75183f05281e57c0d485eb15bfe147cd2a95f86368a332034985\", \"build_seconds\": 4.6544397650000064, \"seconds\": 14.594676605000018, \"maxrss_bytes\": 836444160}\n{\"images\": 2048, \"means_sha256\": \"9fa1a56a76da24e6462edc34024a2605248b9bc8652529cca5bd29945e89e5d2\", \"counts_sha256\": \"fc7c091ef96ec55850f923c49a19cffe7346da5955f7bc57262955f75e680038\", \"total\": 478153025805, \"max\": 1802, \"stack_sha256\": \"c7d6d44d86eb75183f05281e57c0d485eb15bfe147cd2a95f86368a332034985\", \"build_seconds\": 4.6544397650000064, \"seconds\": 14.594676605000018, \"maxrss_bytes\": 836444160, \"io\": {\"rchar\": 4930601, \"wchar\": 0, \"syscr\": 20640, \"syscw\": 0, \"read_bytes\": 0, \"write_bytes\": 0, \"cancelled_write_bytes\": 0}}\n",
+ "stderr_tail": "memopro report:\n  [applied] enable.rt - runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it\n  [applied] enable.numpy - arrays >= 16 MiB are paged within the ceiling (compressed)\n  [applied] transparent - budget 788.00 MiB, peak 738.00 MiB; 6545 faults, 6116 chunks compressed (5.97 GiB to 2.62 GiB), 5009 brought back, 0 over budget; nothing written\n",
+ "limit": 826277888,
+ "same_result": true,
+ "write_bytes": 0
+}

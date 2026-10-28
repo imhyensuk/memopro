@@ -1,0 +1,32 @@
+{
+ "case": "v3b_R1",
+ "returncode": 0,
+ "wall_s": 71.57975037299997,
+ "swap_out_bytes": 8897282048,
+ "disk_written_bytes": 8901832704,
+ "stdout_tail": "pressure up\n{\"buffer\": \"numpy\", \"mib\": 256, \"seconds\": 60.0, \"blocks\": 11250, \"glitches\": 3, \"render_ms_p50\": 0.03087799996137619, \"render_ms_p99\": 0.30303673999981184, \"render_ms_max\": 9.342350000054012, \"late_ms_max\": 4.0304210000385865, \"major_faults\": 549, \"checksum\": 509546.0, \"render_ms_hist\": [9822, 946, 114, 330, 14, 7, 14, 3, 0, 0]}\n",
+ "stderr_tail": "",
+ "buffer": "numpy",
+ "mib": 256,
+ "seconds": 60.0,
+ "blocks": 11250,
+ "glitches": 3,
+ "render_ms_p50": 0.03087799996137619,
+ "render_ms_p99": 0.30303673999981184,
+ "render_ms_max": 9.342350000054012,
+ "late_ms_max": 4.0304210000385865,
+ "major_faults": 549,
+ "checksum": 509546.0,
+ "render_ms_hist": [
+  9822,
+  946,
+  114,
+  330,
+  14,
+  7,
+  14,
+  3,
+  0,
+  0
+ ]
+}

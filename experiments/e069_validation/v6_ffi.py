@@ -91,7 +91,11 @@ def main() -> None:
         "experiments/e069_validation/v6_ffi.c", "-L", "target/release", "-lmemopro_c", "-o", exe)
     lib = {"DYLD_LIBRARY_PATH" if sys.platform == "darwin" else "LD_LIBRARY_PATH":
            str(ROOT / "target/release")}
-    c = json.loads(run(exe, capture_output=True, text=True, env={**os.environ, **lib}).stdout)
+    p = subprocess.run([exe], capture_output=True, text=True, env={**os.environ, **lib},
+                       check=False)
+    if p.returncode:
+        raise RuntimeError(f"the C benchmark failed ({p.returncode}): {p.stderr}")
+    c = json.loads(p.stdout)
     py = python_side()
     results = [rust, c, py]
     for r in results:
