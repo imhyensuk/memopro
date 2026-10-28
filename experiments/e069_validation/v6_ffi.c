@@ -49,6 +49,7 @@ static void op_alloc(void) {
 
 static void op_stats(void) {
     mp_stats s;
+    s.size = sizeof s;
     if (mp_stats_get(rt, &s) != MP_OK) fail("mp_stats_get");
 }
 
