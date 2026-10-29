@@ -1,0 +1,12 @@
+{"t": 1793257316.7864156, "case": "tests", "status": "ok", "seconds": 127.9}
+{"t": 1793258299.251866, "case": "Qwen2.5-0.5B-Instruct__plain_lora", "status": "ok", "seconds": 953.7}
+{"t": 1793258325.122585, "case": "Qwen2.5-0.5B-Instruct__plain_gen", "status": "ok", "seconds": 25.8}
+{"t": 1793259401.7127595, "case": "Qwen2.5-0.5B-Instruct__ft_2560", "status": "ok", "seconds": 1076.6}
+{"t": 1793260578.416715, "case": "Qwen2.5-0.5B-Instruct__ft_3072", "status": "ok", "seconds": 1176.7}
+{"t": 1793260613.5240672, "case": "Qwen2.5-0.5B-Instruct__gen_2560", "status": "ok", "seconds": 35.1}
+{"t": 1793260617.0971406, "case": "D_image_plain", "status": "ok", "seconds": 3.5}
+{"t": 1793260628.4091015, "case": "D_image_run", "status": "ok", "seconds": 11.3}
+{"t": 1793260628.4236176, "case": "D_image_run", "status": "ok", "seconds": 11.3}
+{"t": 1793260643.7244065, "case": "D_classify_plain", "status": "ok", "seconds": 15.3}
+{"t": 1793260686.2832, "case": "D_classify_run", "status": "ok", "seconds": 42.5}
+{"t": 1793260686.3140166, "case": "D_classify_run", "status": "ok", "seconds": 42.5}

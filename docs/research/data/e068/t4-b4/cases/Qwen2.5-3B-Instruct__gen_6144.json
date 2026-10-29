@@ -1,0 +1,39 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "gen",
+  "Qwen/Qwen2.5-3B-Instruct",
+  "6442450944",
+  "32"
+ ],
+ "kind": "gen",
+ "model": "Qwen/Qwen2.5-3B-Instruct",
+ "mode": "memopro",
+ "budget": 6442450944,
+ "texts": [
+  "A hash table is a data structure that allows for efficient insertion, deletion, and retrieval of elements. It works by using a hash function to map keys to indices",
+  "Certainly! Below is a Python function that checks whether a given string is a palindrome. The function includes a docstring to describe its purpose.\n\n```python\ndef"
+ ],
+ "seconds": [
+  11.876284122467041,
+  11.443666219711304
+ ],
+ "s_per_token": 0.36437422409653664,
+ "ceiling": 6442450944,
+ "worker_s": 28.8,
+ "memory_end": {
+  "host_peak_rss_bytes": 2221113344,
+  "allocated_bytes": 6295217152,
+  "reserved_bytes": 6467616768,
+  "peak_allocated_bytes": 6301494272,
+  "peak_reserved_bytes": 6467616768,
+  "device_used_bytes": 6604849152,
+  "peak_device_used_bytes": 6604849152
+ },
+ "memopro_report": [],
+ "case": "Qwen2.5-3B-Instruct__gen_6144",
+ "wall_s": 32.1,
+ "timeline_peak_gpu_used_bytes": 6604980224,
+ "timeline_peak_host_used_bytes": 3858464768
+}

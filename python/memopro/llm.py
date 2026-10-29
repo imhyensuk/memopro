@@ -500,6 +500,10 @@ def generate(
         if not (auto and draft is not None):
             raise
         out = None  # retried below, once the exception (and the draft it holds) is gone
+    except Exception as e:  # a CUDA out-of-memory with a draft chosen for the caller (0366)
+        if not (auto and draft is not None and _out_of_memory(e)):
+            raise
+        out = None
     finally:
         if hook is not None:
             hook.remove()
@@ -508,6 +512,9 @@ def generate(
         # text without it; a streamer gets only the tokens it has not had yet
         _note("memopro: the budget cannot hold the draft as well; generating without it")
         _AUTO_DRAFTS[m] = draft = None
+        weights = m.memopro_weights
+        weights.gpu_budget += getattr(weights, "draft_taken", 0)  # the draft's room is free
+        weights.draft_taken = 0
         _free_gpu(m)
         return generate(
             m,
@@ -522,6 +529,13 @@ def generate(
             stopping_criteria=stopping_criteria,
         )
     return tok.decode(out[0, ids.shape[1] :], skip_special_tokens=True)
+
+
+def _out_of_memory(e: BaseException) -> bool:
+    import torch
+
+    kind = getattr(torch, "OutOfMemoryError", None) or torch.cuda.OutOfMemoryError
+    return isinstance(e, kind)
 
 
 def _free_gpu(m: Any) -> None:
@@ -650,6 +664,12 @@ def _cuda_draft(m: Any, tok: Any, tokens: int) -> Any:
     name, path = choice
     config = transformers.AutoConfig.from_pretrained(str(path))
     working = int(_FIRST_STEP_MARGIN * _generation_estimate(config, tokens))
+    # a verification holds one target layer's copies and the output head at once, beside the
+    # copy of the next module (E068 0.2.0b4: 7B with a 1.5B draft ran out of GPU memory while
+    # holding the 1 GiB head; plain generation never verifies several rows)
+    largest = max(buf.nbytes for buf, _, _ in weights.buffers.values())
+    layers = max(1, getattr(m.config, "num_hidden_layers", 1))
+    working += 2 * largest + (whole - 2 * largest) // layers
     need = int((rtt.draft_size(path, "cuda") + working) * (1 + AUTO_DRAFT_SLACK))
     if need > weights.gpu_budget:
         _note(
@@ -664,6 +684,7 @@ def _cuda_draft(m: Any, tok: Any, tokens: int) -> Any:
         _note(f"memopro: {name} cannot draft here ({e}); generating without a draft")
         return None
     weights.gpu_budget = max(0, weights.gpu_budget - working)
+    weights.draft_taken = draft.memopro_draft_bytes + working  # given back if the draft goes
     if weights.gpu_cache_bytes > weights.gpu_budget:
         weights.drop_gpu_cache()
     _note(
