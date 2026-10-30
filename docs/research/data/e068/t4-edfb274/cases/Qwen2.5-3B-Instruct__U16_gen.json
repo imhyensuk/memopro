@@ -1,0 +1,54 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "Qwen/Qwen2.5-3B-Instruct",
+  "16",
+  "10",
+  "512",
+  "gen"
+ ],
+ "kind": "unsloth_lora",
+ "model": "Qwen/Qwen2.5-3B-Instruct",
+ "bits": 16,
+ "mode": "gen",
+ "unsloth": "2026.10.11",
+ "torch": "2.14.1+cu130",
+ "load_s": 25.8,
+ "dtype": "torch.float16",
+ "memory_after_load": {
+  "host_peak_rss_bytes": 5317451776,
+  "allocated_bytes": 6180398080,
+  "reserved_bytes": 6201278464,
+  "peak_allocated_bytes": 6180398592,
+  "peak_reserved_bytes": 6264193024,
+  "device_used_bytes": 6340608000,
+  "peak_device_used_bytes": 6403522560
+ },
+ "texts": [
+  "A hash table is a data structure that allows for efficient insertion, deletion, and retrieval of elements. It uses a hash function to map keys to indices in an",
+  "Certainly! A palindrome is a word, phrase, number, or other sequences of characters which reads the same backward as forward, ignoring spaces, punctuation, and capital"
+ ],
+ "plain_texts": [
+  "A hash table is a data structure that allows for efficient insertion, deletion, and retrieval of elements. It uses a hash function to map keys to indices in an",
+  "Certainly! A palindrome is a word, phrase, number, or other sequences of characters which reads the same backward as forward, ignoring spaces, punctuation, and capital"
+ ],
+ "same": true,
+ "memopro": "0.2.0b4",
+ "seconds": 2.8994808197021484,
+ "worker_s": 34.6,
+ "memory_end": {
+  "host_peak_rss_bytes": 5317451776,
+  "allocated_bytes": 6218760192,
+  "reserved_bytes": 6249512960,
+  "peak_allocated_bytes": 6222446080,
+  "peak_reserved_bytes": 6264193024,
+  "device_used_bytes": 6388842496,
+  "peak_device_used_bytes": 6403522560
+ },
+ "memopro_report": [],
+ "case": "Qwen2.5-3B-Instruct__U16_gen",
+ "wall_s": 49.9,
+ "timeline_peak_gpu_used_bytes": 6403653632,
+ "timeline_peak_host_used_bytes": 3798814720
+}

@@ -14,8 +14,8 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   one).
 - On CUDA `generate` keeps the whole model on the GPU when it fits next to the generation, as it
   does loaded normally, instead of copying what the training-sized cache left out again for every
-  token (7B on a T4: about 2 GB per token, 7.9x the plain run; not yet re-measured). Running out of
-  that room falls back to the automatic cache with the same text; a `gpu_budget` you set stands.
+  token (7B on a T4: about 2 GB per token; now 1.04x the plain run after the first token, 0.066 vs
+  0.064 s/token, with the same text and a 2.32 GiB process peak). Running out of that room falls back to the automatic cache with the same text; a `gpu_budget` you set stands.
 - Models streamed by `finetune`/`generate` keep a little of the process ceiling free for what
   grows between two measurements (7B generation peaked 0.95 MiB over 7 GiB).
 

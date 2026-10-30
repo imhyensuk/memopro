@@ -1,0 +1,41 @@
+{
+ "status": "ok",
+ "returncode": 0,
+ "counts": {
+  "passed": 177,
+  "skipped": 23
+ },
+ "failed": [],
+ "skipped": [
+  "SKIPPED [1] tests/test_int4pack.py:17: could not import 'torchao': No module named 'torchao'",
+  "SKIPPED [1] tests/test_mlx.py:8: could not import 'mlx.core': No module named 'mlx'",
+  "SKIPPED [1] tests/test_activations.py:30: no MPS",
+  "SKIPPED [1] tests/test_doctor.py:59: vm_stat is macOS only",
+  "SKIPPED [1] tests/test_doctor.py:175: needs a usable Apple MPS device",
+  "SKIPPED [1] tests/test_macos_malloc.py:85: the restart only happens on macOS",
+  "SKIPPED [1] tests/test_mps_heap.py:99: Apple silicon only",
+  "SKIPPED [1] tests/test_mps_heap.py:121: Apple silicon only",
+  "SKIPPED [1] tests/test_mps_heap.py:167: MPS only",
+  "SKIPPED [1] tests/test_rt_adopt.py:143: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:179: needs a usable Apple GPU (CI macOS VMs cannot allocate)",
+  "SKIPPED [1] tests/test_rt_torch.py:298: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:330: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:460: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:482: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:617: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:642: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:682: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:722: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:793: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:821: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_torch.py:1168: needs a usable Apple GPU",
+  "SKIPPED [1] tests/test_rt_transparent.py:74: elsewhere the refusal is checked"
+ ],
+ "files": [
+  "tests"
+ ],
+ "case": "tests",
+ "wall_s": 71.4,
+ "timeline_peak_gpu_used_bytes": 265289728,
+ "timeline_peak_host_used_bytes": 3686895616
+}
