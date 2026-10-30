@@ -87,11 +87,11 @@ def beta_body():
             free_local_models(keep=(local_name(model),))
             extra = {"MP_MODEL_PATH": fetch_model(model), **dev}
             n = short(model)
-            if not big:  # 7B does not fit the T4 loaded normally
+            if not big:  # 7B generates on the T4 loaded normally, but does not train
                 case(run, f"{n}__plain_lora", 300, "worker_suite.py",
                      ["lm_lora", model, "plain", 0, steps, seq], 25 * 60, {**extra, **DETERMINISTIC})
-                case(run, f"{n}__plain_gen", 180, "worker_suite.py",
-                     ["lm_gen", model, "plain", 0, NEW_TOKENS], 20 * 60, extra)
+            case(run, f"{n}__plain_gen", 180, "worker_suite.py",
+                 ["lm_gen", model, "plain", 0, NEW_TOKENS], 20 * 60, extra)
             for c in ceilings:
                 case(run, f"{n}__ft_{c // MIB}", (12 if big else 5) * 60, "worker_suite.py",
                      ["ft", model, c, steps, seq], 30 * 60, {**extra, **DETERMINISTIC})

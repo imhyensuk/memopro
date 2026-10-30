@@ -314,6 +314,7 @@ class StreamedWeights:
         # copies kept on the device, up to `gpu_budget` bytes: with room for the whole model
         # every use after the first is a hit (0201)
         self.gpu_budget = 0
+        self.auto_gpu_budget: int | None = None  # the automatic budget; None when the user set it
         self.gpu_cache: dict[int, Any] = {}
         self.gpu_cache_bytes = 0
         # the next module's copies, made while the device computes the current one (0201)
@@ -773,6 +774,7 @@ def stream_model(
     weights = StreamedWeights(model, rt, regions, device=device)
     if weights.copy:
         weights.gpu_budget = _gpu_budget(gpu_budget, torch.device(device))
+        weights.auto_gpu_budget = weights.gpu_budget if gpu_budget == "auto" else None
         weights.edr = edr
     model.memopro_weights = weights
     model.memopro_runtime = rt

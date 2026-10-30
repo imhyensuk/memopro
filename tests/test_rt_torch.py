@@ -4,6 +4,7 @@ the weights in aligned memory), within the budget, for inference and frozen-weig
 import contextlib
 import math
 import os
+import types
 import warnings
 
 import pytest
@@ -1374,6 +1375,88 @@ def test_an_out_of_memory_with_an_automatic_draft_retries_without_it(tmp_path, m
     with pytest.warns(UserWarning, match="without it"):
         text = memopro.generate(m, "w2 w9 w16", tokenizer=tok, max_new_tokens=5, chat=False)
     assert text == plain and isinstance(calls[0], Draft) and calls[1] is None
+
+
+def _cuda_model(whole, cached=0, auto=1 << 30):
+    buffers = {0: (types.SimpleNamespace(nbytes=whole), None, None)}
+    dropped = []
+    weights = types.SimpleNamespace(
+        buffers=buffers,
+        gpu_budget=auto,
+        auto_gpu_budget=auto,
+        gpu_cache_bytes=cached,
+        drop_gpu_cache=lambda: dropped.append(1),
+    )
+    return types.SimpleNamespace(device=torch.device("cuda"), memopro_weights=weights), dropped
+
+
+def test_generation_gives_the_gpu_cache_the_whole_model_when_it_fits(monkeypatch):
+    """0370: a model that fits the GPU as it does loaded normally stays there whole; 7B on a T4
+    copied 2 GB again per token because the cache left training's room free."""
+    from memopro import llm
+
+    mb, room = 1 << 20, 2048 << 20
+    monkeypatch.setattr(torch.cuda, "mem_get_info", lambda d: (room, room))
+    monkeypatch.setattr(torch.cuda, "memory_reserved", lambda d: 0)
+    monkeypatch.setattr(torch.cuda, "memory_allocated", lambda d: 0)
+
+    m, _ = _cuda_model(1900 * mb)
+    assert llm._keep_whole_on_gpu(m, 16 * mb) and m.memopro_weights.gpu_budget == 1900 * mb
+    assert not llm._keep_whole_on_gpu(_cuda_model(2000 * mb)[0], 16 * mb)  # no room beside it
+    assert not llm._keep_whole_on_gpu(_cuda_model(512 * mb)[0], 16 * mb)  # the cache holds it
+
+    m, _ = _cuda_model(1900 * mb)
+    m.memopro_weights.auto_gpu_budget = None  # the user's gpu_budget stands
+    assert not llm._keep_whole_on_gpu(m, 16 * mb) and m.memopro_weights.gpu_budget == 1 << 30
+
+    m, dropped = _cuda_model(1900 * mb, cached=1900 * mb)  # kept by a shorter call
+    m.memopro_weights.gpu_budget = 1900 * mb
+    room = 0  # a longer generation no longer fits next to it
+    assert not llm._keep_whole_on_gpu(m, 1024 * mb)
+    assert m.memopro_weights.gpu_budget == 1 << 30 and dropped
+
+    m, dropped = _cuda_model(1900 * mb, cached=1900 * mb)
+    m.memopro_weights.gpu_budget = 1900 * mb
+    llm._leave_gpu_room(m.memopro_weights)  # training comes next
+    assert m.memopro_weights.gpu_budget == 1 << 30 and dropped
+
+
+def test_an_out_of_memory_with_the_whole_model_kept_retries_with_the_automatic_cache(
+    tmp_path, monkeypatch
+):
+    """0370: the room is tight (7B on a T4 leaves about 100 MiB), so running out of it costs
+    copies, not the generation; the text is the same."""
+    from memopro import llm
+
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    m = rtt.stream_model(path, budget="64MiB", device="cpu")
+    plain = memopro.generate(
+        m, "w2 w9 w16", tokenizer=tok, max_new_tokens=5, chat=False, draft=None
+    )
+    w = m.memopro_weights
+    w.gpu_budget, w.auto_gpu_budget = 1 << 30, 1 << 20
+    kept = iter([True])
+    real, calls = rtt.generate, []
+
+    def generate(model, ids, **kw):
+        calls.append(w.gpu_budget)
+        if len(calls) == 1:
+            raise torch.OutOfMemoryError("CUDA out of memory (simulated)")
+        return real(model, ids, **kw)
+
+    monkeypatch.setattr(llm, "_keep_whole_on_gpu", lambda *a: next(kept, False))
+    monkeypatch.setattr(rtt, "generate", generate)
+    with pytest.warns(UserWarning, match="whole model"):
+        text = memopro.generate(
+            m, "w2 w9 w16", tokenizer=tok, max_new_tokens=5, chat=False, draft=None
+        )
+    assert text == plain and calls == [1 << 30, 1 << 20] and w.auto_gpu_budget is None
 
 
 def test_a_cuda_draft_must_pay_for_the_cache_it_takes():

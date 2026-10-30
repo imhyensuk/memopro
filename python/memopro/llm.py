@@ -45,6 +45,9 @@ _FIRST_STEP_MARGIN = 1.4
 # memory that comes and goes between two measurements of the process (0344: an Apple GPU step of
 # Qwen2.5-3B rose 10 MiB over a 2.5 GiB ceiling with nothing kept for it)
 _TRANSIENT = 64 << 20
+# GPU memory left free beside a whole model and its generation: what torch's allocator kept
+# unused around 7B on a T4 loaded normally (reserved - allocated, 139 MiB in E042)
+_GPU_SLACK = 128 << 20
 
 
 def _device(device: str) -> str:
@@ -309,6 +312,7 @@ def finetune(
         raise InvalidArgument(f"batch must be 'auto' or at least 1, not {batch!r}")
     torch.manual_seed(seed)
     m = _streamed(model, budget, device)
+    _leave_gpu_room(m.memopro_weights)
     tok = _tokenizer(m, tokenizer)
     adapter = peft.get_peft_model(
         m, peft.LoraConfig(r=rank, lora_alpha=alpha, target_modules=list(targets))
@@ -403,7 +407,7 @@ def generate(
     downloaded for it; looked for in the ``model_dirs`` setting, next to a model loaded from a
     folder, and in the Hugging Face cache), and goes without one when there is none or when the budget
     cannot hold it next to the generation; on NVIDIA GPUs only while the weights do not all
-    fit the GPU cache (0363); ``None`` never drafts. ``streamer`` (e.g. Transformers'
+    fit the GPU (0363); ``None`` never drafts. ``streamer`` (e.g. Transformers'
     ``TextIteratorStreamer``) and ``stopping_criteria`` go to ``model.generate`` as they are: the
     streamer receives the same tokens the returned text is decoded from.
 
@@ -457,6 +461,7 @@ def generate(
     tokens = ids.shape[1] + max_new_tokens
     estimate = int(_FIRST_STEP_MARGIN * _generation_estimate(m.config, tokens))
     auto = isinstance(draft, str) and draft == "auto"
+    whole_kept = (auto or draft is None) and _keep_whole_on_gpu(m, estimate)
     if auto:
         draft = _auto_draft(m, tok, _room(m, estimate), tokens)
     elif draft is not None and not hasattr(draft, "memopro_draft_bytes"):
@@ -502,21 +507,26 @@ def generate(
         if not (auto and draft is not None):
             raise
         out = None  # retried below, once the exception (and the draft it holds) is gone
-    except Exception as e:  # a CUDA out-of-memory with a draft chosen for the caller (0366)
-        if not (auto and draft is not None and _out_of_memory(e)):
+    except Exception as e:  # a CUDA out-of-memory with a room memopro chose (0366, 0370)
+        if not ((whole_kept or (auto and draft is not None)) and _out_of_memory(e)):
             raise
         out = None
     finally:
         if hook is not None:
             hook.remove()
     if out is None:
-        # measured on the GPU, the draft did not fit next to the generation after all: the same
-        # text without it; a streamer gets only the tokens it has not had yet
-        _note("memopro: the budget cannot hold the draft as well; generating without it")
-        _AUTO_DRAFTS[m] = draft = None
+        # measured on the GPU, the draft or the whole model did not fit next to the generation
+        # after all: the same text without it; a streamer gets only the tokens it has not had yet
         weights = m.memopro_weights
-        weights.gpu_budget += getattr(weights, "draft_taken", 0)  # the draft's room is free
-        weights.draft_taken = 0
+        if whole_kept:
+            _note("memopro: the GPU cannot hold the whole model as well; copying what is left")
+            weights.gpu_budget, weights.auto_gpu_budget = weights.auto_gpu_budget, None
+            weights.drop_gpu_cache()
+        else:
+            _note("memopro: the budget cannot hold the draft as well; generating without it")
+            weights.gpu_budget += getattr(weights, "draft_taken", 0)  # the draft's room is free
+            weights.draft_taken = 0
+        _AUTO_DRAFTS[m] = draft = None
         _free_gpu(m)
         return generate(
             m,
@@ -531,6 +541,37 @@ def generate(
             stopping_criteria=stopping_criteria,
         )
     return tok.decode(out[0, ids.shape[1] :], skip_special_tokens=True)
+
+
+def _keep_whole_on_gpu(m: Any, estimate: int) -> bool:
+    """Give the CUDA cache all the room when the whole model fits next to this generation, as it
+    does when loaded normally. The automatic budget leaves 2 GiB or 15% for training's
+    activations; generation needs far less, and 7B on a T4 (15.3 GB) copied about 2 GB again for
+    every token, 7.9x slower than the plain run (0369). ponytail: a model that does not fit keeps
+    the automatic budget; a tighter one would have to leave room for its largest weights too."""
+    weights = m.memopro_weights
+    if m.device.type != "cuda" or weights.auto_gpu_budget is None:
+        return False
+    import torch
+
+    whole = sum(buf.nbytes for buf, _, _ in weights.buffers.values())
+    if whole <= weights.auto_gpu_budget:
+        return False
+    free, _ = torch.cuda.mem_get_info(m.device)
+    unused = torch.cuda.memory_reserved(m.device) - torch.cuda.memory_allocated(m.device)
+    fits = whole + estimate + _GPU_SLACK <= free + unused + weights.gpu_cache_bytes
+    weights.gpu_budget = whole if fits else weights.auto_gpu_budget
+    if weights.gpu_cache_bytes > weights.gpu_budget:
+        weights.drop_gpu_cache()
+    return fits
+
+
+def _leave_gpu_room(weights: Any) -> None:
+    """Back to the automatic CUDA cache: training's activations need the room generation gave up."""
+    auto = weights.auto_gpu_budget
+    if auto is not None and weights.gpu_budget > auto:
+        weights.gpu_budget = auto
+        weights.drop_gpu_cache()
 
 
 def _out_of_memory(e: BaseException) -> bool:
