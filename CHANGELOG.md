@@ -10,7 +10,8 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   the same text without the draft instead of failing (E068 on a T4: 7B with a 1.5B draft).
 - On CUDA the automatic draft is used only when it pays for the GPU cache it takes: a pass must
   copy less than twice the bytes it would without it (0367: 7B on a T4 went from 1.55 to 7.3
-  s/token with a 1.5B draft, so it now generates without one).
+  s/token with a 1.5B draft, counting the time to load the model, so it now generates without
+  one).
 - Models streamed by `finetune`/`generate` keep a little of the process ceiling free for what
   grows between two measurements (7B generation peaked 0.95 MiB over 7 GiB).
 

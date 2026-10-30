@@ -190,8 +190,11 @@ def summarize_beta(run, gpu, models):
         if pg.get("case"):
             check(f"B4 {n}", "generate's text = the model loaded normally",
                   ok(pg) and ok(g) and pg.get("texts") == g.get("texts"),
-                  f"plain {pg.get('status')} {fmt(pg.get('s_per_token'))} s/token, memopro "
-                  f"{g.get('status')} {fmt(g.get('s_per_token'))} s/token", [g.get("case") or ""])
+                  f"after the first token plain {pg.get('status')} "
+                  f"{fmt(pg.get('steady_s_per_token'))} s/token, memopro {g.get('status')} "
+                  f"{fmt(g.get('steady_s_per_token'))}; first token (memopro opens the folder "
+                  f"each call) {[fmt(s) for s in g.get('first_token_s') or []]} s",
+                  [g.get("case") or ""])
         pl = recs.get(f"{n}__plain_lora", {})
         check(f"R1 {n}", "report: step s plain / memopro at both ceilings; first loss", None,
               f"{fmt(step_s(pl))} / {[fmt(step_s(r)) for r in fts]}; "
