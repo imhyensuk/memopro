@@ -1374,3 +1374,14 @@ def test_an_out_of_memory_with_an_automatic_draft_retries_without_it(tmp_path, m
     with pytest.warns(UserWarning, match="without it"):
         text = memopro.generate(m, "w2 w9 w16", tokenizer=tok, max_new_tokens=5, chat=False)
     assert text == plain and isinstance(calls[0], Draft) and calls[1] is None
+
+
+def test_a_cuda_draft_must_pay_for_the_cache_it_takes():
+    """0367: on a T4, 7B (15 GB, 13 GB cache) with a 1.5B draft (about 7 GB with its room) took
+    7.3 instead of 1.55 s/token; a model far larger than the
+    GPU copies most of its weights anyway."""
+    from memopro import llm
+
+    gb = 1 << 30
+    assert not llm._draft_pays(15 * gb, 13 * gb, 7 * gb)
+    assert llm._draft_pays(30 * gb, 13 * gb, 12 * gb)

@@ -1,0 +1,46 @@
+[03:28:06] {"memopro": "0.2.0b4", "torch": "2.11.0+cu130", "transformers": "5.20.2", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0195_cuda_stream": true}}
+[03:28:06] cuda; time left after setup: 117 min
+[03:28:06] run tests
+[03:29:22]   -> ok (75.4s)
+[03:29:25] model Qwen/Qwen2.5-3B-Instruct on Drive (3s)
+[03:31:06] staged Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 101s)
+[03:31:06] run Qwen2.5-3B-Instruct__plain_lora
+[03:32:48]   -> ok (101.7s)
+[03:32:48] run Qwen2.5-3B-Instruct__plain_gen
+[03:33:22]   -> ok (34.3s)
+[03:33:23] run Qwen2.5-3B-Instruct__ft_6144
+[03:35:01]   -> ok (98.0s)
+[03:35:01] run Qwen2.5-3B-Instruct__ft_8192
+[03:36:37]   -> ok (96.1s)
+[03:36:37] run Qwen2.5-3B-Instruct__gen_6144
+[03:37:10]   -> ok (33.6s)
+[03:37:13] model Qwen/Qwen2.5-7B-Instruct on Drive (3s)
+[03:42:22] staged Qwen/Qwen2.5-7B-Instruct to local disk (14.2 GiB, 308s)
+[03:42:22] run Qwen2.5-7B-Instruct__ft_7168
+[03:50:50]   -> ok (507.6s)
+[03:50:50] run Qwen2.5-7B-Instruct__ft_9216
+[03:59:16]   -> ok (506.2s)
+[03:59:16] run Qwen2.5-7B-Instruct__gen_7168
+[04:07:24]   -> ok (487.4s)
+[04:07:24] run D_image_plain
+[04:07:30]   -> ok (5.9s)
+[04:07:30] run D_image_run
+[04:07:45]   -> ok (15.2s)
+[04:07:45] run D_classify_plain
+[04:08:03]   -> ok (17.4s)
+[04:08:03] run D_classify_run
+[04:08:53]   -> ok (50.1s)
+[04:08:53] installing Unsloth into its own virtual environment with uv (~3-6 min)
+[04:10:45] Unsloth environment: 🦥 Unsloth: Will patch your computer to enable 2x faster free finetuning.
+Unsloth: xformers is installed but cannot load with torch 2.14.1+cu130 (it was built for 2.10.0+cu128), so PyTorch attention is used instead.
+To install a matching xformers, run `unsloth install-kernels xformers`, or `pip uninstall xformers` to hide this. UNSLOTH_ENABLE_LOGGING=1 shows the full error.
+🦥 Unsloth Zoo will now patch everything to make training faster!
+2026.10.10 2.14.1+cu130 5.17.0
+[04:10:46] model Qwen/Qwen2.5-3B-Instruct on Drive (1s)
+[04:12:07] staged Qwen/Qwen2.5-3B-Instruct to local disk (5.8 GiB, 81s)
+[04:12:07] run Qwen2.5-3B-Instruct__U16
+[04:13:39]   -> ok (91.7s)
+[04:13:42] run Qwen2.5-3B-Instruct__U16_memopro
+[04:14:55]   -> ok (73.0s)
+[04:14:55] run Qwen2.5-3B-Instruct__U16_gen
+[04:15:46]   -> ok (50.8s)

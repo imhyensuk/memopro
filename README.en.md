@@ -331,7 +331,7 @@ Weights are read once per step, so a larger batch costs less time per token. Wit
 text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Instruct")
 ```
 
-The small model proposes tokens and the large model verifies them; the output equals generation with the large model alone. Drafts run on Apple GPUs (int4) and NVIDIA GPUs (16-bit) and must share the target's tokenizer. On NVIDIA GPUs the automatic draft is used only when the model's weights do not all fit the GPU, and the draft's weights and generation memory come out of the GPU cache first (when the model fits, a draft only made it slower).
+The small model proposes tokens and the large model verifies them; the output equals generation with the large model alone. Drafts run on Apple GPUs (int4) and NVIDIA GPUs (16-bit) and must share the target's tokenizer. On NVIDIA GPUs the automatic draft is used only when it pays for the GPU cache it takes, that is for models far larger than the GPU (on a T4, 3B and 7B were faster without one; 7B: 1.55 s/token, 7.3 with a draft).
 
 Without `draft` (the default `"auto"`), a model already on this disk that shares the tokenizer and is about a fifth of the size becomes the draft. It is looked for in three places:
 
