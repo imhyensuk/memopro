@@ -1,0 +1,29 @@
+{
+ "task": "vis_infer",
+ "argv": [
+  "/content/memopro_bench/models/google--siglip-so400m-patch14-384",
+  "SiglipVisionModel",
+  "plain",
+  "0",
+  "8",
+  "384"
+ ],
+ "device": "cuda",
+ "status": "ok",
+ "load_s": 1.0,
+ "output_sha": "88823f5c808d503a",
+ "same_twice": true,
+ "shape": [
+  8,
+  1152
+ ],
+ "first_s": 1.8326823711395264,
+ "second_s": 1.5019195079803467,
+ "rt": null,
+ "host_peak_bytes": 2693042176,
+ "gpu_peak_bytes": 2517499904,
+ "gpu_peak_allocated_bytes": 2048429568,
+ "case": "infer_plain",
+ "wall_s": 13.1,
+ "warned_ceiling": false
+}

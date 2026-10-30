@@ -1,0 +1,46 @@
+{
+ "task": "lm_lora",
+ "argv": [
+  "/content/memopro_bench/models/HuggingFaceTB--SmolLM2-1.7B-Instruct",
+  "plain",
+  "0",
+  "5",
+  "256",
+  "1"
+ ],
+ "device": "cuda",
+ "status": "ok",
+ "losses": [
+  2.6376233100891113,
+  2.842970848083496,
+  3.153636932373047,
+  3.268864393234253,
+  3.6495015621185303
+ ],
+ "loss_bits": [
+  "0x1.519da40000000p+1",
+  "0x1.6be6780000000p+1",
+  "0x1.93aa600000000p+1",
+  "0x1.a26a260000000p+1",
+  "0x1.d322de0000000p+1"
+ ],
+ "step_s": [
+  1.6262028217315674,
+  1.128410816192627,
+  1.1493535041809082,
+  1.1544466018676758,
+  1.154944896697998
+ ],
+ "targets": [
+  "q_proj",
+  "k_proj",
+  "v_proj",
+  "o_proj"
+ ],
+ "host_peak_bytes": 4674940928,
+ "gpu_peak_bytes": 3914203136,
+ "gpu_peak_allocated_bytes": 3557337088,
+ "case": "lora_plain",
+ "wall_s": 25.2,
+ "warned_ceiling": false
+}

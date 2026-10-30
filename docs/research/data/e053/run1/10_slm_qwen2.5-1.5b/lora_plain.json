@@ -1,0 +1,46 @@
+{
+ "task": "lm_lora",
+ "argv": [
+  "/content/memopro_bench/models/Qwen--Qwen2.5-1.5B-Instruct",
+  "plain",
+  "0",
+  "5",
+  "256",
+  "1"
+ ],
+ "device": "cuda",
+ "status": "ok",
+ "losses": [
+  3.0268373489379883,
+  3.083101511001587,
+  3.3799898624420166,
+  3.348170042037964,
+  3.7011196613311768
+ ],
+ "loss_bits": [
+  "0x1.836f680000000p+1",
+  "0x1.8aa3120000000p+1",
+  "0x1.b0a3820000000p+1",
+  "0x1.ac90d60000000p+1",
+  "0x1.d9be4a0000000p+1"
+ ],
+ "step_s": [
+  1.7503557205200195,
+  1.3947875499725342,
+  1.4309356212615967,
+  1.4344477653503418,
+  1.4301118850708008
+ ],
+ "targets": [
+  "q_proj",
+  "k_proj",
+  "v_proj",
+  "o_proj"
+ ],
+ "host_peak_bytes": 4299259904,
+ "gpu_peak_bytes": 3553492992,
+ "gpu_peak_allocated_bytes": 3205497856,
+ "case": "lora_plain",
+ "wall_s": 25.1,
+ "warned_ceiling": false
+}

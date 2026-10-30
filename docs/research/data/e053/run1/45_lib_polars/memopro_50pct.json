@@ -1,0 +1,10 @@
+{
+ "agg": "2093b2f796de0f4b",
+ "groups": 100000,
+ "seconds": 195.92,
+ "peak_bytes": 1155371008,
+ "status": "ok",
+ "case": "memopro_50pct",
+ "wall_s": 196.4,
+ "warned_ceiling": true
+}

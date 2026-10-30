@@ -1,0 +1,44 @@
+{
+ "task": "lm_lora",
+ "argv": [
+  "/content/memopro_bench/models/microsoft--Phi-3.5-mini-instruct",
+  "plain",
+  "0",
+  "5",
+  "256",
+  "1"
+ ],
+ "device": "cuda",
+ "status": "ok",
+ "losses": [
+  2.088061571121216,
+  2.500480890274048,
+  3.166295289993286,
+  2.943310499191284,
+  3.250206232070923
+ ],
+ "loss_bits": [
+  "0x1.0b459a0000000p+1",
+  "0x1.400fc20000000p+1",
+  "0x1.95492a0000000p+1",
+  "0x1.78be660000000p+1",
+  "0x1.a006c20000000p+1"
+ ],
+ "step_s": [
+  3.185361623764038,
+  2.5426621437072754,
+  2.5715250968933105,
+  2.5928235054016113,
+  2.609517812728882
+ ],
+ "targets": [
+  "qkv_proj",
+  "o_proj"
+ ],
+ "host_peak_bytes": 4993122304,
+ "gpu_peak_bytes": 8030912512,
+ "gpu_peak_allocated_bytes": 7828794880,
+ "case": "lora_plain",
+ "wall_s": 52.9,
+ "warned_ceiling": false
+}
