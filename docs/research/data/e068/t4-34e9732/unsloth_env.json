@@ -1,0 +1,4 @@
+{
+ "versions": "\ud83e\udda5 Unsloth: Will patch your computer to enable 2x faster free finetuning.\nUnsloth: xformers is installed but cannot load with torch 2.14.1+cu130 (it was built for 2.10.0+cu128), so PyTorch attention is used instead.\nTo install a matching xformers, run `unsloth install-kernels xformers`, or `pip uninstall xformers` to hide this. UNSLOTH_ENABLE_LOGGING=1 shows the full error.\n\ud83e\udda5 Unsloth Zoo will now patch everything to make training faster!\n2026.10.10 2.14.1+cu130 5.17.0",
+ "error": ""
+}

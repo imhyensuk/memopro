@@ -96,7 +96,9 @@ def _runtime(ceiling: int) -> Any:
     process holds while it runs (what the first step's warm-up adds before it can be measured)."""
     from memopro.rt import Runtime
 
-    return Runtime(budget=ceiling, process_budget=ceiling)
+    # the runtime measures the process when it makes room; what grows between two measurements
+    # needs a little room (E068: 7B generation peaked 0.95 MiB over 7 GiB)
+    return Runtime(budget=ceiling, process_budget=ceiling - min(128 << 20, ceiling // 16))
 
 
 def _tokenizer(model: Any, tokenizer: Any) -> Any:
@@ -644,6 +646,16 @@ def _auto_draft(m: Any, tok: Any, room: int | None = None, tokens: int = 2048) -
     return draft
 
 
+def _draft_pays(whole: int, cache: int, need: int) -> bool:
+    """Whether a CUDA draft taking ``need`` bytes of a ``cache``-byte GPU cache is worth it for
+    ``whole`` bytes of weights: it saves passes (about 3 tokens per pass) but every pass then
+    copies what the cache no longer holds. Measured on a T4 (0367): 7B (15 GB, cache 13 GB) went
+    from 1.55 to 7.3 s/token with a 1.5B draft, an estimated 4x the bytes per pass. Worth it
+    when a pass copies less than twice as much; only a model far larger than the GPU gets there
+    (ponytail: the factor 2 comes from that one measurement; retune it with a 14B run)."""
+    return whole - (cache - need) < 2 * (whole - cache)
+
+
 def _cuda_draft(m: Any, tok: Any, tokens: int) -> Any:
     """The automatic draft on CUDA (0363): none while every target weight stays in the GPU cache
     (then a draft is pure cost: E068 0351, 3B 1.07 s/token with a 0.5B draft vs 0.46 without);
@@ -671,6 +683,8 @@ def _cuda_draft(m: Any, tok: Any, tokens: int) -> Any:
     layers = max(1, getattr(m.config, "num_hidden_layers", 1))
     working += 2 * largest + (whole - 2 * largest) // layers
     need = int((rtt.draft_size(path, "cuda") + working) * (1 + AUTO_DRAFT_SLACK))
+    if not _draft_pays(whole, weights.gpu_budget, need):
+        return None
     if need > weights.gpu_budget:
         _note(
             f"memopro: {name} could draft, but it needs about {need >> 20} MiB of GPU memory "

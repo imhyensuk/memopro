@@ -1,0 +1,36 @@
+{
+ "PIP_SPEC": "memopro[llm]==0.2.0b4",
+ "GIT_REF": "v0.2.0b4",
+ "SOURCE_REF": "main",
+ "MODELS": {
+  "Qwen/Qwen2.5-3B-Instruct": [
+   6442450944,
+   8589934592
+  ],
+  "Qwen/Qwen2.5-7B-Instruct": [
+   7516192768,
+   9663676416
+  ]
+ },
+ "LORA": {
+  "steps": 10,
+  "seq": 512
+ },
+ "NEW_TOKENS": 32,
+ "DATA_WORKLOADS": [
+  [
+   "image.py",
+   "1024"
+  ],
+  [
+   "classify.py"
+  ]
+ ],
+ "PARTS": [
+  "tests",
+  "lm",
+  "data",
+  "unsloth"
+ ],
+ "COMMIT": "34e9732e7224"
+}

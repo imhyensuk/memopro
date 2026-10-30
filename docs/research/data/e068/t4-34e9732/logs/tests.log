@@ -1,0 +1,47 @@
+$ /usr/bin/python3 /content/memopro_colab/worker_pytest.py /content/memopro-src tests
+........s....................................................s......s... [ 36%]
+.......................s....sss.................s............s....ss.... [ 73%]
+ss....ss.ss..s.s............s.......s..............                      [100%]
+=============================== warnings summary ===============================
+tests/test_examples.py::test_quickstart_notebook_runs
+  /usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py:434: UserWarning: The given buffer is not writable, and PyTorch does not support non-writable tensors. This means you can write to the underlying (supposedly non-writable) buffer using the tensor. You may want to copy the buffer to protect its data or make it writable before converting it to a tensor. This type of warning will be suppressed for the rest of this program. (Triggered internally at /pytorch/torch/csrc/utils/tensor_new.cpp:1586.)
+    t = torch.frombuffer(pin, dtype=dtype, count=numel).view(shape)
+
+tests/test_rt_torch.py::test_lora_on_streamed_frozen_weights_trains_identically
+  /content/memopro-src/tests/test_rt_torch.py:122: UserWarning: Converting a tensor with requires_grad=True to a scalar may lead to unexpected behavior.
+  Consider using tensor.detach() first. (Triggered internally at /pytorch/torch/csrc/autograd/generated/python_variable_methods.cpp:836.)
+    losses.append(float(loss))
+
+tests/test_rt_torch.py::test_loss_chunks_keep_float32_logits_under_the_mps_heap_threshold
+  /usr/local/lib/python3.13/dist-packages/torch/utils/checkpoint.py:232: UserWarning: None of the inputs have requires_grad=True. Gradients will be None
+    check_backward_validity(args)
+
+-- Docs: https://docs.pytest.org/en/stable/how-to/capture-warnings.html
+=========================== short test summary info ============================
+SKIPPED [1] tests/test_int4pack.py:17: could not import 'torchao': No module named 'torchao'
+SKIPPED [1] tests/test_mlx.py:8: could not import 'mlx.core': No module named 'mlx'
+SKIPPED [1] tests/test_activations.py:30: no MPS
+SKIPPED [1] tests/test_doctor.py:59: vm_stat is macOS only
+SKIPPED [1] tests/test_doctor.py:175: needs a usable Apple MPS device
+SKIPPED [1] tests/test_macos_malloc.py:85: the restart only happens on macOS
+SKIPPED [1] tests/test_mps_heap.py:99: Apple silicon only
+SKIPPED [1] tests/test_mps_heap.py:121: Apple silicon only
+SKIPPED [1] tests/test_mps_heap.py:167: MPS only
+SKIPPED [1] tests/test_rt_adopt.py:143: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:178: needs a usable Apple GPU (CI macOS VMs cannot allocate)
+SKIPPED [1] tests/test_rt_torch.py:297: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:329: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:459: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:481: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:616: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:641: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:681: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:721: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:792: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:820: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_torch.py:1167: needs a usable Apple GPU
+SKIPPED [1] tests/test_rt_transparent.py:74: elsewhere the refusal is checked
+174 passed, 23 skipped, 3 warnings in 68.54s (0:01:08)
+
+
+RESULT {"status": "ok", "returncode": 0, "counts": {"passed": 174, "skipped": 23}, "failed": [], "skipped": ["SKIPPED [1] tests/test_int4pack.py:17: could not import 'torchao': No module named 'torchao'", "SKIPPED [1] tests/test_mlx.py:8: could not import 'mlx.core': No module named 'mlx'", "SKIPPED [1] tests/test_activations.py:30: no MPS", "SKIPPED [1] tests/test_doctor.py:59: vm_stat is macOS only", "SKIPPED [1] tests/test_doctor.py:175: needs a usable Apple MPS device", "SKIPPED [1] tests/test_macos_malloc.py:85: the restart only happens on macOS", "SKIPPED [1] tests/test_mps_heap.py:99: Apple silicon only", "SKIPPED [1] tests/test_mps_heap.py:121: Apple silicon only", "SKIPPED [1] tests/test_mps_heap.py:167: MPS only", "SKIPPED [1] tests/test_rt_adopt.py:143: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:178: needs a usable Apple GPU (CI macOS VMs cannot allocate)", "SKIPPED [1] tests/test_rt_torch.py:297: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:329: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:459: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:481: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:616: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:641: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:681: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:721: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:792: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:820: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_torch.py:1167: needs a usable Apple GPU", "SKIPPED [1] tests/test_rt_transparent.py:74: elsewhere the refusal is checked"], "files": ["tests"]}
