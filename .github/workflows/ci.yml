@@ -98,7 +98,7 @@ jobs:
   macos:
     # One macOS job (Rust tests + Python 3.14), on pull requests too (0230).
     name: macOS (Rust + Python 3.14)
-    runs-on: macos-14
+    runs-on: macos-15
     steps:
       - uses: actions/checkout@v4
       - uses: dtolnay/rust-toolchain@stable
