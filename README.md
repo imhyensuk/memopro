@@ -229,7 +229,7 @@ PyPI는 macOS arm64, Linux x86_64·aarch64, Windows x86_64 wheel을 제공합니
 | 함수 | 설명 |
 |---|---|
 | `memopro.finetune(model, texts, budget=, batch=, seq_len=, epochs=, lr=, rank=)` | 메모리보다 큰 LLM의 LoRA 학습. `FinetuneResult`(`model`, `adapter`, `losses`, `batch` 등) 반환. 직접 불러온 PyTorch 모델(Unsloth `FastLanguageModel`, Transformers)을 `tokenizer=`와 함께 주면 그 모델 그대로(Unsloth면 Unsloth의 LoRA 층과 속도로) 학습하고, memopro는 프로세스 상한만 확인함. `mlx_lm.load`로 불러온 모델을 `tokenizer=`와 함께 주면 mlx-lm의 LoRA 층과 손실로 학습하며, 결과는 mlx-lm 학습과 같음 |
-| `memopro.generate(model, prompt, budget=, draft="auto", max_new_tokens=, streamer=, stopping_criteria=)` | 메모리보다 큰 LLM의 생성. 디스크에 있는 같은 계열의 작은 모델을 초안으로 자동 사용. `streamer`(예: Transformers `TextIteratorStreamer`)와 `stopping_criteria`는 `model.generate`에 그대로 넘어가며, 스트리머가 받는 텍스트는 반환값과 같음. `mlx_lm.load`로 불러온 모델을 `tokenizer=`와 함께 주면 mlx-lm이 그대로 생성하고, memopro는 상한에 맞지 않는 층만 토큰마다 다시 읽음(출력은 mlx-lm과 같음, `pip install memopro[mlx]`). |
+| `memopro.generate(model, prompt, budget=, draft="auto", max_new_tokens=, streamer=, stopping_criteria=)` | 메모리보다 큰 LLM의 생성. 이름이나 폴더를 주면 호출마다 모델을 다시 열므로, 여러 번 부를 때는 `memopro.load(이름, task="text-generation")`이 돌려준 모델을 넘기세요. 디스크에 있는 같은 계열의 작은 모델을 초안으로 자동 사용. `streamer`(예: Transformers `TextIteratorStreamer`)와 `stopping_criteria`는 `model.generate`에 그대로 넘어가며, 스트리머가 받는 텍스트는 반환값과 같음. `mlx_lm.load`로 불러온 모델을 `tokenizer=`와 함께 주면 mlx-lm이 그대로 생성하고, memopro는 상한에 맞지 않는 층만 토큰마다 다시 읽음(출력은 mlx-lm과 같음, `pip install memopro[mlx]`). |
 | `memopro.enable(budget=)` / `memopro.disable()` | 프로세스 전체 메모리 상한. `Session.estimate()`, `Session.measured()` |
 | `memopro.load(model_id, budget=, **from_pretrained)` | Hugging Face 모델을 저장된 그대로 불러오기(정밀도를 바꾸지 않음). 예산에 안 들어가면 흘려 쓰기로 불러옴. `dtype=`·`quantization_config=`를 직접 주면 그 모델이 원본이 되어 준 그대로 불러옴. 디스크에는 아무것도 쓰지 않음 |
 | `memopro.sort(path, key, out=, budget=)` / `memopro.join(left, right, on, out=, budget=)` | 메모리보다 큰 CSV를 한 열로 정렬하거나 병합(정수면 숫자 순서, 아니면 바이트 순서). 상한 안에서 돌고 중간 파일을 디스크에 쓰지 않음(원본을 필요한 만큼 다시 읽고, 바뀌었으면 오류). `out`은 파일 경로나 바이트 조각을 받는 함수. RFC 4180 CSV(머리글, `,` 구분, 따옴표 필드, `\n`·`\r\n` 줄 끝) |
@@ -331,7 +331,7 @@ r.adapter.save_pretrained("my-lora")     # 표준 PEFT 어댑터
 text = memopro.generate(r.model, "Summarize: ...", draft="Qwen/Qwen2.5-1.5B-Instruct")
 ```
 
-작은 모델이 토큰을 제안하고 큰 모델이 검증합니다. 출력은 큰 모델만으로 생성한 결과와 같습니다. 초안은 Apple GPU(int4)와 NVIDIA GPU(16비트)에서 쓸 수 있고, 같은 토크나이저를 쓰는 모델이어야 합니다. NVIDIA GPU에서 자동 초안은 초안이 차지하는 GPU 캐시보다 얻는 이득이 클 때만 씁니다. 모델이 GPU보다 훨씬 큰 경우입니다(T4에서 3B·7B는 초안 없이가 더 빨랐습니다. 7B: 1.55초/토큰, 초안 사용 시 7.3초/토큰).
+작은 모델이 토큰을 제안하고 큰 모델이 검증합니다. 출력은 큰 모델만으로 생성한 결과와 같습니다. 초안은 Apple GPU(int4)와 NVIDIA GPU(16비트)에서 쓸 수 있고, 같은 토크나이저를 쓰는 모델이어야 합니다. NVIDIA GPU에서 자동 초안은 초안이 차지하는 GPU 캐시보다 얻는 이득이 클 때만 씁니다. 모델이 GPU보다 훨씬 큰 경우입니다(T4의 7B는 초안을 쓰면 오히려 약 5배 느렸습니다. 모델 적재까지 포함한 값입니다).
 
 `draft`를 주지 않으면(기본값 `"auto"`) 이 디스크에 이미 있는 모델 가운데 같은 토크나이저를 쓰고 크기가 약 1/5인 모델을 골라 초안으로 씁니다. 찾는 곳은 세 군데입니다.
 

@@ -28,6 +28,37 @@ VISION_CLASSES = {"resnet": "ResNetForImageClassification", "dinov2": "Dinov2Mod
                   "vit": "ViTModel"}
 
 
+class TokenClock:
+    """A Transformers streamer that times the tokens: the first one (which pays for any loading)
+    apart from the steady rate after it, because s_per_token mixes the two (0369)."""
+
+    def __init__(self):
+        self.start = time.time()
+        self.prompt = True
+        self.marks = []
+
+    def put(self, value):
+        if self.prompt:  # generate sends the prompt first
+            self.prompt = False
+        else:
+            self.marks.append((time.time(), value.numel()))
+
+    def end(self):
+        pass
+
+    def first_s(self):
+        return self.marks[0][0] - self.start
+
+    def steady_s(self):
+        return (self.marks[-1][0] - self.marks[0][0]) / sum(n for _, n in self.marks[1:])
+
+
+def timing(clocks):
+    """What the clocks of a case's prompts report, for finish()."""
+    return {"first_token_s": [c.first_s() for c in clocks],
+            "steady_s_per_token": sum(c.steady_s() for c in clocks) / len(clocks)}
+
+
 def copy_stats(m):
     """Device copies, cache hits, prefetched weights and the cache size (0201), if streamed."""
     w = getattr(m, "memopro_weights", None)
@@ -106,22 +137,25 @@ def lm_gen(model_id, mode, budget, new_tokens):
 
     m, path = load("lm", model_id, mode, budget)
     tok = transformers.AutoTokenizer.from_pretrained(path)
-    texts, secs = [], []
+    texts, secs, clocks = [], [], []
     for p in PROMPTS:
         t = time.time()
+        clocks.append(TokenClock())
         if mode == "plain":
             msgs = [{"role": "user", "content": p}]
             ids = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt")
             ids = (ids["input_ids"] if hasattr(ids, "keys") else ids).to(DEVICE)
             with torch.no_grad():
                 out = m.generate(input_ids=ids, max_new_tokens=new_tokens, do_sample=False,
-                                 pad_token_id=tok.eos_token_id)
+                                 pad_token_id=tok.eos_token_id, streamer=clocks[-1])
             texts.append(tok.decode(out[0, ids.shape[1]:], skip_special_tokens=True))
         else:
-            texts.append(memopro.generate(m, p, tokenizer=tok, max_new_tokens=new_tokens))
+            texts.append(memopro.generate(m, p, tokenizer=tok, max_new_tokens=new_tokens,
+                                          streamer=clocks[-1]))
         sync()
         secs.append(time.time() - t)
     finish(texts=texts, seconds=secs, s_per_token=sum(secs) / (new_tokens * len(PROMPTS)),
+           **timing(clocks),
            rt=getattr(getattr(m, "memopro_runtime", None), "stats", lambda: None)(),
            copy_stats=copy_stats(m))
 
@@ -204,15 +238,16 @@ def gen(model_id, ceiling, new_tokens):
 
     path = model_path(model_id)
     tok = transformers.AutoTokenizer.from_pretrained(path)
-    texts, secs = [], []
+    texts, secs, clocks = [], [], []
     for p in PROMPTS:  # each call from the folder, as a user would call it
         t = time.time()
+        clocks.append(TokenClock())
         texts.append(memopro.generate(path, p, tokenizer=tok, budget=ceiling,
-                                      max_new_tokens=new_tokens))
+                                      max_new_tokens=new_tokens, streamer=clocks[-1]))
         sync()
         secs.append(time.time() - t)
     finish(texts=texts, seconds=secs, s_per_token=sum(secs) / (new_tokens * len(PROMPTS)),
-           ceiling=ceiling)
+           **timing(clocks), ceiling=ceiling)
 
 
 def images(batch, size):
