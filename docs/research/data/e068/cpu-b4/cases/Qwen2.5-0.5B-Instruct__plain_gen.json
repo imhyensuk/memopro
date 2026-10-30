@@ -1,0 +1,39 @@
+{
+ "status": "ok",
+ "device": "cpu",
+ "argv": [
+  "lm_gen",
+  "Qwen/Qwen2.5-0.5B-Instruct",
+  "plain",
+  "0",
+  "32"
+ ],
+ "kind": "lm_gen",
+ "model": "Qwen/Qwen2.5-0.5B-Instruct",
+ "mode": "plain",
+ "budget": 0,
+ "load_s": 0.7,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 522690560
+ },
+ "texts": [
+  "A hash table is designed to handle collisions using the chaining method. This method involves storing each key-value pair in a linked list where the hash function returns an index",
+  "Certainly! Below is a Python function that checks if a given string is a palindrome:\n\n```python\ndef is_palindrome(s):\n    \"\"\"\n    Check if the"
+ ],
+ "seconds": [
+  7.284470319747925,
+  7.917502403259277
+ ],
+ "s_per_token": 0.23753082379698753,
+ "rt": null,
+ "copy_stats": null,
+ "worker_s": 22.0,
+ "memory_end": {
+  "host_peak_rss_bytes": 1615179776
+ },
+ "memopro_report": [],
+ "case": "Qwen2.5-0.5B-Instruct__plain_gen",
+ "wall_s": 25.8,
+ "timeline_peak_gpu_used_bytes": null,
+ "timeline_peak_host_used_bytes": 2275950592
+}

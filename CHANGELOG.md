@@ -2,6 +2,13 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
+## Unreleased
+
+### Fixed: CUDA generation with an automatic draft (0366)
+- The automatic draft's GPU plan counts what a verification holds (one target layer and the
+  output head at once); a CUDA out-of-memory while drafting with a draft memopro chose now gives
+  the same text without the draft instead of failing (E068 on a T4: 7B with a 1.5B draft).
+
 ## 0.2.0b4 (beta)
 
 CSV sorting and joining beyond memory (text keys, quoted CSV), locked buffers, models you loaded

@@ -1339,3 +1339,38 @@ def test_a_model_you_loaded_trains_and_generates_as_it_is(tmp_path):
     assert text == tok.decode(plain[0, prompt.shape[1] :], skip_special_tokens=True)
     with pytest.raises(memopro.InvalidArgument, match="tokenizer"):
         memopro.generate(model, "w2", max_new_tokens=2)
+
+
+def test_an_out_of_memory_with_an_automatic_draft_retries_without_it(tmp_path, monkeypatch):
+    """0366: a draft memopro chose must never cost the generation: a CUDA out-of-memory while
+    drafting (E068 0.2.0b4, 7B on a T4) is answered with the same text without the draft."""
+    from memopro import llm
+
+    tokenizers = pytest.importorskip("tokenizers")
+    path = _tiny_qwen(tmp_path / "t", 0)
+    core = tokenizers.Tokenizer(
+        tokenizers.models.WordLevel({f"w{i}": i for i in range(8000)}, unk_token="w0")
+    )
+    core.pre_tokenizer = tokenizers.pre_tokenizers.Whitespace()
+    tok = transformers.PreTrainedTokenizerFast(tokenizer_object=core, eos_token="w1")
+    m = rtt.stream_model(path, budget="64MiB", device="cpu")
+    plain = memopro.generate(
+        m, "w2 w9 w16", tokenizer=tok, max_new_tokens=5, chat=False, draft=None
+    )
+
+    class Draft:
+        memopro_draft_bytes = 1
+
+    real, calls = rtt.generate, []
+
+    def generate(model, ids, draft=None, **kw):
+        calls.append(draft)
+        if draft is not None:
+            raise torch.OutOfMemoryError("CUDA out of memory (simulated)")
+        return real(model, ids, **kw)
+
+    monkeypatch.setattr(llm, "_auto_draft", lambda *a, **k: Draft())
+    monkeypatch.setattr(rtt, "generate", generate)
+    with pytest.warns(UserWarning, match="without it"):
+        text = memopro.generate(m, "w2 w9 w16", tokenizer=tok, max_new_tokens=5, chat=False)
+    assert text == plain and isinstance(calls[0], Draft) and calls[1] is None

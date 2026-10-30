@@ -1,0 +1,31 @@
+{
+ "status": "oom",
+ "device": "cuda",
+ "argv": [
+  "gen",
+  "Qwen/Qwen2.5-7B-Instruct",
+  "7516192768",
+  "32"
+ ],
+ "kind": "gen",
+ "model": "Qwen/Qwen2.5-7B-Instruct",
+ "mode": "memopro",
+ "budget": 7516192768,
+ "error": "OutOfMemoryError: CUDA out of memory. Tried to allocate 1.02 GiB. GPU 0 has a total capacity of 14.56 GiB of which 979.81 MiB is free. Including non-PyTorch memory, this process has 13.60 GiB memory in use. Of the allocated memory 13.32 GiB is allocated by PyTorch, and 159.81 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)",
+ "trace": "urn model.generate(input_ids=input_ids, **kwargs)\n           ~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/_contextlib.py\", line 124, in decorate_context\n    return func(*args, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/generation/utils.py\", line 2989, in generate\n    result = decoding_method(\n        self,\n    ...<5 lines>...\n        **model_kwargs,\n    )\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/generation/utils.py\", line 4069, in _assisted_decoding\n    outputs = self(**model_inputs)\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1790, in _call_impl\n    return forward_call(*args, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/utils/generic.py\", line 943, in wrapper\n    output = func(self, *args, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/transformers/models/qwen2/modeling_qwen2.py\", line 457, in forward\n    logits = self.lm_head(hidden_states[:, slice_indices, :])\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1885, in _call_impl\n    return inner()\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1833, in inner\n    result = forward_call(*args, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 1158, in forward\n    held = hold(head)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 1080, in hold\n    id(p): weights._tensor(id(p))\n           ~~~~~~~~~~~~~~~^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 430, in _tensor\n    t = self._device_copy(pid)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 529, in _device_copy\n    t = self._copy_now(pid)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 450, in _copy_now\n    t = host.to(self.device, copy=True, non_blocking=non_blocking)\ntorch.OutOfMemoryError: CUDA out of memory. Tried to allocate 1.02 GiB. GPU 0 has a total capacity of 14.56 GiB of which 979.81 MiB is free. Including non-PyTorch memory, this process has 13.60 GiB memory in use. Of the allocated memory 13.32 GiB is allocated by PyTorch, and 159.81 MiB is reserved by PyTorch but unallocated. If reserved but unallocated memory is large try setting PYTORCH_CUDA_ALLOC_CONF=expandable_segments:True to avoid fragmentation.  See documentation for Memory Management  (https://docs.pytorch.org/docs/stable/notes/cuda.html#optimizing-memory-usage-with-pytorch-cuda-alloc-conf)\n",
+ "worker_s": 178.1,
+ "memory_end": {
+  "host_peak_rss_bytes": 6871285760,
+  "allocated_bytes": 14300677120,
+  "reserved_bytes": 14468251648,
+  "peak_allocated_bytes": 14300677120,
+  "peak_reserved_bytes": 14879293440,
+  "device_used_bytes": 14609678336,
+  "peak_device_used_bytes": 15020720128
+ },
+ "memopro_report": [],
+ "case": "Qwen2.5-7B-Instruct__gen_7168",
+ "wall_s": 185.7,
+ "timeline_peak_gpu_used_bytes": 14609809408,
+ "timeline_peak_host_used_bytes": 8877527040
+}

@@ -1,0 +1,24 @@
+[06:59:48] {"memopro": "0.2.0b4", "torch": "2.11.0+cpu", "transformers": "5.20.2", "gpu": null, "build_has": {"0195_cuda_stream": true}}
+[06:59:48] cpu; time left after setup: 119 min
+[06:59:48] run tests
+[07:01:56]   -> ok (127.9s)
+[07:01:59] model Qwen/Qwen2.5-0.5B-Instruct on Drive (3s)
+[07:02:25] staged Qwen/Qwen2.5-0.5B-Instruct to local disk (0.9 GiB, 26s)
+[07:02:25] run Qwen2.5-0.5B-Instruct__plain_lora
+[07:18:19]   -> ok (953.7s)
+[07:18:19] run Qwen2.5-0.5B-Instruct__plain_gen
+[07:18:45]   -> ok (25.8s)
+[07:18:45] run Qwen2.5-0.5B-Instruct__ft_2560
+[07:36:41]   -> ok (1076.6s)
+[07:36:41] run Qwen2.5-0.5B-Instruct__ft_3072
+[07:56:18]   -> ok (1176.7s)
+[07:56:18] run Qwen2.5-0.5B-Instruct__gen_2560
+[07:56:53]   -> ok (35.1s)
+[07:56:53] run D_image_plain
+[07:56:57]   -> ok (3.5s)
+[07:56:57] run D_image_run
+[07:57:08]   -> ok (11.3s)
+[07:57:08] run D_classify_plain
+[07:57:23]   -> ok (15.3s)
+[07:57:23] run D_classify_run
+[07:58:06]   -> ok (42.5s)
