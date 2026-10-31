@@ -408,6 +408,7 @@ samples = rt.array((48_000 * 60,), "int16", locked=True)  # never compressed or 
 | Qwen2.5-7B LoRA training | Apple M1, 8 GB | 15.5 tokens/s at a 2.5 GiB budget, `batch=4` |
 | Mistral-7B LoRA training | NVIDIA T4, 16 GB | about 43 tokens/s at a 4 GiB budget |
 | Qwen2.5-7B generation with `draft` | Apple M1, 8 GB | 8.95 → 2.37 s/token, identical output |
+| Qwen2.5-7B generation without a draft | NVIDIA T4, 16 GB | 1.04x the plain run after the first token (0.066 vs 0.064 s/token), identical output, process peak 2.32 GiB (plain 3.58 GiB) |
 | Qwen2.5-3B LoRA training | Apple M1, 8 GB | 20 tokens/s (mlx-tune runs out of memory) |
 | Qwen2.5-3B LoRA training, a model from `mlx_lm.load` | Apple M1, 8 GB | 22.8 tokens/s at a 2.5 GiB ceiling, losses and adapters bit-identical to mlx-lm's training (mlx-lm alone: 1.8 tokens/s, +0.9 GB of swap; mlx-tune runs out of memory) |
 | 1.5B–3.8B models (Qwen2.5, SmolLM2, Phi-3.5) | NVIDIA T4, 16 GB | 1.00–1.03x the time of a run with enough memory for training, 1.06–1.35x for generation |

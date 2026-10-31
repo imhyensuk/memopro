@@ -408,6 +408,7 @@ samples = rt.array((48_000 * 60,), "int16", locked=True)  # 압축·스왑되지
 | Qwen2.5-7B LoRA 학습 | Apple M1, 8GB | 예산 2.5GiB, `batch=4`에서 15.5토큰/초 |
 | Mistral-7B LoRA 학습 | NVIDIA T4, 16GB | 예산 4GiB, 약 43토큰/초 |
 | Qwen2.5-7B 생성 (`draft` 사용) | Apple M1, 8GB | 8.95 → 2.37초/토큰, 출력 동일 |
+| Qwen2.5-7B 생성 (초안 없음) | NVIDIA T4, 16GB | 첫 토큰 이후 일반 실행의 1.04배(0.066 대 0.064초/토큰), 출력 동일, 프로세스 최대 2.32GiB(일반 3.58GiB) |
 | Qwen2.5-3B LoRA 학습 | Apple M1, 8GB | 20토큰/초 (mlx-tune은 메모리 부족으로 실행 불가) |
 | Qwen2.5-3B LoRA 학습, `mlx_lm.load` 모델 | Apple M1, 8GB | 상한 2.5GiB에서 22.8토큰/초, 손실·어댑터가 mlx-lm 학습과 비트 동일 (mlx-lm 그대로는 1.8토큰/초, 스왑 +0.9GB; mlx-tune은 메모리 부족) |
 | 1.5B~3.8B 모델 (Qwen2.5, SmolLM2, Phi-3.5) | NVIDIA T4, 16GB | 메모리를 충분히 쓴 실행 대비 학습 1.00~1.03배, 생성 1.06~1.35배 시간 |
