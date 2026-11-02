@@ -109,3 +109,30 @@ def test_the_unsloth_verdict_tells_a_memopro_change_from_unsloth_noise():
     assert "seed differs" in verdict(noisy, [r("a", "g")], [r("x")] * 2, [r("x")] * 2)
     assert "incomplete" in verdict(noisy, noisy, [r("x", status="oom")], [r("x")])
     assert "incomplete" in verdict(noisy, [], [r("x")], [r("x")])
+
+
+def test_the_family_classes_put_a_wrong_result_above_everything():
+    """E073 (0375): a model whose result differs must never read as partly supported."""
+    source = (ROOT / "examples/colab_t4/cell_families.py").read_text(encoding="utf-8")
+    wanted = [
+        n for n in ast.parse(source).body if getattr(n, "name", "") in ("host_peak", "judged")
+    ]
+    space = {}
+    exec(compile(ast.Module(wanted, []), "cell", "exec"), space)  # noqa: S102
+    judged = space["judged"]
+
+    def r(ok=True, peak=1, bits=("a",), text="t"):
+        return {
+            "status": "ok" if ok else "oom",
+            "ceiling": 10,
+            "texts": [text],
+            "loss_bits": list(bits),
+            "memory_end": {"host_peak_rss_bytes": peak},
+        }
+
+    assert judged(r(), r(), [r(), r()])["class"] == "full"
+    assert judged(r(), r(text="x"), [r(), r()])["class"] == "WRONG"
+    assert judged(r(), r(), [r(), r(bits=("b",))])["class"] == "WRONG"
+    assert judged(r(), r(peak=11), [r(), r()])["class"] == "partial"
+    assert judged(r(), r(), [])["class"] == "partial"
+    assert judged({}, {}, [])["class"] == "none"

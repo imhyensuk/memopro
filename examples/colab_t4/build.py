@@ -45,6 +45,7 @@ EXTRA_WORKERS = {
         "classify.py": ROOT / "experiments/e040_workloads/classify.py",
     },
     "unsloth_bits": {"worker_unsloth.py": HERE / "worker_unsloth.py"},
+    "families": {"worker_suite.py": HERE / "worker_suite.py"},
     "e069": {
         "worker_e069.py": HERE / "worker_e069.py",
         "csvgen.py": ROOT / "experiments/e069_validation/csvgen.py",
@@ -161,6 +162,24 @@ memopro로 감싼 Unsloth 학습이 Unsloth 단독과 다른 것이 memopro 때�
 - 런타임: **T4 GPU**. 예상 시간 30~45분(빌드 5~8분, Unsloth 설치 3~6분, 모델이 Drive에 없으면 다운로드).
 - 준비: 올릴 파일은 없다. 아래 공통 준비의 소스 배포본 업로드는 이 노트북에 필요 없다(`SOURCE_REF = "main"`이 저장소에서 직접 빌드한다).
 - 결과: 맨 위 **Verdict** 한 줄이 결론이다. `MyDrive/memopro_colab/results/unsloth_bits/<실행 id>/summary.md`, 같은 이름의 `.zip`.
+"""),
+    "families": ("colab_model_families.ipynb", "cell_families.py", """# E073: 모델 계열별 범용성 (docs/research/0375)
+
+Qwen2.5에서 낸 결과가 다른 계열에도 맞는지 T4에 들어가는 실제 모델로 잰다. 모델마다 그냥 올린 실행과 `memopro.generate`, 상한 두 개의 `memopro.finetune`을 돌린다.
+
+| 판정 | 기준 |
+|---|---|
+| text | 생성 글이 일반 실행과 같음 |
+| gen_ceiling, ft_ceiling | 프로세스 정점이 상한 안 |
+| losses | 상한이 달라도 손실이 비트 동일 |
+| class | full(전부 통과), partial, none, **WRONG**(결과가 다름) |
+
+첫 토큰 이후 속도 비율은 보고만 한다.
+
+- 런타임: **T4 GPU**. 예상 시간 1시간~1시간 30분(셀 예산 2시간). 끊기면 다시 실행해 이어 간다.
+- **Llama, Gemma(선택)**: Hugging Face에서 [Llama 3.2 1B](https://huggingface.co/meta-llama/Llama-3.2-1B-Instruct)와 [Gemma 3 1B](https://huggingface.co/google/gemma-3-1b-it)의 라이선스에 동의하고, Colab 왼쪽 열쇠 아이콘(보안 비밀)에 `HF_TOKEN`을 넣고 이 노트북 접근을 허용한다. 하지 않으면 두 모델만 건너뛴다.
+- 모델은 로컬 디스크에만 받고 다음 모델로 넘어갈 때 지운다. 드라이브에는 결과만 저장한다. 공통 준비의 소스 배포본 업로드는 필요 없다.
+- 결과: `MyDrive/memopro_colab/results/families/<실행 id>/summary.md`, 같은 이름의 `.zip`.
 """),
     "e069": ("colab_e069.ipynb", "cell_e069.py", """# E069 V2: 30GB CSV를 8GB 상한에서 정렬·병합 (docs/research/0356)
 

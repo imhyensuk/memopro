@@ -100,7 +100,7 @@ def load(kind, model_id, mode, budget):
     cls = transformers.AutoModelForCausalLM if kind == "lm" else vision_class(model_id)
     t = time.time()
     if mode == "plain":
-        dtype = torch.bfloat16 if kind == "lm" else None
+        dtype = "auto" if kind == "lm" else None  # as stored (Phi-2: float16)
         m = cls.from_pretrained(path, dtype=dtype).to(DEVICE).eval()
     else:
         try:
@@ -142,9 +142,14 @@ def lm_gen(model_id, mode, budget, new_tokens):
         t = time.time()
         clocks.append(TokenClock())
         if mode == "plain":
-            msgs = [{"role": "user", "content": p}]
-            ids = tok.apply_chat_template(msgs, add_generation_prompt=True, return_tensors="pt")
-            ids = (ids["input_ids"] if hasattr(ids, "keys") else ids).to(DEVICE)
+            if tok.chat_template:  # as memopro.generate does
+                msgs = [{"role": "user", "content": p}]
+                ids = tok.apply_chat_template(msgs, add_generation_prompt=True,
+                                              return_tensors="pt")
+                ids = ids["input_ids"] if hasattr(ids, "keys") else ids
+            else:
+                ids = tok(p, return_tensors="pt").input_ids
+            ids = ids.to(DEVICE)
             with torch.no_grad():
                 out = m.generate(input_ids=ids, max_new_tokens=new_tokens, do_sample=False,
                                  pad_token_id=tok.eos_token_id, streamer=clocks[-1])
