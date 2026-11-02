@@ -2,10 +2,14 @@
 With a fifth argument (0363): ``memopro`` trains the same Unsloth model through
 ``memopro.finetune`` (its losses should equal Unsloth's own loop), ``gen`` compares
 ``memopro.generate`` on an Unsloth model with Unsloth's own greedy ``generate``.
+E072 (0372): MP_TRACE=1 hashes the adapters and gradients at every step and MP_DET=1 turns on
+torch's deterministic algorithms, so that a difference can be told from the machine's own.
 
     python worker_unsloth.py <model> <bits 16|4> <steps> <seq> [memopro|gen]
 """
 
+import hashlib
+import os
 import sys
 import time
 
@@ -15,7 +19,39 @@ from unsloth import FastLanguageModel
 from worker_common import DEVICE, MON, RESULT, finish, guarded, model_path, sync, wikitext_ids
 
 
+def digest(tensors):
+    h = hashlib.sha256()
+    for t in tensors:
+        h.update(t.detach().float().cpu().numpy().tobytes())
+    return h.hexdigest()
+
+
+class Trace:
+    """The adapters and gradients as the optimizer is about to step, whoever runs the loop."""
+
+    def __init__(self):
+        self.params, self.grads, self.last = [], [], []
+        if os.environ.get("MP_TRACE"):
+            from torch.optim.optimizer import register_optimizer_step_pre_hook
+
+            register_optimizer_step_pre_hook(self.step)
+
+    def step(self, opt, args, kwargs):
+        self.last = [p for group in opt.param_groups for p in group["params"]]
+        self.params.append(digest(self.last))
+        self.grads.append(digest(p.grad for p in self.last if p.grad is not None))
+
+    def fields(self):
+        if not self.params:
+            return {}
+        return {"first_params": self.params[0], "first_grads": self.grads[0],
+                "final_params": digest(self.last), "grad_hashes": self.grads}
+
+
 def main():
+    if os.environ.get("MP_DET"):
+        torch.use_deterministic_algorithms(True, warn_only=True)
+    trace = Trace()
     model_id, bits, steps, seq = sys.argv[1], int(sys.argv[2]), int(sys.argv[3]), int(sys.argv[4])
     mode = sys.argv[5] if len(sys.argv) > 5 else "unsloth"
     RESULT.update(kind="unsloth_lora", model=model_id, bits=bits, mode=mode,
@@ -52,7 +88,7 @@ def main():
         texts = [tok.decode(ids[i * (seq - 1):(i + 1) * (seq - 1)]) for i in range(steps)]
         r = memopro.finetune(m, texts, tokenizer=tok, seq_len=seq, lr=2e-4, rank=8, alpha=16)
         finish(losses=r.losses, loss_bits=[float.hex(x) for x in r.losses], step_s=r.step_seconds,
-               tokens=r.tokens, memopro=memopro.__version__)
+               tokens=r.tokens, memopro=memopro.__version__, **trace.fields())
         return
     m = FastLanguageModel.get_peft_model(m, r=8, lora_alpha=16, lora_dropout=0, bias="none",
                                          target_modules=["q_proj", "k_proj", "v_proj", "o_proj"],
@@ -76,7 +112,7 @@ def main():
         losses.append(float(loss.detach()))
         step_s.append(time.time() - t)
     finish(losses=losses, loss_bits=[float.hex(x) for x in losses], step_s=step_s,
-           tokens=int(sum(len(p) for p in pieces if len(p) > 1)))
+           tokens=int(sum(len(p) for p in pieces if len(p) > 1)), **trace.fields())
 
 
 if __name__ == "__main__":

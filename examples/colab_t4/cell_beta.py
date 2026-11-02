@@ -46,13 +46,6 @@ def step_s(r):
     return sum(s[1:]) / len(s[1:]) if len(s) > 1 else None
 
 
-def built_from():
-    """What this run measures: the PyPI release, or the branch and commit built here."""
-    if SOURCE_REF:
-        return f"{SOURCE_REF}@{os.environ.get('MP_MEMOPRO_COMMIT', '?')}"
-    return PIP_SPEC.split("==")[-1]
-
-
 def on_gpu():
     try:
         import torch  # noqa: PLC0415
@@ -119,24 +112,6 @@ def beta_body():
                  [model, 16, lora["steps"], lora["seq"], "gen"], 20 * 60, extra, python=py)
         free_local_models()
     summarize_beta(run, gpu, models)
-
-
-def install_into(py):
-    """This commit's memopro wheel (built at setup) into the Unsloth environment."""
-    import glob  # noqa: PLC0415
-
-    wheels = sorted(glob.glob(os.path.join(DRIVE_ROOT, "install",
-                                           f"built-{os.environ.get('MP_MEMOPRO_COMMIT')}",
-                                           "memopro-*.whl")))
-    if not wheels:
-        _log("no memopro wheel for the Unsloth environment")
-        return False
-    r = subprocess.run([sys.executable, "-m", "uv", "pip", "install", "-q", "--python", py,
-                        "--no-deps", "--reinstall", wheels[-1]], capture_output=True, text=True,
-                       check=False)
-    if r.returncode:
-        _log(f"memopro into the Unsloth environment failed: {r.stderr[-800:]}")
-    return r.returncode == 0
 
 
 def enable_run(run, key, expected_s, budget, workload, timeout):

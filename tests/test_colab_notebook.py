@@ -88,3 +88,24 @@ def test_windows_notebook_is_built_from_its_sources_and_compiles(tmp_path):
     )
     for key, value in zip(workers.value.keys, workers.value.values, strict=True):
         compile(value.value, key.value, "exec")
+
+
+def test_the_unsloth_verdict_tells_a_memopro_change_from_unsloth_noise():
+    """E072 (0372): the one line the run is judged by."""
+    tree = ast.parse((ROOT / "examples/colab_t4/cell_unsloth_bits.py").read_text(encoding="utf-8"))
+    wanted = [n for n in tree.body if getattr(n, "name", "") in ("same", "verdict")]
+    space = {}
+    exec(compile(ast.Module(wanted, []), "cell", "exec"), space)  # noqa: S102
+    verdict = space["verdict"]
+
+    def r(final, first="f", status="ok"):
+        return {"status": status, "first_params": first, "final_params": final}
+
+    noisy = [r("a"), r("b")]
+    assert "reproduces" in verdict(noisy, noisy, [r("x")] * 2, [r("x")] * 2)
+    assert "changes the result" in verdict(noisy, noisy, [r("x")] * 2, [r("y")] * 2)
+    assert "memopro differs from itself" in verdict(noisy, noisy, [r("x")] * 2, [r("x"), r("y")])
+    assert "Unsloth differs from itself" in verdict(noisy, noisy, [r("x"), r("y")], [r("x")] * 2)
+    assert "seed differs" in verdict(noisy, [r("a", "g")], [r("x")] * 2, [r("x")] * 2)
+    assert "incomplete" in verdict(noisy, noisy, [r("x", status="oom")], [r("x")])
+    assert "incomplete" in verdict(noisy, [], [r("x")], [r("x")])

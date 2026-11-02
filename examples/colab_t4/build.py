@@ -44,6 +44,7 @@ EXTRA_WORKERS = {
         "common.py": ROOT / "experiments/e040_workloads/common.py",
         "classify.py": ROOT / "experiments/e040_workloads/classify.py",
     },
+    "unsloth_bits": {"worker_unsloth.py": HERE / "worker_unsloth.py"},
     "e069": {
         "worker_e069.py": HERE / "worker_e069.py",
         "csvgen.py": ROOT / "experiments/e069_validation/csvgen.py",
@@ -144,6 +145,22 @@ PyPI에 올린 **0.2.0b4**을 사용자처럼 설치해(`pip install --pre "memo
 - 예상 시간: T4 약 1시간 30분~2시간(셀 예산 120분, 넘으면 뒤가 건너뛰어진다), CPU 약 40~60분.
 - 준비: Drive `install/`에 아무것도 올리지 않아도 된다(PyPI에서 설치). 이전 세션에서 memopro를 설치했다면 **런타임을 다시 시작**한다.
 - 결과: `MyDrive/memopro_colab/results/beta_t4|beta_cpu/<실행 id>/summary.md`(판정 표), 같은 이름의 `.zip`.
+"""),
+    "unsloth_bits": ("colab_unsloth_bits.ipynb", "cell_unsloth_bits.py", """# E072: Unsloth와 memopro의 비트 차이 원인 (docs/research/0372)
+
+memopro로 감싼 Unsloth 학습이 Unsloth 단독과 다른 것이 memopro 때문인지, Unsloth가 실행마다 달라지기 때문인지 가린다. 같은 세션, 같은 버전에서 같은 16비트 LoRA(Qwen2.5-3B, 512토큰, 10단계)를 번갈아 돌린다.
+
+| 사례 | 내용 |
+|---|---|
+| U1~U3 | Unsloth 자체 학습 |
+| M1~M3 | 같은 모델을 `memopro.finetune`으로 |
+| UD1·UD2, MD1·MD2 | 위 둘을 torch 결정적 모드로 |
+
+매 단계 어댑터와 기울기의 해시를 기록하므로 처음 어긋나는 단계를 알 수 있다.
+
+- 런타임: **T4 GPU**. 예상 시간 30~45분(빌드 5~8분, Unsloth 설치 3~6분, 모델이 Drive에 없으면 다운로드).
+- 준비: 올릴 파일은 없다. 아래 공통 준비의 소스 배포본 업로드는 이 노트북에 필요 없다(`SOURCE_REF = "main"`이 저장소에서 직접 빌드한다).
+- 결과: 맨 위 **Verdict** 한 줄이 결론이다. `MyDrive/memopro_colab/results/unsloth_bits/<실행 id>/summary.md`, 같은 이름의 `.zip`.
 """),
     "e069": ("colab_e069.ipynb", "cell_e069.py", """# E069 V2: 30GB CSV를 8GB 상한에서 정렬·병합 (docs/research/0356)
 

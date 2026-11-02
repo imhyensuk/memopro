@@ -654,3 +654,28 @@ def unsloth_python(run):
         json.dump(info, f, indent=1)
     _log(f"Unsloth environment: {info['versions'] or info['error'][-300:]}")
     return py
+
+
+def install_into(py):
+    """This commit's memopro wheel (built at setup) into the Unsloth environment."""
+    import glob  # noqa: PLC0415
+
+    wheels = sorted(glob.glob(os.path.join(DRIVE_ROOT, "install",
+                                           f"built-{os.environ.get('MP_MEMOPRO_COMMIT')}",
+                                           "memopro-*.whl")))
+    if not wheels:
+        _log("no memopro wheel for the Unsloth environment")
+        return False
+    r = subprocess.run([sys.executable, "-m", "uv", "pip", "install", "-q", "--python", py,
+                        "--no-deps", "--reinstall", wheels[-1]], capture_output=True, text=True,
+                       check=False)
+    if r.returncode:
+        _log(f"memopro into the Unsloth environment failed: {r.stderr[-800:]}")
+    return r.returncode == 0
+
+
+def built_from():
+    """What this run measures: the PyPI release, or the branch and commit built here."""
+    if SOURCE_REF:
+        return f"{SOURCE_REF}@{os.environ.get('MP_MEMOPRO_COMMIT', '?')}"
+    return PIP_SPEC.split("==")[-1]

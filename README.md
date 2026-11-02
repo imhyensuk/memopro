@@ -423,6 +423,7 @@ samples = rt.array((48_000 * 60,), "int16", locked=True)  # 압축·스왑되지
 - 모델이 메모리에 들어가는 크기에서는 전용 도구가 훨씬 빠릅니다(T4 3B: Unsloth가 약 11배, M1 1.5B: mlx-tune이 2.6배). memopro의 장점은 들어가지 않는 크기를 결과를 바꾸지 않고 상한 안에서 돌리는 데 있습니다.
 - 코드를 고치지 않은 무작위 접근 작업(pandas 데이터프레임 조작, Polars 등)은 `memopro run`에서 크게 느려지거나 상한을 지키지 못할 수 있습니다. 큰 CSV의 정렬·병합에는 `memopro.sort`/`memopro.join`을 쓰세요.
 - CUDA에서 학습 손실은 상한과 관계없이 같지만, 일반 PyTorch 학습과는 2단계부터 마지막 자리가 다를 수 있습니다.
+- Unsloth 학습은 Unsloth 단독끼리도 실행마다 첫 역전파부터 비트가 달라, 감싼 결과가 비트까지 같다고 말할 수 없습니다. T4 3B 측정에서 시작 어댑터와 첫 손실은 같았고, 뒤 손실의 차이(약 0.0005 이내)는 Unsloth 단독끼리의 차이와 구별되지 않았습니다.
 - `locked=True`는 데이터 버퍼만 고정합니다. 프로그램 코드까지 고정하려면 프로그램이 직접 `mlockall`을 써야 합니다.
 - Apple GPU에서는 `finetune`/`stream_model`을 다른 MPS 연산보다 먼저 호출해야 메모리 설정이 적용됩니다.
 - 베타 버전이라 API가 바뀔 수 있습니다. 변경 내역은 [CHANGELOG](CHANGELOG.md)에 있습니다.

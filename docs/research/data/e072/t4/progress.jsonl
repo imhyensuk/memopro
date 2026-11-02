@@ -1,0 +1,10 @@
+{"t": 1793587202.1518617, "case": "U1", "status": "ok", "seconds": 109.4}
+{"t": 1793587284.579243, "case": "M1", "status": "ok", "seconds": 82.4}
+{"t": 1793587366.4891403, "case": "U2", "status": "ok", "seconds": 81.9}
+{"t": 1793587448.7602978, "case": "M2", "status": "ok", "seconds": 82.2}
+{"t": 1793587527.4229357, "case": "U3", "status": "ok", "seconds": 78.6}
+{"t": 1793587607.170912, "case": "M3", "status": "ok", "seconds": 79.7}
+{"t": 1793587687.3951168, "case": "UD1", "status": "ok", "seconds": 80.2}
+{"t": 1793587757.6725662, "case": "MD1", "status": "ok", "seconds": 70.3}
+{"t": 1793587824.6330464, "case": "UD2", "status": "ok", "seconds": 66.9}
+{"t": 1793587893.6273143, "case": "MD2", "status": "ok", "seconds": 69.0}

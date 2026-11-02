@@ -16,6 +16,7 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
   does loaded normally, instead of copying what the training-sized cache left out again for every
   token (7B on a T4: about 2 GB per token; now 1.04x the plain run after the first token, 0.066 vs
   0.064 s/token, with the same text and a 2.32 GiB process peak). Running out of that room falls back to the automatic cache with the same text; a `gpu_budget` you set stands.
+- Correction to 0.2.0b4: `finetune` on an Unsloth model is not known to match Unsloth bit for bit. Unsloth differs from itself run to run from the first backward pass, even with deterministic torch; memopro starts from the same adapters and first loss, and its later differences are the same size (E072, 0373).
 - Models streamed by `finetune`/`generate` keep a little of the process ceiling free for what
   grows between two measurements (7B generation peaked 0.95 MiB over 7 GiB).
 

@@ -1,0 +1,7 @@
+pair,what,runs,equal,widest,first_step
+U-U,Unsloth against itself,3,0,0.000491,2
+M-M,memopro against itself,3,0,0.000300,2
+U-M,Unsloth against memopro,9,0,0.000433,2
+UD-UD,"Unsloth against itself, deterministic",1,0,0.000322,2
+MD-MD,"memopro against itself, deterministic",1,0,0.000360,2
+UD-MD,"Unsloth against memopro, deterministic",4,0,0.000500,2
