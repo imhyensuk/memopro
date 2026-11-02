@@ -1,0 +1,12 @@
+{
+ "MODEL": "Qwen/Qwen2.5-3B-Instruct",
+ "LORA": {
+  "steps": 10,
+  "seq": 512
+ },
+ "REPEATS": 3,
+ "DET_REPEATS": 2,
+ "SOURCE_REF": "main",
+ "PIP_SPEC": "memopro[llm]==0.2.0b4",
+ "COMMIT": "bfbdcffd0f1b"
+}
