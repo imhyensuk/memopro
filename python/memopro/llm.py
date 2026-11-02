@@ -134,7 +134,8 @@ def _generation_estimate(config: Any, tokens: int) -> int:
     h, i, layers = config.hidden_size, config.intermediate_size, config.num_hidden_layers
     heads = config.num_attention_heads
     kv = getattr(config, "num_key_value_heads", None) or heads
-    head_dim = getattr(config, "head_dim", None) or h // heads
+    # vars: Gemma 4 raises on reading what varies per layer, which this estimate need not follow
+    head_dim = vars(config).get("head_dim") or h // heads
     cache = 2 * layers * kv * head_dim * tokens * 2
     scores = heads * tokens * tokens * 4
     return cache + 2 * tokens * (4 * h + 3 * i) + scores + 4 * config.vocab_size * 4
@@ -507,8 +508,11 @@ def generate(
         if not (auto and draft is not None):
             raise
         out = None  # retried below, once the exception (and the draft it holds) is gone
-    except Exception as e:  # a CUDA out-of-memory with a room memopro chose (0366, 0370)
-        if not ((whole_kept or (auto and draft is not None)) and _out_of_memory(e)):
+    except (RuntimeError, TypeError, ValueError) as e:
+        # a draft memopro chose must not cost the generation, whatever stopped it: out of memory
+        # (0366), a stateful model (Qwen3.5) or one that needs a mask (DeepSeek V3.2, 0374);
+        # nor must the room it chose for the whole model (0370)
+        if not ((auto and draft is not None) or (whole_kept and _out_of_memory(e))):
             raise
         out = None
     finally:

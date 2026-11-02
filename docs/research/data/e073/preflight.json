@@ -1,0 +1,286 @@
+[
+ {
+  "family": "llama",
+  "type": "LlamaForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.833776473999023,
+   5.75668478012085,
+   5.713094234466553
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "qwen2",
+  "type": "Qwen2ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.708375453948975,
+   5.672503471374512,
+   5.7069478034973145
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "qwen3",
+  "type": "Qwen3ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.826170921325684,
+   5.730535507202148,
+   5.7099528312683105
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "qwen3_5_text",
+  "type": "Qwen3_5ForCausalLM",
+  "generate": "same",
+  "draft": "ValueError: assisted generation is not supported with stateful models, such as StreamedQwen3_5ForCausalLM",
+  "losses": [
+   5.683718681335449,
+   5.779712200164795,
+   5.6720290184021
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "qwen3_next",
+  "type": "Qwen3NextForCausalLM",
+  "generate": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "draft": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "lora": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr"
+ },
+ {
+  "family": "qwen2_moe",
+  "type": "Qwen2MoeForCausalLM",
+  "generate": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "draft": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "lora": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr"
+ },
+ {
+  "family": "qwen3_moe",
+  "type": "Qwen3MoeForCausalLM",
+  "generate": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "draft": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "lora": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr"
+ },
+ {
+  "family": "gemma",
+  "type": "GemmaForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.715738296508789,
+   5.712507724761963,
+   5.698751449584961
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "gemma2",
+  "type": "Gemma2ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.702728271484375,
+   5.6719841957092285,
+   5.631303310394287
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "gemma3_text",
+  "type": "Gemma3ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.695633411407471,
+   5.669216632843018,
+   5.632102012634277
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "gemma4_text",
+  "type": "Gemma4ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.8098955154418945,
+   5.841594219207764,
+   5.695353984832764
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "phi",
+  "type": "PhiForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.722524642944336,
+   5.743391036987305,
+   5.732913017272949
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "phi3",
+  "type": "Phi3ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.84130334854126,
+   5.779191493988037,
+   5.660434246063232
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "mistral",
+  "type": "MistralForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.833776473999023,
+   5.75668478012085,
+   5.713094234466553
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "smollm3",
+  "type": "SmolLM3ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.74178409576416,
+   5.680875301361084,
+   5.669229030609131
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "deepseek_v2",
+  "type": "DeepseekV2ForCausalLM",
+  "generate": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "draft": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "lora": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr"
+ },
+ {
+  "family": "deepseek_v3",
+  "type": "DeepseekV3ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.473006248474121,
+   5.508957386016846,
+   5.721489906311035
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "deepseek_v32",
+  "type": "DeepseekV32ForCausalLM",
+  "generate": "same",
+  "draft": "TypeError: 'NoneType' object is not subscriptable",
+  "losses": [
+   5.6429762840271,
+   5.6710309982299805,
+   5.676553249359131
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "deepseek_v4",
+  "type": "DeepseekV4ForCausalLM",
+  "generate": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "draft": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "lora": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr"
+ },
+ {
+  "family": "kimi_linear",
+  "type": "KimiLinearForCausalLM",
+  "generate": "InvalidArgument: no weights in the files for ['model.layers.0.self_attn.conv1d.weight', 'model.layers.1.mlp.experts.gate_up_proj', 'model.layers.1.mlp.experts.down_pro",
+  "draft": "InvalidArgument: no weights in the files for ['model.layers.0.self_attn.conv1d.weight', 'model.layers.1.mlp.experts.gate_up_proj', 'model.layers.1.mlp.experts.down_pro",
+  "lora": "InvalidArgument: no weights in the files for ['model.layers.0.self_attn.conv1d.weight', 'model.layers.1.mlp.experts.gate_up_proj', 'model.layers.1.mlp.experts.down_pro"
+ },
+ {
+  "family": "glm4",
+  "type": "Glm4ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.685775279998779,
+   5.756904602050781,
+   5.732338905334473
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "glm4_moe",
+  "type": "Glm4MoeForCausalLM",
+  "generate": "InvalidArgument: no weights in the files for ['model.layers.1.mlp.experts.gate_up_proj', 'model.layers.1.mlp.experts.down_proj']",
+  "draft": "InvalidArgument: no weights in the files for ['model.layers.1.mlp.experts.gate_up_proj', 'model.layers.1.mlp.experts.down_proj']",
+  "lora": "InvalidArgument: no weights in the files for ['model.layers.1.mlp.experts.gate_up_proj', 'model.layers.1.mlp.experts.down_proj']"
+ },
+ {
+  "family": "granite",
+  "type": "GraniteForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.8329010009765625,
+   5.755042552947998,
+   5.7132673263549805
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "olmo3",
+  "type": "Olmo3ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.893095016479492,
+   5.701748371124268,
+   5.6879963874816895
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "exaone4",
+  "type": "Exaone4ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.899090766906738,
+   5.699165344238281,
+   5.689641952514648
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "cohere2",
+  "type": "Cohere2ForCausalLM",
+  "generate": "same",
+  "draft": "same",
+  "losses": [
+   5.779008865356445,
+   5.737681865692139,
+   5.6737189292907715
+  ],
+  "lora": "same"
+ },
+ {
+  "family": "minimax_m2",
+  "type": "MiniMaxM2ForCausalLM",
+  "generate": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "draft": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr",
+  "lora": "InvalidArgument: no weights in the files for ['model.layers.0.mlp.experts.gate_up_proj', 'model.layers.0.mlp.experts.down_proj', 'model.layers.1.mlp.experts.gate_up_pr"
+ }
+]

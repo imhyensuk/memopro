@@ -20,6 +20,15 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 - Models streamed by `finetune`/`generate` keep a little of the process ceiling free for what
   grows between two measurements (7B generation peaked 0.95 MiB over 7 GiB).
 
+### Fixed: other model families (E073, 0374)
+- A module that reads a child's weight without calling it (Qwen3.5's `self.conv1d.weight`) gets
+  that weight pinned. Before, streamed Qwen3.5 gave wrong text and NaN losses without an error.
+- `generate` without a draft no longer needs a Llama-like layout: Qwen3.5 runs, and Phi's
+  `final_layernorm` is found for drafts.
+- Gemma 4's per-layer settings no longer stop the memory estimate.
+- An automatic draft that a model cannot use (Qwen3.5, DeepSeek V3.2) gives the same text without
+  it instead of an error.
+
 ## 0.2.0b4 (beta)
 
 CSV sorting and joining beyond memory (text keys, quoted CSV), locked buffers, models you loaded
