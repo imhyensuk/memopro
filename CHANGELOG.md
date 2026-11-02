@@ -28,6 +28,8 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 - Gemma 4's per-layer settings no longer stop the memory estimate.
 - An automatic draft that a model cannot use (Qwen3.5, DeepSeek V3.2) gives the same text without
   it instead of an error.
+- A small weight stored in another dtype than the model's (Qwen3.5-4B's float32 `A_log`) is cast
+  once, as `from_pretrained` does, instead of refusing the model.
 
 ## 0.2.0b4 (beta)
 

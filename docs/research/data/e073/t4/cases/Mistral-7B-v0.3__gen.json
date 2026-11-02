@@ -1,0 +1,44 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "gen",
+  "mistralai/Mistral-7B-v0.3",
+  "6442450944",
+  "32"
+ ],
+ "kind": "gen",
+ "model": "mistralai/Mistral-7B-v0.3",
+ "mode": "memopro",
+ "budget": 6442450944,
+ "texts": [
+  "\n\nA hash table is a data structure that uses a hash function to map keys to values. When a key is inserted into the hash table, the hash",
+  "\n\nA palindrome is a word or sentence that reads the same backward as forward.\n\nFor example, the word \"radar\" is a"
+ ],
+ "seconds": [
+  67.5411319732666,
+  63.37935185432434
+ ],
+ "s_per_token": 2.0456325598061085,
+ "first_token_s": [
+  64.64548707008362,
+  61.1485698223114
+ ],
+ "steady_s_per_token": 0.08263245321089221,
+ "ceiling": 6442450944,
+ "worker_s": 136.0,
+ "memory_end": {
+  "host_peak_rss_bytes": 1638068224,
+  "allocated_bytes": 14504567808,
+  "reserved_bytes": 14665383936,
+  "peak_allocated_bytes": 14514764288,
+  "peak_reserved_bytes": 14665383936,
+  "device_used_bytes": 14802616320,
+  "peak_device_used_bytes": 14802616320
+ },
+ "memopro_report": [],
+ "case": "Mistral-7B-v0.3__gen",
+ "wall_s": 139.9,
+ "timeline_peak_gpu_used_bytes": 14800650240,
+ "timeline_peak_host_used_bytes": 3672784896
+}

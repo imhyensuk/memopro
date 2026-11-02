@@ -330,8 +330,9 @@ def main():
         kind, model_id, ceiling, *rest = sys.argv[1:]
         RESULT.update(kind=kind, model=model_id, mode="memopro", budget=int(ceiling))
         torch.manual_seed(0)
-        if kind == "ft":
-            torch.use_deterministic_algorithms(True, warn_only=True)
+        if kind == "ft":  # MP_STRICT=1: no nondeterministic kernel even with only a warning
+            # (Phi-2's float16 memory-efficient attention backward, 0376)
+            torch.use_deterministic_algorithms(True, warn_only=not os.environ.get("MP_STRICT"))
         (ft if kind == "ft" else gen)(model_id, int(ceiling), *map(int, rest))
         cleanup()
         return

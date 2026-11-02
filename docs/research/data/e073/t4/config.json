@@ -1,0 +1,26 @@
+{
+ "MODELS": {
+  "meta-llama/Llama-3.2-1B-Instruct": "Llama",
+  "google/gemma-3-1b-it": "Gemma 3",
+  "Qwen/Qwen3-1.7B": "Qwen3",
+  "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B": "DeepSeek (Qwen2 architecture)",
+  "ibm-granite/granite-3.3-2b-instruct": "Granite",
+  "microsoft/phi-2": "Phi",
+  "HuggingFaceTB/SmolLM3-3B": "SmolLM3",
+  "microsoft/Phi-3.5-mini-instruct": "Phi-3",
+  "Qwen/Qwen3.5-4B": "Qwen3.5",
+  "mistralai/Mistral-7B-v0.3": "Mistral"
+ },
+ "CEILINGS": [
+  6442450944,
+  8589934592
+ ],
+ "LORA": {
+  "steps": 10,
+  "seq": 512
+ },
+ "NEW_TOKENS": 32,
+ "SOURCE_REF": "main",
+ "PIP_SPEC": "memopro[llm]==0.2.0b4",
+ "COMMIT": "c00eb589638c"
+}

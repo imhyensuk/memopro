@@ -1,25 +1,22 @@
 # ==== SETTINGS (edit here) ===========================================================
-# E073 (pre-registered in docs/research/0375): do the Qwen2.5 results hold for other families?
+# E073b (pre-registered in docs/research/0376): what E073 (0375, run 20261102-091733) left open.
 # Real models that fit a T4, each through memopro.generate and memopro.finetune next to the plain
-# model. Llama and Gemma need their license accepted and an HF_TOKEN Colab secret: without
-# them those two are recorded as not reached and the rest go on.
-TIME_LIMIT_S = 120 * 60  # cases that would end after this are skipped (setup counts too)
-MODELS = {  # model -> family; the first two are gated, and short
-    "meta-llama/Llama-3.2-1B-Instruct": "Llama",
-    "google/gemma-3-1b-it": "Gemma 3",
-    "Qwen/Qwen3-1.7B": "Qwen3",
-    "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B": "DeepSeek (Qwen2 architecture)",
-    "ibm-granite/granite-3.3-2b-instruct": "Granite",
+# model. Llama and Gemma come from Unsloth's ungated copies (E073 hit the license gate); Qwen3.5
+# runs with the float32 A_log fix; Phi-2 also trains in torch's strict deterministic mode.
+TIME_LIMIT_S = 60 * 60  # cases that would end after this are skipped (setup counts too)
+MODELS = {  # model -> family
+    "unsloth/Llama-3.2-1B-Instruct": "Llama",
+    "unsloth/gemma-3-1b-it": "Gemma 3",
     "microsoft/phi-2": "Phi",
-    "HuggingFaceTB/SmolLM3-3B": "SmolLM3",
-    "microsoft/Phi-3.5-mini-instruct": "Phi-3",
     "Qwen/Qwen3.5-4B": "Qwen3.5",
-    "mistralai/Mistral-7B-v0.3": "Mistral",
 }
+# these also train at both ceilings with MP_STRICT=1 and once more at the first ceiling as before:
+# E073 saw their losses differ from step 2 with a nondeterministic-kernel warning
+STRICT = {"microsoft/phi-2"}
 CEILINGS = [6 << 30, 8 << 30]  # whole-process host ceilings (bytes), as for 3B in E068
 LORA = {"steps": 10, "seq": 512}
 NEW_TOKENS = 32
-SOURCE_REF = "main"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
+SOURCE_REF = "e073-families"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
 PIP_SPEC = "memopro[llm]==0.2.0b4"
 # ==== (settings shared by all cells) ================================================
 DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"
@@ -37,7 +34,7 @@ def host_peak(r):
 
 def judged(plain, gen, fts):
     """One model's checks (0375): text, ceilings, losses, and its class. A check is None when the
-    case behind it did not finish."""
+    case behind it did not finish. ``fts`` are the strict runs when there are any (0376)."""
     done = lambda r: bool(r) and r.get("status") == "ok"
     within = lambda r: (host_peak(r) or 1 << 62) <= r["ceiling"] if done(r) else None
     trained = all(done(r) for r in fts) and len(fts) == 2
@@ -58,7 +55,7 @@ def judged(plain, gen, fts):
 
 
 def families_body():
-    config = {"MODELS": MODELS, "CEILINGS": CEILINGS, "LORA": LORA, "NEW_TOKENS": NEW_TOKENS,
+    config = {"MODELS": MODELS, "STRICT": sorted(STRICT), "CEILINGS": CEILINGS, "LORA": LORA, "NEW_TOKENS": NEW_TOKENS,
               "SOURCE_REF": SOURCE_REF, "PIP_SPEC": PIP_SPEC}
     run, env = bootstrap("families", config)
     not_reached = {}
@@ -83,6 +80,14 @@ def families_body():
         for c in CEILINGS:
             case(run, f"{n}__ft_{c // MIB}", 180, "worker_suite.py", ["ft", model, c, steps, seq],
                  15 * 60, {**extra, **DETERMINISTIC})
+        if model in STRICT:
+            c = CEILINGS[0]
+            case(run, f"{n}__ft_{c // MIB}_again", 180, "worker_suite.py",
+                 ["ft", model, c, steps, seq], 15 * 60, {**extra, **DETERMINISTIC})
+            for c in CEILINGS:
+                case(run, f"{n}__ft_{c // MIB}_strict", 180, "worker_suite.py",
+                     ["ft", model, c, steps, seq], 15 * 60,
+                     {**extra, **DETERMINISTIC, "MP_STRICT": "1"})
     free_local_models()
     summarize_families(run, not_reached)
 
@@ -94,7 +99,14 @@ def summarize_families(run, not_reached):
         n = short(model)
         plain, gen = recs.get(f"{n}__plain", {}), recs.get(f"{n}__gen", {})
         fts = [r for c in CEILINGS if (r := recs.get(f"{n}__ft_{c // MIB}"))]
-        j = judged(plain, gen, fts)
+        strict = [r for c in CEILINGS if (r := recs.get(f"{n}__ft_{c // MIB}_strict"))]
+        again = recs.get(f"{n}__ft_{CEILINGS[0] // MIB}_again")
+        j = judged(plain, gen, strict if model in STRICT else fts)
+        # reported only: the default runs across ceilings, and the first one against its repeat
+        j["losses_default"] = (fts[0].get("loss_bits") == fts[1].get("loss_bits")
+                               if len(fts) == 2 else None)
+        j["repeat_same"] = (fts[0].get("loss_bits") == again.get("loss_bits")
+                            if fts and again else None)
         a, b = plain.get("steady_s_per_token"), gen.get("steady_s_per_token")
         rows.append({"family": family, "model": n, **j,
                      "steady": f"{fmt(a, 3)} / {fmt(b, 3)}",
@@ -104,14 +116,17 @@ def summarize_families(run, not_reached):
     counts = {c: sum(r["class"] == c for r in rows) for c in ("full", "partial", "none", "WRONG")}
     notes = [f"Classes: {counts}. `WRONG` is a result that differs from the plain run.",
              "steady = s/token after the first token, plain / memopro.",
-             f"Pre-registered: docs/research/0375 (E073). {built_from()}; elapsed "
+             "losses = strict runs where there are any; losses_default = default runs across "
+             "ceilings; repeat_same = the first ceiling's default run against its repeat.",
+             f"Pre-registered: docs/research/0376 (E073b). {built_from()}; elapsed "
              f"{(time.time() - T_START) / 60:.0f} min.", ""]
     errors = [(k, r) for k, r in sorted(recs.items()) if r.get("status") != "ok"]
     notes += [f"- `{k}` ({r.get('status')}): {str(r.get('error') or r.get('why') or '')[:300]}"
               for k, r in errors]
     cols = [(c, lambda r, c=c: r[c]) for c in ("family", "class", "text", "gen_ceiling", "losses",
-                                               "ft_ceiling", "steady", "ratio", "peak", "note")]
-    return write_summary(run, "E073: model families on a T4", cols, rows, notes)
+                                               "ft_ceiling", "losses_default", "repeat_same",
+                                               "steady", "ratio", "peak", "note")]
+    return write_summary(run, "E073b: model families on a T4", cols, rows, notes)
 
 
 families_body()

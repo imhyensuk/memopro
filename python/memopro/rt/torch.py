@@ -73,6 +73,8 @@ _RT_DTYPE = {
     "uint8": "uint8",
     "bool": "uint8",
 }
+# a weight stored in another dtype than the model's is cast once and kept resident up to this size
+_CAST_ONCE = 1 << 20
 
 
 # what streaming a model needs from its repository besides the weights: configs and tokenizer
@@ -343,12 +345,13 @@ class StreamedWeights:
         prefix = getattr(model, "base_model_prefix", "") or ""
         # one runtime buffer per distinct parameter object (tied weights share one)
         self.buffers: dict[int, tuple[Any, torch.dtype, tuple[int, ...]]] = {}
+        self.cast: set[int] = set()  # small weights cast once to the model's dtype, not streamed
         # parameters, then buffers still on the meta device: int4 layers keep their weight as
         # buffers (packed codes, scales) that stream like parameters (0286)
         tensors = [*model.named_parameters(remove_duplicate=False)]
         tensors += [(n, b) for n, b in model.named_buffers(remove_duplicate=False) if b.is_meta]
         for name, param in tensors:
-            if id(param) in self.buffers:
+            if id(param) in self.buffers:  # tied names of a cast weight are each cast
                 continue
             region = _find(regions, name, prefix)
             if region is None:
@@ -357,6 +360,12 @@ class StreamedWeights:
                 raise InvalidArgument(
                     f"{name}: shape {tuple(param.shape)} in the model, {region.shape} in the file"
                 )
+            if region.dtype != param.dtype and region.nbytes <= _CAST_ONCE:
+                # from_pretrained casts it to the model's dtype; so does this, once, kept resident
+                # (Qwen3.5 stores A_log in float32, 0376)
+                self._load_cast(model, name, region)
+                self.cast.add(id(param))
+                continue
             if region.dtype != param.dtype:
                 raise InvalidArgument(
                     f"{name}: dtype {param.dtype} in the model, {region.dtype} in the file "
@@ -368,7 +377,7 @@ class StreamedWeights:
             )
             self.buffers[id(param)] = (buf, region.dtype, tuple(region.shape))
         self._pid_of = {buf.id: pid for pid, (buf, _, _) in self.buffers.items()}
-        missing = [n for n, p in tensors if id(p) not in self.buffers]
+        missing = [n for n, p in tensors if id(p) not in self.buffers and id(p) not in self.cast]
         if missing:
             raise InvalidArgument(f"no weights in the files for {missing[:5]}")
         self._load_saved_buffers(regions, prefix)
@@ -399,6 +408,22 @@ class StreamedWeights:
                 self._held[module] = []
                 self._handles.append(module.register_forward_pre_hook(self._before))
                 self._handles.append(module.register_forward_hook(self._after))
+
+    def _load_cast(self, model: Any, name: str, region: Any) -> None:
+        import torch
+
+        owner, _, leaf = name.rpartition(".")
+        module = model.get_submodule(owner)
+        with open(region.path, "rb") as f:
+            f.seek(region.offset)
+            data = bytearray(f.read(region.nbytes))
+        old = getattr(module, leaf)
+        value = torch.frombuffer(data, dtype=region.dtype).reshape(region.shape)
+        value = value.to(self.device, old.dtype)
+        if leaf in module._parameters:
+            module._parameters[leaf] = torch.nn.Parameter(value, requires_grad=False)
+        else:
+            module._buffers[leaf] = value
 
     def _load_saved_buffers(self, regions: dict[str, Any], prefix: str) -> None:
         """Persistent buffers stored in the files (small): loaded once, normally."""

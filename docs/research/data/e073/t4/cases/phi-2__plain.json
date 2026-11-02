@@ -1,0 +1,56 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "lm_gen",
+  "microsoft/phi-2",
+  "plain",
+  "0",
+  "32"
+ ],
+ "kind": "lm_gen",
+ "model": "microsoft/phi-2",
+ "mode": "plain",
+ "budget": 0,
+ "load_s": 22.9,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 3418636288,
+  "allocated_bytes": 5559368704,
+  "reserved_bytes": 5760876544,
+  "peak_allocated_bytes": 5559368704,
+  "peak_reserved_bytes": 5760876544,
+  "device_used_bytes": 5870845952,
+  "peak_device_used_bytes": 5870845952
+ },
+ "texts": [
+  "\n\nSolution:\nA hash table handles collisions by using a technique called chaining. When two or more keys hash to the same index, they are stored",
+  "\n\n```python\ndef is_palindrome(s):\n    \"\"\"\n    Check if a string is a palindrome.\n\n    "
+ ],
+ "seconds": [
+  2.104431390762329,
+  1.0707242488861084
+ ],
+ "s_per_token": 0.049611806869506836,
+ "first_token_s": [
+  0.7988135814666748,
+  0.0390012264251709
+ ],
+ "steady_s_per_token": 0.03767618056266539,
+ "rt": null,
+ "copy_stats": null,
+ "worker_s": 30.0,
+ "memory_end": {
+  "host_peak_rss_bytes": 3418636288,
+  "allocated_bytes": 5568937984,
+  "reserved_bytes": 5804916736,
+  "peak_allocated_bytes": 5586494464,
+  "peak_reserved_bytes": 5804916736,
+  "device_used_bytes": 5944246272,
+  "peak_device_used_bytes": 5944246272
+ },
+ "memopro_report": [],
+ "case": "phi-2__plain",
+ "wall_s": 34.6,
+ "timeline_peak_gpu_used_bytes": 5942280192,
+ "timeline_peak_host_used_bytes": 3932545024
+}

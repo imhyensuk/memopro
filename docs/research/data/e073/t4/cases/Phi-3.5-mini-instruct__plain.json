@@ -1,0 +1,56 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "lm_gen",
+  "microsoft/Phi-3.5-mini-instruct",
+  "plain",
+  "0",
+  "32"
+ ],
+ "kind": "lm_gen",
+ "model": "microsoft/Phi-3.5-mini-instruct",
+ "mode": "plain",
+ "budget": 0,
+ "load_s": 29.4,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 4490399744,
+  "allocated_bytes": 7642422272,
+  "reserved_bytes": 7644119040,
+  "peak_allocated_bytes": 7642422272,
+  "peak_reserved_bytes": 7644119040,
+  "device_used_bytes": 7754088448,
+  "peak_device_used_bytes": 7754088448
+ },
+ "texts": [
+  "A hash table is a data structure that implements an associative array abstract data type, a structure that can map keys to values. A hash function is used to",
+  "```python\ndef is_palindrome(s: str) -> bool:\n    \"\"\"\n    Check if the given string is a palindrome"
+ ],
+ "seconds": [
+  2.8088033199310303,
+  2.161233901977539
+ ],
+ "s_per_token": 0.0776568315923214,
+ "first_token_s": [
+  1.0657892227172852,
+  0.20533156394958496
+ ],
+ "steady_s_per_token": 0.05963486625302222,
+ "rt": null,
+ "copy_stats": null,
+ "worker_s": 38.3,
+ "memory_end": {
+  "host_peak_rss_bytes": 4490399744,
+  "allocated_bytes": 7650943488,
+  "reserved_bytes": 7692353536,
+  "peak_allocated_bytes": 7674823680,
+  "peak_reserved_bytes": 7692353536,
+  "device_used_bytes": 7829585920,
+  "peak_device_used_bytes": 7829585920
+ },
+ "memopro_report": [],
+ "case": "Phi-3.5-mini-instruct__plain",
+ "wall_s": 42.5,
+ "timeline_peak_gpu_used_bytes": 7829716992,
+ "timeline_peak_host_used_bytes": 3472015360
+}

@@ -1,0 +1,44 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "gen",
+  "Qwen/Qwen3-1.7B",
+  "6442450944",
+  "32"
+ ],
+ "kind": "gen",
+ "model": "Qwen/Qwen3-1.7B",
+ "mode": "memopro",
+ "budget": 6442450944,
+ "texts": [
+  "<think>\nOkay, so I need to explain how a hash table handles collisions. Let me start by recalling what a hash table is. From what I remember,",
+  "<think>\nOkay, I need to write a Python function that checks if a string is a palindrome. Hmm, a palindrome is a string that reads the same forwards"
+ ],
+ "seconds": [
+  13.817310810089111,
+  9.509272336959839
+ ],
+ "s_per_token": 0.36447786167263985,
+ "first_token_s": [
+  11.578157424926758,
+  6.586270570755005
+ ],
+ "steady_s_per_token": 0.08324211643588159,
+ "ceiling": 6442450944,
+ "worker_s": 27.2,
+ "memory_end": {
+  "host_peak_rss_bytes": 2078834688,
+  "allocated_bytes": 3450209280,
+  "reserved_bytes": 3483369472,
+  "peak_allocated_bytes": 3459412992,
+  "peak_reserved_bytes": 3483369472,
+  "device_used_bytes": 3620601856,
+  "peak_device_used_bytes": 3620601856
+ },
+ "memopro_report": [],
+ "case": "Qwen3-1.7B__gen",
+ "wall_s": 30.7,
+ "timeline_peak_gpu_used_bytes": 3620732928,
+ "timeline_peak_host_used_bytes": 3923267584
+}
