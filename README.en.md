@@ -423,6 +423,7 @@ Models verified: Qwen2.5 (1.5B–14B), SmolLM2, Phi-3.5, Mistral-7B, DINOv2, Con
 - When the model fits in memory, dedicated tools are much faster (T4 3B: Unsloth about 11x; M1 1.5B: mlx-tune 2.6x). memopro's strength is running what does not fit, unchanged and within the ceiling.
 - Unchanged programs with heavy random access (pandas dataframe work, Polars) can be much slower under `memopro run` or fail to keep the ceiling. Sort and join large CSV files with `memopro.sort`/`memopro.join`.
 - On CUDA, training losses are the same whatever the ceiling but can differ from plain PyTorch training in the last bits from step 2.
+- MoE models whose expert weights are merged on loading (Qwen3-MoE, Qwen3-Next, DeepSeek V2 and V4, Kimi Linear, GLM4-MoE, MiniMax M2 and others) cannot be streamed from a folder and are refused with an error. Passing such a model you loaded yourself has not been tried, even at a small size.
 - Unsloth training differs from itself run to run from the first backward pass, so a wrapped run cannot be called bit-identical. On a T4 with 3B the starting adapters and first loss matched, and later loss differences (within about 0.0005) could not be told from those between Unsloth runs.
 - `locked=True` pins data buffers only; to pin the program's code as well, the program itself calls `mlockall`.
 - On Apple GPUs, call `finetune`/`stream_model` before other MPS work so the memory setting applies.

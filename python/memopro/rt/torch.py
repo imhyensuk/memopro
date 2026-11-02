@@ -39,6 +39,8 @@ each layer's weights pinned once for all of them (0142).
 from __future__ import annotations
 
 import contextlib
+import inspect
+import re
 import warnings
 import weakref
 from collections.abc import Iterator
@@ -382,11 +384,7 @@ class StreamedWeights:
         self._held: dict[Any, list[list[Any]]] = {}
         self._handles = []
         for module in model.modules():
-            # nn.MultiheadAttention reads out_proj.weight without calling out_proj (SigLIP's
-            # pooling head, 0270): such a module pins its children's weights too
-            owners = (
-                module.modules() if isinstance(module, torch.nn.MultiheadAttention) else (module,)
-            )
+            owners = _weight_readers(module)
             own = [
                 (owner, n, p)
                 for owner in owners
@@ -584,11 +582,13 @@ class StreamedWeights:
         swapped = []
         for owner, name, param in self._own[module]:
             t = self._tensor(id(param))
-            if name in owner._parameters:
-                owner._parameters[name] = torch.nn.Parameter(t, requires_grad=False)
-            else:
-                owner._buffers[name] = t
-            swapped.append((owner, name, param, t.untyped_storage().data_ptr()))
+            slots = owner._parameters if name in owner._parameters else owner._buffers
+            # not `param`: a parent reading this weight (_weight_readers) may hold it already
+            before = slots[name]
+            slots[name] = (
+                torch.nn.Parameter(t, requires_grad=False) if slots is owner._parameters else t
+            )
+            swapped.append((owner, name, before, t.untyped_storage().data_ptr()))
         self._held[module].append(swapped)
 
     def _after(self, module: Any, args: Any, output: Any) -> None:
@@ -647,6 +647,25 @@ class StreamedWeights:
                 import torch
 
                 torch.mps.empty_cache()
+
+
+def _weight_readers(module: Any) -> tuple[Any, ...]:
+    """``module`` and the children whose weights it reads without calling them: nothing pins
+    those, and a meta weight in an operation gives garbage, not an error (Qwen3.5's
+    ``self.conv1d.weight``, 0374; nn.MultiheadAttention's out_proj, SigLIP, 0270). ponytail: reads
+    in ``forward`` itself; one in a helper method is missed, which the E073 preflight would show."""
+    import torch
+
+    if isinstance(module, torch.nn.MultiheadAttention):
+        return tuple(module.modules())
+    if not module._modules:
+        return (module,)
+    try:
+        source = inspect.getsource(inspect.unwrap(type(module).forward))
+    except (OSError, TypeError):
+        return (module,)
+    names = dict.fromkeys(re.findall(r"self\.(\w+)\.(?:weight|bias)\b", source))
+    return (module, *(module._modules[n] for n in names if module._modules.get(n) is not None))
 
 
 def _tie(model: Any, config: Any) -> None:
@@ -1064,7 +1083,8 @@ def _row_invariant(model: Any, prompt: int) -> Iterator[None]:
 
     base = getattr(model, getattr(model, "base_model_prefix", ""), None)
     layers = getattr(base, "layers", None)
-    norm, head = getattr(base, "norm", None), model.get_output_embeddings()
+    norm = getattr(base, "norm", None) or getattr(base, "final_layernorm", None)  # Phi
+    head = model.get_output_embeddings()
     if layers is None or norm is None or head is None:
         raise ModeUnavailable(
             "memopro.rt.torch.generate",
@@ -1203,8 +1223,10 @@ def generate(model: Any, input_ids: Any, *, draft: Any = None, **kwargs: Any) ->
     if mask is not None and not bool(mask.all()):
         raise InvalidArgument("generate takes no padding (an attention_mask of all ones)")
     kwargs["do_sample"] = False
-    if draft is not None:
-        kwargs["assistant_model"] = draft
+    if draft is None:  # one row at a time already: nothing to keep invariant (E073, 0374)
+        with torch.no_grad():
+            return model.generate(input_ids=input_ids, **kwargs)
+    kwargs["assistant_model"] = draft
     with torch.no_grad(), _row_invariant(model, input_ids.shape[1]):
         return model.generate(input_ids=input_ids, **kwargs)
 

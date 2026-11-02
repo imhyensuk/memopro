@@ -1377,6 +1377,36 @@ def test_an_out_of_memory_with_an_automatic_draft_retries_without_it(tmp_path, m
     assert text == plain and isinstance(calls[0], Draft) and calls[1] is None
 
 
+def test_a_module_reading_a_childs_weight_gets_it_pinned(tmp_path):
+    """0374: Qwen3.5 reads ``self.conv1d.weight`` without calling conv1d. Unpinned it is a meta
+    tensor, and operations on one give NaN instead of an error."""
+    if "qwen3_5_text" not in transformers.models.auto.configuration_auto.CONFIG_MAPPING_NAMES:
+        pytest.skip("this transformers has no Qwen3.5")
+    torch.manual_seed(0)
+    config = transformers.AutoConfig.for_model(
+        "qwen3_5_text",
+        hidden_size=64,
+        intermediate_size=128,
+        num_hidden_layers=2,
+        num_attention_heads=4,
+        num_key_value_heads=2,
+        vocab_size=300,
+        max_position_embeddings=128,
+        head_dim=16,
+    )
+    config.layer_types = ["linear_attention", "full_attention"]
+    plain = transformers.AutoModelForCausalLM.from_config(config, dtype=torch.bfloat16).eval()
+    plain.save_pretrained(tmp_path)
+    m = rtt.stream_model(tmp_path, budget="256MiB", device="cpu")
+    ids = torch.tensor([[5, 9, 16, 23]])
+    with torch.no_grad():
+        assert torch.equal(m(input_ids=ids).logits, plain(input_ids=ids).logits)
+    kw = {"max_new_tokens": 6, "do_sample": False, "pad_token_id": 0}
+    with torch.no_grad():
+        want = plain.generate(input_ids=ids, **kw)
+    assert torch.equal(rtt.generate(m, ids, **kw), want)
+
+
 def _cuda_model(whole, cached=0, auto=1 << 30):
     buffers = {0: (types.SimpleNamespace(nbytes=whole), None, None)}
     dropped = []
