@@ -1,0 +1,48 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "offload_gen",
+  "Qwen/Qwen2.5-14B-Instruct",
+  "13958643712",
+  "6442450944",
+  "16"
+ ],
+ "kind": "offload_gen",
+ "model": "Qwen/Qwen2.5-14B-Instruct",
+ "mode": "accelerate",
+ "load_s": 54.3,
+ "device_map": {
+  "0": 20,
+  "cpu": 8,
+  "disk": 24
+ },
+ "offload_folder_bytes": 0,
+ "texts": [
+  "A hash table is a data structure that implements an associative array abstract data type,"
+ ],
+ "seconds": [
+  1141.1647264957428
+ ],
+ "s_per_token": 71.32279540598392,
+ "first_token_s": [
+  72.21139359474182
+ ],
+ "steady_s_per_token": 71.26336911519368,
+ "worker_s": 1200.8,
+ "memory_end": {
+  "host_peak_rss_bytes": 7573979136,
+  "allocated_bytes": 12026912768,
+  "reserved_bytes": 13616807936,
+  "peak_allocated_bytes": 13597052928,
+  "peak_reserved_bytes": 13618905088,
+  "device_used_bytes": 13754040320,
+  "peak_device_used_bytes": 13756137472
+ },
+ "write_bytes": 4096,
+ "memopro_report": [],
+ "case": "accelerate",
+ "wall_s": 1206.6,
+ "timeline_peak_gpu_used_bytes": 13754171392,
+ "timeline_peak_host_used_bytes": 3335757824
+}

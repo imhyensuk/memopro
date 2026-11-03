@@ -1,0 +1,12 @@
+[07:03:39] {"memopro": "0.2.0b4", "torch": "2.11.0+cu130", "transformers": "5.22.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0195_cuda_stream": true}}
+[07:22:58] downloaded Qwen/Qwen2.5-14B-Instruct to local disk only (1159s)
+[07:22:58] run plain
+[07:24:17]   -> oom (78.8s)
+[07:24:17] run memopro_gen
+[07:41:48]   -> ok (1051.0s)
+[07:41:48] run accelerate
+[08:01:54]   -> ok (1206.6s)
+[08:01:54] run ft_6144
+[08:05:31]   -> error (216.4s)
+[08:05:31] run ft_9216
+[08:08:57]   -> error (206.6s)

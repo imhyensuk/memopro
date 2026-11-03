@@ -1,0 +1,22 @@
+{
+ "MODEL": "Qwen/Qwen2.5-14B-Instruct",
+ "PARTS": [
+  "train"
+ ],
+ "CEILINGS": [
+  6442450944,
+  9663676416
+ ],
+ "OFFLOAD": {
+  "gpu": 13958643712,
+  "cpu": 6442450944
+ },
+ "LORA": {
+  "steps": 3,
+  "seq": 512
+ },
+ "NEW_TOKENS": 16,
+ "SOURCE_REF": "e074-extreme",
+ "PIP_SPEC": "memopro[llm]==0.2.0b4",
+ "COMMIT": "6de680e70999"
+}

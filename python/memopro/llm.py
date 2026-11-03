@@ -571,10 +571,15 @@ def _keep_whole_on_gpu(m: Any, estimate: int) -> bool:
 
 
 def _leave_gpu_room(weights: Any) -> None:
-    """Back to the automatic CUDA cache: training's activations need the room generation gave up."""
+    """Back to the automatic CUDA cache, less the largest weight: training's activations need the
+    room generation gave up, and the backward pass copies an uncached weight in beside them
+    (14B's 1.45 GiB head filled a T4 and cuBLAS could not start, 0380)."""
     auto = weights.auto_gpu_budget
-    if auto is not None and weights.gpu_budget > auto:
-        weights.gpu_budget = auto
+    if auto is None:
+        return
+    want = max(0, auto - max(b[0].nbytes for b in weights.buffers.values()))
+    if weights.gpu_budget > want:
+        weights.gpu_budget = want
         weights.drop_gpu_cache()
 
 

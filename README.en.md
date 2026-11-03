@@ -121,6 +121,7 @@ The ceiling covers the whole process, Python and torch included, not only what m
 |---|---|---|
 | 3B 16-bit LoRA (Colab T4) | 6 / 8 GiB | 5.56 / 7.34 GiB |
 | 7B 16-bit LoRA (Colab T4; 7B does not fit a T4 loaded normally) | 7 / 9 GiB | 6.36 / 8.37 GiB |
+| 14B 16-bit LoRA (Colab T4, 29.5 GB model) | 6 / 9 GiB | 5.90 / 8.92 GiB |
 | image stack at half memory (Colab) | 403 MiB | 407 MiB (within the 32 MiB allowed) |
 | scikit-learn at half memory (Colab) | 1,220 MiB | 1,222 MiB |
 | 1 GB CSV sort (M1, development check) | 313 MiB | 233 MiB |
@@ -409,6 +410,8 @@ samples = rt.array((48_000 * 60,), "int16", locked=True)  # never compressed or 
 | Mistral-7B LoRA training | NVIDIA T4, 16 GB | about 43 tokens/s at a 4 GiB budget |
 | Qwen2.5-7B generation with `draft` | Apple M1, 8 GB | 8.95 → 2.37 s/token, identical output |
 | Qwen2.5-7B generation without a draft | NVIDIA T4, 16 GB | 1.04x the plain run after the first token (0.066 vs 0.064 s/token), identical output, process peak 2.32 GiB (plain 3.58 GiB) |
+| Qwen2.5-14B generation (29.5 GB; loaded normally it runs out of GPU memory) | NVIDIA T4, 16 GB | 55.9 s/token after the first at a 6 GiB ceiling, process peak 5.88 GiB, no disk writes (Transformers `device_map="auto"`: 71.3 s/token, peak 7.05 GiB with 6 GiB of CPU set; same output) |
+| Qwen2.5-14B LoRA training | NVIDIA T4, 16 GB | about 185 s per 512-token step at 6/9 GiB ceilings, losses bit-identical across ceilings |
 | Qwen2.5-3B LoRA training | Apple M1, 8 GB | 20 tokens/s (mlx-tune runs out of memory) |
 | Qwen2.5-3B LoRA training, a model from `mlx_lm.load` | Apple M1, 8 GB | 22.8 tokens/s at a 2.5 GiB ceiling, losses and adapters bit-identical to mlx-lm's training (mlx-lm alone: 1.8 tokens/s, +0.9 GB of swap; mlx-tune runs out of memory) |
 | 1.5B–3.8B models (Qwen2.5, SmolLM2, Phi-3.5) | NVIDIA T4, 16 GB | 1.00–1.03x the time of a run with enough memory for training, 1.06–1.35x for generation |
@@ -419,7 +422,7 @@ Models verified: Qwen2.5 (1.5B–14B), Qwen3, Qwen3.5, Llama 3.2, Gemma 3, Phi-2
 
 ### Limitations
 
-- Models far larger than memory run, but storage read speed makes them very slow; 14B 16-bit LoRA on an NVIDIA T4 runs at about 1 token/s.
+- Models far larger than memory run, but storage read speed makes them very slow; on an NVIDIA T4, 14B generates about one token a minute and 16-bit LoRA trains at about 3 tokens/s.
 - When the model fits in memory, dedicated tools are much faster (T4 3B: Unsloth about 11x; M1 1.5B: mlx-tune 2.6x). memopro's strength is running what does not fit, unchanged and within the ceiling.
 - Unchanged programs with heavy random access (pandas dataframe work, Polars) can be much slower under `memopro run` or fail to keep the ceiling. Sort and join large CSV files with `memopro.sort`/`memopro.join`.
 - On CUDA, training losses are the same whatever the ceiling but can differ from plain PyTorch training in the last bits from step 2.

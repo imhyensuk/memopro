@@ -47,6 +47,7 @@ EXTRA_WORKERS = {
     "unsloth_bits": {"worker_unsloth.py": HERE / "worker_unsloth.py"},
     "families": {"worker_suite.py": HERE / "worker_suite.py"},
     "diag": {"worker_suite.py": HERE / "worker_suite.py"},
+    "extreme": {"worker_suite.py": HERE / "worker_suite.py"},
     "e069": {
         "worker_e069.py": HERE / "worker_e069.py",
         "csvgen.py": ROOT / "experiments/e069_validation/csvgen.py",
@@ -170,6 +171,25 @@ E073b에서 memopro로 스트리밍한 Qwen3.5-4B의 생성 글이 일반 실행
 
 - 런타임: **T4 GPU**. 예상 시간 15~25분. 토큰은 필요 없다. 모델은 로컬 디스크에만 받는다.
 - 결과: `MyDrive/memopro_colab/results/diag/<실행 id>/summary.md`, 같은 이름의 `.zip`.
+"""),
+    "extreme": ("colab_extreme_14b.ipynb", "cell_extreme.py", """# E074: 극한 시험 — T4에 들어가지 않는 14B (docs/research/0379)
+
+Qwen2.5-14B-Instruct(bf16 29.5GB)는 T4 GPU(15GB)에도, Colab 호스트 메모리(12.7GB)에도 들어가지 않는다. 같은 모델을 세 가지로 돌린다: 그냥 올리기(실패 예상), Transformers `device_map="auto"`(accelerate가 CPU·디스크로 덜어 냄, 호스트 6GiB), memopro(프로세스 상한 6GiB 생성, 6·9GiB 16비트 LoRA 3단계).
+
+| 판정 | 기준 |
+|---|---|
+| E1 | 그냥 올리기는 끝나지 않음 |
+| E2 | memopro 생성 완주, 호스트 정점 ≤ 6GiB, 쓰기 ≤ 64MiB |
+| E3 | memopro 학습 두 상한 완주, 정점 ≤ 상한, 쓰기 ≤ 64MiB |
+| E4 | 학습 손실이 상한과 무관하게 비트 동일 |
+
+보고만: accelerate의 완주 여부·속도·정점·쓰기, memopro와 accelerate 생성 글의 일치.
+
+**결과 (0380)**: E074(20261103-070335) 생성 통과, E074b(20261103-113859) 학습이 6/9 GiB 상한 안에서 완주하고 손실이 비트 단위로 같았다(단계당 약 183~190초).
+
+- 런타임: **T4 GPU**. 예상 시간 1시간 30분~2시간 30분(셀 예산 2시간 30분). 끊기면 다시 실행해 이어 간다.
+- 토큰은 필요 없다. 모델(29.5GB)은 로컬 디스크에만 받고 끝나면 지운다.
+- 결과: `MyDrive/memopro_colab/results/extreme/<실행 id>/summary.md`, 같은 이름의 `.zip`.
 """),
     "families": ("colab_model_families.ipynb", "cell_families.py", """# E073c: Qwen3.5-4B 재측정 (docs/research/0378)
 

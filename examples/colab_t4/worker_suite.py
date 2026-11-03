@@ -6,6 +6,7 @@
     worker_suite.py vis_lora  <model> <plain|memopro> <budget_bytes> <steps> <batch>
     worker_suite.py ft        <model> <ceiling_bytes> <steps> <seq>    (public API, E068)
     worker_suite.py gen       <model> <ceiling_bytes> <new_tokens>     (public API, E068)
+    worker_suite.py offload_gen <model> <gpu_bytes> <cpu_bytes> <new_tokens>  (accelerate, E074)
 
 `plain` loads the model normally onto the GPU; `memopro` streams it from host memory within
 `budget_bytes` (memopro.rt.torch.stream_model(device="cuda"), 0195).
@@ -16,6 +17,7 @@ import hashlib
 import os
 import sys
 import time
+from pathlib import Path
 
 import torch
 from worker_common import DEVICE, MON, RESULT, cleanup, finish, guarded, model_path, sync
@@ -23,7 +25,7 @@ from worker_common import DEVICE, MON, RESULT, cleanup, finish, guarded, model_p
 PROMPTS = [
     "Explain how a hash table handles collisions.",
     "Write a Python function that checks whether a string is a palindrome, with a short docstring.",
-]
+][:int(os.environ.get("MP_PROMPTS", 2))]  # E074: one prompt for 14B
 VISION_CLASSES = {"resnet": "ResNetForImageClassification", "dinov2": "Dinov2Model",
                   "vit": "ViTModel"}
 
@@ -328,6 +330,45 @@ def vis_lora(model_id, mode, budget, steps, batch):
            rt=m.base_model.model.memopro_runtime.stats() if streamed else None)
 
 
+def offload_gen(model_id, gpu, cpu, new_tokens):
+    """E074: what a user without memopro reaches for when the model fits neither the GPU nor host
+    memory: Transformers' device_map="auto" with accelerate offloading to the CPU and the disk."""
+    import shutil
+
+    import transformers
+
+    path = model_path(model_id)
+    folder = "/content/offload_e074"
+    shutil.rmtree(folder, ignore_errors=True)
+    t = time.time()
+    m = transformers.AutoModelForCausalLM.from_pretrained(
+        path, dtype="auto", device_map="auto", max_memory={0: gpu, "cpu": cpu},
+        offload_folder=folder).eval()
+    RESULT["load_s"] = round(time.time() - t, 1)
+    places = list(m.hf_device_map.values())
+    RESULT["device_map"] = {str(d): places.count(d) for d in set(places)}
+    RESULT["offload_folder_bytes"] = sum(f.stat().st_size for f in Path(folder).rglob("*")
+                                         if f.is_file())
+    tok = transformers.AutoTokenizer.from_pretrained(path)
+    pad = tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id
+    texts, secs, clocks = [], [], []
+    for p in PROMPTS:
+        t = time.time()
+        clocks.append(TokenClock())
+        ids = tok.apply_chat_template([{"role": "user", "content": p}], add_generation_prompt=True,
+                                      return_tensors="pt")
+        ids = (ids["input_ids"] if hasattr(ids, "keys") else ids).to("cuda:0")
+        with torch.no_grad():
+            out = m.generate(input_ids=ids, max_new_tokens=new_tokens, do_sample=False,
+                             pad_token_id=pad, streamer=clocks[-1])
+        texts.append(tok.decode(out[0, ids.shape[1]:], skip_special_tokens=True))
+        sync()
+        secs.append(time.time() - t)
+    finish(texts=texts, seconds=secs, s_per_token=sum(secs) / (new_tokens * len(PROMPTS)),
+           **timing(clocks))
+    shutil.rmtree(folder, ignore_errors=True)
+
+
 def diag(model_id, ceiling):
     """0377: where a streamed model's forward first differs from the plain one. Each decoder
     layer's output (last position) and the logits of each prompt, plain then streamed."""
@@ -387,6 +428,11 @@ def main():
     if sys.argv[1] == "diag":  # <model> <ceiling> (0377)
         RESULT.update(kind="diag", model=sys.argv[2], budget=int(sys.argv[3]))
         diag(sys.argv[2], int(sys.argv[3]))
+        cleanup()
+        return
+    if sys.argv[1] == "offload_gen":  # <model> <gpu_bytes> <cpu_bytes> <new_tokens> (E074)
+        RESULT.update(kind="offload_gen", model=sys.argv[2], mode="accelerate")
+        offload_gen(sys.argv[2], *map(int, sys.argv[3:6]))
         cleanup()
         return
     if sys.argv[1] in ("ft", "gen"):  # the public API: <model> <ceiling> <...> (E068)

@@ -1,0 +1,5 @@
+{"t": 1793690657.1617854, "case": "plain", "status": "oom", "seconds": 78.8}
+{"t": 1793691708.1643107, "case": "memopro_gen", "status": "ok", "seconds": 1051.0}
+{"t": 1793692914.7426708, "case": "accelerate", "status": "ok", "seconds": 1206.6}
+{"t": 1793693131.1448123, "case": "ft_6144", "status": "error", "seconds": 216.4}
+{"t": 1793693337.8065639, "case": "ft_9216", "status": "error", "seconds": 206.6}
