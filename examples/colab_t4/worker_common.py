@@ -121,6 +121,11 @@ def finish(status=None, **fields):
         RESULT["status"] = "ok"
     RESULT["worker_s"] = round(time.time() - _T0, 1)
     RESULT["memory_end"] = MON.snapshot()
+    try:  # bytes this process sent to storage (Linux), E074
+        with open("/proc/self/io") as f:
+            RESULT["write_bytes"] = next(int(x.split()[1]) for x in f if x.startswith("write_bytes:"))
+    except (OSError, StopIteration):
+        pass
     RESULT["memopro_report"] = memopro_report()
     path = os.environ.get("MP_OUT")
     text = json.dumps(RESULT, default=str)
