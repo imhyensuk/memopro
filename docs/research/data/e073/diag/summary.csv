@@ -1,0 +1,5 @@
+model,prompt,status,first_layer,logits_max_abs,argmax,margin,plain_dtypes,streamed_dtypes
+Qwen3.5-4B,1,ok,,0.0000,"[1919, 1919]",3.1250,[],[]
+Qwen3.5-4B,2,ok,,0.0000,"[760, 760]",0.6250,[],[]
+Qwen3-1.7B,1,ok,,0.0000,"[151667, 151667]",12.2500,[],[]
+Qwen3-1.7B,2,ok,,0.0000,"[151667, 151667]",11.6250,[],[]

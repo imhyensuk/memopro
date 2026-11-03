@@ -1,0 +1,56 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "lm_gen",
+  "Qwen/Qwen3.5-4B",
+  "plain",
+  "0",
+  "32"
+ ],
+ "kind": "lm_gen",
+ "model": "Qwen/Qwen3.5-4B",
+ "mode": "plain",
+ "budget": 0,
+ "load_s": 36.1,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 6612647936,
+  "allocated_bytes": 8512194560,
+  "reserved_bytes": 8514437120,
+  "peak_allocated_bytes": 8512194560,
+  "peak_reserved_bytes": 8514437120,
+  "device_used_bytes": 8624406528,
+  "peak_device_used_bytes": 8624406528
+ },
+ "texts": [
+  "This is a straightforward technical question about hash tables and collision handling. I should provide a clear, comprehensive explanation of what collisions are and the main strategies for handling them",
+  "The user wants a Python function that checks if a string is a palindrome. A palindrome is a string that reads the same forwards and backwards. I should:\n\n"
+ ],
+ "seconds": [
+  3.8785319328308105,
+  2.4343600273132324
+ ],
+ "s_per_token": 0.09863893687725067,
+ "first_token_s": [
+  1.4611899852752686,
+  0.19693875312805176
+ ],
+ "steady_s_per_token": 0.0750502847856091,
+ "rt": null,
+ "copy_stats": null,
+ "worker_s": 47.0,
+ "memory_end": {
+  "host_peak_rss_bytes": 6612647936,
+  "allocated_bytes": 8520715264,
+  "reserved_bytes": 8619294720,
+  "peak_allocated_bytes": 8594533376,
+  "peak_reserved_bytes": 8619294720,
+  "device_used_bytes": 8758624256,
+  "peak_device_used_bytes": 8758624256
+ },
+ "memopro_report": [],
+ "case": "Qwen3.5-4B__plain",
+ "wall_s": 52.7,
+ "timeline_peak_gpu_used_bytes": 8758755328,
+ "timeline_peak_host_used_bytes": 3411333120
+}

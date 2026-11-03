@@ -1,0 +1,43 @@
+[02:21:18] {"memopro": "0.2.0b4", "torch": "2.11.0+cu130", "transformers": "5.22.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0195_cuda_stream": true}}
+[02:21:42] downloaded unsloth/Llama-3.2-1B-Instruct to local disk only (23s)
+[02:21:42] run Llama-3.2-1B-Instruct__plain
+[02:21:57]   -> ok (15.5s)
+[02:21:57] run Llama-3.2-1B-Instruct__gen
+[02:22:17]   -> ok (19.6s)
+[02:22:17] run Llama-3.2-1B-Instruct__ft_6144
+[02:23:10]   -> ok (53.3s)
+[02:23:10] run Llama-3.2-1B-Instruct__ft_8192
+[02:24:01]   -> ok (50.5s)
+[02:24:21] downloaded unsloth/gemma-3-1b-it to local disk only (21s)
+[02:24:22] run gemma-3-1b-it__plain
+[02:24:42]   -> ok (20.9s)
+[02:24:42] run gemma-3-1b-it__gen
+[02:25:08]   -> ok (25.7s)
+[02:25:08] run gemma-3-1b-it__ft_6144
+[02:26:16]   -> ok (67.9s)
+[02:26:16] run gemma-3-1b-it__ft_8192
+[02:27:25]   -> ok (68.6s)
+[02:27:53] downloaded microsoft/phi-2 to local disk only (29s)
+[02:27:53] run phi-2__plain
+[02:28:31]   -> ok (38.0s)
+[02:28:31] run phi-2__gen
+[02:29:19]   -> ok (48.1s)
+[02:29:19] run phi-2__ft_6144
+[02:30:00]   -> ok (40.8s)
+[02:30:00] run phi-2__ft_8192
+[02:30:39]   -> ok (38.7s)
+[02:30:39] run phi-2__ft_6144_again
+[02:31:18]   -> ok (39.1s)
+[02:31:18] run phi-2__ft_6144_strict
+[02:31:57]   -> ok (39.0s)
+[02:31:57] run phi-2__ft_8192_strict
+[02:32:36]   -> ok (38.4s)
+[02:33:51] downloaded Qwen/Qwen3.5-4B to local disk only (76s)
+[02:33:51] run Qwen3.5-4B__plain
+[02:34:49]   -> ok (57.3s)
+[02:34:49] run Qwen3.5-4B__gen
+[02:36:18]   -> ok (89.1s)
+[02:36:18] run Qwen3.5-4B__ft_6144
+[02:39:12]   -> ok (174.0s)
+[02:39:12] run Qwen3.5-4B__ft_8192
+[02:42:15]   -> ok (182.6s)

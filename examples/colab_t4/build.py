@@ -46,6 +46,7 @@ EXTRA_WORKERS = {
     },
     "unsloth_bits": {"worker_unsloth.py": HERE / "worker_unsloth.py"},
     "families": {"worker_suite.py": HERE / "worker_suite.py"},
+    "diag": {"worker_suite.py": HERE / "worker_suite.py"},
     "e069": {
         "worker_e069.py": HERE / "worker_e069.py",
         "csvgen.py": ROOT / "experiments/e069_validation/csvgen.py",
@@ -163,20 +164,27 @@ memopro로 감싼 Unsloth 학습이 Unsloth 단독과 다른 것이 memopro 때�
 - 준비: 올릴 파일은 없다. 아래 공통 준비의 소스 배포본 업로드는 이 노트북에 필요 없다(`SOURCE_REF = "main"`이 저장소에서 직접 빌드한다).
 - 결과: 맨 위 **Verdict** 한 줄이 결론이다. `MyDrive/memopro_colab/results/unsloth_bits/<실행 id>/summary.md`, 같은 이름의 `.zip`.
 """),
-    "families": ("colab_model_families.ipynb", "cell_families.py", """# E073b: 모델 계열별 범용성 후속 (docs/research/0376)
+    "diag": ("colab_qwen35_diag.ipynb", "cell_diag.py", """# 0377: 스트리밍한 Qwen3.5가 어디서 달라지는가
 
-E073(0375)에서 남은 것만 잰다. Llama·Gemma는 Unsloth의 동의 없는 사본으로 받고, Qwen3.5는 float32 `A_log` 수정 후 다시 돌리고, Phi-2는 torch의 엄격한 결정적 모드로도 학습한다. 모델마다 그냥 올린 실행과 `memopro.generate`, 상한 두 개의 `memopro.finetune`을 돌린다.
+E073b에서 memopro로 스트리밍한 Qwen3.5-4B의 생성 글이 일반 실행과 달랐다(두 번째 프롬프트는 첫 토큰부터). 같은 프롬프트로 일반 모델과 스트리밍 모델의 디코더 층별 출력과 로짓을 비교해 처음 달라지는 층을 찾는다. Qwen3-1.7B(E073에서 같은 글)는 대조군이다.
+
+- 런타임: **T4 GPU**. 예상 시간 15~25분. 토큰은 필요 없다. 모델은 로컬 디스크에만 받는다.
+- 결과: `MyDrive/memopro_colab/results/diag/<실행 id>/summary.md`, 같은 이름의 `.zip`.
+"""),
+    "families": ("colab_model_families.ipynb", "cell_families.py", """# E073c: Qwen3.5-4B 재측정 (docs/research/0378)
+
+E073b(0376)의 일반 실행은 eos(`<|im_end|>`)를 패딩 토큰으로 넘겨, 채팅 프롬프트 속 `<|im_end|>`가 가려졌다(0377). 일반 실행이 `memopro.generate`와 같은 패딩 토큰을 넘기도록 고친 뒤 Qwen3.5-4B만 다시 잰다: 그냥 올린 실행, `memopro.generate`, 상한 두 개의 `memopro.finetune`.
 
 | 판정 | 기준 |
 |---|---|
 | text | 생성 글이 일반 실행과 같음 |
 | gen_ceiling, ft_ceiling | 프로세스 정점이 상한 안 |
-| losses | 상한이 달라도 손실이 비트 동일(Phi-2는 엄격 모드 실행으로) |
+| losses | 상한이 달라도 손실이 비트 동일 |
 | class | full(전부 통과), partial, none, **WRONG**(결과가 다름) |
 
 보고만: losses_default(기본 모드의 상한 간 비교), repeat_same(같은 상한 반복), 첫 토큰 이후 속도 비율.
 
-- 런타임: **T4 GPU**. 예상 시간 30~40분(셀 예산 1시간). 끊기면 다시 실행해 이어 간다.
+- 런타임: **T4 GPU**. 예상 시간 15~25분(셀 예산 1시간). 끊기면 다시 실행해 이어 간다.
 - 토큰이나 라이선스 동의는 필요 없다. 모델은 로컬 디스크에만 받고 다음 모델로 넘어갈 때 지운다. 공통 준비의 소스 배포본 업로드는 필요 없다.
 - 결과: `MyDrive/memopro_colab/results/families/<실행 id>/summary.md`, 같은 이름의 `.zip`.
 """),

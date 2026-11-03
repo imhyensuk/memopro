@@ -1,0 +1,4 @@
+{"t": 1793686579.349368, "case": "Qwen3.5-4B__plain", "status": "ok", "seconds": 52.7}
+{"t": 1793686660.7631795, "case": "Qwen3.5-4B__gen", "status": "ok", "seconds": 81.4}
+{"t": 1793686823.0236156, "case": "Qwen3.5-4B__ft_6144", "status": "ok", "seconds": 162.2}
+{"t": 1793686991.4129107, "case": "Qwen3.5-4B__ft_8192", "status": "ok", "seconds": 168.4}

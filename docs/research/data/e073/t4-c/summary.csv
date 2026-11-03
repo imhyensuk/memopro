@@ -1,0 +1,2 @@
+family,class,text,gen_ceiling,losses,ft_ceiling,losses_default,repeat_same,steady,ratio,peak,note
+Qwen3.5,full,True,True,True,True,True,,0.075 / 0.103,1.37,2.70 GiB,

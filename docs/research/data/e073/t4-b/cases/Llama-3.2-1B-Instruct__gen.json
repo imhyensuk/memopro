@@ -1,0 +1,44 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "gen",
+  "unsloth/Llama-3.2-1B-Instruct",
+  "6442450944",
+  "32"
+ ],
+ "kind": "gen",
+ "model": "unsloth/Llama-3.2-1B-Instruct",
+ "mode": "memopro",
+ "budget": 6442450944,
+ "texts": [
+  "Hash Table Collision Handling\n==========================\n\nA hash table is a data structure that stores key-value pairs in an array using a hash function to map keys to indices",
+  "**Palindrome Checker Function**\n================================\n\nThe following Python function checks whether a given string is a palindrome.\n\n```python\ndef is_palindrome(s: str) ->"
+ ],
+ "seconds": [
+  6.2885143756866455,
+  5.008093595504761
+ ],
+ "s_per_token": 0.17650949954986572,
+ "first_token_s": [
+  4.933839797973633,
+  4.0122411251068115
+ ],
+ "steady_s_per_token": 0.037872337525890726,
+ "ceiling": 6442450944,
+ "worker_s": 16.6,
+ "memory_end": {
+  "host_peak_rss_bytes": 1966321664,
+  "allocated_bytes": 2481198080,
+  "reserved_bytes": 2501902336,
+  "peak_allocated_bytes": 2486985216,
+  "peak_reserved_bytes": 2501902336,
+  "device_used_bytes": 2639134720,
+  "peak_device_used_bytes": 2639134720
+ },
+ "memopro_report": [],
+ "case": "Llama-3.2-1B-Instruct__gen",
+ "wall_s": 19.6,
+ "timeline_peak_gpu_used_bytes": 2639265792,
+ "timeline_peak_host_used_bytes": 3681329152
+}

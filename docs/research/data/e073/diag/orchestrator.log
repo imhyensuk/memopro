@@ -1,0 +1,7 @@
+[05:02:06] {"memopro": "0.2.0b4", "torch": "2.11.0+cu130", "transformers": "5.22.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0195_cuda_stream": true}}
+[05:03:14] downloaded Qwen/Qwen3.5-4B to local disk only (68s)
+[05:03:14] run Qwen3.5-4B__diag
+[05:04:36]   -> ok (81.4s)
+[05:05:05] downloaded Qwen/Qwen3-1.7B to local disk only (29s)
+[05:05:05] run Qwen3-1.7B__diag
+[05:05:34]   -> ok (29.2s)

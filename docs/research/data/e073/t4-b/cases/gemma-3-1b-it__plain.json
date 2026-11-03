@@ -1,0 +1,56 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "lm_gen",
+  "unsloth/gemma-3-1b-it",
+  "plain",
+  "0",
+  "32"
+ ],
+ "kind": "lm_gen",
+ "model": "unsloth/gemma-3-1b-it",
+ "mode": "plain",
+ "budget": 0,
+ "load_s": 6.9,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 2876686336,
+  "allocated_bytes": 2052623360,
+  "reserved_bytes": 2059403264,
+  "peak_allocated_bytes": 2052623360,
+  "peak_reserved_bytes": 2059403264,
+  "device_used_bytes": 2169372672,
+  "peak_device_used_bytes": 2169372672
+ },
+ "texts": [
+  "Okay, let's break down how hash tables handle collisions \u2013 the problem of when multiple keys map to the same index in the table. It's a",
+  "```python\ndef is_palindrome(text):\n  \"\"\"Checks if a string is a palindrome (reads the same backward as forward).\n\n  Args:"
+ ],
+ "seconds": [
+  2.350825548171997,
+  1.9859049320220947
+ ],
+ "s_per_token": 0.06776141375303268,
+ "first_token_s": [
+  0.4985072612762451,
+  0.1104440689086914
+ ],
+ "steady_s_per_token": 0.06010678506666614,
+ "rt": null,
+ "copy_stats": null,
+ "worker_s": 17.1,
+ "memory_end": {
+  "host_peak_rss_bytes": 2876686336,
+  "allocated_bytes": 2061144064,
+  "reserved_bytes": 2082471936,
+  "peak_allocated_bytes": 2065352704,
+  "peak_reserved_bytes": 2082471936,
+  "device_used_bytes": 2219704320,
+  "peak_device_used_bytes": 2219704320
+ },
+ "memopro_report": [],
+ "case": "gemma-3-1b-it__plain",
+ "wall_s": 20.9,
+ "timeline_peak_gpu_used_bytes": 2219835392,
+ "timeline_peak_host_used_bytes": 3408244736
+}
