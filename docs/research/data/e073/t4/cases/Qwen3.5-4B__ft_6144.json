@@ -1,0 +1,32 @@
+{
+ "status": "error",
+ "device": "cuda",
+ "argv": [
+  "ft",
+  "Qwen/Qwen3.5-4B",
+  "6442450944",
+  "10",
+  "512"
+ ],
+ "kind": "ft",
+ "model": "Qwen/Qwen3.5-4B",
+ "mode": "memopro",
+ "budget": 6442450944,
+ "error": "InvalidArgument: model.layers.0.linear_attn.A_log: dtype torch.bfloat16 in the model, torch.float32 in the file (streaming keeps the stored dtype)",
+ "trace": "Traceback (most recent call last):\n  File \"/content/memopro_colab/worker_common.py\", line 136, in guarded\n    main()\n    ~~~~^^\n  File \"/content/memopro_colab/worker_suite.py\", line 335, in main\n    (ft if kind == \"ft\" else gen)(model_id, int(ceiling), *map(int, rest))\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_suite.py\", line 231, in ft\n    r = memopro.finetune(path, lora_texts(tok, steps, seq), tokenizer=tok, budget=ceiling,\n                         seq_len=seq)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/llm.py\", line 315, in finetune\n    m = _streamed(model, budget, device)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/llm.py\", line 90, in _streamed\n    return rtt.stream_model(model, budget=ceiling, runtime=_runtime(ceiling), device=where)\n           ~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 793, in stream_model\n    weights = StreamedWeights(model, rt, regions, device=device)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 361, in __init__\n    raise InvalidArgument(\n    ...<2 lines>...\n    )\nmemopro._errors.InvalidArgument: model.layers.0.linear_attn.A_log: dtype torch.bfloat16 in the model, torch.float32 in the file (streaming keeps the stored dtype)\n",
+ "worker_s": 26.2,
+ "memory_end": {
+  "host_peak_rss_bytes": 2873597952,
+  "allocated_bytes": 0,
+  "reserved_bytes": 0,
+  "peak_allocated_bytes": 0,
+  "peak_reserved_bytes": 0,
+  "device_used_bytes": 109969408,
+  "peak_device_used_bytes": 109969408
+ },
+ "memopro_report": [],
+ "case": "Qwen3.5-4B__ft_6144",
+ "wall_s": 29.8,
+ "timeline_peak_gpu_used_bytes": 110100480,
+ "timeline_peak_host_used_bytes": 4612149248
+}

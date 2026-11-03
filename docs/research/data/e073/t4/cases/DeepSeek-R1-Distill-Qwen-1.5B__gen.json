@@ -1,0 +1,44 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "gen",
+  "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+  "6442450944",
+  "32"
+ ],
+ "kind": "gen",
+ "model": "deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B",
+ "mode": "memopro",
+ "budget": 6442450944,
+ "texts": [
+  "Okay, so I need to explain how a hash table handles collisions. Hmm, I remember that hash tables are data structures that store and retrieve data in an average",
+  "Okay, I need to write a Python function that checks if a string is a palindrome. Let me think about how to approach this.\n\nFirst, what's a"
+ ],
+ "seconds": [
+  10.542951107025146,
+  8.836925506591797
+ ],
+ "s_per_token": 0.30281057208776474,
+ "first_token_s": [
+  8.143589735031128,
+  7.023035526275635
+ ],
+ "steady_s_per_token": 0.06793538216621645,
+ "ceiling": 6442450944,
+ "worker_s": 23.6,
+ "memory_end": {
+  "host_peak_rss_bytes": 1940324352,
+  "allocated_bytes": 3565580288,
+  "reserved_bytes": 3776970752,
+  "peak_allocated_bytes": 3568925696,
+  "peak_reserved_bytes": 3776970752,
+  "device_used_bytes": 3914203136,
+  "peak_device_used_bytes": 3914203136
+ },
+ "memopro_report": [],
+ "case": "DeepSeek-R1-Distill-Qwen-1.5B__gen",
+ "wall_s": 28.2,
+ "timeline_peak_gpu_used_bytes": 3914334208,
+ "timeline_peak_host_used_bytes": 3621175296
+}

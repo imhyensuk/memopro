@@ -1407,6 +1407,24 @@ def test_a_module_reading_a_childs_weight_gets_it_pinned(tmp_path):
     assert torch.equal(rtt.generate(m, ids, **kw), want)
 
 
+def test_a_small_weight_stored_in_another_dtype_is_cast_as_from_pretrained_does(tmp_path):
+    """0376: Qwen3.5-4B stores A_log in float32 in a bf16 model; from_pretrained casts it."""
+    import safetensors.torch as st
+
+    _tiny_qwen(tmp_path, seed=0)
+    path = tmp_path / "model.safetensors"
+    sd = st.load_file(path)
+    name = "model.norm.weight"
+    sd[name] = torch.randn(sd[name].shape, dtype=torch.float32)
+    st.save_file(sd, path, metadata={"format": "pt"})
+    plain = transformers.AutoModelForCausalLM.from_pretrained(tmp_path, dtype="auto").eval()
+    assert plain.get_parameter(name).dtype != torch.float32
+    m = rtt.stream_model(tmp_path, budget="256MiB", device="cpu")
+    ids = torch.tensor([[5, 9, 16, 23]])
+    with torch.no_grad():
+        assert torch.equal(m(input_ids=ids).logits, plain(input_ids=ids).logits)
+
+
 def _cuda_model(whole, cached=0, auto=1 << 30):
     buffers = {0: (types.SimpleNamespace(nbytes=whole), None, None)}
     dropped = []

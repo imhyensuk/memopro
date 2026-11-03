@@ -45,6 +45,7 @@ EXTRA_WORKERS = {
         "classify.py": ROOT / "experiments/e040_workloads/classify.py",
     },
     "unsloth_bits": {"worker_unsloth.py": HERE / "worker_unsloth.py"},
+    "families": {"worker_suite.py": HERE / "worker_suite.py"},
     "e069": {
         "worker_e069.py": HERE / "worker_e069.py",
         "csvgen.py": ROOT / "experiments/e069_validation/csvgen.py",
@@ -161,6 +162,23 @@ memopro로 감싼 Unsloth 학습이 Unsloth 단독과 다른 것이 memopro 때�
 - 런타임: **T4 GPU**. 예상 시간 30~45분(빌드 5~8분, Unsloth 설치 3~6분, 모델이 Drive에 없으면 다운로드).
 - 준비: 올릴 파일은 없다. 아래 공통 준비의 소스 배포본 업로드는 이 노트북에 필요 없다(`SOURCE_REF = "main"`이 저장소에서 직접 빌드한다).
 - 결과: 맨 위 **Verdict** 한 줄이 결론이다. `MyDrive/memopro_colab/results/unsloth_bits/<실행 id>/summary.md`, 같은 이름의 `.zip`.
+"""),
+    "families": ("colab_model_families.ipynb", "cell_families.py", """# E073b: 모델 계열별 범용성 후속 (docs/research/0376)
+
+E073(0375)에서 남은 것만 잰다. Llama·Gemma는 Unsloth의 동의 없는 사본으로 받고, Qwen3.5는 float32 `A_log` 수정 후 다시 돌리고, Phi-2는 torch의 엄격한 결정적 모드로도 학습한다. 모델마다 그냥 올린 실행과 `memopro.generate`, 상한 두 개의 `memopro.finetune`을 돌린다.
+
+| 판정 | 기준 |
+|---|---|
+| text | 생성 글이 일반 실행과 같음 |
+| gen_ceiling, ft_ceiling | 프로세스 정점이 상한 안 |
+| losses | 상한이 달라도 손실이 비트 동일(Phi-2는 엄격 모드 실행으로) |
+| class | full(전부 통과), partial, none, **WRONG**(결과가 다름) |
+
+보고만: losses_default(기본 모드의 상한 간 비교), repeat_same(같은 상한 반복), 첫 토큰 이후 속도 비율.
+
+- 런타임: **T4 GPU**. 예상 시간 30~40분(셀 예산 1시간). 끊기면 다시 실행해 이어 간다.
+- 토큰이나 라이선스 동의는 필요 없다. 모델은 로컬 디스크에만 받고 다음 모델로 넘어갈 때 지운다. 공통 준비의 소스 배포본 업로드는 필요 없다.
+- 결과: `MyDrive/memopro_colab/results/families/<실행 id>/summary.md`, 같은 이름의 `.zip`.
 """),
     "e069": ("colab_e069.ipynb", "cell_e069.py", """# E069 V2: 30GB CSV를 8GB 상한에서 정렬·병합 (docs/research/0356)
 

@@ -1,0 +1,56 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "lm_gen",
+  "HuggingFaceTB/SmolLM3-3B",
+  "plain",
+  "0",
+  "32"
+ ],
+ "kind": "lm_gen",
+ "model": "HuggingFaceTB/SmolLM3-3B",
+ "mode": "plain",
+ "budget": 0,
+ "load_s": 21.5,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 3865665536,
+  "allocated_bytes": 6264493056,
+  "reserved_bytes": 6266290176,
+  "peak_allocated_bytes": 6264493056,
+  "peak_reserved_bytes": 6266290176,
+  "device_used_bytes": 6376259584,
+  "peak_device_used_bytes": 6376259584
+ },
+ "texts": [
+  " What are the different collision resolution techniques? What are the trade-offs between them?\n\nHash tables are a fundamental data structure in computer science, and collisions are a common",
+  " \n\n```python\ndef is_palindrome(s):\n    # Your code here\n    pass\n```\n\nExample usage:\n\n```python\nprint(is_palindrome(\""
+ ],
+ "seconds": [
+  2.3623251914978027,
+  1.8514764308929443
+ ],
+ "s_per_token": 0.06584065034985542,
+ "first_token_s": [
+  0.658379077911377,
+  0.16206574440002441
+ ],
+ "steady_s_per_token": 0.05469213378044867,
+ "rt": null,
+ "copy_stats": null,
+ "worker_s": 30.1,
+ "memory_end": {
+  "host_peak_rss_bytes": 3865665536,
+  "allocated_bytes": 6273013760,
+  "reserved_bytes": 6293553152,
+  "peak_allocated_bytes": 6278689280,
+  "peak_reserved_bytes": 6293553152,
+  "device_used_bytes": 6430785536,
+  "peak_device_used_bytes": 6430785536
+ },
+ "memopro_report": [],
+ "case": "SmolLM3-3B__plain",
+ "wall_s": 34.1,
+ "timeline_peak_gpu_used_bytes": 6430916608,
+ "timeline_peak_host_used_bytes": 3449016320
+}

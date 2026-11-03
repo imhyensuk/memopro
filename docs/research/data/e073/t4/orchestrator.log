@@ -1,0 +1,79 @@
+[09:17:36] {"memopro": "0.2.0b4", "torch": "2.11.0+cu130", "transformers": "5.21.0", "gpu": {"name": "Tesla T4", "total_bytes": 15637086208, "capability": "7.5"}, "build_has": {"0195_cuda_stream": true}}
+[09:17:38] meta-llama/Llama-3.2-1B-Instruct not reached: GatedRepoError: 401 Client Error. (Request ID: Root=1-6ae85532-1ac427934a7f9ce401dfec63;66a20fd5-0640-42dc-a281-ffb5a12e3f13)
+
+Cannot access gated repo for url https://huggingf
+[09:17:39] google/gemma-3-1b-it not reached: GatedRepoError: 401 Client Error. (Request ID: Root=1-6ae85533-42c5ef29478777046f4503fd;8d97e440-b64f-48da-ab9c-d32c0c5c7c2f)
+
+Cannot access gated repo for url https://huggingf
+[09:18:17] downloaded Qwen/Qwen3-1.7B to local disk only (38s)
+[09:18:17] run Qwen3-1.7B__plain
+[09:18:43]   -> ok (26.5s)
+[09:18:43] run Qwen3-1.7B__gen
+[09:19:14]   -> ok (30.7s)
+[09:19:14] run Qwen3-1.7B__ft_6144
+[09:20:26]   -> ok (71.6s)
+[09:20:26] run Qwen3-1.7B__ft_8192
+[09:21:32]   -> ok (66.5s)
+[09:22:06] downloaded deepseek-ai/DeepSeek-R1-Distill-Qwen-1.5B to local disk only (34s)
+[09:22:06] run DeepSeek-R1-Distill-Qwen-1.5B__plain
+[09:22:29]   -> ok (22.9s)
+[09:22:29] run DeepSeek-R1-Distill-Qwen-1.5B__gen
+[09:22:57]   -> ok (28.2s)
+[09:22:57] run DeepSeek-R1-Distill-Qwen-1.5B__ft_6144
+[09:23:59]   -> ok (61.8s)
+[09:23:59] run DeepSeek-R1-Distill-Qwen-1.5B__ft_8192
+[09:25:03]   -> ok (63.4s)
+[09:25:43] downloaded ibm-granite/granite-3.3-2b-instruct to local disk only (40s)
+[09:25:43] run granite-3.3-2b-instruct__plain
+[09:26:14]   -> ok (31.4s)
+[09:26:14] run granite-3.3-2b-instruct__gen
+[09:26:54]   -> ok (39.5s)
+[09:26:54] run granite-3.3-2b-instruct__ft_6144
+[09:28:07]   -> ok (73.0s)
+[09:28:07] run granite-3.3-2b-instruct__ft_8192
+[09:29:20]   -> ok (72.8s)
+[09:30:06] downloaded microsoft/phi-2 to local disk only (46s)
+[09:30:06] run phi-2__plain
+[09:30:41]   -> ok (34.6s)
+[09:30:41] run phi-2__gen
+[09:31:38]   -> ok (57.2s)
+[09:31:38] run phi-2__ft_6144
+[09:32:23]   -> ok (45.1s)
+[09:32:23] run phi-2__ft_8192
+[09:33:04]   -> ok (40.7s)
+[09:34:42] downloaded HuggingFaceTB/SmolLM3-3B to local disk only (98s)
+[09:34:42] run SmolLM3-3B__plain
+[09:35:16]   -> ok (34.1s)
+[09:35:16] run SmolLM3-3B__gen
+[09:36:15]   -> ok (59.0s)
+[09:36:15] run SmolLM3-3B__ft_6144
+[09:37:47]   -> ok (91.3s)
+[09:37:47] run SmolLM3-3B__ft_8192
+[09:39:15]   -> ok (88.1s)
+[09:40:12] downloaded microsoft/Phi-3.5-mini-instruct to local disk only (58s)
+[09:40:12] run Phi-3.5-mini-instruct__plain
+[09:40:55]   -> ok (42.5s)
+[09:40:55] run Phi-3.5-mini-instruct__gen
+[09:41:49]   -> ok (54.4s)
+[09:41:49] run Phi-3.5-mini-instruct__ft_6144
+[09:43:24]   -> ok (94.3s)
+[09:43:24] run Phi-3.5-mini-instruct__ft_8192
+[09:44:59]   -> ok (95.0s)
+[09:46:21] downloaded Qwen/Qwen3.5-4B to local disk only (82s)
+[09:46:21] run Qwen3.5-4B__plain
+[09:47:18]   -> ok (56.9s)
+[09:47:18] run Qwen3.5-4B__gen
+[09:47:30]   -> error (11.9s)
+[09:47:30] run Qwen3.5-4B__ft_6144
+[09:48:00]   -> error (29.8s)
+[09:48:00] run Qwen3.5-4B__ft_8192
+[09:48:29]   -> error (29.1s)
+[09:52:30] downloaded mistralai/Mistral-7B-v0.3 to local disk only (241s)
+[09:52:30] run Mistral-7B-v0.3__plain
+[09:53:46]   -> ok (75.5s)
+[09:53:46] run Mistral-7B-v0.3__gen
+[09:56:06]   -> ok (139.9s)
+[09:56:06] run Mistral-7B-v0.3__ft_6144
+[09:59:41]   -> ok (215.1s)
+[09:59:41] run Mistral-7B-v0.3__ft_8192
+[10:03:18]   -> ok (217.3s)
