@@ -1,22 +1,16 @@
 # ==== SETTINGS (edit here) ===========================================================
-# E073b (pre-registered in docs/research/0376): what E073 (0375, run 20261102-091733) left open.
-# Real models that fit a T4, each through memopro.generate and memopro.finetune next to the plain
-# model. Llama and Gemma come from Unsloth's ungated copies (E073 hit the license gate); Qwen3.5
-# runs with the float32 A_log fix; Phi-2 also trains in torch's strict deterministic mode.
+# E073c (pre-registered in docs/research/0378): Qwen3.5-4B again after 0377. E073b's plain run
+# passed eos (<|im_end|>) as the pad token, so generate masked the <|im_end|> in the chat prompt;
+# the plain run now passes the pad token memopro.generate passes.
 TIME_LIMIT_S = 60 * 60  # cases that would end after this are skipped (setup counts too)
-MODELS = {  # model -> family
-    "unsloth/Llama-3.2-1B-Instruct": "Llama",
-    "unsloth/gemma-3-1b-it": "Gemma 3",
-    "microsoft/phi-2": "Phi",
-    "Qwen/Qwen3.5-4B": "Qwen3.5",
-}
+MODELS = {"Qwen/Qwen3.5-4B": "Qwen3.5"}  # model -> family
 # these also train at both ceilings with MP_STRICT=1 and once more at the first ceiling as before:
-# E073 saw their losses differ from step 2 with a nondeterministic-kernel warning
-STRICT = {"microsoft/phi-2"}
+# E073 saw their losses differ from step 2 with a nondeterministic-kernel warning (E073b)
+STRICT = set()
 CEILINGS = [6 << 30, 8 << 30]  # whole-process host ceilings (bytes), as for 3B in E068
 LORA = {"steps": 10, "seq": 512}
 NEW_TOKENS = 32
-SOURCE_REF = "main"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
+SOURCE_REF = "e073b-diag"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
 PIP_SPEC = "memopro[llm]==0.2.0b4"
 # ==== (settings shared by all cells) ================================================
 DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"

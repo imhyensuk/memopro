@@ -150,9 +150,12 @@ def lm_gen(model_id, mode, budget, new_tokens):
             else:
                 ids = tok(p, return_tensors="pt").input_ids
             ids = ids.to(DEVICE)
+            # the pad token as memopro.generate picks it: generate masks every pad token in the
+            # prompt, and Qwen3.5's eos (<|im_end|>) is in every chat prompt (0377)
+            pad = tok.pad_token_id if tok.pad_token_id is not None else tok.eos_token_id
             with torch.no_grad():
                 out = m.generate(input_ids=ids, max_new_tokens=new_tokens, do_sample=False,
-                                 pad_token_id=tok.eos_token_id, streamer=clocks[-1])
+                                 pad_token_id=pad, streamer=clocks[-1])
             texts.append(tok.decode(out[0, ids.shape[1]:], skip_special_tokens=True))
         else:
             texts.append(memopro.generate(m, p, tokenizer=tok, max_new_tokens=new_tokens,
