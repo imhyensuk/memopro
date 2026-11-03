@@ -1,0 +1,6 @@
+case,status,first_s,steady,step_s,host_peak,gpu_peak,written,offload_folder,device_map
+plain,not run,-,-,-,-,-,-,-,
+accelerate,not run,-,-,-,-,-,-,-,
+memopro_gen,not run,-,-,-,-,-,-,-,
+ft_6144,ok,-,-,190.2,5.90 GiB,14.36 GiB,0.00 GiB,-,
+ft_9216,ok,-,-,182.5,8.92 GiB,14.36 GiB,0.00 GiB,-,

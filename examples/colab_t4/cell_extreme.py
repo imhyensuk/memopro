@@ -2,16 +2,16 @@
 # E074 (pre-registered in docs/research/0379): a model that fits neither the T4 (15 GB) nor the
 # host (12.7 GB). Qwen2.5-14B-Instruct in bf16 is 29.5 GB: loaded normally, with Transformers'
 # device_map="auto" (accelerate offloading to CPU and disk), and through memopro.
-# E074b (0380): run 1 (20261103-070335) passed E1-E2; training ran out of GPU memory and is fixed,
-# so only training runs again.
+# E074b (0380): run 1 (20261103-070335) passed E1-E2; training ran out of GPU memory, was fixed
+# and passed E3-E4 in 20261103-113859.
 TIME_LIMIT_S = 150 * 60  # cases that would end after this are skipped (setup counts too)
 MODEL = "Qwen/Qwen2.5-14B-Instruct"
 CEILINGS = [6 << 30, 9 << 30]  # whole-process host ceilings (bytes) for memopro
 OFFLOAD = {"gpu": 13 << 30, "cpu": 6 << 30}  # accelerate's max_memory: the same host room
 LORA = {"steps": 3, "seq": 512}
 NEW_TOKENS = 16  # one prompt
-PARTS = {"train"}  # of {"gen", "train"}; E074b runs training only
-SOURCE_REF = "e074-extreme"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
+PARTS = {"gen", "train"}
+SOURCE_REF = "main"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
 PIP_SPEC = "memopro[llm]==0.2.0b4"
 # ==== (settings shared by all cells) ================================================
 DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"

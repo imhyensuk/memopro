@@ -121,6 +121,7 @@ memopro는 이 문제를 **메모리 대신 시간을 쓰는 방식**으로 해�
 |---|---|---|
 | 3B 16비트 LoRA (Colab T4) | 6 / 8 GiB | 5.56 / 7.34 GiB |
 | 7B 16비트 LoRA (Colab T4, 7B는 T4에 그냥 안 들어감) | 7 / 9 GiB | 6.36 / 8.37 GiB |
+| 14B 16비트 LoRA (Colab T4, 29.5GB 모델) | 6 / 9 GiB | 5.90 / 8.92 GiB |
 | 영상 묶음, 메모리 절반 (Colab) | 403 MiB | 407 MiB (허용 +32 MiB 안) |
 | scikit-learn, 메모리 절반 (Colab) | 1,220 MiB | 1,222 MiB |
 | 1GB CSV 정렬 (M1, 개발 확인) | 313 MiB | 233 MiB |
@@ -409,6 +410,8 @@ samples = rt.array((48_000 * 60,), "int16", locked=True)  # 압축·스왑되지
 | Mistral-7B LoRA 학습 | NVIDIA T4, 16GB | 예산 4GiB, 약 43토큰/초 |
 | Qwen2.5-7B 생성 (`draft` 사용) | Apple M1, 8GB | 8.95 → 2.37초/토큰, 출력 동일 |
 | Qwen2.5-7B 생성 (초안 없음) | NVIDIA T4, 16GB | 첫 토큰 이후 일반 실행의 1.04배(0.066 대 0.064초/토큰), 출력 동일, 프로세스 최대 2.32GiB(일반 3.58GiB) |
+| Qwen2.5-14B 생성 (29.5GB, 그냥 올리면 GPU 메모리 부족) | NVIDIA T4, 16GB | 상한 6GiB에서 첫 토큰 이후 55.9초/토큰, 프로세스 최대 5.88GiB, 디스크 쓰기 0 (Transformers `device_map="auto"`는 71.3초/토큰, CPU 6GiB 지정에 최대 7.05GiB; 출력 동일) |
+| Qwen2.5-14B LoRA 학습 | NVIDIA T4, 16GB | 상한 6/9GiB에서 512토큰 단계당 약 185초, 손실이 상한과 관계없이 비트 동일 |
 | Qwen2.5-3B LoRA 학습 | Apple M1, 8GB | 20토큰/초 (mlx-tune은 메모리 부족으로 실행 불가) |
 | Qwen2.5-3B LoRA 학습, `mlx_lm.load` 모델 | Apple M1, 8GB | 상한 2.5GiB에서 22.8토큰/초, 손실·어댑터가 mlx-lm 학습과 비트 동일 (mlx-lm 그대로는 1.8토큰/초, 스왑 +0.9GB; mlx-tune은 메모리 부족) |
 | 1.5B~3.8B 모델 (Qwen2.5, SmolLM2, Phi-3.5) | NVIDIA T4, 16GB | 메모리를 충분히 쓴 실행 대비 학습 1.00~1.03배, 생성 1.06~1.35배 시간 |
@@ -419,7 +422,7 @@ samples = rt.array((48_000 * 60,), "int16", locked=True)  # 압축·스왑되지
 
 ### 한계
 
-- 메모리를 크게 넘는 모델은 실행되지만 저장 장치 읽기 속도에 묶여 매우 느립니다. 예를 들어 NVIDIA T4에서 14B 16비트 LoRA는 약 1토큰/초입니다.
+- 메모리를 크게 넘는 모델은 실행되지만 저장 장치 읽기 속도에 묶여 매우 느립니다. 예를 들어 NVIDIA T4에서 14B는 생성이 토큰당 약 1분, 16비트 LoRA가 약 3토큰/초입니다.
 - 모델이 메모리에 들어가는 크기에서는 전용 도구가 훨씬 빠릅니다(T4 3B: Unsloth가 약 11배, M1 1.5B: mlx-tune이 2.6배). memopro의 장점은 들어가지 않는 크기를 결과를 바꾸지 않고 상한 안에서 돌리는 데 있습니다.
 - 코드를 고치지 않은 무작위 접근 작업(pandas 데이터프레임 조작, Polars 등)은 `memopro run`에서 크게 느려지거나 상한을 지키지 못할 수 있습니다. 큰 CSV의 정렬·병합에는 `memopro.sort`/`memopro.join`을 쓰세요.
 - CUDA에서 학습 손실은 상한과 관계없이 같지만, 일반 PyTorch 학습과는 2단계부터 마지막 자리가 다를 수 있습니다.
