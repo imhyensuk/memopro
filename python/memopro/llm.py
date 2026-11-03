@@ -87,9 +87,32 @@ def _streamed(model: Any, budget: Any, device: str) -> Any:
         elif where == "mps":  # what it held must not count as this model's GPU memory
             torch.mps.empty_cache()
         ceiling = resolve_budget(budget)
+        from memopro import _core
+        from memopro.env import HostMemory
+        from memopro.rt import process_footprint
+
+        free = HostMemory(**_core.hwinfo_memory()).usable_bytes
+        message = _swap_risk(ceiling, free, process_footprint() or 0)
+        if message:
+            _note(message)
         return rtt.stream_model(model, budget=ceiling, runtime=_runtime(ceiling), device=where)
     raise InvalidArgument(
         "pass a model name or folder, or a model from memopro.rt.torch.stream_model"
+    )
+
+
+def _swap_risk(ceiling: int, free: int, held: int) -> str | None:
+    """A warning when the ceiling is above what is free now besides what the process holds:
+    memopro keeps within it, but other programs are pushed to swap on the disk to make room
+    (E069 V1, 0382: system swap grew 0.5-1.2 GB at 4-5 GiB ceilings on an 8 GB Mac)."""
+    from memopro._units import format_size
+
+    if ceiling <= free + held:
+        return None
+    return (
+        f"memopro: the ceiling {format_size(ceiling)} is above the {format_size(free + held)} "
+        "free now; memopro stays within it, but the system may swap other programs to the disk "
+        "to make room. Close other programs or pass a smaller budget."
     )
 
 
