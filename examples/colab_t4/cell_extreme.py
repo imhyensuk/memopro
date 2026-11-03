@@ -2,13 +2,16 @@
 # E074 (pre-registered in docs/research/0379): a model that fits neither the T4 (15 GB) nor the
 # host (12.7 GB). Qwen2.5-14B-Instruct in bf16 is 29.5 GB: loaded normally, with Transformers'
 # device_map="auto" (accelerate offloading to CPU and disk), and through memopro.
+# E074b (0380): run 1 (20261103-070335) passed E1-E2; training ran out of GPU memory and is fixed,
+# so only training runs again.
 TIME_LIMIT_S = 150 * 60  # cases that would end after this are skipped (setup counts too)
 MODEL = "Qwen/Qwen2.5-14B-Instruct"
 CEILINGS = [6 << 30, 9 << 30]  # whole-process host ceilings (bytes) for memopro
 OFFLOAD = {"gpu": 13 << 30, "cpu": 6 << 30}  # accelerate's max_memory: the same host room
 LORA = {"steps": 3, "seq": 512}
 NEW_TOKENS = 16  # one prompt
-SOURCE_REF = "main"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
+PARTS = {"train"}  # of {"gen", "train"}; E074b runs training only
+SOURCE_REF = "e074-extreme"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
 PIP_SPEC = "memopro[llm]==0.2.0b4"
 # ==== (settings shared by all cells) ================================================
 DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"
@@ -21,22 +24,23 @@ STAGE_TO_LOCAL = True
 # @@COMMON@@
 # ---------------------------------------------------------------- body
 def extreme_body():
-    config = {"MODEL": MODEL, "CEILINGS": CEILINGS, "OFFLOAD": OFFLOAD, "LORA": LORA,
+    config = {"MODEL": MODEL, "PARTS": sorted(PARTS), "CEILINGS": CEILINGS, "OFFLOAD": OFFLOAD, "LORA": LORA,
               "NEW_TOKENS": NEW_TOKENS, "SOURCE_REF": SOURCE_REF, "PIP_SPEC": PIP_SPEC}
     run, env = bootstrap("extreme", config)
     free_local_models()
     extra = {"MP_MODEL_PATH": fetch_model(MODEL, drive=False), "MP_PROMPTS": "1"}
     steps, seq = LORA["steps"], LORA["seq"]
-    # cheapest first; the plain run is expected to fail while loading
-    case(run, "plain", 300, "worker_suite.py", ["lm_gen", MODEL, "plain", 0, NEW_TOKENS],
-         15 * 60, extra)
-    case(run, "memopro_gen", 1200, "worker_suite.py", ["gen", MODEL, CEILINGS[0], NEW_TOKENS],
-         40 * 60, extra)
-    case(run, "accelerate", 1200, "worker_suite.py",
-         ["offload_gen", MODEL, OFFLOAD["gpu"], OFFLOAD["cpu"], NEW_TOKENS], 40 * 60, extra)
-    for c in CEILINGS:
-        case(run, f"ft_{c // MIB}", 900, "worker_suite.py", ["ft", MODEL, c, steps, seq],
-             30 * 60, {**extra, **DETERMINISTIC})
+    if "gen" in PARTS:  # cheapest first; the plain run is expected to fail while loading
+        case(run, "plain", 300, "worker_suite.py", ["lm_gen", MODEL, "plain", 0, NEW_TOKENS],
+             15 * 60, extra)
+        case(run, "memopro_gen", 1200, "worker_suite.py",
+             ["gen", MODEL, CEILINGS[0], NEW_TOKENS], 40 * 60, extra)
+        case(run, "accelerate", 1200, "worker_suite.py",
+             ["offload_gen", MODEL, OFFLOAD["gpu"], OFFLOAD["cpu"], NEW_TOKENS], 40 * 60, extra)
+    if "train" in PARTS:
+        for c in CEILINGS:
+            case(run, f"ft_{c // MIB}", 900, "worker_suite.py", ["ft", MODEL, c, steps, seq],
+                 30 * 60, {**extra, **DETERMINISTIC})
     free_local_models()
     summarize_extreme(run)
 
@@ -71,11 +75,13 @@ def summarize_extreme(run):
                      "offload_folder": fmt_bytes(r.get("offload_folder_bytes")),
                      "device_map": r.get("device_map", "")})
     same = (gen.get("texts") == acc.get("texts")) if ok(gen) and ok(acc) else None
-    notes = [f"- {k}: {'PASS' if v else 'FAIL'}" for k, v in checks.items()]
+    run_e = {"E1": "gen", "E2": "gen", "E3": "train", "E4": "train"}
+    notes = [f"- {k}: {'PASS' if v else 'FAIL'}" for k, v in checks.items()
+             if run_e[k[:2]] in PARTS]
     notes += [f"Reported: memopro text == accelerate text: {same}.",
               "first_s = first token (pays for loading); steady = s/token after it; step_s = "
               "mean training step after the first; written = /proc/self/io write_bytes.",
-              f"Pre-registered: docs/research/0379 (E074). {built_from()}; elapsed "
+              f"Pre-registered: docs/research/0379 (E074), 0380 (E074b). {built_from()}; elapsed "
               f"{(time.time() - T_START) / 60:.0f} min.", ""]
     notes += [f"- `{k}` ({r.get('status')}): {str(r.get('error') or r.get('why') or '')[:300]}"
               for k, r in sorted(recs.items()) if r.get("status") != "ok"]

@@ -19,6 +19,9 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 - Correction to 0.2.0b4: `finetune` on an Unsloth model is not known to match Unsloth bit for bit. Unsloth differs from itself run to run from the first backward pass, even with deterministic torch; memopro starts from the same adapters and first loss, and its later differences are the same size (E072, 0373).
 - Models streamed by `finetune`/`generate` keep a little of the process ceiling free for what
   grows between two measurements (7B generation peaked 0.95 MiB over 7 GiB).
+- On CUDA `finetune` keeps the largest weight out of the automatic GPU cache: the backward pass
+  copies it in beside the activations (14B on a T4 failed with `CUBLAS_STATUS_ALLOC_FAILED`
+  when its 1.45 GiB output head came in, E074).
 
 ### Fixed: other model families (E073, 0374)
 - A module that reads a child's weight without calling it (Qwen3.5's `self.conv1d.weight`) gets

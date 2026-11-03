@@ -185,6 +185,8 @@ Qwen2.5-14B-Instruct(bf16 29.5GB)는 T4 GPU(15GB)에도, Colab 호스트 메모�
 
 보고만: accelerate의 완주 여부·속도·정점·쓰기, memopro와 accelerate 생성 글의 일치.
 
+**E074b (0380)**: 1차 실행(20261103-070335)은 E1·E2 통과, 학습은 GPU 메모리 부족으로 실패해 고쳤다. `PARTS = {"train"}`으로 학습만 다시 잰다(예상 20~40분).
+
 - 런타임: **T4 GPU**. 예상 시간 1시간 30분~2시간 30분(셀 예산 2시간 30분). 끊기면 다시 실행해 이어 간다.
 - 토큰은 필요 없다. 모델(29.5GB)은 로컬 디스크에만 받고 끝나면 지운다.
 - 결과: `MyDrive/memopro_colab/results/extreme/<실행 id>/summary.md`, 같은 이름의 `.zip`.

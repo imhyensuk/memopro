@@ -1,0 +1,33 @@
+{
+ "status": "error",
+ "device": "cuda",
+ "argv": [
+  "ft",
+  "Qwen/Qwen2.5-14B-Instruct",
+  "9663676416",
+  "3",
+  "512"
+ ],
+ "kind": "ft",
+ "model": "Qwen/Qwen2.5-14B-Instruct",
+ "mode": "memopro",
+ "budget": 9663676416,
+ "error": "RuntimeError: CUDA error: CUBLAS_STATUS_ALLOC_FAILED when calling `cublasCreate(handle)`",
+ "trace": "Traceback (most recent call last):\n  File \"/content/memopro_colab/worker_common.py\", line 141, in guarded\n    main()\n    ~~~~^^\n  File \"/content/memopro_colab/worker_suite.py\", line 445, in main\n    (ft if kind == \"ft\" else gen)(model_id, int(ceiling), *map(int, rest))\n    ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n  File \"/content/memopro_colab/worker_suite.py\", line 236, in ft\n    r = memopro.finetune(path, lora_texts(tok, steps, seq), tokenizer=tok, budget=ceiling,\n                         seq_len=seq)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/llm.py\", line 366, in finetune\n    loss.backward()\n    ~~~~~~~~~~~~~^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/_tensor.py\", line 631, in backward\n    torch.autograd.backward(\n    ~~~~~~~~~~~~~~~~~~~~~~~^\n        self, gradient, retain_graph, create_graph, inputs=inputs\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/autograd/__init__.py\", line 381, in backward\n    _engine_run_backward(\n    ~~~~~~~~~~~~~~~~~~~~^\n        tensors,\n        ^^^^^^^^\n    ...<5 lines>...\n        accumulate_grad=True,\n        ^^^^^^^^^^^^^^^^^^^^^\n    )\n    ^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/autograd/graph.py\", line 869, in _engine_run_backward\n    return Variable._execution_engine.run_backward(  # Calls into the C++ engine to run the backward pass\n           ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\n        t_outputs, *args, **kwargs\n        ^^^^^^^^^^^^^^^^^^^^^^^^^^\n    )  # Calls into the C++ engine to run the backward pass\n    ^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/autograd/function.py\", line 317, in apply\n    return user_fn(self, *args)\n  File \"/usr/local/lib/python3.13/dist-packages/torch/utils/checkpoint.py\", line 308, in backward\n    outputs = ctx.run_function(*detached_inputs)\n  File \"/usr/local/lib/python3.13/dist-packages/memopro/rt/torch.py\", line 1323, in part\n    logits = head(h).float()\n             ~~~~^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1779, in _wrapped_call_impl\n    return self._call_impl(*args, **kwargs)\n           ~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1885, in _call_impl\n    return inner()\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/module.py\", line 1833, in inner\n    result = forward_call(*args, **kwargs)\n  File \"/usr/local/lib/python3.13/dist-packages/torch/nn/modules/linear.py\", line 134, in forward\n    return F.linear(input, self.weight, self.bias)\n           ~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^\nRuntimeError: CUDA error: CUBLAS_STATUS_ALLOC_FAILED when calling `cublasCreate(handle)`\n",
+ "worker_s": 200.1,
+ "memory_end": {
+  "host_peak_rss_bytes": 9022726144,
+  "allocated_bytes": 15139199488,
+  "reserved_bytes": 15447621632,
+  "peak_allocated_bytes": 15143152640,
+  "peak_reserved_bytes": 15447621632,
+  "device_used_bytes": 15610019840,
+  "peak_device_used_bytes": 15610019840
+ },
+ "write_bytes": 4096,
+ "memopro_report": [],
+ "case": "ft_9216",
+ "wall_s": 206.6,
+ "timeline_peak_gpu_used_bytes": 15610150912,
+ "timeline_peak_host_used_bytes": 10991104000
+}

@@ -1,0 +1,6 @@
+case,status,first_s,steady,step_s,host_peak,gpu_peak,written,offload_folder,device_map
+plain,oom,-,-,-,4.83 GiB,14.41 GiB,0.00 GiB,-,
+accelerate,ok,72.2,71.26,-,7.05 GiB,12.68 GiB,0.00 GiB,0.00 GiB,"{'0': 20, 'cpu': 8, 'disk': 24}"
+memopro_gen,ok,199.3,55.95,-,5.88 GiB,14.33 GiB,0.00 GiB,-,
+ft_6144,error,-,-,-,5.44 GiB,14.39 GiB,0.00 GiB,-,
+ft_9216,error,-,-,-,8.40 GiB,14.39 GiB,0.00 GiB,-,

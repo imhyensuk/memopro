@@ -1466,7 +1466,23 @@ def test_generation_gives_the_gpu_cache_the_whole_model_when_it_fits(monkeypatch
     m, dropped = _cuda_model(1900 * mb, cached=1900 * mb)
     m.memopro_weights.gpu_budget = 1900 * mb
     llm._leave_gpu_room(m.memopro_weights)  # training comes next
-    assert m.memopro_weights.gpu_budget == 1 << 30 and dropped
+    assert m.memopro_weights.gpu_budget == 0 and dropped  # the 1.9 GB weight is the largest
+
+
+def test_training_leaves_the_largest_weight_out_of_the_gpu_cache():
+    """0380: 14B on a T4 cached up to its automatic budget, then its 1.45 GiB head was copied in
+    beside the backward pass's activations and cuBLAS could not start."""
+    from memopro import llm
+
+    mb = 1 << 20
+    m, dropped = _cuda_model(300 * mb, auto=4096 * mb)
+    w = m.memopro_weights
+    w.buffers[1] = (types.SimpleNamespace(nbytes=1500 * mb), None, None)  # the head
+    llm._leave_gpu_room(w)
+    assert w.gpu_budget == (4096 - 1500) * mb and dropped
+    w.gpu_budget, w.auto_gpu_budget = 8192 * mb, None  # the user's gpu_budget stands
+    llm._leave_gpu_room(w)
+    assert w.gpu_budget == 8192 * mb
 
 
 def test_an_out_of_memory_with_the_whole_model_kept_retries_with_the_automatic_cache(
