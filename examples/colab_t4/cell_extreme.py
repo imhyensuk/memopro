@@ -12,7 +12,7 @@ LORA = {"steps": 3, "seq": 512}
 NEW_TOKENS = 16  # one prompt
 PARTS = {"gen", "train"}
 SOURCE_REF = "main"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
-PIP_SPEC = "memopro[llm]==0.2.0b4"
+PIP_SPEC = "memopro[llm]==0.2.0"
 # ==== (settings shared by all cells) ================================================
 DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"
 GIT_REF = "main"

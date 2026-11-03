@@ -2,7 +2,10 @@
 
 All notable changes are recorded here. The research log (`docs/research/`) holds the reasons.
 
-## Unreleased
+## 0.2.0
+
+The first 0.2 release: everything in the 0.2.0 betas below, plus 14B on a T4, more model
+families and a swap warning (E069-E074; docs/research/0365-0382).
 
 ### Added: a warning when the ceiling is above the free memory (0382)
 - `finetune` and `generate` warn when the ceiling is above what is free now besides what the
