@@ -423,6 +423,7 @@ Models verified: Qwen2.5 (1.5B–14B), Qwen3, Qwen3.5, Llama 3.2, Gemma 3, Phi-2
 ### Limitations
 
 - Models far larger than memory run, but storage read speed makes them very slow; on an NVIDIA T4, 14B generates about one token a minute and 16-bit LoRA trains at about 3 tokens/s.
+- memopro keeps within its ceiling, but a ceiling above the memory free now makes the system swap other programs to the disk (7B training on an 8 GB M1 at 4-5 GiB: system swap +0.5-1.2 GB); `finetune`/`generate` warn when that happens. Close other programs or lower the ceiling.
 - When the model fits in memory, dedicated tools are much faster (T4 3B: Unsloth about 11x; M1 1.5B: mlx-tune 2.6x). memopro's strength is running what does not fit, unchanged and within the ceiling.
 - Unchanged programs with heavy random access (pandas dataframe work, Polars) can be much slower under `memopro run` or fail to keep the ceiling. Sort and join large CSV files with `memopro.sort`/`memopro.join`.
 - On CUDA, training losses are the same whatever the ceiling but can differ from plain PyTorch training in the last bits from step 2.

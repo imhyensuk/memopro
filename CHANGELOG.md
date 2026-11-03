@@ -4,6 +4,11 @@ All notable changes are recorded here. The research log (`docs/research/`) holds
 
 ## Unreleased
 
+### Added: a warning when the ceiling is above the free memory (0382)
+- `finetune` and `generate` warn when the ceiling is above what is free now besides what the
+  process holds: memopro stays within it, but the system may swap other programs to the disk
+  (E069 V1: 7B LoRA on an 8 GB M1 kept within 4-5 GiB while system swap grew 0.5-1.2 GB).
+
 ### Fixed: CUDA generation with an automatic draft (0366)
 - The automatic draft's GPU plan counts what a verification holds (one target layer and the
   output head at once); a CUDA out-of-memory while drafting with a draft memopro chose now gives

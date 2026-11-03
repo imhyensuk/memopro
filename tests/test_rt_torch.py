@@ -1532,3 +1532,13 @@ def test_a_cuda_draft_must_pay_for_the_cache_it_takes():
     gb = 1 << 30
     assert not llm._draft_pays(15 * gb, 13 * gb, 7 * gb)
     assert llm._draft_pays(30 * gb, 13 * gb, 12 * gb)
+
+
+def test_a_ceiling_above_free_memory_warns_about_swapping_other_programs():
+    """0382: on an 8 GB Mac, 4-5 GiB ceilings kept memopro within them but grew system swap."""
+    from memopro.llm import _swap_risk
+
+    gib = 1 << 30
+    assert _swap_risk(4 * gib, 3 * gib, gib) is None  # what the process holds counts as its room
+    message = _swap_risk(5 * gib, 3 * gib, gib)
+    assert message is not None and "swap" in message and "smaller budget" in message
