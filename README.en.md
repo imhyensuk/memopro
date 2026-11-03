@@ -192,7 +192,7 @@ pip install memopro            # runtime, memopro run, enable, diagnostics
 pip install "memopro[llm]"     # + finetune, generate (PyTorch, Transformers, PEFT)
 ```
 
-The 0.2.0 beta installs with `pip install --pre memopro` (or `"memopro[llm]==0.2.0b4"`). What changed from 0.1.x: [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md), "Upgrading from 0.1.x".
+What changed from 0.1.x: [CHANGELOG](https://github.com/imhyensuk/memopro/blob/main/CHANGELOG.md), "Upgrading from 0.1.x".
 
 | Extra | Includes |
 |---|---|

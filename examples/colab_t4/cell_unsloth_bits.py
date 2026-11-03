@@ -8,7 +8,7 @@ LORA = {"steps": 10, "seq": 512}
 REPEATS = 3  # of each case as it is
 DET_REPEATS = 2  # of each case with deterministic torch
 SOURCE_REF = "main"  # build this branch of the repository (0354); a wheel is needed in the venv
-PIP_SPEC = "memopro[llm]==0.2.0b4"
+PIP_SPEC = "memopro[llm]==0.2.0"
 # ==== (settings shared by all cells) ================================================
 DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"
 GIT_REF = "main"

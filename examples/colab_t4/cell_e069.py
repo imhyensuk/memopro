@@ -11,7 +11,7 @@ CASES = ["s_mp", "s_gnu", "s_duck", "j_mp", "j_duck"]
 CASE_TIMEOUT_S = 90 * 60
 DATA_DIR = "/content/e069data"  # local disk (the input is read again, so not Drive)
 SOURCE_REF = "main"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
-PIP_SPEC = "memopro==0.2.0b4"
+PIP_SPEC = "memopro==0.2.0"
 # ==== (settings shared by all cells) ================================================
 DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"
 GIT_REF = "main"
