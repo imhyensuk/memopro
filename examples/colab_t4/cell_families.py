@@ -10,7 +10,7 @@ STRICT = set()
 CEILINGS = [6 << 30, 8 << 30]  # whole-process host ceilings (bytes), as for 3B in E068
 LORA = {"steps": 10, "seq": 512}
 NEW_TOKENS = 32
-SOURCE_REF = "e073b-diag"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
+SOURCE_REF = "main"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
 PIP_SPEC = "memopro[llm]==0.2.0b4"
 # ==== (settings shared by all cells) ================================================
 DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"
@@ -112,7 +112,7 @@ def summarize_families(run, not_reached):
              "steady = s/token after the first token, plain / memopro.",
              "losses = strict runs where there are any; losses_default = default runs across "
              "ceilings; repeat_same = the first ceiling's default run against its repeat.",
-             f"Pre-registered: docs/research/0376 (E073b). {built_from()}; elapsed "
+             f"Pre-registered: docs/research/0378 (E073c). {built_from()}; elapsed "
              f"{(time.time() - T_START) / 60:.0f} min.", ""]
     errors = [(k, r) for k, r in sorted(recs.items()) if r.get("status") != "ok"]
     notes += [f"- `{k}` ({r.get('status')}): {str(r.get('error') or r.get('why') or '')[:300]}"
@@ -120,7 +120,7 @@ def summarize_families(run, not_reached):
     cols = [(c, lambda r, c=c: r[c]) for c in ("family", "class", "text", "gen_ceiling", "losses",
                                                "ft_ceiling", "losses_default", "repeat_same",
                                                "steady", "ratio", "peak", "note")]
-    return write_summary(run, "E073b: model families on a T4", cols, rows, notes)
+    return write_summary(run, "E073c: model families on a T4", cols, rows, notes)
 
 
 families_body()

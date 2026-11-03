@@ -5,7 +5,7 @@
 TIME_LIMIT_S = 40 * 60  # cases that would end after this are skipped (setup counts too)
 MODELS = ["Qwen/Qwen3.5-4B", "Qwen/Qwen3-1.7B"]
 CEILING = 6 << 30
-SOURCE_REF = "e073b-diag"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
+SOURCE_REF = "main"  # build this branch of the repository (0354); "" = PIP_SPEC from PyPI
 PIP_SPEC = "memopro[llm]==0.2.0b4"
 # ==== (settings shared by all cells) ================================================
 DRIVE_ROOT = "/content/drive/MyDrive/memopro_colab"

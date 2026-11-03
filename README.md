@@ -415,7 +415,7 @@ samples = rt.array((48_000 * 60,), "int16", locked=True)  # 압축·스왑되지
 | NumPy·scikit-learn·CSV 처리, 필요 메모리의 50~75% 상한 | Linux | 결과 동일, 1.1~3.4배 시간 |
 | 같은 3B LoRA, 모델이 GPU에 들어가는 크기 | NVIDIA T4 | Unsloth 0.45초/스텝 대 memopro 5.1초/스텝 (Unsloth가 약 11배 빠름) |
 
-검증한 모델: Qwen2.5(1.5B~14B), SmolLM2, Phi-3.5, Mistral-7B, DINOv2, ConvNeXtV2, ResNet-152. 원시 결과는 [`docs/research/data/`](docs/research/data/)에 있습니다.
+검증한 모델: Qwen2.5(1.5B~14B), Qwen3, Qwen3.5, Llama 3.2, Gemma 3, Phi-2, Phi-3, Phi-3.5, Granite, SmolLM2, SmolLM3, DeepSeek-R1-Distill(Qwen 구조), Mistral-7B, DINOv2, ConvNeXtV2, ResNet-152. 원시 결과는 [`docs/research/data/`](docs/research/data/)에 있습니다.
 
 ### 한계
 

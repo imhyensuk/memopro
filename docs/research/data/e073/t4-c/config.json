@@ -1,0 +1,18 @@
+{
+ "MODELS": {
+  "Qwen/Qwen3.5-4B": "Qwen3.5"
+ },
+ "STRICT": [],
+ "CEILINGS": [
+  6442450944,
+  8589934592
+ ],
+ "LORA": {
+  "steps": 10,
+  "seq": 512
+ },
+ "NEW_TOKENS": 32,
+ "SOURCE_REF": "e073b-diag",
+ "PIP_SPEC": "memopro[llm]==0.2.0b4",
+ "COMMIT": "17e2fbbbbeeb"
+}
