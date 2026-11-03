@@ -1,0 +1,56 @@
+{
+ "status": "ok",
+ "device": "cuda",
+ "argv": [
+  "lm_gen",
+  "Qwen/Qwen3.5-4B",
+  "plain",
+  "0",
+  "32"
+ ],
+ "kind": "lm_gen",
+ "model": "Qwen/Qwen3.5-4B",
+ "mode": "plain",
+ "budget": 0,
+ "load_s": 37.6,
+ "memory_after_load": {
+  "host_peak_rss_bytes": 3888111616,
+  "allocated_bytes": 8512194560,
+  "reserved_bytes": 8514437120,
+  "peak_allocated_bytes": 8512194560,
+  "peak_reserved_bytes": 8514437120,
+  "device_used_bytes": 8624406528,
+  "peak_device_used_bytes": 8624406528
+ },
+ "texts": [
+  "This is a straightforward technical question about hash tables and collision handling. I should provide a clear, comprehensive explanation of the different collision resolution strategies used in hash tables.",
+  "Thinking Process:\n\n1.  **Analyze the Request:**\n    *   Task: Write a Python function.\n    *   Functionality: Check"
+ ],
+ "seconds": [
+  4.362759113311768,
+  2.5235774517059326
+ ],
+ "s_per_token": 0.10759900882840157,
+ "first_token_s": [
+  1.8770902156829834,
+  0.22194170951843262
+ ],
+ "steady_s_per_token": 0.07717758993948659,
+ "rt": null,
+ "copy_stats": null,
+ "worker_s": 51.6,
+ "memory_end": {
+  "host_peak_rss_bytes": 3888111616,
+  "allocated_bytes": 8520715264,
+  "reserved_bytes": 8619294720,
+  "peak_allocated_bytes": 8594683392,
+  "peak_reserved_bytes": 8619294720,
+  "device_used_bytes": 8758624256,
+  "peak_device_used_bytes": 8758624256
+ },
+ "memopro_report": [],
+ "case": "Qwen3.5-4B__plain",
+ "wall_s": 57.3,
+ "timeline_peak_gpu_used_bytes": 8758755328,
+ "timeline_peak_host_used_bytes": 3845861376
+}

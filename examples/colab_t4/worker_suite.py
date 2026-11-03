@@ -325,7 +325,67 @@ def vis_lora(model_id, mode, budget, steps, batch):
            rt=m.base_model.model.memopro_runtime.stats() if streamed else None)
 
 
+def diag(model_id, ceiling):
+    """0377: where a streamed model's forward first differs from the plain one. Each decoder
+    layer's output (last position) and the logits of each prompt, plain then streamed."""
+    import transformers
+
+    import memopro.rt.torch as rtt
+
+    path = model_path(model_id)
+    tok = transformers.AutoTokenizer.from_pretrained(path)
+    ids = []
+    for p in PROMPTS:
+        x = tok.apply_chat_template([{"role": "user", "content": p}], add_generation_prompt=True,
+                                    return_tensors="pt")
+        ids.append((x["input_ids"] if hasattr(x, "keys") else x).to(DEVICE))
+
+    def trace(m):
+        layers = m.get_decoder().layers
+        seen = []
+        hooks = [layer.register_forward_hook(
+            lambda _m, _a, out: seen.append((out[0] if isinstance(out, tuple) else out)[0, -1]
+                                            .float().cpu())) for layer in layers]
+        runs = []
+        for x in ids:
+            seen.clear()
+            with torch.no_grad():
+                logits = m(input_ids=x).logits[0, -1].float().cpu()
+            runs.append((list(seen), logits))
+        for h in hooks:
+            h.remove()
+        return runs
+
+    def odd_dtypes(m):
+        return sorted({f"{n.rsplit('.', 1)[-1]}:{p.dtype}" for n, p in m.named_parameters()
+                       if p.dtype != m.dtype and p.device.type != "meta"})
+
+    plain = transformers.AutoModelForCausalLM.from_pretrained(path, dtype="auto").to(DEVICE).eval()
+    RESULT["plain_class"], RESULT["plain_odd_dtypes"] = type(plain).__name__, odd_dtypes(plain)
+    want = trace(plain)
+    del plain
+    cleanup()
+    m = rtt.stream_model(path, budget=ceiling, device=DEVICE)
+    RESULT["streamed_class"], RESULT["streamed_odd_dtypes"] = type(m).__name__, odd_dtypes(m)
+    got = trace(m)
+    out = []
+    for (wl, wlog), (gl, glog) in zip(want, got, strict=True):
+        diffs = [float((a - b).abs().max()) for a, b in zip(wl, gl, strict=True)]
+        top = torch.topk(wlog, 2).values
+        out.append({"first_layer_differs": next((i for i, d in enumerate(diffs) if d), None),
+                    "layer_max_abs": [round(d, 6) for d in diffs],
+                    "logits_max_abs": float((wlog - glog).abs().max()),
+                    "argmax": [int(wlog.argmax()), int(glog.argmax())],
+                    "plain_top2_margin": float(top[0] - top[1])})
+    finish(prompts=out)
+
+
 def main():
+    if sys.argv[1] == "diag":  # <model> <ceiling> (0377)
+        RESULT.update(kind="diag", model=sys.argv[2], budget=int(sys.argv[3]))
+        diag(sys.argv[2], int(sys.argv[3]))
+        cleanup()
+        return
     if sys.argv[1] in ("ft", "gen"):  # the public API: <model> <ceiling> <...> (E068)
         kind, model_id, ceiling, *rest = sys.argv[1:]
         RESULT.update(kind=kind, model=model_id, mode="memopro", budget=int(ceiling))

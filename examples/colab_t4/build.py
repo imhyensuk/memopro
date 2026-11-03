@@ -46,6 +46,7 @@ EXTRA_WORKERS = {
     },
     "unsloth_bits": {"worker_unsloth.py": HERE / "worker_unsloth.py"},
     "families": {"worker_suite.py": HERE / "worker_suite.py"},
+    "diag": {"worker_suite.py": HERE / "worker_suite.py"},
     "e069": {
         "worker_e069.py": HERE / "worker_e069.py",
         "csvgen.py": ROOT / "experiments/e069_validation/csvgen.py",
@@ -162,6 +163,13 @@ memopro로 감싼 Unsloth 학습이 Unsloth 단독과 다른 것이 memopro 때�
 - 런타임: **T4 GPU**. 예상 시간 30~45분(빌드 5~8분, Unsloth 설치 3~6분, 모델이 Drive에 없으면 다운로드).
 - 준비: 올릴 파일은 없다. 아래 공통 준비의 소스 배포본 업로드는 이 노트북에 필요 없다(`SOURCE_REF = "main"`이 저장소에서 직접 빌드한다).
 - 결과: 맨 위 **Verdict** 한 줄이 결론이다. `MyDrive/memopro_colab/results/unsloth_bits/<실행 id>/summary.md`, 같은 이름의 `.zip`.
+"""),
+    "diag": ("colab_qwen35_diag.ipynb", "cell_diag.py", """# 0377: 스트리밍한 Qwen3.5가 어디서 달라지는가
+
+E073b에서 memopro로 스트리밍한 Qwen3.5-4B의 생성 글이 일반 실행과 달랐다(두 번째 프롬프트는 첫 토큰부터). 같은 프롬프트로 일반 모델과 스트리밍 모델의 디코더 층별 출력과 로짓을 비교해 처음 달라지는 층을 찾는다. Qwen3-1.7B(E073에서 같은 글)는 대조군이다.
+
+- 런타임: **T4 GPU**. 예상 시간 15~25분. 토큰은 필요 없다. 모델은 로컬 디스크에만 받는다.
+- 결과: `MyDrive/memopro_colab/results/diag/<실행 id>/summary.md`, 같은 이름의 `.zip`.
 """),
     "families": ("colab_model_families.ipynb", "cell_families.py", """# E073b: 모델 계열별 범용성 후속 (docs/research/0376)
 

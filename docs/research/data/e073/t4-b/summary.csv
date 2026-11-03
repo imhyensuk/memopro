@@ -1,0 +1,5 @@
+family,class,text,gen_ceiling,losses,ft_ceiling,losses_default,repeat_same,steady,ratio,peak,note
+Llama,full,True,True,True,True,True,,0.030 / 0.038,1.26,1.89 GiB,
+Gemma 3,full,True,True,True,True,True,,0.060 / 0.079,1.32,2.07 GiB,
+Phi,full,True,True,True,True,False,False,0.043 / 0.045,1.04,1.79 GiB,
+Qwen3.5,WRONG,False,True,True,True,True,,0.077 / 0.106,1.37,2.69 GiB,

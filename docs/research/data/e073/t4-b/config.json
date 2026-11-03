@@ -1,0 +1,23 @@
+{
+ "MODELS": {
+  "unsloth/Llama-3.2-1B-Instruct": "Llama",
+  "unsloth/gemma-3-1b-it": "Gemma 3",
+  "microsoft/phi-2": "Phi",
+  "Qwen/Qwen3.5-4B": "Qwen3.5"
+ },
+ "STRICT": [
+  "microsoft/phi-2"
+ ],
+ "CEILINGS": [
+  6442450944,
+  8589934592
+ ],
+ "LORA": {
+  "steps": 10,
+  "seq": 512
+ },
+ "NEW_TOKENS": 32,
+ "SOURCE_REF": "e073-families",
+ "PIP_SPEC": "memopro[llm]==0.2.0b4",
+ "COMMIT": "0df206899b57"
+}
