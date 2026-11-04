@@ -1,7 +1,7 @@
 한국어 · [English](README.en.md)
 
 <p align="center">
-  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/banner.svg" alt="memopro: 메모리보다 큰 작업을, 정한 상한 안에서, 결과 그대로" width="100%">
+  <img src="docs/images/banner.svg" alt="memopro: 메모리보다 큰 작업을, 정한 상한 안에서, 결과 그대로" width="100%">
 </p>
 
 <p align="center">
@@ -30,16 +30,37 @@
 
 ## 목차
 
-- [Phase 1. 첫인상과 철학](#문제)
-  - [문제](#문제) · [해결 방식](#해결-방식) · [측정 결과 한눈에 보기](#측정-결과-한눈에-보기) · [주요 기능](#주요-기능) · [보장 사항과 다섯 가지 원칙](#보장-사항과-다섯-가지-원칙) · [주요 대상](#주요-대상) · [다른 도구와의 관계](#다른-도구와의-관계)
-- [Phase 2. 시작하기](#플랫폼-지원)
-  - [플랫폼 지원](#플랫폼-지원) · [요구 사항](#요구-사항) · [설치](#설치) · [빠른 시작](#빠른-시작)
-- [Phase 3. 상세 명세](#예산-형식과-설정)
-  - [예산 형식과 설정](#예산-형식과-설정) · [명령줄](#명령줄-cli) · [Python·Rust·C API](#pythonrustc-api) · [런타임 API](#런타임-api) · [고급 사용법](#고급-사용법) · [예제 디렉터리](#예제-디렉터리) · [0.1.x에서 바뀐 API](#01x에서-바뀐-api)
-- [Phase 4. 성능과 내부 구조](#벤치마크)
-  - [벤치마크](#벤치마크) · [동작 원리](#동작-원리) · [한계](#한계) · [자주 묻는 질문과 문제 해결](#자주-묻는-질문과-문제-해결)
-- [Phase 5. 프로젝트 관리](#기여-방법)
-  - [기여 방법](#기여-방법) · [인용](#인용) · [라이선스](#라이선스) · [버전 변경 이력](#버전-변경-이력)
+- **Phase 1. 첫인상과 철학**
+  - [문제](#문제)
+  - [해결 방식](#해결-방식)
+  - [측정 결과 한눈에 보기](#측정-결과-한눈에-보기)
+  - [주요 기능](#주요-기능)
+  - [보장 사항과 다섯 가지 원칙](#보장-사항과-다섯-가지-원칙)
+  - [주요 대상](#주요-대상)
+  - [다른 도구와의 관계](#다른-도구와의-관계)
+- **Phase 2. 시작하기**
+  - [플랫폼 지원](#플랫폼-지원)
+  - [요구 사항](#요구-사항)
+  - [설치](#설치)
+  - [빠른 시작](#빠른-시작)
+- **Phase 3. 상세 명세**
+  - [예산 형식과 설정](#예산-형식과-설정)
+  - [명령줄 (CLI)](#명령줄-cli)
+  - [Python·Rust·C API](#pythonrustc-api)
+  - [런타임 API](#런타임-api)
+  - [고급 사용법](#고급-사용법)
+  - [예제 디렉터리](#예제-디렉터리)
+  - [0.1.x에서 바뀐 API](#01x에서-바뀐-api)
+- **Phase 4. 성능과 내부 구조**
+  - [벤치마크](#벤치마크)
+  - [동작 원리](#동작-원리)
+  - [한계](#한계)
+  - [자주 묻는 질문과 문제 해결](#자주-묻는-질문과-문제-해결)
+- **Phase 5. 프로젝트 관리**
+  - [기여 방법](#기여-방법)
+  - [인용](#인용)
+  - [라이선스](#라이선스)
+  - [버전 변경 이력](#버전-변경-이력)
 
 ---
 
@@ -54,6 +75,7 @@
 > - **양자화**(4비트·8비트): 메모리는 줄지만 모델의 출력과 정확도가 바뀝니다. 원래 모델로 얻은 결과와 비교할 수 없습니다.
 > - **운영체제 스왑**: 결과는 같지만 사용량을 제한할 수 없습니다. 실행 중에 SSD에 수 GB를 반복해서 쓰고, 심하면 시스템 전체가 멈춥니다.
 > - **모델별 오프로딩 도구**: 특정 모델이나 작업에만 쓸 수 있고, 지정한 메모리를 넘기도 합니다. 예를 들어 Transformers의 `device_map="auto"`는 CPU 메모리를 6GiB로 지정해도 14B 모델 생성에서 7.05GiB를 썼습니다.
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 해결 방식
 
@@ -66,6 +88,7 @@
 > - **입력이 그대로 남아 있는 계산 결과**: 비웠다가 다시 계산합니다.
 >
 > 상한은 memopro가 쥔 메모리만이 아니라 Python·PyTorch·토크나이저까지 포함한 **프로세스 전체**에 걸립니다. 지킬 수 없는 상한은 실행 전에 거절하고, 어느 상한이면 되는지 알려 줍니다.
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 측정 결과 한눈에 보기
 
@@ -81,14 +104,15 @@
 | 다른 메모리가 스왑되는 중의 **실시간 오디오** | 일반 버퍼: 마감 초과(끊김) 3번 | `locked=True` 버퍼: 끊김 0번 |
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/fit-8gb-dark.svg">
-  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/fit-8gb.svg" alt="8GB MacBook Air M1에서 Qwen2.5 1.5B, 3B, 7B의 16비트 LoRA: 3B부터 mlx-tune은 메모리 부족, memopro는 7B(가중치 15GB)까지 학습" width="720">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/fit-8gb-dark.svg">
+  <img src="docs/images/fit-8gb.svg" alt="8GB MacBook Air M1에서 Qwen2.5 1.5B, 3B, 7B의 16비트 LoRA: 3B부터 mlx-tune은 메모리 부족, memopro는 7B(가중치 15GB)까지 학습" width="720">
 </picture>
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/extreme-14b-t4-dark.svg">
-  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/extreme-14b-t4.svg" alt="T4에서 Qwen2.5-14B 생성: 그냥 올리면 GPU 메모리 부족, device_map auto는 토큰당 71.3초에 호스트 7.05GiB, memopro는 토큰당 55.9초에 5.88GiB(6GiB 지정)" width="720">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/extreme-14b-t4-dark.svg">
+  <img src="docs/images/extreme-14b-t4.svg" alt="T4에서 Qwen2.5-14B 생성: 그냥 올리면 GPU 메모리 부족, device_map auto는 토큰당 71.3초에 호스트 7.05GiB, memopro는 토큰당 55.9초에 5.88GiB(6GiB 지정)" width="720">
 </picture>
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 주요 기능
 
@@ -104,6 +128,7 @@
 | 메모리보다 큰 CSV 정렬·병합 | `memopro.sort` / `memopro.join`: 중간 파일을 디스크에 쓰지 않고 상한 안에서 |
 | 예산 런타임 | 큰 배열·텐서·모듈·옵티마이저를 상한 안에서 관리하는 Python·Rust·C API. `locked=True`로 실시간 버퍼를 RAM에 고정 |
 | 스왑 위험 경고 | 상한이 지금 비어 있는 메모리보다 크면 다른 프로그램이 스왑될 수 있다고 시작 시 경고 |
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 보장 사항과 다섯 가지 원칙
 
@@ -120,6 +145,7 @@
 > 3. **작고 직관적인 API**: 진입점과 설정을 적게 둡니다. 복잡한 옵션 조합을 만들지 않습니다.
 > 4. **사용자 원본과 비트 동일**: memopro를 적용해도 결과와 품질이 바뀌지 않습니다. 사용자가 내려받은 양자화 모델은 그 자체가 원본이고, 그대로 재현합니다. 손실 모드는 없습니다.
 > 5. **속도를 위한 연구**: 결과를 바꾸지 않는 범위에서 더 빠르게 만들기 위해 새 알고리즘·구조·커널을 연구합니다.
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 주요 대상
 
@@ -130,6 +156,7 @@
 | 데이터 과학 | RAM보다 큰 NumPy 배열, scikit-learn 전처리 스크립트를 수정 없이 실행. 메모리보다 큰 CSV 정렬·병합 |
 | 교육·개인 학습 | 8GB 노트북, 무료 클라우드 GPU처럼 메모리가 작은 환경에서 큰 모델 실습 |
 | 실시간·시스템 개발 | 오디오처럼 기다리면 안 되는 버퍼를 RAM에 고정. Rust·C 프로그램에 상한을 지키는 버퍼 런타임 내장 |
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 다른 도구와의 관계
 
@@ -151,6 +178,8 @@ memopro는 "들어가지 않는 크기를, 결과를 바꾸지 않고, 상한 �
 | mlx-lm (`mlx_lm.load`) | 불러온 모델과 `tokenizer=` | mlx-lm의 LoRA 층·손실로 학습하고, 상한에 맞지 않는 층만 파일에서 다시 읽음. 결과는 mlx-lm 학습과 같음 |
 | 양자화 모델 (bitsandbytes 등) | `memopro.load(..., quantization_config=...)` | 사용자가 준 설정 그대로 불러오기. 그 모델이 원본이 됨 |
 
+<p align="right"><a href="#목차">↑ 목차로</a></p>
+
 ---
 
 # Phase 2. 시작하기
@@ -165,6 +194,7 @@ memopro는 "들어가지 않는 크기를, 결과를 바꾸지 않고, 상한 �
 | Windows x86_64 | CPU 기능 (LLM 학습·생성, `sort`/`join`, 런타임) | `memopro run`의 투명 페이징과 `locked=True`는 미지원 |
 
 측정에 쓴 환경은 8GB MacBook Air M1, Colab T4(GPU 15GB, RAM 12.7GB), GitHub Actions Linux 러너입니다. Windows는 CI에서 시험합니다. 설계는 메모리 크기에 의존하지 않습니다.
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 요구 사항
 
@@ -177,6 +207,7 @@ memopro는 "들어가지 않는 크기를, 결과를 바꾸지 않고, 상한 �
 | 메모리 | 제한 없음. 상한은 기계 메모리 안에서 사용자가 정함 |
 | 디스크 | 모델을 처음 내려받을 공간(예: 7B 16비트는 15.2GB). 실행 중에는 쓰지 않음 |
 | GPU | 선택 사항. Apple silicon GPU 또는 NVIDIA CUDA GPU(T4에서 검증) |
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 설치
 
@@ -211,6 +242,7 @@ cargo build -p memopro-c --release
 # 헤더: crates/memopro-c/include/memopro.h
 # 라이브러리: target/release/libmemopro_c.{so,dylib,a}
 ```
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 빠른 시작
 
@@ -300,6 +332,8 @@ mp_unpin(p);
 mp_runtime_free(rt);
 ```
 
+<p align="right"><a href="#목차">↑ 목차로</a></p>
+
 ---
 
 # Phase 3. 상세 명세
@@ -341,6 +375,7 @@ memopro.configure(budget="6GB", download="never")
 with memopro.using(budget="2GB"):
     memopro.generate("Qwen/Qwen2.5-1.5B-Instruct", "Hello")
 ```
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 명령줄 (CLI)
 
@@ -364,6 +399,7 @@ memopro --version
 | `run --keep-mps-heap` | Apple silicon: MPS 메모리 설정으로 다시 시작하지 않음 |
 
 종료 코드는 0(성공), 1(memopro 오류), 2(사용법 오류), 3(구현되지 않음)입니다.
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## Python·Rust·C API
 
@@ -409,6 +445,7 @@ memopro --version
 | `mp_version`, `mp_abi_version`, `mp_last_error` | 버전과 마지막 오류 |
 
 모든 `int` 반환 함수는 `MP_OK`(0) 또는 음수 오류 코드(`MP_ERR_BUDGET`, `MP_ERR_INTEGRITY` 등)를 돌려줍니다. 모든 함수는 스레드에 안전합니다.
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 런타임 API
 
@@ -428,6 +465,7 @@ Python 런타임(`memopro.rt`)은 큰 배열·텐서를 직접 상한 안에 맡
 | `memopro.rt.torch.generate(model, input_ids, *, draft=None, **kwargs)` | 일반 greedy `generate`와 같은 출력의 초안 검증 생성 |
 | `memopro.rt.torch.causal_lm_loss`, `enable_checkpointing`, `saved_weights` | 흘려 쓰는 모델로 직접 학습 루프를 짤 때 쓰는 손실·체크포인트·가중치 참조 도구 |
 | `memopro.rt.process_footprint()` / `process_peak_footprint()` | 현재·최대 프로세스 메모리 |
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 고급 사용법
 
@@ -540,6 +578,7 @@ samples = rt.array((48_000 * 60,), "int16", locked=True)  # 압축·스왑되지
 ### Apple GPU 메모리 설정
 
 Apple GPU에서는 `finetune`·`stream_model`을 다른 MPS 연산보다 먼저 호출해야 합니다. 그래야 memopro가 PyTorch MPS 할당기의 여유 힙(약 1GiB)을 줄이는 설정을 적용할 수 있습니다. `memopro run`은 이 설정을 자동으로 적용해 스크립트를 다시 시작합니다.
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 예제 디렉터리
 
@@ -557,6 +596,7 @@ Apple GPU에서는 `finetune`·`stream_model`을 다른 MPS 연산보다 먼저 
 | [`docs/guide/`](docs/guide/README.md) | 사용 안내서 (설치부터 동작 방식까지) |
 
 Colab 노트북은 결과를 Google Drive에 저장하고, 끊겼다가 다시 실행하면 이어서 잽니다.
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 0.1.x에서 바뀐 API
 
@@ -582,6 +622,8 @@ Colab 노트북은 결과를 Google Drive에 저장하고, 끊겼다가 다시 �
 | `memopro run` | 코드 수정 없는 상한 실행 (Linux, macOS) |
 | Windows wheel | CPU 기능 |
 
+<p align="right"><a href="#목차">↑ 목차로</a></p>
+
 ---
 
 # Phase 4. 성능과 내부 구조
@@ -591,8 +633,8 @@ Colab 노트북은 결과를 Google Drive에 저장하고, 끊겼다가 다시 �
 ### 8GB Mac에서 7B 학습의 메모리 변화
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/train-7b-8gb-dark.svg">
-  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/train-7b-8gb.svg" alt="8GB M1에서 Qwen2.5-7B 16비트 LoRA의 프로세스 메모리 시간축: 상한 4, 5, 5.5GiB 모두 상한 아래" width="720">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/train-7b-8gb-dark.svg">
+  <img src="docs/images/train-7b-8gb.svg" alt="8GB M1에서 Qwen2.5-7B 16비트 LoRA의 프로세스 메모리 시간축: 상한 4, 5, 5.5GiB 모두 상한 아래" width="720">
 </picture>
 
 15.2GB 모델을 8GB 기계에서 학습하는 동안, 프로세스 메모리는 매 단계 가중치를 읽고 비우며 오르내리고 상한(점선)을 넘지 않습니다. 2,048토큰 학습은 주의(attention) 점수 때문에 역전파 구간에서 상한 가까이 머뭅니다.
@@ -606,8 +648,8 @@ Colab 노트북은 결과를 Google Drive에 저장하고, 끊겼다가 다시 �
 ### 8GB Mac에서 메모리보다 큰 생성
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/generation-8gb-dark.svg">
-  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/generation-8gb.svg" alt="토큰당 시간: 3B는 llama.cpp CPU 14.75초 대 memopro 1.09초, 7B는 초안 없이 8.95초에서 초안으로 2.37초" width="720">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/generation-8gb-dark.svg">
+  <img src="docs/images/generation-8gb.svg" alt="토큰당 시간: 3B는 llama.cpp CPU 14.75초 대 memopro 1.09초, 7B는 초안 없이 8.95초에서 초안으로 2.37초" width="720">
 </picture>
 
 출력은 모델을 그냥 올렸을 때와 같습니다. llama.cpp는 Metal로 올리면 모두 메모리 부족이었고 CPU로만 돌았습니다.
@@ -615,8 +657,8 @@ Colab 노트북은 결과를 Google Drive에 저장하고, 끊겼다가 다시 �
 ### 프로세스 전체가 상한 안에
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ceiling-dark.svg">
-  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ceiling.svg" alt="프로세스 최대 메모리 대 상한: T4 학습 91~99%, 데이터 프로그램 100~101%(허용 +32MiB), 1GB CSV 정렬 74%" width="720">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/ceiling-dark.svg">
+  <img src="docs/images/ceiling.svg" alt="프로세스 최대 메모리 대 상한: T4 학습 91~99%, 데이터 프로그램 100~101%(허용 +32MiB), 1GB CSV 정렬 74%" width="720">
 </picture>
 
 | 작업 (환경) | 상한 | 최대 메모리 |
@@ -631,8 +673,8 @@ Colab 노트북은 결과를 Google Drive에 저장하고, 끊겼다가 다시 �
 ### 메모리 절반에서 그대로 실행, SSD에는 0바이트
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/half-memory-dark.svg">
-  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/half-memory.svg" alt="메모리 절반에서 OS 스왑은 2,300MiB와 1,713MiB를 SSD에 썼고 memopro는 0바이트; 영상 작업은 스왑 62초 대 memopro 15초" width="720">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/half-memory-dark.svg">
+  <img src="docs/images/half-memory.svg" alt="메모리 절반에서 OS 스왑은 2,300MiB와 1,713MiB를 SSD에 썼고 memopro는 0바이트; 영상 작업은 스왑 62초 대 memopro 15초" width="720">
 </picture>
 
 | 작업 | SSD 쓰기: OS 스왑 / memopro | 시간: 메모리 전부 / OS 스왑 / memopro |
@@ -645,8 +687,8 @@ Linux 러너에서 cgroup 상한을 일반 실행 최대 메모리의 1/2로 두
 ### 실시간 오디오: 다른 메모리가 스왑돼도 끊기지 않음
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/audio-locked-dark.svg">
-  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/audio-locked.svg" alt="오디오 블록 렌더 시간 분포: 일반 버퍼는 마감 5.33ms를 3번 넘었고(최대 9.3ms) locked=True 버퍼는 0번(최대 2.5ms)" width="720">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/audio-locked-dark.svg">
+  <img src="docs/images/audio-locked.svg" alt="오디오 블록 렌더 시간 분포: 일반 버퍼는 마감 5.33ms를 3번 넘었고(최대 9.3ms) locked=True 버퍼는 0번(최대 2.5ms)" width="720">
 </picture>
 
 | 경우 | 끊김 | 렌더 p99 / 최대 | 메이저 폴트 |
@@ -658,8 +700,8 @@ Linux 러너에서 cgroup 상한을 일반 실행 최대 메모리의 1/2로 두
 ### 무손실 압축의 비율과 속도
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/compression-dark.svg">
-  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/compression.svg" alt="자료 종류별 압축 비율: CSV 3.02배, int64 열쇠 2.07배, 영상 1.36배, float32 1.10배(압축 안 함), 무작위 바이트 압축 안 함" width="720">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/compression-dark.svg">
+  <img src="docs/images/compression.svg" alt="자료 종류별 압축 비율: CSV 3.02배, int64 열쇠 2.07배, 영상 1.36배, float32 1.10배(압축 안 함), 무작위 바이트 압축 안 함" width="720">
 </picture>
 
 거의 줄지 않는 자료(15% 미만 절약)는 압축하지 않고 그대로 둡니다. 모든 버퍼가 비트 단위로 같게 돌아왔습니다. Apple M1에서는 비율이 같고 속도는 약 두 배였습니다(CSV 압축 0.98GB/s, 해제 3.23GB/s).
@@ -667,8 +709,8 @@ Linux 러너에서 cgroup 상한을 일반 실행 최대 메모리의 1/2로 두
 ### 다른 언어에서 부르기
 
 <picture>
-  <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ffi-dark.svg">
-  <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/ffi.svg" alt="런타임 호출 비용: C ABI는 Rust와 같고 Python은 호출당 약 5배; 대량 복사는 세 언어 모두 memcpy 속도" width="720">
+  <source media="(prefers-color-scheme: dark)" srcset="docs/images/ffi-dark.svg">
+  <img src="docs/images/ffi.svg" alt="런타임 호출 비용: C ABI는 Rust와 같고 Python은 호출당 약 5배; 대량 복사는 세 언어 모두 memcpy 속도" width="720">
 </picture>
 
 ### 전체 표
@@ -689,6 +731,7 @@ Linux 러너에서 cgroup 상한을 일반 실행 최대 메모리의 1/2로 두
 | 같은 3B LoRA, 모델이 GPU에 들어가는 크기 | NVIDIA T4 | Unsloth 0.45초/단계 대 memopro 5.1초/단계 (Unsloth가 약 11배 빠름) |
 
 **검증한 모델**: Qwen2.5(1.5B~14B), Qwen3, Qwen3.5, Llama 3.2, Gemma 3, Phi-2, Phi-3, Phi-3.5, Granite, SmolLM2, SmolLM3, DeepSeek-R1-Distill(Qwen 구조), Mistral-7B, DINOv2, ConvNeXtV2, ResNet-152. 각 계열에서 생성 글은 일반 실행과 같았고, 학습 손실은 상한과 관계없이 같았습니다.
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 동작 원리
 
@@ -826,6 +869,8 @@ Windows는 투명 페이징을 지원하지 않습니다. LLM 학습·생성, `s
 wheel이 없는 플랫폼에서는 소스에서 빌드하므로 Rust 1.85 이상이 필요합니다. [rustup](https://rustup.rs)으로 설치한 뒤 다시 시도하십시오.
 </details>
 
+<p align="right"><a href="#목차">↑ 목차로</a></p>
+
 ---
 
 # Phase 5. 프로젝트 관리
@@ -857,6 +902,7 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 - 무손실 원칙을 지킵니다. 결과를 바꾸는 방식은 기본값이 될 수 없습니다.
 - memopro가 만든 데이터를 디스크에 쓰는 기능은 추가하지 않습니다.
 - 공개 API는 작게 유지합니다. 새 이름을 추가하려면 먼저 이슈로 논의합니다.
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 인용
 
@@ -871,10 +917,12 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
   url     = {https://github.com/imhyensuk/memopro}
 }
 ```
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 라이선스
 
 [MIT](LICENSE-MIT) 또는 [Apache-2.0](LICENSE-APACHE) 중 하나를 선택해 쓸 수 있습니다. 기여한 코드도 같은 이중 라이선스로 배포됩니다.
+<p align="right"><a href="#목차">↑ 목차로</a></p>
 
 ## 버전 변경 이력
 
@@ -885,3 +933,5 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 | **0.2.0** | 첫 0.2 정식판. 무손실만, 실행 중 디스크 쓰기 없음, 프로세스 전체 상한. 14B를 T4에서 생성·학습, 모델 계열 확대(Qwen3·Qwen3.5·Llama·Gemma·Phi·Granite·SmolLM·Mistral), CUDA 학습의 GPU 캐시 수정, 스왑 위험 경고 |
 | 0.2.0b1~b4 | 베타: `finetune`/`generate`, mlx-lm 모델, `enable`, `sort`/`join`, `locked=True`, 직접 불러온 모델(Unsloth), Windows wheel |
 | 0.1.x | 첫 공개판: 진단(`doctor`, census), hibernate, 접근 계층(`load`, `check`, `optimize`, `train_session`), `memopro run` |
+
+<p align="right"><a href="#목차">↑ 목차로</a></p>

@@ -30,16 +30,37 @@
 
 ## Contents
 
-- [Phase 1. First look and philosophy](#the-problem)
-  - [The problem](#the-problem) · [The approach](#the-approach) · [Results at a glance](#results-at-a-glance) · [Features](#features) · [Guarantees and five principles](#guarantees-and-five-principles) · [Who it is for](#who-it-is-for) · [Relation to other tools](#relation-to-other-tools)
-- [Phase 2. Getting started](#platform-support)
-  - [Platform support](#platform-support) · [Requirements](#requirements) · [Installation](#installation) · [Quick start](#quick-start)
-- [Phase 3. Reference](#budget-forms-and-settings)
-  - [Budget forms and settings](#budget-forms-and-settings) · [Command line](#command-line-cli) · [Python, Rust and C API](#python-rust-and-c-api) · [Runtime API](#runtime-api) · [Advanced use](#advanced-use) · [Examples](#examples) · [API changes since 0.1.x](#api-changes-since-01x)
-- [Phase 4. Performance and internals](#benchmarks)
-  - [Benchmarks](#benchmarks) · [How it works](#how-it-works) · [Limitations](#limitations) · [FAQ and troubleshooting](#faq-and-troubleshooting)
-- [Phase 5. Project](#contributing)
-  - [Contributing](#contributing) · [Citation](#citation) · [License](#license) · [Changelog](#changelog)
+- **Phase 1. First look and philosophy**
+  - [The problem](#the-problem)
+  - [The approach](#the-approach)
+  - [Results at a glance](#results-at-a-glance)
+  - [Features](#features)
+  - [Guarantees and five principles](#guarantees-and-five-principles)
+  - [Who it is for](#who-it-is-for)
+  - [Relation to other tools](#relation-to-other-tools)
+- **Phase 2. Getting started**
+  - [Platform support](#platform-support)
+  - [Requirements](#requirements)
+  - [Installation](#installation)
+  - [Quick start](#quick-start)
+- **Phase 3. Reference**
+  - [Budget forms and settings](#budget-forms-and-settings)
+  - [Command line (CLI)](#command-line-cli)
+  - [Python, Rust and C API](#python-rust-and-c-api)
+  - [Runtime API](#runtime-api)
+  - [Advanced use](#advanced-use)
+  - [Examples](#examples)
+  - [API changes since 0.1.x](#api-changes-since-01x)
+- **Phase 4. Performance and internals**
+  - [Benchmarks](#benchmarks)
+  - [How it works](#how-it-works)
+  - [Limitations](#limitations)
+  - [FAQ and troubleshooting](#faq-and-troubleshooting)
+- **Phase 5. Project**
+  - [Contributing](#contributing)
+  - [Citation](#citation)
+  - [License](#license)
+  - [Changelog](#changelog)
 
 ---
 
@@ -54,6 +75,7 @@
 > - **Quantization** (4-bit, 8-bit): uses less memory but changes the model's outputs and accuracy, so results can no longer be compared with the original model.
 > - **Operating-system swap**: keeps results the same but cannot be limited, writes gigabytes to the SSD again and again during the run, and can freeze the whole system.
 > - **Model-specific offloading tools**: work only for certain models or tasks, and may exceed the memory they are given. Transformers' `device_map="auto"`, for example, used 7.05 GiB of host memory generating with a 14B model after being given 6 GiB of CPU memory.
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## The approach
 
@@ -66,6 +88,7 @@
 > - **Results computed from inputs that are still there**: dropped and computed again.
 >
 > The ceiling applies to the **whole process**, including Python, PyTorch and the tokenizer, not only to what memopro holds. A ceiling that cannot be kept is refused before the job starts, together with the ceiling that would work.
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Results at a glance
 
@@ -89,6 +112,7 @@ Every number below was measured against criteria fixed before the run. Raw resul
   <source media="(prefers-color-scheme: dark)" srcset="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/extreme-14b-t4-dark.svg">
   <img src="https://raw.githubusercontent.com/imhyensuk/memopro/main/docs/images/extreme-14b-t4.svg" alt="Qwen2.5-14B generation on a T4: loaded normally runs out of GPU memory, device_map auto takes 71.3 s/token at 7.05 GiB of host memory, memopro 55.9 s/token at 5.88 GiB (6 GiB set)" width="720">
 </picture>
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Features
 
@@ -104,6 +128,7 @@ Every number below was measured against criteria fixed before the run. Raw resul
 | CSV sorting and joining beyond memory | `memopro.sort` / `memopro.join`, within the ceiling and without temporary files |
 | Budgeted runtime | Python, Rust and C APIs that keep large arrays, tensors, modules and optimizers within a ceiling; `locked=True` pins real-time buffers in RAM |
 | Swap-risk warning | warns at the start when the ceiling is above the memory free now, since other programs may then be swapped out |
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Guarantees and five principles
 
@@ -120,6 +145,7 @@ Every number below was measured against criteria fixed before the run. Raw resul
 > 3. **A small, intuitive API**: few entry points and settings, no complicated combinations of options.
 > 4. **Bit-identical to the user's original**: applying memopro changes neither results nor quality. A quantized model the user downloaded is itself the original and is reproduced exactly. There are no lossy modes.
 > 5. **Research for speed**: new algorithms, structures and kernels are in scope when they make things faster without changing results.
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Who it is for
 
@@ -130,6 +156,7 @@ Every number below was measured against criteria fixed before the run. Raw resul
 | Data science | NumPy arrays larger than RAM and scikit-learn preprocessing scripts, unchanged; sorting and joining CSV files larger than memory |
 | Teaching and self-study | large models on 8 GB laptops and free cloud GPUs |
 | Real-time and systems work | buffers that must not wait, such as audio, pinned in RAM; a ceiling-keeping buffer runtime inside Rust and C programs |
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Relation to other tools
 
@@ -151,6 +178,8 @@ memopro also works with other tools. When a model loaded with a tool the user al
 | mlx-lm (`mlx_lm.load`) | the loaded model and `tokenizer=` | trains with mlx-lm's LoRA layers and loss, reading only the layers that do not fit from their files; results equal mlx-lm's training |
 | Quantized models (bitsandbytes and others) | `memopro.load(..., quantization_config=...)` | loads exactly what was given; that model is the original |
 
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
+
 ---
 
 # Phase 2. Getting started
@@ -165,6 +194,7 @@ memopro also works with other tools. When a model loaded with a tool the user al
 | Windows x86_64 | CPU features (LLM training and generation, `sort`/`join`, the runtime) | no transparent paging in `memopro run`, no `locked=True` |
 
 Measurements were made on an 8 GB MacBook Air M1, a Colab T4 (15 GB GPU, 12.7 GB RAM) and GitHub Actions Linux runners; Windows is tested in CI. The design does not depend on the memory size.
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Requirements
 
@@ -177,6 +207,7 @@ Measurements were made on an 8 GB MacBook Air M1, a Colab T4 (15 GB GPU, 12.7 GB
 | Memory | no minimum; the ceiling is set by the user within the machine's memory |
 | Disk | room for the first model download (a 7B model in 16 bits is 15.2 GB); nothing is written during runs |
 | GPU | optional: Apple silicon GPU or NVIDIA CUDA GPU (verified on a T4) |
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Installation
 
@@ -211,6 +242,7 @@ cargo build -p memopro-c --release
 # header:  crates/memopro-c/include/memopro.h
 # library: target/release/libmemopro_c.{so,dylib,a}
 ```
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Quick start
 
@@ -300,6 +332,8 @@ mp_unpin(p);
 mp_runtime_free(rt);
 ```
 
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
+
 ---
 
 # Phase 3. Reference
@@ -341,6 +375,7 @@ memopro.configure(budget="6GB", download="never")
 with memopro.using(budget="2GB"):
     memopro.generate("Qwen/Qwen2.5-1.5B-Instruct", "Hello")
 ```
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Command line (CLI)
 
@@ -364,6 +399,7 @@ memopro --version
 | `run --keep-mps-heap` | Apple silicon: do not restart with the MPS memory setting |
 
 Exit codes: 0 success, 1 memopro error, 2 usage error, 3 not implemented.
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Python, Rust and C API
 
@@ -409,6 +445,7 @@ Exit codes: 0 success, 1 memopro error, 2 usage error, 3 not implemented.
 | `mp_version`, `mp_abi_version`, `mp_last_error` | versions and the last error |
 
 Every function returning `int` returns `MP_OK` (0) or a negative error code (`MP_ERR_BUDGET`, `MP_ERR_INTEGRITY`, ...). All functions are thread-safe.
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Runtime API
 
@@ -428,6 +465,7 @@ The Python runtime (`memopro.rt`) is for handing large arrays and tensors to a c
 | `memopro.rt.torch.generate(model, input_ids, *, draft=None, **kwargs)` | draft-verified generation with the same output as ordinary greedy `generate` |
 | `memopro.rt.torch.causal_lm_loss`, `enable_checkpointing`, `saved_weights` | loss, checkpointing and weight-reference helpers for writing a training loop over a streamed model |
 | `memopro.rt.process_footprint()` / `process_peak_footprint()` | the process's current and peak memory |
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Advanced use
 
@@ -540,6 +578,7 @@ samples = rt.array((48_000 * 60,), "int16", locked=True)  # never compressed or 
 ### Apple GPU memory setting
 
 On Apple GPUs, call `finetune` or `stream_model` before any other MPS work, so memopro can apply the setting that shrinks the PyTorch MPS allocator's spare heap (about 1 GiB). `memopro run` applies it automatically by restarting the script.
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Examples
 
@@ -557,6 +596,7 @@ On Apple GPUs, call `finetune` or `stream_model` before any other MPS work, so m
 | [`docs/guide/`](https://github.com/imhyensuk/memopro/blob/main/docs/guide/README.en.md) | the user guide, from installation to how it works |
 
 The Colab notebooks save their results to Google Drive and resume where they stopped when run again.
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## API changes since 0.1.x
 
@@ -581,6 +621,8 @@ The Colab notebooks save their results to Google Drive and resume where they sto
 | `Runtime.adopt`, `alloc(..., locked=True)` | handing objects over, pinning real-time buffers |
 | `memopro run` | a ceiling without code changes (Linux, macOS) |
 | Windows wheels | CPU features |
+
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ---
 
@@ -689,6 +731,7 @@ Data that barely shrinks (saves under 15%) is kept as it is. Every buffer came b
 | The same 3B LoRA at a size that fits the GPU | NVIDIA T4 | Unsloth 0.45 s/step vs memopro 5.1 s/step (Unsloth about 11x faster) |
 
 **Models verified**: Qwen2.5 (1.5B-14B), Qwen3, Qwen3.5, Llama 3.2, Gemma 3, Phi-2, Phi-3, Phi-3.5, Granite, SmolLM2, SmolLM3, DeepSeek-R1-Distill (Qwen architecture), Mistral-7B, DINOv2, ConvNeXtV2, ResNet-152. For each family the generated text matched the ordinary run, and training losses were identical across ceilings.
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## How it works
 
@@ -826,6 +869,8 @@ Windows has no transparent paging. LLM training and generation, `sort`/`join` an
 Platforms without a wheel build from source and need Rust 1.85 or later. Install it with [rustup](https://rustup.rs) and try again.
 </details>
 
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
+
 ---
 
 # Phase 5. Project
@@ -857,6 +902,7 @@ cargo fmt --all --check && cargo clippy --workspace --all-targets -- -D warnings
 - The lossless principle holds: a result-changing method can never be a default.
 - No feature may write data memopro makes to the disk.
 - The public API stays small; discuss new names in an issue first.
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Citation
 
@@ -871,10 +917,12 @@ If you use memopro in research, please cite it with the repository's **"Cite thi
   url     = {https://github.com/imhyensuk/memopro}
 }
 ```
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## License
 
 Either [MIT](https://github.com/imhyensuk/memopro/blob/main/LICENSE-MIT) or [Apache-2.0](https://github.com/imhyensuk/memopro/blob/main/LICENSE-APACHE), at your option. Contributions are released under the same dual license.
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
 
 ## Changelog
 
@@ -885,3 +933,5 @@ The full history is in [CHANGELOG.md](https://github.com/imhyensuk/memopro/blob/
 | **0.2.0** | The first 0.2 release: lossless only, no disk writes during runs, a whole-process ceiling. 14B generation and training on a T4, more model families (Qwen3, Qwen3.5, Llama, Gemma, Phi, Granite, SmolLM, Mistral), a fix to the GPU cache in CUDA training, a swap-risk warning |
 | 0.2.0b1-b4 | Betas: `finetune`/`generate`, mlx-lm models, `enable`, `sort`/`join`, `locked=True`, models loaded by the user (Unsloth), Windows wheels |
 | 0.1.x | First public releases: diagnosis (`doctor`, census), hibernate, the access layer (`load`, `check`, `optimize`, `train_session`), `memopro run` |
+
+<p align="right"><a href="#contents">↑ Back to contents</a></p>
