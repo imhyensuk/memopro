@@ -165,8 +165,16 @@ def fig_ceiling(theme: str) -> None:
     ]:
         r = load(t4 + case + ".json")
         rows.append((name, r["result"]["maxrss_bytes"] / r["budget"]))
+    big = [load(f"e074/t4-b/cases/ft_{m}.json") for m in (6144, 9216)]  # E074b, 0380
+    rows[4:4] = [
+        (
+            f"14B LoRA, {r['budget'] // GIB} GiB",
+            r["memory_end"]["host_peak_rss_bytes"] / r["budget"],
+        )
+        for r in big
+    ]
     rows.append(("1 GB CSV sort, 313 MiB", 233 / 313))  # dev check, 0357
-    fig, ax = figure(h=3.3)
+    fig, ax = figure(h=3.8)
     hbars(
         ax,
         [r[0] for r in rows],
@@ -183,9 +191,81 @@ def fig_ceiling(theme: str) -> None:
     title(
         ax,
         "The whole process stays within the ceiling",
-        "Colab T4, 0.2.0b3 (data programs may go 32 MiB over); sort: development check",
+        "Colab T4 (data programs may go 32 MiB over); sort: development check",
     )
     save(fig, "ceiling", theme)
+
+
+def fig_extreme(theme: str) -> None:
+    """Qwen2.5-14B (29.5 GB) generation on a T4: plain, device_map="auto", memopro (E074, 0380)."""
+    blue, orange, _ = T["slots"]
+    c = "e074/t4/cases/"
+    acc, mp = load(c + "accelerate.json"), load(c + "memopro_gen.json")
+    fig, (a1, a2) = plt.subplots(1, 2, figsize=(7.2, 2.6))
+    labels = ["loaded normally", 'device_map="auto"', "memopro, 6 GiB"]
+    for ax in (a1, a2):
+        fig.patch.set_facecolor(T["surface"])
+        ax.set_facecolor(T["surface"])
+        for side in ("top", "right", "left"):
+            ax.spines[side].set_visible(False)
+        ax.spines["bottom"].set_color(T["axis"])
+        ax.tick_params(colors=T["ink2"], labelsize=9, length=0)
+        ax.grid(axis="x", color=T["grid"], linewidth=0.8)
+        ax.set_axisbelow(True)
+    y = [2, 1, 0]
+    s = [acc["steady_s_per_token"], mp["steady_s_per_token"]]
+    a1.barh(y[1:], s, height=0.56, color=[orange, blue], edgecolor=T["surface"], linewidth=2)
+    a1.set_yticks(y, labels)
+    a1.text(1, 2, "out of GPU memory", va="center", fontsize=8.5, color=T["ink2"])
+    for yi, v in zip(y[1:], s, strict=True):
+        a1.text(v + 1, yi, f"{v:.1f} s", va="center", fontsize=8.5, color=T["ink"])
+    a1.set_xlim(0, 95)
+    a1.set_xlabel("seconds per token after the first", color=T["ink2"], fontsize=9)
+    peaks = [r["memory_end"]["host_peak_rss_bytes"] / GIB for r in (acc, mp)]
+    a2.barh(y[1:], peaks, height=0.56, color=[orange, blue], edgecolor=T["surface"], linewidth=2)
+    a2.set_yticks(y, ["", "", ""])
+    a2.axvline(6, color=T["ink2"], linewidth=1, linestyle=(0, (3, 2)))
+    a2.text(6.1, 2, "6 GiB set for both", va="center", fontsize=8, color=T["ink2"])
+    for yi, v in zip(y[1:], peaks, strict=True):
+        a2.text(max(v, 6) + 0.1, yi, f"{v:.2f} GiB", va="center", fontsize=8.5, color=T["ink"])
+    a2.set_xlim(0, 9)
+    a2.set_xlabel("process peak of host memory, GiB", color=T["ink2"], fontsize=9)
+    fig.suptitle(
+        "Qwen2.5-14B (29.5 GB, 16-bit) on a 15 GB T4: same text, no disk writes",
+        x=0.02,
+        ha="left",
+        fontsize=11,
+        fontweight="bold",
+        color=T["ink"],
+    )
+    save(fig, "extreme-14b-t4", theme)
+
+
+def fig_timeline(theme: str) -> None:
+    """Footprint over time, Qwen2.5-7B 16-bit LoRA on the 8 GB M1 (E069 V1, 0381)."""
+    fig, ax = figure(h=2.9)
+    ax.grid(axis="x", visible=False)
+    ax.grid(axis="y", color=T["grid"], linewidth=0.8)
+    for name, col, what in [
+        ("V1-a", T["slots"][0], "512 tokens, 4 GiB"),
+        ("V1-b", T["slots"][1], "512 tokens, 5 GiB"),
+        ("V1-c", T["slots"][2], "2,048 tokens, 5.5 GiB"),
+    ]:
+        r = load(f"e069/mac/cases/{name}.json")
+        t = [a / 60 for a, _ in r["timeline"]]
+        f = [b / GIB for _, b in r["timeline"]]
+        ax.plot(t, f, color=col, linewidth=0.9, label=what)
+        ax.axhline(r["ceiling"] / GIB, color=col, linewidth=0.9, linestyle=(0, (3, 2)))
+    ax.set_ylim(0, 7)
+    ax.set_xlabel("minutes", color=T["ink2"], fontsize=9)
+    ax.set_ylabel("process footprint, GiB", color=T["ink2"], fontsize=9)
+    ax.legend(frameon=False, fontsize=8, labelcolor=T["ink2"], loc="upper left", ncol=3)
+    title(
+        ax,
+        "Qwen2.5-7B (15.2 GB) 16-bit LoRA on an 8 GB MacBook Air M1",
+        "dashed: the ceiling of each run; losses bit-identical at 4 and 5 GiB",
+    )
+    save(fig, "train-7b-8gb", theme)
 
 
 def fig_swap(theme: str) -> None:
@@ -399,7 +479,17 @@ def main() -> None:
     for theme, colors in THEMES.items():
         T = colors
         plt.rcParams.update({"font.family": "DejaVu Sans", "svg.hashsalt": "memopro"})
-        for f in (fig_fit, fig_generation, fig_ceiling, fig_swap, fig_audio, fig_codec, fig_ffi):
+        for f in (
+            fig_fit,
+            fig_generation,
+            fig_ceiling,
+            fig_extreme,
+            fig_timeline,
+            fig_swap,
+            fig_audio,
+            fig_codec,
+            fig_ffi,
+        ):
             f(theme)
     print(sorted(p.name for p in OUT.glob("*.svg")))
 
