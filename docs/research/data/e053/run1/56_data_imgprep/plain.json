@@ -1,0 +1,11 @@
+{
+ "channel_mean": "a515370ef1089966",
+ "channel_std": "8be752f4e4d6be14",
+ "batch": "71916d7ed7372a99",
+ "seconds": 112.63,
+ "peak_bytes": 9517469696,
+ "status": "ok",
+ "case": "plain",
+ "wall_s": 112.9,
+ "warned_ceiling": false
+}

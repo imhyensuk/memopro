@@ -1,0 +1,80 @@
+{
+ "report": {
+  "entries": [
+   {
+    "technique": "elastic",
+    "action": "skipped",
+    "detail": "\u03b3 is off by default (experimental): the macOS pressure level marks pressure, not the stalls a user feels (E013a/0088), and Linux PSI rose above 'warning' from the I/O of loading a model, halving budgets so the loading policy stood aside (E021/0093); --elastic turns it on",
+    "reclaimed_bytes": null,
+    "timestamp": 1791906425.4281201
+   },
+   {
+    "technique": "enable.rt",
+    "action": "applied",
+    "detail": "runtimes and pagers share the ceiling; budget=\"auto\" (finetune, generate, stream_model, Runtime) means it",
+    "reclaimed_bytes": null,
+    "timestamp": 1791906425.5109222
+   },
+   {
+    "technique": "enable.numpy",
+    "action": "applied",
+    "detail": "arrays >= 16 MiB are paged within the ceiling (compressed)",
+    "reclaimed_bytes": null,
+    "timestamp": 1791906425.5109258
+   },
+   {
+    "technique": "enable.transformers",
+    "action": "applied",
+    "detail": "from_pretrained loads models that do not fit as memopro.load",
+    "reclaimed_bytes": null,
+    "timestamp": 1791906425.5109277
+   },
+   {
+    "technique": "transparent",
+    "action": "applied",
+    "detail": "budget 2.28 GiB, peak 2.23 GiB; 7328 faults, 4882 chunks compressed (4.77 GiB to 2.50 GiB), 4256 brought back, 0 over budget; nothing written",
+    "reclaimed_bytes": null,
+    "timestamp": 1791906459.3993936
+   }
+  ]
+ },
+ "transparent": {
+  "budget": 2447631360,
+  "limit": 2446582784,
+  "used": 0,
+  "peak_used": 2398639753,
+  "regions": 0,
+  "mapped_bytes": 0,
+  "resident_bytes": 0,
+  "compressed_bytes": 0,
+  "faults": 7328,
+  "zero_fills": 3072,
+  "restores": 4256,
+  "restore_seconds": 6.722539041999999,
+  "evictions": 4882,
+  "compress_in": 5119148032,
+  "compress_out": 2685509529,
+  "compress_seconds": 7.938435704999982,
+  "incompressible": 0,
+  "overruns": 0,
+  "spurious": 0,
+  "outside_peak": 615713770,
+  "limit_low": 1830869014,
+  "trims": 0,
+  "written_bytes": 0
+ },
+ "session": {
+  "elapsed_seconds": 33.959197985999936,
+  "memopro_seconds": 14.660974746999981,
+  "slowdown": 1.759705935900435,
+  "ceiling": 2447631360,
+  "footprint": 773705728,
+  "peak_footprint": 2449051648,
+  "exceeded_bytes": 1420288,
+  "overruns": 0,
+  "activations_moved": 0,
+  "runtimes": [],
+  "predictions": []
+ },
+ "ceiling": 2447631360
+}

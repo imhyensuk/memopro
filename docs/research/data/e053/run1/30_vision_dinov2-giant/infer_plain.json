@@ -1,0 +1,29 @@
+{
+ "task": "vis_infer",
+ "argv": [
+  "/content/memopro_bench/models/facebook--dinov2-giant",
+  "Dinov2Model",
+  "plain",
+  "0",
+  "8",
+  "224"
+ ],
+ "device": "cuda",
+ "status": "ok",
+ "load_s": 12.1,
+ "output_sha": "6a65fef70c0385bf",
+ "same_twice": true,
+ "shape": [
+  8,
+  1536
+ ],
+ "first_s": 3.3990976810455322,
+ "second_s": 1.454315423965454,
+ "rt": null,
+ "host_peak_bytes": 5512101888,
+ "gpu_peak_bytes": 5086511104,
+ "gpu_peak_allocated_bytes": 4724525056,
+ "case": "infer_plain",
+ "wall_s": 28.5,
+ "warned_ceiling": false
+}

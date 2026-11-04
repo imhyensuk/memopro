@@ -1,0 +1,79 @@
+{
+ "task": "lm_lora",
+ "argv": [
+  "/content/memopro_bench/models/Qwen--Qwen2.5-14B-Instruct",
+  "memopro",
+  "6442450944",
+  "2",
+  "128",
+  "1"
+ ],
+ "device": "cuda",
+ "status": "ok",
+ "losses": [
+  2.0252394676208496,
+  3.259883165359497
+ ],
+ "loss_bits": [
+  "0x1.033b0c0000000p+1",
+  "0x1.a143da0000000p+1"
+ ],
+ "batch": 1,
+ "step_s": [
+  197.11033406999968,
+  124.1926320409998
+ ],
+ "tokens": 256,
+ "rt": {
+  "budget": 6442450944,
+  "reserve": 4210688,
+  "used": 6412390400,
+  "peak_used": 6433554432,
+  "buffers": 579,
+  "resident_bytes": 6412390400,
+  "compressed_bytes": 0,
+  "pinned_bytes": 0,
+  "loads": 579,
+  "load_bytes": 29540067328,
+  "rereads": 861,
+  "reread_bytes": 52267055104,
+  "read_seconds": 323.3122710429999,
+  "drops": 1308,
+  "drop_bytes": 75395469312,
+  "compressions": 0,
+  "compress_in": 0,
+  "compress_out": 0,
+  "compress_seconds": 0.0,
+  "decompressions": 0,
+  "decompress_bytes": 0,
+  "decompress_seconds": 0.0,
+  "incompressible": 0,
+  "evictions": 1308,
+  "refusals": 0,
+  "restore_seconds": 261.54834590900026,
+  "pins": 1578,
+  "recomputes": 0,
+  "recompute_bytes": 0,
+  "recompute_seconds": 0.0,
+  "prefetches": 568,
+  "prefetch_bytes": 23022270464,
+  "prefetch_hits": 385,
+  "prefetch_wasted": 84,
+  "prefetch_skipped": 269,
+  "written_bytes": 0,
+  "outside_peak": 0,
+  "limit_low": 0
+ },
+ "targets": [
+  "q_proj",
+  "k_proj",
+  "v_proj",
+  "o_proj"
+ ],
+ "host_peak_bytes": 8002314240,
+ "gpu_peak_bytes": 15635185664,
+ "gpu_peak_allocated_bytes": 15041854464,
+ "case": "memopro_16bit",
+ "wall_s": 340.9,
+ "warned_ceiling": false
+}

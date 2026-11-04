@@ -1,0 +1,28 @@
+{
+ "task": "unsloth",
+ "argv": [
+  "/content/memopro_bench/models/unsloth--Qwen2.5-14B-Instruct-bnb-4bit",
+  "4",
+  "2",
+  "128"
+ ],
+ "device": "cuda",
+ "status": "ok",
+ "unsloth": "2026.10.4",
+ "load_s": 47.8,
+ "losses": [
+  2.0289220809936523,
+  3.4018006324768066
+ ],
+ "step_s": [
+  6.263122797012329,
+  0.8081796169281006
+ ],
+ "dtype": "torch.float16",
+ "host_peak_bytes": 7759970304,
+ "gpu_peak_bytes": 11887575040,
+ "gpu_peak_allocated_bytes": 11511198208,
+ "case": "unsloth_4bit",
+ "wall_s": 87.8,
+ "warned_ceiling": false
+}

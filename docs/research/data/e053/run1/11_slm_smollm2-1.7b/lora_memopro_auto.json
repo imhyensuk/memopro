@@ -1,0 +1,76 @@
+{
+ "task": "lm_lora",
+ "argv": [
+  "/content/memopro_bench/models/HuggingFaceTB--SmolLM2-1.7B-Instruct",
+  "memopro",
+  "2147483648",
+  "5",
+  "256",
+  "auto"
+ ],
+ "device": "cuda",
+ "status": "ok",
+ "losses": [
+  3.1139678955078125
+ ],
+ "loss_bits": [
+  "0x1.8e96800000000p+1"
+ ],
+ "batch": 5,
+ "step_s": [
+  10.736162115000013
+ ],
+ "tokens": 1280,
+ "rt": {
+  "budget": 2147483648,
+  "reserve": 4210688,
+  "used": 2139226112,
+  "peak_used": 2139226112,
+  "buffers": 218,
+  "resident_bytes": 2139226112,
+  "compressed_bytes": 0,
+  "pinned_bytes": 0,
+  "loads": 218,
+  "load_bytes": 3422752768,
+  "rereads": 0,
+  "reread_bytes": 0,
+  "read_seconds": 3.603047147000001,
+  "drops": 75,
+  "drop_bytes": 1283526656,
+  "compressions": 0,
+  "compress_in": 0,
+  "compress_out": 0,
+  "compress_seconds": 0.0,
+  "decompressions": 0,
+  "decompress_bytes": 0,
+  "decompress_seconds": 0.0,
+  "incompressible": 0,
+  "evictions": 75,
+  "refusals": 0,
+  "restore_seconds": 3.6840300549999982,
+  "pins": 218,
+  "recomputes": 0,
+  "recompute_bytes": 0,
+  "recompute_seconds": 0.0,
+  "prefetches": 0,
+  "prefetch_bytes": 0,
+  "prefetch_hits": 0,
+  "prefetch_wasted": 0,
+  "prefetch_skipped": 0,
+  "written_bytes": 0,
+  "outside_peak": 0,
+  "limit_low": 0
+ },
+ "targets": [
+  "q_proj",
+  "k_proj",
+  "v_proj",
+  "o_proj"
+ ],
+ "host_peak_bytes": 3745116160,
+ "gpu_peak_bytes": 4404936704,
+ "gpu_peak_allocated_bytes": 3851087872,
+ "case": "lora_memopro_auto",
+ "wall_s": 24.3,
+ "warned_ceiling": false
+}

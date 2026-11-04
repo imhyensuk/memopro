@@ -1,0 +1,11 @@
+{
+ "coef": "a9b9ed86098f6946",
+ "accuracy": 0.9514175,
+ "nnz": 21699438,
+ "seconds": 55.31,
+ "peak_bytes": 1282015232,
+ "status": "ok",
+ "case": "memopro_50pct",
+ "wall_s": 56.0,
+ "warned_ceiling": false
+}

@@ -1,0 +1,13 @@
+{
+ "means": "13edcf3f20c49326",
+ "counts": "907c1a2182220de5",
+ "total": 963774938936,
+ "max": 1802,
+ "stack": "a4933b05d8ee458a",
+ "seconds": 33.79,
+ "peak_bytes": 2449051648,
+ "status": "ok",
+ "case": "memopro_75pct",
+ "wall_s": 34.1,
+ "warned_ceiling": false
+}
